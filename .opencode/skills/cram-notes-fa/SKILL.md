@@ -40,6 +40,19 @@ Ask the user to clarify only if the source is ambiguous. Default to: "Point me a
 
 If they provide no path, ask once. Never invent book content.
 
+## Output Length Preference
+
+Before starting, ask the user: **"How many lines would you like the study guide to be approximately?"** Offer these options:
+- **Comprehensive (no limit)** — extract everything (default)
+- **~2000 lines** — thorough but trimmed
+- **~1000 lines** — concise
+- **~500 lines** — compact
+- **Custom** — let them type a number
+
+Store their choice as `$OUTPUT_LINES`. If they choose "Comprehensive" or don't specify, extract everything with no length limit. If they choose a specific number, respect that target by prioritizing the most exam-relevant content per chapter (focus on definitions, key processes, formulas, comparisons, and end-of-chapter material; trim examples and narrative).
+
+Update the study guide header to include: `> طول هدف: <value> خط.`
+
 ## Workflow
 
 ### Step 1 — Acquire the book
