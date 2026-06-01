@@ -1,6 +1,6 @@
 ---
 name: cram-notes
-description: Generate ultra-compressed night-before-exam cram notes from a book or long document. Use when the user says "cram this book", "night before exam notes", "make a cheat sheet from <book>", "exam summary", "study guide for tomorrow", "compress this book to one page", or asks for a "very short version" of a book. Reads every chapter and returns a tight Markdown file of must-know facts, key terms, formulas, dates, and likely exam questions.
+description: Generate comprehensive full-coverage exam study notes from a book or long document. Use when the user says "cram this book", "exam study guide", "make comprehensive notes from <book>", "full summary", "complete study guide", or wants thorough coverage of a book. Reads every chapter and returns a thorough Markdown file covering every examinable concept, term, process, formula, case study, and likely exam question in detail.
 license: MIT
 compatibility: opencode
 metadata:
@@ -14,20 +14,20 @@ metadata:
 - Detect and list all chapters
 - Read each chapter one at a time (never the whole file at once)
 - Systematically extract **every examinable primitive** from each chapter using a universal taxonomy that works for any discipline (CS, Biology, Math, Physics, Chemistry, Medicine, Engineering, Law, History, etc.)
-- Produce a single short Markdown cram sheet that covers: definitions, procedures/algorithms/pathways, formulas, classifications/comparisons, rules/laws/theorems, data structures, proof/argument patterns, design paradigms (DP, greedy, CRISPR, PCR), visual diagrams (text), edge cases, evidence, case studies, cross-chapter dependencies, mnemonics, probability & statistics foundation, self-test fill-in templates, ethics, and likely exam questions — every item tagged with a **priority heat map** (HIGH/MEDIUM/LOW) so the student knows where to focus
-- Target: readable in 20–30 min the night before an exam
+- Produce a comprehensive Markdown study guide covering: definitions, procedures/algorithms/pathways, formulas, classifications/comparisons, rules/laws/theorems, data structures, proof/argument patterns, design paradigms (DP, greedy, CRISPR, PCR), visual diagrams (text), edge cases, evidence, case studies, cross-chapter dependencies, mnemonics, probability & statistics foundation, self-test fill-in templates, ethics, and likely exam questions
+- **No length limit — every examinable item is included.** The goal is that a student who reads the output cover-to-cover should be prepared for any question on the exam (score 20/20).
 
 ## When to use me
 
-Use this when the user wants the *shortest possible* version of a book that still contains everything a teacher could plausibly test. The output is organized for rapid lookup, not narrative reading.
+Use this when the user wants a **complete study guide** from a book — not a quick cram sheet, but thorough coverage that leaves nothing out.
 
 Trigger phrases:
-- "cram this book", "night before exam notes", "exam cram"
-- "cheat sheet from <book>", "study guide for tomorrow"
-- "compress this to one page", "ultra short summary"
-- "give me the must-knows from <book>"
+- "cram this book", "exam study guide", "comprehensive notes"
+- "full summary from <book>", "complete study guide for", "get 20/20 on exam"
+- "make notes covering everything from <book>"
+- "i want to get full marks by reading the notes"
 
-Do **not** use this when the user wants a deep, faithful summary or a full book report.
+Do **not** use this when the user wants an ultra-short one-page cheat sheet.
 
 ## Input
 
@@ -61,13 +61,13 @@ Build a preliminary **cross-chapter dependency map** by noting forward reference
 
 If the book has >20 chapters, ask which subset to prioritize (whole book, exam-relevant sections, or last-N chapters).
 
-### Step 4 — Read and extract from each chapter (universal checklist)
+### Step 4 — Read and extract from each chapter (universal checklist) — comprehensively
 
 For each chapter:
 1. Extract the slice with offset/limit
 2. Run the **universal extraction checklist** below. **Check every category.** If a category has zero content in that chapter, skip it. This systematic sweep ensures nothing examinable is missed.
-3. Tag every extracted item with its **priority** (HIGH / MEDIUM / LOW) based on the heat map signals below
-4. Drop examples, anecdotes, and repetition
+3. **Include all content**, not just highlights. Every named entity, every process step, every formula, every comparison, every edge case, every case study — extract it all.
+4. **Keep examples and anecdotes** if they help understand the concept. Do not drop them aggressively — only remove truly redundant repetition.
 5. Note any cross-chapter links discovered
 
 #### Universal Extraction Checklist
@@ -75,255 +75,132 @@ For each chapter:
 | # | Primitive | What to look for | Applies to |
 |---|-----------|------------------|------------|
 | 1 | **Named Entities** | Terms, concepts, phenomena, species, organelles, compounds, diseases, algorithms, data structures, protocols — any named thing with a definition | All domains |
-| 2 | **Sequential Processes** | Step-by-step procedures: algorithms, metabolic pathways, signaling cascades, protocols, methods, workflows, cycles (Krebs, cell cycle, fetch-decode-execute) | CS, Bio, Chem, Medicine, Engineering |
-| 3 | **Hierarchies / Classifications** | Taxonomies, type systems, categorization schemes, complexity classes, Linnaean ranks, disease classifications, protein families | All domains |
+| 2 | **Sequential Processes** | Step-by-step procedures: algorithms, metabolic pathways, signaling cascades, protocols, methods, workflows, cycles (Krebs, cell cycle, fetch-decode-execute) — **list every step with full detail** | CS, Bio, Chem, Medicine, Engineering |
+| 3 | **Hierarchies / Classifications** | Taxonomies, type systems, categorization schemes, complexity classes, Linnaean ranks, disease classifications, protein families — **reproduce the full hierarchy, not just the top levels** | All domains |
 | 4 | **Comparisons / Trade-offs** | A vs B, pros/cons, before/after, strengths/weaknesses — anything that contrasts two or more things | All domains |
-| 5 | **Formulas & Equations** | Mathematical expressions, statistical tests, chemical equations, Big-O bounds, reaction rate laws, Hardy-Weinberg, enzyme kinetics | CS, Math, Physics, Chem, Bio, Engineering |
-| 6 | **Rules, Laws & Theorems** | Named principles: laws, theorems, rules of thumb, design principles, biological laws (Mendel, Hardy-Weinberg), legal doctrines | All domains |
-| 7 | **Data Structures & Types** (CS-specific section) | Properties, supported operations, time/space complexity, trade-offs, when to use each | CS |
+| 5 | **Formulas & Equations** | Mathematical expressions, statistical tests, chemical equations, Big-O bounds, reaction rate laws, Hardy-Weinberg, enzyme kinetics — **include every formula with all variable definitions and units** | CS, Math, Physics, Chem, Bio, Engineering |
+| 6 | **Rules, Laws & Theorems** | Named principles: laws, theorems, rules of thumb, design principles, biological laws (Mendel, Hardy-Weinberg), legal doctrines — **include full statement and conditions** | All domains |
+| 7 | **Data Structures & Types** (CS-specific section) | Properties, supported operations, time/space complexity, trade-offs, when to use each — **include all variants and implementations discussed** | CS |
 | 8 | **Visual Patterns** (text-described) | Diagrams, graphs, charts, pathways, architectures, cycles — describe them in text so they can be re-drawn from memory | All domains (critical for Bio pathways, CS graphs, Engineering diagrams) |
 | 9 | **Edge Cases / Exceptions / Traps** | Gotchas, degenerate inputs, worst-case scenarios, atypical presentations, contraindications, non-examples | All domains |
-| 10 | **Empirical Evidence / Key Results** | Experimental findings, benchmark results, case studies, statistical significance, key experiments | CS (benchmarks), Bio/Chem (experiments), Medicine (trials) |
+| 10 | **Empirical Evidence / Key Results** | Experimental findings, benchmark results, case studies, statistical significance, key experiments — **include numbers, sample sizes, and conclusions** | CS (benchmarks), Bio/Chem (experiments), Medicine (trials) |
 | 11 | **Cross-Chapter Dependencies** | "This requires Ch X", "as we saw in Ch Y", forward references | All domains |
 | 12 | **Dates & People** | Discoverers, inventors, landmark dates, historical context | All domains (critical for History, Medicine, CS pioneers) |
-| 13 | **Proof & Argument Patterns** | Induction, contradiction, loop invariants, exchange argument, greedy stays ahead, reduction, experimental reasoning (controls, variables, statistical significance), phylogenetic inference | CS, Math, Bio, Medicine |
-| 14 | **Design Paradigms / Meta-Methods** | Cross-cutting methodologies: divide & conquer, dynamic programming, greedy, backtracking, branch & bound (CS); PCR, gel electrophoresis, Western blot, CRISPR, sequencing (Bio); any reusable technique referenced across multiple chapters | CS, Bio, Chem, Medicine, Engineering |
-| 15 | **Case Studies / Classic Examples** | Famous named experiments or systems: Mendel's peas, Meselson-Stahl, Hershey-Chase, HeLa cells, Pavlov's dogs (Bio); Turing test, CAP theorem, Winograd schema, Peter Principle, HeLa of CS (CS); landmark legal cases (Law) | All domains |
+| 13 | **Proof & Argument Patterns** | Induction, contradiction, loop invariants, exchange argument, greedy stays ahead, reduction, experimental reasoning (controls, variables, statistical significance), phylogenetic inference — **include the full proof structure** | CS, Math, Bio, Medicine |
+| 14 | **Design Paradigms / Meta-Methods** | Cross-cutting methodologies: divide & conquer, dynamic programming, greedy, backtracking, branch & bound (CS); PCR, gel electrophoresis, Western blot, CRISPR, sequencing (Bio); any reusable technique referenced across multiple chapters — **describe each in detail with when/why/how** | CS, Bio, Chem, Medicine, Engineering |
+| 15 | **Case Studies / Classic Examples** | Famous named experiments or systems: Mendel's peas, Meselson-Stahl, Hershey-Chase, HeLa cells, Pavlov's dogs (Bio); Turing test, CAP theorem, Winograd schema (CS); landmark legal cases (Law) — **include full details: what was done, results, significance** | All domains |
 | 16 | **Ethics & Professional Practice** | AI ethics principles, animal testing guidelines, informed consent, CRISPR ethics, data privacy, dual-use concerns, professional codes of conduct | CS, Bio, Medicine, Engineering, Law |
+| 17 | **Chapter Summaries / End-of-Chapter Material** | Bolded terms, review questions, key points boxes, exercises — **extract all of these verbatim; they are the most exam-relevant content** | All domains |
 
-#### Priority Heat Map
+Target: each chapter should yield **enough content to fully cover the chapter's material**. There is no upper limit on bullets or word count. A dense textbook chapter may yield 100+ bullets. Prefer structured formats over prose, but include enough detail that the reader can learn the material without referring back to the original book.
 
-Within each extraction category, tag every item with an **exam priority** based on signal strength:
+### Step 5 — Write the comprehensive study guide
 
-| Signal | Tag |
-|--------|-----|
-| Repeated across multiple chapters, framed as "important"/"key"/"remember", appears in bold, in a summary box, or is a section heading | **HIGH** |
-| Mentioned once with moderate emphasis, or clearly background knowledge | MEDIUM |
-| Peripheral example, anecdote, historical curiosity, footnote | LOW |
-
-Example: `- **Bayes' theorem** (HIGH): P(A\|B) = P(B\|A)P(A)/P(B)` — tag as HIGH if the author devotes a whole section to it and references it later.
-
-Target: each chapter compresses to **8–20 bullets** or roughly **300–600 words**. Dense chapters get more. Thin chapters get fewer. Prefer structured formats over prose.
-
-### Step 5 — Write the cram sheet
-
-Save as `cram-notes-<book-title>-<YYYY-MM-DD>.md` with this template. **Include every section that has content.** Reorder sections so the most content-heavy ones come first. Skip empty sections entirely.
+Save as `study-guide-<book-title>-<YYYY-MM-DD>.md` with this template. **Include every section that has content.** Reorder sections so the most content-heavy ones come first. Skip empty sections entirely.
 
 ```markdown
-# Cram Notes: <Book Title>
+# Study Guide: <Book Title>
 
-> Generated <date>. Subject: <domain>. Exam format: <format>. Read time: ~20–30 min.
+> Generated <date>. Subject: <domain>. Exam format: <format>. Coverage: comprehensive.
 
-## Top 20 Must-Knows
-1. ...
-2. ...
+## Chapter-by-Chapter Breakdown
 
----
+### Ch. 1 — <Title>
 
-## 1. Sequential Processes (Algorithms / Pathways / Cycles / Protocols)
+#### Named Entities (Terms & Definitions)
+- **Term**: full definition with context
+- ...
 
-### <Name>
+#### Processes / Algorithms / Pathways
+##### <Name>
 - **Type**: Algorithm / Pathway / Cycle / Protocol / Workflow
 - **Goal**: ...
-- **Steps**: (1) ... (2) ... (3) ... (N) ...
+- **Steps**: (1) ... (2) ... (3) ... (N) ... — **every step described in detail**
 - **Input**: ... **Output**: ...
 - **Conditions / Invariants**: ...
 - **Complexity** (if applicable): Time O(?) Space O(?)
 - **Edge Cases**: ...
+- **Example**: walk through a concrete example with values
 
-### <Next Process>
-- ...
+#### Classifications & Hierarchies
+- **Hierarchy name**:
+  - Level 1: ...
+    - Level 2: ...
+      - Level 3: ...
 
----
-
-## 2. Design Paradigms & Meta-Methods
-
-### <Paradigm Name>
-- **Type**: Algorithmic paradigm / Lab technique / Design pattern
-- **Core idea**: ...
-- **When to apply** (decision rule): ...
-- **Classic examples**: ...
-- **Trade-offs / Limitations**: ...
-- **Relation to other paradigms**: ...
-
----
-
-## 3. Classifications & Comparisons
-
-### Hierarchies
-- <Root>
-  - <Level 1>
-    - <Level 2> ...
-
-### Comparisons
+#### Comparisons & Trade-offs
 | Dimension | A | B |
 |---|---|---|
 | Property | value | value |
+| Advantage | ... | ... |
+| Disadvantage | ... | ... |
 
----
-
-## 4. Formulas & Equations
-
-### <Name>
+#### Formulas & Equations
+##### <Name>
 `equation`
 - *var* = definition [units]
 - *var* = definition [units]
 - **When to use**: ...
 - **Constraints**: ...
+- **Example calculation**: ...
 
----
-
-## 5. Probability & Statistics Foundation
-
-### Distributions
-| Distribution | Parameters | Mean | Variance | Use when |
-|---|---|---|---|---|
-| Normal | μ, σ² | μ | σ² | ... |
-| Binomial | n, p | np | np(1-p) | ... |
-
-### Statistical Tests
-| Test | What it checks | When to use | Assumptions |
-|---|---|---|---|
-| t-test | difference in means | 2 groups, small n | normality, equal variance |
-| ANOVA | difference in ≥3 means | ≥3 groups | normality, equal variance |
-| Chi-square | independence / fit | categorical data | expected ≥5 per cell |
-
-### Key Concepts
-- **p-value**: probability of observed data (or more extreme) given H₀ true. Threshold: typically 0.05
-- **Bayes' rule**: P(A\|B) = P(B\|A)P(A) / P(B)
-- **MLE**: find parameters that maximize likelihood of observed data
-- **Multiple testing correction**: Bonferroni (α/n), FDR (Benjamini-Hochberg) — critical for Bio (GWAS, microarrays)
-
----
-
-## 6. Rules, Laws & Theorems
-
-### <Name>
-- **Priority**: HIGH / MEDIUM / LOW
-- **Statement**: ...
-- **Conditions**: ...
+#### Rules, Laws & Theorems
+##### <Name>
+- **Statement**: full statement
+- **Conditions / Assumptions**: ...
 - **Implications**: ...
-- **Proof sketch** (if ≤5 lines): ...
+- **Proof sketch**: ...
 - **Common misapplication**: ...
 
----
+#### Edge Cases & Common Pitfalls
+- **Situation**: ... **Why it traps**: ... **How to avoid**: ... **Example**: ...
 
-## 7. Proof & Argument Patterns
+#### Case Studies & Examples
+##### <Name>
+- **What**: detailed description of the study/experiment
+- **Method**: how it was done
+- **Results**: what was found (include numbers)
+- **Significance**: why it matters
+- **Exam angle**: what a question might ask
 
-### <Pattern Name>
-- **Domain**: CS / Math / Bio / ...
-- **Structure**: (1) ... (2) ... (N) ...
-- **When to use**: ...
-- **Classic example**: ...
-- **Common mistake**: ...
-
----
-
-## 8. Key Concepts & Glossary (A–Z)
-
-- **Term**: one-line definition
-- **Term**: ...
-
----
-
-## 9. Data Structures  <!-- CS only; omit for other domains -->
-
-| Structure | Operations | Time (avg) | Time (worst) | Space | Use when |
-|---|---|---|---|---|---|
-| Array | read/write | O(1) | O(1) | O(n) | ... |
-
----
-
-## 10. Visual Reference (Text Diagrams)
-
-### <Diagram/Cycle/Architecture Name>
+#### Diagrams & Visuals
 ```
-         ┌─────┐     ┌─────┐
-Input → │  A  │ →  │  B  │ → Output
-         └─────┘     └─────┘
-           │            │
-           ▼            ▼
-         Side A       Side B
+ASCII/text diagram here
 ```
-- **Key labels**: ...
-- **Flow direction**: ...
-- **Critical junctions**: ...
+- **Labels**: ...
+- **Flow**: ...
+- **Key junctions**: ...
+
+#### End-of-Chapter Material
+- **Key terms** (reproduced from chapter): ...
+- **Review questions** (with answers): ...
+- **Exercises** (with solutions if straightforward): ...
+
+### Ch. 2 — <Title>
+... (same structure)
 
 ---
 
-## 11. Case Studies
+## Cross-Cutting Topics
 
-### <Name>
-- **Priority**: HIGH / MEDIUM / LOW
-- **Domain**: ...
-- **What**: ...
-- **Why it matters**: ...
-- **Key takeaway**: ...
-- **What to know for exam**: ...
+### Design Paradigms & Meta-Methods
+(extracted from across all chapters)
 
----
+### Proof & Argument Patterns
+(extracted from across all chapters)
 
-## 12. Common Pitfalls & Edge Cases
+### Probability & Statistics Foundation
+(extracted from across all chapters)
 
-- ❗ **Priority**: HIGH / MEDIUM / LOW
-- **Situation**: ... **Why it traps**: ... **Fix**: ...
+### Mnemonics & Memory Aids
+(extracted from across all chapters)
 
----
-
-## 13. Empirical Evidence & Key Results
-
-- **Priority**: HIGH / MEDIUM / LOW
-- **Finding**: ... **Method**: ... **Significance**: ...
+### People & Dates
+(extracted from across all chapters)
 
 ---
 
-## 14. Cross-Chapter Dependencies
-
-```mermaid
-graph LR
-  Ch2 --> Ch4
-  Ch4 --> Ch7
-  Ch7 --> Ch12
-```
-  Or text: `Ch 2 → Ch 4 → Ch 7 → Ch 12`
-
----
-
-## 15. Ethics & Professional Practice
-
-- **Topic**: ... **Key principle**: ... **Example scenario**: ... **Exam angle**: ...
-
----
-
-## 16. Mnemonics & Memory Aids
-
-- **<Hard list>**: Acronym: `...` → expansion
-- **<Recurring pattern>**: "When X happens, remember Y because Z"
-- **<Rhyme or chunk>**: ...
-
----
-
-## 17. People & Dates
-
-- **Person** (Year–Year): contribution
-
----
-
-## 18. Self-Test Templates
-
-Fill in the blanks / trace the steps from memory:
-
-### <Process/Algorithm Name> (≥5 steps)
-```
-Step 1: _____ → _____
-Step 2: _____ → _____
-...
-```
-- **Check your answer**: [refer to section 1]
-
----
-
-## 19. Exam Questions
+## Exam Questions by Type
 
 ### MCQ
 1. **Q:** ...  **A:** ...  **Distractor:** ... (why wrong)
@@ -337,64 +214,70 @@ Step 2: _____ → _____
 
 ### Diagram Label
 1. **Diagram:** <text description> **Label:** element A, element B, element C
+
+### Essay / Long-Form
+1. **Q:** ...  **Key points to include:** ..., ..., ...
 ```
 
 ### Step 6 — Verify before saving
 
 Re-read the output and check:
 - Is every chapter covered? (count must match the index)
-- Were all 16 universal primitives checked against each chapter? (no category skipped without consideration)
-- Are all process steps complete (not truncated)?
+- Were all 17 universal primitives checked against each chapter? (no category skipped without consideration)
+- For each chapter, have you extracted **all** named entities, process steps, formulas, comparisons, edge cases, case studies, and end-of-chapter material?
+- Are all process steps complete (not truncated) — could a student follow them without the original book?
 - Are formulas given with every variable defined plus units/constraints?
 - Are comparisons fair (same dimensions used across both sides)?
-- Is every extracted item tagged with a priority (HIGH / MEDIUM / LOW)?
-- Are design paradigms and meta-methods extracted (if the source covers them across multiple chapters)?
-- Are proof/argument patterns captured with structure + classic example?
-- Are case studies present with exam-relevant takeaway?
+- Are case studies described with enough detail (method, results, significance) for an essay question?
+- Is the end-of-chapter material (bold terms, review questions, exercises) fully reproduced?
+- Are design paradigms and meta-methods extracted and consolidated from across all chapters?
+- Are proof/argument patterns captured with full structure + classic example?
 - Is the probability & statistics section present (if the source uses any stats)?
-- Are self-test templates present for any process/algorithm with ≥5 steps?
 - Are ethics topics captured (if the source covers ethics)?
 - Are exam questions formatted per the user's specified exam type?
-- Is the total length under ~3000 words? (Tighten the Top-20 and remove redundant glossary entries if over)
+- **Is there any section where a reader would need to go back to the original book? If so, add more detail.**
 - Did you flag any section where the source was unclear?
 
 ## Rules
 
 - **Never invent content.** If a chapter is missing or unreadable, say so in the output.
 - **Systematic extraction is mandatory.** Run every category in the universal checklist against every chapter. Do not skip categories preemptively — let the content decide.
-- **Compress aggressively.** If a process can be 3 steps, don't write 5. If a concept can be one line, don't write two.
+- **Be comprehensive, not compressed.** Include every named entity, every process step, every formula, every comparison, every edge case. The goal is that the reader can learn solely from the study guide without needing the original book.
 - **Preserve the author's framing** for theories, definitions, and named items — paraphrase only connective tissue.
 - **Surface exam signals**: repetition, bold text, summary boxes, "key" / "important" / "remember" — these are almost always testable.
+- **Reproduce end-of-chapter material verbatim.** Bolded terms, key points boxes, review questions, and exercises are the single most exam-relevant content in any textbook. Include them fully.
 - **Generate mnemonics proactively.** If a list of 5+ items must be memorized (e.g., Big-O ordering, Krebs cycle intermediates, Kings of England), invent an acronym, rhyme, or chunk for it.
 - **Generate self-test templates for any process/algorithm with ≥5 steps.** Leave blanks for key steps, inputs, or outputs so the student can fill them from memory. Reference the answer location.
-- **Capture ethics wherever present.** If the source discusses ethics (AI safety, animal testing, informed consent, dual-use), extract it as a dedicated item — these appear on exams increasingly often.
-- **Prioritize technical content** over narrative. A single line of pseudocode or formula is worth more than three lines of explanatory prose.
-- **Respect copyright.** Do not reproduce long verbatim passages. Brief quotes (≤25 words) for definitions are fine. Pseudocode and small code snippets (≤15 lines) that are idiomatic/canonical are fine.
+- **Capture ethics wherever present.** If the source discusses ethics (AI safety, animal testing, informed consent, dual-use), extract it as a dedicated item.
+- **Prioritize technical content** over narrative. Include both the formula and the explanatory context needed to understand it.
+- **Walk through examples.** For any algorithm, formula, or process, include at least one concrete worked example with values.
+- **Respect copyright.** Do not reproduce long verbatim passages. Brief quotes (≤25 words) for definitions are fine. Pseudocode and small code snippets (≤15 lines) that are idiomatic/canonical are fine. End-of-chapter material is typically short enough to include.
 - **No filler.** No "in this chapter we learned...". No "as discussed earlier". Just the facts.
 - **Structured over prose.** Use lists, tables, ASCII diagrams, and equations. Minimize paragraphs.
+- **There is no length limit.** Do not truncate or abbreviate content to save space. If coverage of a chapter requires 200 bullets, write 200 bullets.
 
 ## Large book strategy
 
 Books over ~2000 lines must be processed in chunks:
 1. **Scan** the first 500 lines to identify structure.
 2. **Locate** all chapter headings and their line numbers.
-3. **Extract** one chapter at a time using offset/limit.
-4. **Discard** chapter text after compression — only the extracted primitive items go into the final file.
+3. **Extract** one chapter at a time using offset/limit — extract **all** examinable primitives before moving on.
+4. **Append** the extracted material to the study guide. Do not discard chapter text until you have fully extracted every primitive from it.
 
-This keeps token usage bounded and works for any book length.
+This keeps token usage bounded while still achieving comprehensive coverage for any book length.
 
-## Domain-specific extraction heuristics
+## Domain-specific attention areas
 
-When the subject is known, **bias the universal checklist** toward these patterns. The categories themselves stay the same — only the extraction depth per category shifts:
+When the subject is known, **pay extra attention** to these primitives — they tend to carry the most exam weight in that field. But still extract **all 17 categories** from every chapter; these are just the ones that are most likely to have rich content:
 
-| Domain | Deep-extract these primitives | Light-extract these |
-|---|---|---|
-| CS / Programming | Sequential Processes (algorithms), Data Structures, Comparisons (trade-offs), Formulas (Big-O), Design Paradigms (DP, greedy, divide & conquer), Proof Patterns (induction, invariants, reductions), Visuals (architectures), Edge Cases, Case Studies | People/Dates, Empirical Evidence, Ethics |
-| Biology | Sequential Processes (pathways, cycles), Hierarchies (taxonomies), Comparisons (e.g. mitosis vs meiosis), Visuals (pathway diagrams), Named Entities (species, organelles), Design Paradigms (PCR, CRISPR, sequencing), Case Studies (Mendel, Meselson-Stahl), Mnemonics, Self-Test Templates | Formulas, Edge Cases, Proof Patterns |
-| Math | Formulas, Laws/Theorems, Sequential Processes (proof patterns), Proof Patterns (induction, contradiction), Hierarchies (number systems, function classes), Comparisons | People/Dates, Empirical Evidence, Ethics |
-| Physics | Formulas, Laws/Theorems, Sequential Processes (derivations), Visuals (free-body, circuits), Edge Cases (limiting behavior), Proof Patterns | People/Dates, Hierarchies, Ethics |
-| Chemistry | Formulas (reactions), Sequential Processes (syntheses), Hierarchies (periodic trends), Visuals (mechanisms), Named Entities (compounds), Design Paradigms (spectroscopy, chromatography) | Comparisons, Empirical Evidence, Ethics |
-| Medicine | Sequential Processes (pathways, diagnostic algorithms), Hierarchies (disease classifications), Comparisons (differential diagnosis), Edge Cases (atypical presentations), Empirical Evidence (trials), Case Studies, Ethics (informed consent, animal testing) | Formulas, Visuals, Proof Patterns |
-| Engineering | Formulas (design equations), Sequential Processes (methods), Comparisons (material trade-offs), Edge Cases (failure modes), Visuals (schematics), Design Paradigms | Named Entities (light), People/Dates, Ethics |
-| Law | Rules/Laws/Theorems (doctrines), Hierarchies (court system), Comparisons (burden of proof standards), People/Dates (landmark cases), Edge Cases (exceptions), Case Studies | Formulas, Sequential Processes, Ethics |
-| History / Social Sciences | People/Dates, Sequential Processes (causation chains), Comparisons (ideologies, regimes), Hierarchies (government structures), Empirical Evidence (statistics), Case Studies, Ethics | Formulas, Visuals, Proof Patterns |
+| Domain | Especially rich in these primitives |
+|---|---|
+| CS / Programming | Sequential Processes (algorithms), Data Structures, Comparisons (trade-offs), Formulas (Big-O), Design Paradigms (DP, greedy, divide & conquer), Proof Patterns (induction, invariants, reductions), Visuals (architectures), Edge Cases, Case Studies, People/Dates, Empirical Evidence, Ethics |
+| Biology | Sequential Processes (pathways, cycles), Hierarchies (taxonomies), Comparisons (e.g. mitosis vs meiosis), Visuals (pathway diagrams), Named Entities (species, organelles), Design Paradigms (PCR, CRISPR, sequencing), Case Studies (Mendel, Meselson-Stahl), Mnemonics, Self-Test Templates, Formulas, Edge Cases, Proof Patterns |
+| Math | Formulas, Laws/Theorems, Sequential Processes (proof patterns), Proof Patterns (induction, contradiction), Hierarchies (number systems, function classes), Comparisons, People/Dates, Empirical Evidence, Ethics |
+| Physics | Formulas, Laws/Theorems, Sequential Processes (derivations), Visuals (free-body, circuits), Edge Cases (limiting behavior), Proof Patterns, People/Dates, Hierarchies, Ethics |
+| Chemistry | Formulas (reactions), Sequential Processes (syntheses), Hierarchies (periodic trends), Visuals (mechanisms), Named Entities (compounds), Design Paradigms (spectroscopy, chromatography), Comparisons, Empirical Evidence, Ethics |
+| Medicine | Sequential Processes (pathways, diagnostic algorithms), Hierarchies (disease classifications), Comparisons (differential diagnosis), Edge Cases (atypical presentations), Empirical Evidence (trials), Case Studies, Ethics (informed consent, animal testing), Formulas, Visuals, Proof Patterns |
+| Engineering | Formulas (design equations), Sequential Processes (methods), Comparisons (material trade-offs), Edge Cases (failure modes), Visuals (schematics), Design Paradigms, Named Entities, People/Dates, Ethics |
+| Law | Rules/Laws/Theorems (doctrines), Hierarchies (court system), Comparisons (burden of proof standards), People/Dates (landmark cases), Edge Cases (exceptions), Case Studies, Formulas, Sequential Processes, Ethics |
+| History / Social Sciences | People/Dates, Sequential Processes (causation chains), Comparisons (ideologies, regimes), Hierarchies (government structures), Empirical Evidence (statistics), Case Studies, Ethics, Formulas, Visuals, Proof Patterns |
