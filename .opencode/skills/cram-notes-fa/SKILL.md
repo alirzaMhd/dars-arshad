@@ -42,7 +42,9 @@ If they provide no path, ask once. Never invent book content.
 
 ## Output Length Preference
 
-Before starting, ask the user: **"How many lines would you like the study guide to be approximately?"** Offer these options:
+Before asking, count the total number of lines in the book file (e.g., `wc -l <book>.txt`) and tell the user: **"The book is approximately <N> lines long."**
+
+Then ask: **"How many lines would you like the study guide to be approximately?"** Offer these options:
 - **Comprehensive (no limit)** — extract everything (default)
 - **~2000 lines** — thorough but trimmed
 - **~1000 lines** — concise
