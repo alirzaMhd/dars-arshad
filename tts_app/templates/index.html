@@ -4,372 +4,581 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kokoro TTS PDF Reader</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
+  :root { --bg: #0f0f1a; --surface: #1a1a2e; --border: #2a2a4a; --text: #e0e0e0; --muted: #888; --accent: #7c3aed; --accent-light: #a78bfa; --success: #4ade80; --danger: #dc2626; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
-  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-  h1 { text-align: center; margin-bottom: 8px; font-size: 1.8rem; color: #a78bfa; }
-  .subtitle { text-align: center; margin-bottom: 24px; color: #888; font-size: 0.9rem; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+  
+  .hidden { display: none !important; }
 
-  .card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  /* Toolbar */
+  .toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .toolbar .brand { font-weight: 700; color: var(--accent-light); font-size: 1.1rem; white-space: nowrap; }
+  .toolbar .sep { width: 1px; height: 28px; background: var(--border); }
+  .toolbar .file-name { color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .toolbar button, .toolbar select { background: #252545; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
+  .toolbar button:hover { background: #30305a; }
+  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .toolbar select { padding: 5px 8px; }
+  .toolbar label { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
 
-  .upload-zone { border: 2px dashed #3a3a5a; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
-  .upload-zone:hover, .upload-zone.dragover { border-color: #a78bfa; background: #1e1e3a; }
-  .upload-zone.has-file { border-color: #4ade80; }
-  .upload-zone input { display: none; }
-  .upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
-  .upload-zone .filename { color: #4ade80; margin-top: 8px; font-weight: 500; }
+  .btn-primary { background: var(--accent) !important; color: white !important; }
+  .btn-primary:hover { background: #6d28d9 !important; }
+  .btn-success { background: #059669 !important; color: white !important; }
+  .btn-success:hover { background: #047857 !important; }
+  .btn-danger { background: var(--danger) !important; color: white !important; }
 
-  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .controls select, .controls input { background: #252545; color: #e0e0e0; border: 1px solid #3a3a5a; border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; }
-  .controls select { flex: 1; min-width: 150px; }
-  .controls input[type="range"] { flex: 1; min-width: 100px; accent-color: #a78bfa; }
-  .controls label { font-size: 0.85rem; color: #aaa; }
+  /* Main layout */
+  .main { display: flex; height: calc(100vh - 53px); }
+  .pdf-viewer { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 20px; position: relative; transition: background 0.3s; }
+  .pdf-viewer.dark { background: #0a0a12; }
+  .pdf-viewer:not(.dark) { background: #525252; }
+  .pdf-viewer canvas { box-shadow: 0 2px 20px rgba(0,0,0,0.3); border-radius: 2px; }
 
-  .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-  .btn-primary { background: #7c3aed; color: white; }
-  .btn-primary:hover { background: #6d28d9; }
-  .btn-primary:disabled { background: #4a4a6a; color: #888; cursor: not-allowed; }
-  .btn-success { background: #059669; color: white; }
-  .btn-success:hover { background: #047857; }
-  .btn-danger { background: #dc2626; color: white; }
-  .btn-danger:hover { background: #b91c1c; }
-  .btn-outline { background: transparent; border: 1px solid #3a3a5a; color: #e0e0e0; }
-  .btn-outline:hover { border-color: #a78bfa; }
+  /* Audio reader panel */
+  .reader-panel { width: 0; overflow: hidden; background: var(--surface); border-left: 1px solid var(--border); transition: width 0.3s ease; display: flex; flex-direction: column; }
+  .reader-panel.open { width: 420px; min-width: 320px; }
+  .reader-panel .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .reader-panel .panel-header h3 { font-size: 0.95rem; color: var(--accent-light); }
+  .reader-panel .panel-header span { font-size: 0.8rem; color: var(--muted); }
+  .reader-panel .panel-controls { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .reader-panel .panel-controls button { background: #252545; border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px; color: var(--text); cursor: pointer; font-size: 0.85rem; }
+  .reader-panel .panel-controls button:hover { background: #30305a; }
+  .reader-panel .panel-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+  
+  .reader-panel .progress-row { padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .reader-panel .progress-row .progress-bar { height: 4px; background: #2a2a4a; border-radius: 2px; overflow: hidden; }
+  .reader-panel .progress-row .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); width: 0%; transition: width 0.3s; }
+  .reader-panel .progress-row .progress-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
 
-  .progress-bar { width: 100%; height: 4px; background: #2a2a4a; border-radius: 2px; margin: 12px 0; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a78bfa); width: 0%; transition: width 0.3s; }
-  .progress-text { font-size: 0.85rem; color: #888; text-align: center; }
+  .reader-panel .paragraphs { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .reader-panel .paragraphs .para { padding: 10px 14px; margin: 4px 0; border-radius: 8px; font-size: 0.92rem; line-height: 1.7; color: #999; transition: all 0.2s; border-left: 3px solid transparent; }
+  .reader-panel .paragraphs .para.active { color: var(--text); background: #7c3aed22; border-left-color: var(--accent-light); }
+  .reader-panel .paragraphs .para.done { color: #555; }
+  .reader-panel .paragraphs .para .page-label { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 2px; }
 
-  .reader-area { margin-top: 20px; }
-  .reader-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .reader-controls { display: flex; gap: 8px; align-items: center; }
+  /* Upload overlay */
+  .upload-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .upload-overlay.hidden { display: none; }
+  .upload-box { background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; padding: 60px 40px; text-align: center; max-width: 500px; width: 90%; cursor: pointer; transition: all 0.3s; }
+  .upload-box:hover, .upload-box.dragover { border-color: var(--accent-light); background: #1e1e3a; }
+  .upload-box .icon { font-size: 56px; margin-bottom: 16px; }
+  .upload-box h2 { margin-bottom: 8px; color: var(--accent-light); }
+  .upload-box p { color: var(--muted); font-size: 0.9rem; }
+  .upload-box input { display: none; }
 
-  .text-display { background: #12121e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 20px; max-height: 500px; overflow-y: auto; font-size: 1rem; line-height: 1.8; }
-  .text-display .line { padding: 2px 8px; border-radius: 4px; transition: all 0.15s; margin: 1px 0; }
-  .text-display .line.active { background: #7c3aed55; border-left: 3px solid #a78bfa; }
-  .text-display .line.played { color: #666; }
-  .text-display .segment-divider { height: 1px; background: #2a2a4a; margin: 8px 0; }
+  /* Loading spinner */
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent-light); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .timeline { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-  .timeline input[type="range"] { flex: 1; accent-color: #a78bfa; }
-  .timeline span { font-size: 0.85rem; color: #888; min-width: 80px; }
+  .generating-indicator { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.8rem; }
 
-  .status { text-align: center; color: #888; font-size: 0.9rem; margin: 8px 0; }
-  .status.error { color: #f87171; }
-  .status.success { color: #4ade80; }
-
-  @media (max-width: 600px) {
-    .container { padding: 12px; }
-    .card { padding: 16px; }
-    .controls { flex-direction: column; }
-    .controls select, .controls input[type="range"] { width: 100%; }
+  @media (max-width: 768px) {
+    .reader-panel.open { width: 100% !important; position: fixed; inset: 0; z-index: 500; }
+    .pdf-viewer { display: none; }
+    .reader-panel.open ~ .pdf-viewer { display: none; }
+    .toolbar { font-size: 0.8rem; gap: 6px; }
+    .toolbar .brand { font-size: 0.9rem; }
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Kokoro TTS PDF Reader</h1>
-  <p class="subtitle">Upload a PDF, and listen to it read aloud with line-by-line highlighting</p>
 
-  <div class="card">
-    <div class="upload-zone" id="uploadZone">
-      <div class="icon">📄</div>
-      <p>Drop a PDF here or click to browse</p>
-      <p style="font-size:0.85rem;color:#888;margin-top:8px">Maximum file size: 50MB</p>
-      <input type="file" id="fileInput" accept=".pdf">
-      <div class="filename" id="fileName" style="display:none"></div>
-    </div>
+<!-- Upload Overlay -->
+<div class="upload-overlay" id="uploadOverlay">
+  <div class="upload-box" id="uploadBox">
+    <div class="icon">📄</div>
+    <h2>Upload a PDF</h2>
+    <p>Drop your PDF here or click to browse</p>
+    <p style="font-size:0.8rem;margin-top:8px;color:#666">The PDF will be read aloud paragraph by paragraph</p>
+    <input type="file" id="fileInput" accept=".pdf">
   </div>
+</div>
 
-  <div class="card" id="configCard" style="display:none">
-    <div class="controls">
-      <select id="voiceSelect">
-        <option value="af_heart">❤️ af_heart (Female, warm)</option>
-        <option value="af_bella">af_bella (Female)</option>
-        <option value="af_sarah">af_sarah (Female)</option>
-        <option value="af_sky">af_sky (Female)</option>
-        <option value="af_nicole">af_nicole (Female)</option>
-        <option value="af_alloy">af_alloy (Female)</option>
-        <option value="af_aoede">af_aoede (Female)</option>
-        <option value="af_jessica">af_jessica (Female)</option>
-        <option value="af_kore">af_kore (Female)</option>
-        <option value="af_nova">af_nova (Female)</option>
-        <option value="af_river">af_river (Female)</option>
-        <option value="am_adam">am_adam (Male)</option>
-        <option value="am_echo">am_echo (Male)</option>
-        <option value="am_eric">am_eric (Male)</option>
-        <option value="am_fenrir">am_fenrir (Male)</option>
-        <option value="am_liam">am_liam (Male)</option>
-        <option value="am_michael">am_michael (Male)</option>
-        <option value="am_onyx">am_onyx (Male)</option>
-        <option value="am_puck">am_puck (Male)</option>
-        <option value="am_santa">am_santa (Male)</option>
-      </select>
-      <label>
-        Speed: <span id="speedLabel">1.0</span>x
-        <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
-      </label>
-      <button class="btn btn-primary" id="generateBtn">Generate Audio</button>
-    </div>
-    <div class="progress-bar" id="progressBar" style="display:none"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="progress-text" id="progressText"></div>
+<!-- Toolbar -->
+<div class="toolbar" id="toolbar">
+  <span class="brand">Kokoro Reader</span>
+  <span class="sep"></span>
+  <span class="file-name" id="fileName">No file</span>
+  <span class="sep"></span>
+  <button id="prevPageBtn" title="Previous page">◀</button>
+  <label><span id="pageInfo">- / -</span></label>
+  <button id="nextPageBtn" title="Next page">▶</button>
+  <span class="sep"></span>
+  <button id="zoomOutBtn" title="Zoom out">🔍−</button>
+  <label> <span id="zoomLabel">100</span>% </label>
+  <button id="zoomInBtn" title="Zoom in">🔍+</button>
+  <button id="fitPageBtn" title="Fit to width">⊞</button>
+  <span class="sep"></span>
+  <button id="darkToggle" title="Toggle dark mode">🌙</button>
+  <span class="sep" id="configSep"></span>
+  <select id="voiceSelect" style="display:none">
+    <option value="af_heart">af_heart (warm)</option>
+    <option value="af_bella">af_bella</option>
+    <option value="af_sarah">af_sarah</option>
+    <option value="af_sky">af_sky</option>
+    <option value="af_nicole">af_nicole</option>
+    <option value="af_alloy">af_alloy</option>
+    <option value="am_adam">am_adam (male)</option>
+    <option value="am_echo">am_echo (male)</option>
+    <option value="am_liam">am_liam (male)</option>
+    <option value="am_michael">am_michael (male)</option>
+    <option value="am_onyx">am_onyx (male)</option>
+  </select>
+  <label style="display:none" id="speedLabel">Speed: <span id="speedVal">1.0</span>x
+    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width:60px;vertical-align:middle">
+  </label>
+  <button class="btn-primary" id="readAloudBtn" style="display:none">🎧 Read Aloud</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="pdf-viewer dark" id="pdfViewer">
+    <canvas id="pdfCanvas"></canvas>
   </div>
-
-  <div class="card reader-area" id="readerCard" style="display:none">
-    <div class="reader-header">
-      <span id="readerTitle">Reader</span>
-      <div class="reader-controls">
-        <button class="btn btn-outline" id="playBtn">▶ Play</button>
-        <button class="btn btn-outline" id="pauseBtn" disabled>⏸ Pause</button>
-        <button class="btn btn-outline" id="stopBtn">⏹ Stop</button>
-      </div>
+  <div class="reader-panel" id="readerPanel">
+    <div class="panel-header">
+      <h3>📖 Audio Reader</h3>
+      <span id="panelPageInfo">Page 1</span>
     </div>
-    <div class="text-display" id="textDisplay"></div>
-    <div class="timeline">
-      <span id="timeCurrent">0:00</span>
-      <input type="range" id="segmentSlider" min="0" max="0" value="0">
-      <span id="timeTotal">0:00</span>
+    <div class="panel-controls" id="panelControls">
+      <button id="playBtn">▶ Play</button>
+      <button id="pauseBtn" disabled>⏸ Pause</button>
+      <button id="stopBtn">⏹ Stop</button>
+      <div class="generating-indicator hidden" id="genIndicator"><span class="spinner"></span> <span id="genText">Generating...</span></div>
     </div>
-    <div class="status" id="status"></div>
+    <div class="progress-row">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-info"><span id="timeCurrent">0:00</span><span id="segInfo">0/0</span><span id="timeTotal">0:00</span></div>
+    </div>
+    <div class="paragraphs" id="paragraphsContainer">
+      <div style="color:var(--muted);text-align:center;padding:40px 20px">Click "Read Aloud" on a page to start listening</div>
+    </div>
   </div>
 </div>
 
 <script>
-const uploadZone = document.getElementById('uploadZone');
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const uploadBox = document.getElementById('uploadBox');
 const fileInput = document.getElementById('fileInput');
+const uploadOverlay = document.getElementById('uploadOverlay');
 const fileName = document.getElementById('fileName');
-const configCard = document.getElementById('configCard');
+const pdfViewer = document.getElementById('pdfViewer');
+const canvas = document.getElementById('pdfCanvas');
+const ctx = canvas.getContext('2d');
+const pageInfo = document.getElementById('pageInfo');
+const prevPageBtn = document.getElementById('prevPageBtn');
+const nextPageBtn = document.getElementById('nextPageBtn');
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomLabel = document.getElementById('zoomLabel');
+const fitPageBtn = document.getElementById('fitPageBtn');
+const darkToggle = document.getElementById('darkToggle');
 const voiceSelect = document.getElementById('voiceSelect');
 const speedSlider = document.getElementById('speedSlider');
+const speedVal = document.getElementById('speedVal');
 const speedLabel = document.getElementById('speedLabel');
-const generateBtn = document.getElementById('generateBtn');
-const progressBar = document.getElementById('progressBar');
-const progressFill = document.getElementById('progressFill');
-const progressText = document.getElementById('progressText');
-const readerCard = document.getElementById('readerCard');
-const readerTitle = document.getElementById('readerTitle');
-const textDisplay = document.getElementById('textDisplay');
+const readAloudBtn = document.getElementById('readAloudBtn');
+const configSep = document.getElementById('configSep');
+const readerPanel = document.getElementById('readerPanel');
+const panelPageInfo = document.getElementById('panelPageInfo');
 const playBtn = document.getElementById('playBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const stopBtn = document.getElementById('stopBtn');
-const segmentSlider = document.getElementById('segmentSlider');
+const paragraphsContainer = document.getElementById('paragraphsContainer');
+const progressFill = document.getElementById('progressFill');
 const timeCurrent = document.getElementById('timeCurrent');
 const timeTotal = document.getElementById('timeTotal');
-const status = document.getElementById('status');
+const segInfo = document.getElementById('segInfo');
+const genIndicator = document.getElementById('genIndicator');
+const genText = document.getElementById('genText');
 
 let sessionId = null;
+let pdfDoc = null;
+let currentPage = 1;
+let scale = 1.5;
+let isDark = true;
+
 let segments = [];
 let currentSegIdx = 0;
 let audioEl = null;
 let isPlaying = false;
 let isPaused = false;
+let autoAdvance = true;
+let prefetching = false;
+let generatingPage = false;
 
-uploadZone.addEventListener('click', () => fileInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('dragover');
+// Upload handlers
+uploadBox.addEventListener('click', () => fileInput.click());
+uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('dragover'); });
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); uploadBox.classList.remove('dragover');
   if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
-speedSlider.addEventListener('input', () => {
-  speedLabel.textContent = parseFloat(speedSlider.value).toFixed(1);
-});
-
 async function handleFile(file) {
-  if (!file.name.endsWith('.pdf')) {
-    setStatus('Please select a PDF file', 'error');
-    return;
-  }
-  fileName.textContent = `✅ ${file.name}`;
-  fileName.style.display = 'block';
-  uploadZone.classList.add('has-file');
-  configCard.style.display = 'block';
-  readerCard.style.display = 'none';
-  setStatus('Uploading PDF...', '');
-
+  if (!file.name.endsWith('.pdf')) return alert('Please select a PDF file');
+  
   const formData = new FormData();
   formData.append('file', file);
+  
   try {
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
     const data = await res.json();
-    if (data.error) { setStatus(data.error, 'error'); return; }
+    if (data.error) { alert(data.error); return; }
+    
     sessionId = data.session_id;
-    setStatus(`Uploaded! ${data.total_lines} lines extracted. Click "Generate Audio".`, 'success');
+    fileName.textContent = data.filename;
+    uploadOverlay.classList.add('hidden');
+    
+    // Show config controls
+    voiceSelect.style.display = '';
+    speedLabel.style.display = '';
+    configSep.style.display = '';
+    readAloudBtn.style.display = '';
+    
+    // Load PDF
+    const pdfRes = await fetch(`/api/pdf/${sessionId}`);
+    const pdfBlob = await pdfRes.blob();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    
+    pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+    currentPage = 1;
+    renderPage();
+    
+    // Enable navigation
+    updateNavButtons();
+    
+    // Set reader panel header
+    panelPageInfo.textContent = `Page 1 of ${pdfDoc.numPages}`;
+    
   } catch(e) {
-    setStatus('Upload failed: ' + e.message, 'error');
+    alert('Upload failed: ' + e.message);
   }
 }
 
-generateBtn.addEventListener('click', async () => {
-  if (!sessionId) { setStatus('Upload a PDF first', 'error'); return; }
-  generateBtn.disabled = true;
-  progressBar.style.display = 'block';
-  progressFill.style.width = '0%';
-  setStatus('Generating audio... this may take a while.', '');
+async function renderPage() {
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(currentPage);
+  const viewport = page.getViewport({ scale });
+  
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  
+  const renderContext = { canvasContext: ctx, viewport };
+  await page.render(renderContext).promise;
+  
+  pageInfo.textContent = `${currentPage} / ${pdfDoc.numPages}`;
+  updateNavButtons();
+  panelPageInfo.textContent = `Page ${currentPage} of ${pdfDoc.numPages}`;
+}
+
+function updateNavButtons() {
+  if (!pdfDoc) return;
+  prevPageBtn.disabled = currentPage <= 1;
+  nextPageBtn.disabled = currentPage >= pdfDoc.numPages;
+}
+
+// Navigation
+prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); resetReader(); }});
+nextPageBtn.addEventListener('click', () => { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(); resetReader(); }});
+
+// Zoom
+zoomInBtn.addEventListener('click', () => { scale = Math.min(5, scale + 0.25); zoomLabel.textContent = Math.round(scale * 100 / 1.5); renderPage(); });
+zoomOutBtn.addEventListener('click', () => { scale = Math.max(0.25, scale - 0.25); zoomLabel.textContent = Math.round(scale * 100 / 1.5); renderPage(); });
+fitPageBtn.addEventListener('click', () => {
+  if (!pdfDoc) return;
+  const vp = pdfViewer.getBoundingClientRect();
+  scale = (vp.width - 80) / 612; // US Letter width points
+  zoomLabel.textContent = Math.round(scale * 100 / 1.5);
+  renderPage();
+});
+
+// Dark mode toggle
+darkToggle.addEventListener('click', () => {
+  isDark = !isDark;
+  pdfViewer.classList.toggle('dark', isDark);
+  pdfViewer.classList.toggle('light', !isDark);
+  darkToggle.textContent = isDark ? '🌙' : '☀️';
+});
+
+// Speed slider
+speedSlider.addEventListener('input', () => {
+  speedVal.textContent = parseFloat(speedSlider.value).toFixed(1);
+});
+
+// ─── Audio Reader ───
+
+readAloudBtn.addEventListener('click', async () => {
+  if (!sessionId || !pdfDoc) return;
+  readerPanel.classList.add('open');
+  generatingPage = true;
+  genIndicator.classList.remove('hidden');
+  genText.textContent = `Generating page ${currentPage}...`;
 
   try {
-    const res = await fetch('/api/generate', {
+    const res = await fetch('/api/generate-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, voice: voiceSelect.value, speed: parseFloat(speedSlider.value) })
+      body: JSON.stringify({
+        session_id: sessionId,
+        page_num: currentPage - 1,
+        voice: voiceSelect.value,
+        speed: parseFloat(speedSlider.value)
+      })
     });
     const data = await res.json();
-    if (data.error) { setStatus(data.error, 'error'); generateBtn.disabled = false; return; }
-
+    if (data.error) { genIndicator.classList.add('hidden'); alert(data.error); return; }
+    
     segments = data.segments;
-    progressFill.style.width = '100%';
-    setStatus(`Audio generated! ${segments.length} segments ready.`, 'success');
-    renderReader();
-    readerCard.style.display = 'block';
+    generatingPage = false;
+    genIndicator.classList.add('hidden');
+    
+    renderParagraphs();
+    
+    // Start prefetching next pages in background
+    prefetchNextPages();
+    
+    // Auto-play
+    currentSegIdx = 0;
+    playSegment(0);
+    
   } catch(e) {
-    setStatus('Generation failed: ' + e.message, 'error');
+    genIndicator.classList.add('hidden');
+    alert('Generation failed: ' + e.message);
   }
-  generateBtn.disabled = false;
 });
 
-function renderReader() {
-  textDisplay.innerHTML = '';
+function renderParagraphs() {
+  paragraphsContainer.innerHTML = '';
   segments.forEach((seg, idx) => {
     const div = document.createElement('div');
-    div.id = `seg-${idx}`;
-    div.dataset.segIndex = idx;
-    seg.lines.forEach((line, li) => {
-      const lineDiv = document.createElement('div');
-      lineDiv.className = 'line';
-      lineDiv.id = `line-${idx}-${li}`;
-      lineDiv.textContent = line.text;
-      div.appendChild(lineDiv);
+    div.className = 'para';
+    div.id = `para-${idx}`;
+    div.textContent = seg.text;
+    div.addEventListener('click', () => {
+      if (audioEl) { audioEl.pause(); audioEl = null; }
+      currentSegIdx = idx;
+      playSegment(idx);
     });
-    if (idx < segments.length - 1) {
-      const hr = document.createElement('div');
-      hr.className = 'segment-divider';
-      div.appendChild(hr);
-    }
-    textDisplay.appendChild(div);
+    paragraphsContainer.appendChild(div);
   });
-
-  segmentSlider.max = segments.length - 1;
-  segmentSlider.value = 0;
-  updateTimeDisplay();
-
-  readerTitle.textContent = `Reader (${segments.length} segments)`;
+  segInfo.textContent = `0/${segments.length}`;
 }
 
-segmentSlider.addEventListener('input', () => {
-  if (!audioEl) return;
-  const idx = parseInt(segmentSlider.value);
-  if (idx !== currentSegIdx) {
-    if (audioEl) { audioEl.pause(); audioEl = null; }
-    currentSegIdx = idx;
-    highlightSegment(idx);
-    playSegment(idx);
-  }
-});
-
-playBtn.addEventListener('click', () => {
-  if (segments.length === 0) return;
-  if (isPaused && audioEl) {
-    audioEl.play();
-    isPlaying = true;
-    isPaused = false;
-    playBtn.disabled = true;
-    pauseBtn.disabled = false;
+function playSegment(idx) {
+  if (idx >= segments.length) {
+    // Page done - auto advance
+    if (autoAdvance && pdfDoc && currentPage < pdfDoc.numPages) {
+      advanceToNextPage();
+    } else {
+      stopReading();
+    }
     return;
   }
-  playSegment(currentSegIdx);
+  
+  const seg = segments[idx];
+  if (!seg) return;
+  
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  
+  // Create audio element with cache-busting for fresh generation
+  audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
+  audioEl.playbackRate = parseFloat(speedSlider.value);
+  
+  audioEl.play().catch(e => {
+    console.log('Play error:', e);
+  });
+  
+  isPlaying = true;
+  isPaused = false;
+  currentSegIdx = idx;
+  updatePlayButtons();
+  highlightParagraph(idx);
+  updateProgress();
+  
+  audioEl.addEventListener('ended', () => {
+    playSegment(idx + 1);
+  });
+  
+  audioEl.addEventListener('error', () => {
+    console.log('Audio error, skipping');
+    playSegment(idx + 1);
+  });
+}
+
+function highlightParagraph(idx) {
+  document.querySelectorAll('.para.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.para.done').forEach(el => el.classList.remove('done'));
+  
+  const active = document.getElementById(`para-${idx}`);
+  if (active) {
+    active.classList.add('active');
+    active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  
+  // Mark previous as done
+  for (let i = 0; i < idx; i++) {
+    const el = document.getElementById(`para-${i}`);
+    if (el) el.classList.add('done');
+  }
+}
+
+function updateProgress() {
+  if (segments.length === 0) return;
+  const pct = ((currentSegIdx) / segments.length) * 100;
+  progressFill.style.width = pct + '%';
+  segInfo.textContent = `${currentSegIdx}/${segments.length}`;
+  
+  // Time
+  let elapsed = 0, total = 0;
+  segments.forEach((s, i) => {
+    if (i < currentSegIdx) elapsed += s.duration || 0;
+    total += s.duration || 0;
+  });
+  timeCurrent.textContent = formatTime(elapsed);
+  timeTotal.textContent = formatTime(total);
+}
+
+function updatePlayButtons() {
+  playBtn.disabled = isPlaying && !isPaused;
+  pauseBtn.disabled = !isPlaying || isPaused;
+}
+
+playBtn.addEventListener('click', () => {
+  if (isPaused && audioEl) {
+    audioEl.play();
+    isPlaying = true; isPaused = false;
+    updatePlayButtons();
+    return;
+  }
+  if (segments.length > 0) playSegment(currentSegIdx);
 });
 
 pauseBtn.addEventListener('click', () => {
   if (audioEl) {
     audioEl.pause();
-    isPaused = true;
-    isPlaying = false;
-    playBtn.disabled = false;
-    pauseBtn.disabled = true;
+    isPaused = true; isPlaying = false;
+    updatePlayButtons();
   }
 });
 
-stopBtn.addEventListener('click', () => {
+stopBtn.addEventListener('click', stopReading);
+
+function stopReading() {
   if (audioEl) { audioEl.pause(); audioEl = null; }
-  isPlaying = false;
-  isPaused = false;
+  isPlaying = false; isPaused = false;
   currentSegIdx = 0;
-  segmentSlider.value = 0;
-  playBtn.disabled = false;
-  pauseBtn.disabled = true;
-  clearHighlights();
-  updateTimeDisplay();
-});
+  updatePlayButtons();
+  progressFill.style.width = '0%';
+  timeCurrent.textContent = '0:00';
+  segInfo.textContent = `0/${segments.length}`;
+  document.querySelectorAll('.para.active, .para.done').forEach(el => el.classList.remove('active', 'done'));
+}
 
-function playSegment(idx) {
-  if (idx >= segments.length) {
-    setStatus('Finished reading!', 'success');
-    isPlaying = false;
-    playBtn.disabled = false;
-    pauseBtn.disabled = true;
-    return;
-  }
-  const seg = segments[idx];
-  if (!seg) return;
-
+function resetReader() {
   if (audioEl) { audioEl.pause(); audioEl = null; }
-
-  audioEl = new Audio(seg.audio_url);
-  audioEl.playbackRate = parseFloat(speedSlider.value);
-  audioEl.play();
-  isPlaying = true;
-  isPaused = false;
-  playBtn.disabled = true;
-  pauseBtn.disabled = false;
-
-  highlightSegment(idx);
-
-  audioEl.addEventListener('ended', () => {
-    currentSegIdx = idx + 1;
-    segmentSlider.value = currentSegIdx;
-    updateTimeDisplay();
-    playSegment(currentSegIdx);
-  });
-
-  audioEl.addEventListener('timeupdate', () => {
-    if (audioEl && audioEl.duration) {
-      seg.currentTime = audioEl.currentTime;
-      updateTimeDisplay();
-    }
-  });
-
-  audioEl.addEventListener('error', () => {
-    setStatus('Audio playback error, skipping...', 'error');
-    currentSegIdx = idx + 1;
-    segmentSlider.value = currentSegIdx;
-    playSegment(currentSegIdx);
-  });
+  isPlaying = false; isPaused = false;
+  currentSegIdx = 0;
+  segments = [];
+  paragraphsContainer.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px 20px">Click "Read Aloud" on a page to start listening</div>';
+  progressFill.style.width = '0%';
+  timeCurrent.textContent = '0:00';
+  segInfo.textContent = '0/0';
+  timeTotal.textContent = '0:00';
+  updatePlayButtons();
 }
 
-function highlightSegment(idx) {
-  document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
-  const segEl = document.getElementById(`seg-${idx}`);
-  if (segEl) {
-    segEl.querySelectorAll('.line').forEach(el => el.classList.add('active'));
-    segEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+async function advanceToNextPage() {
+  currentPage++;
+  await renderPage();
+  resetReader();
+  readerPanel.classList.add('open');
+  
+  // Check if next page is already generated
+  try {
+    const statusRes = await fetch(`/api/page-status/${sessionId}/${currentPage - 1}`);
+    const statusData = await statusRes.json();
+    
+    if (statusData.status === 'ready') {
+      // Load existing
+      const res = await fetch('/api/generate-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          page_num: currentPage - 1,
+          voice: voiceSelect.value,
+          speed: parseFloat(speedSlider.value)
+        })
+      });
+      const data = await res.json();
+      if (!data.error) {
+        segments = data.segments;
+        renderParagraphs();
+        prefetchNextPages();
+        currentSegIdx = 0;
+        playSegment(0);
+        return;
+      }
+    }
+    
+    // Need to generate
+    generatingPage = true;
+    genIndicator.classList.remove('hidden');
+    genText.textContent = `Generating page ${currentPage}...`;
+    
+    const res = await fetch('/api/generate-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        page_num: currentPage - 1,
+        voice: voiceSelect.value,
+        speed: parseFloat(speedSlider.value)
+      })
+    });
+    const data = await res.json();
+    if (!data.error) {
+      segments = data.segments;
+      generatingPage = false;
+      genIndicator.classList.add('hidden');
+      renderParagraphs();
+      prefetchNextPages();
+      currentSegIdx = 0;
+      playSegment(0);
+    }
+  } catch(e) {
+    console.log('Auto-advance error:', e);
   }
 }
 
-function clearHighlights() {
-  document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
-}
-
-function updateTimeDisplay() {
-  const total = segments.reduce((sum, s) => sum + (s.duration || 0), 0);
-  const elapsed = segments.slice(0, currentSegIdx).reduce((sum, s) => sum + (s.duration || 0), 0);
-  timeCurrent.textContent = formatTime(elapsed);
-  timeTotal.textContent = formatTime(total);
+async function prefetchNextPages() {
+  if (prefetching || !sessionId || !pdfDoc) return;
+  prefetching = true;
+  
+  try {
+    await fetch('/api/generate-next-pages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        current_page: currentPage - 1,
+        voice: voiceSelect.value,
+        speed: parseFloat(speedSlider.value),
+        n_ahead: 3
+      })
+    });
+  } catch(e) {
+    console.log('Prefetch error:', e);
+  }
+  prefetching = false;
 }
 
 function formatTime(secs) {
@@ -378,10 +587,18 @@ function formatTime(secs) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function setStatus(msg, type) {
-  status.textContent = msg;
-  status.className = 'status' + (type ? ' ' + type : '');
-}
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') prevPageBtn.click();
+  else if (e.key === 'ArrowRight') nextPageBtn.click();
+  else if (e.key === ' ' && e.target === document.body) {
+    e.preventDefault();
+    if (readerPanel.classList.contains('open')) {
+      if (isPlaying) pauseBtn.click();
+      else playBtn.click();
+    }
+  }
+});
 </script>
 </body>
 </html>

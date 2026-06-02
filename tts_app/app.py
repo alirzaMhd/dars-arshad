@@ -1,70 +1,156 @@
-import os
-import uuid
-import json
-import re
-import io
-import wave
+import os, uuid, json, re, threading, time, importlib
 import numpy as np
 import soundfile as sf
 import pymupdf
 import torch
-from flask import Flask, request, jsonify, send_file, render_template, url_for
+from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
 from flask_cors import CORS
-from kokoro import KPipeline
 
 app = Flask(__name__)
 CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 app.config['AUDIO_FOLDER'] = os.path.join(BASE_DIR, 'static', 'audio')
+app.config['SESSIONS_FOLDER'] = os.path.join(BASE_DIR, 'static', 'sessions')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['AUDIO_FOLDER'], exist_ok=True)
+os.makedirs(app.config['SESSIONS_FOLDER'], exist_ok=True)
 
 _pipeline = None
+_pipeline_lock = threading.Lock()
+
 def get_pipeline():
     global _pipeline
     if _pipeline is None:
-        _pipeline = KPipeline(lang_code='a')
+        with _pipeline_lock:
+            if _pipeline is None:
+                from kokoro import KPipeline
+                _pipeline = KPipeline(lang_code='a')
     return _pipeline
 
-def extract_lines(pdf_path, max_chars=300):
-    doc = pymupdf.open(pdf_path)
-    lines = []
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        blocks = page.get_text("blocks")
-        for block in blocks:
-            text = block[4].strip()
-            if not text:
-                continue
-            block_lines = text.split('\n')
-            for bl in block_lines:
-                bl = bl.strip()
-                if not bl:
-                    continue
-                lines.append({
-                    'page': page_num + 1,
-                    'text': bl
-                })
-    return lines
+if os.environ.get('PRELOAD_PIPELINE') and os.environ.get('GUNICORN_CMD_ARGS') is None:
+    t0 = time.time()
+    print('Pre-loading Kokoro pipeline...', end='', flush=True)
+    get_pipeline()
+    print(f' done ({time.time()-t0:.1f}s)')
 
-def group_lines(lines, max_chars=300):
+def get_session_dir(session_id):
+    return os.path.join(app.config['SESSIONS_FOLDER'], session_id)
+
+def load_session(session_id):
+    path = os.path.join(get_session_dir(session_id), 'session.json')
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return None
+
+def save_session(session_data):
+    d = get_session_dir(session_data['session_id'])
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, 'session.json'), 'w') as f:
+        json.dump(session_data, f)
+
+def extract_page_text(pdf_path, page_num):
+    doc = pymupdf.open(pdf_path)
+    if page_num < 0 or page_num >= len(doc):
+        return []
+    page = doc[page_num]
+    blocks = page.get_text("blocks")
+    paragraphs = []
+    for block in blocks:
+        text = block[4].strip()
+        if not text:
+            continue
+        for p in re.split(r'\n\s*\n', text):
+            p = p.strip()
+            if p:
+                paragraphs.append(p)
+    return paragraphs
+
+def split_paragraphs(paragraphs, max_chars=300):
     groups = []
-    current = []
-    current_text = ""
-    for line in lines:
-        candidate = (current_text + " " + line['text']).strip() if current_text else line['text']
-        if len(candidate) <= max_chars:
-            current.append(line)
-            current_text = candidate
+    for p in paragraphs:
+        if len(p) <= max_chars:
+            groups.append(p)
         else:
+            sentences = re.split(r'(?<=[.!?])\s+', p)
+            current = ''
+            for s in sentences:
+                if len(current) + len(s) + 1 <= max_chars:
+                    current = (current + ' ' + s).strip()
+                else:
+                    if current:
+                        groups.append(current)
+                    current = s
             if current:
-                groups.append({'lines': current, 'text': current_text})
-            current = [line]
-            current_text = line['text']
-    if current:
-        groups.append({'lines': current, 'text': current_text})
+                groups.append(current)
     return groups
+
+def generate_page_audio(session_id, page_num, voice, speed):
+    session = load_session(session_id)
+    if not session:
+        return None
+
+    pdf_path = session['pdf_path']
+    page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
+    audio_dir = os.path.join(page_dir, 'audio')
+    os.makedirs(audio_dir, exist_ok=True)
+
+    paragraphs = extract_page_text(pdf_path, page_num)
+    segments = split_paragraphs(paragraphs)
+
+    page_data = {'page': page_num, 'segments': [], 'total_segments': len(segments), 'status': 'generating'}
+
+    for idx, text in enumerate(segments):
+        audio_path = os.path.join(audio_dir, f'seg_{idx:04d}.wav')
+        audio_data = []
+        for result in get_pipeline()(text, voice=voice, speed=speed):
+            if result.audio is not None:
+                audio_data.append(result.audio)
+        if audio_data:
+            if hasattr(audio_data[0], 'cpu'):
+                full_audio = torch.cat(audio_data).cpu().numpy()
+            else:
+                full_audio = np.concatenate(audio_data)
+            sf.write(audio_path, full_audio, 24000)
+            duration = len(full_audio) / 24000
+        else:
+            duration = 0
+
+        page_data['segments'].append({
+            'index': idx,
+            'text': text,
+            'audio_url': f'/static/sessions/{session_id}/pages/{page_num}/audio/seg_{idx:04d}.wav',
+            'duration': duration
+        })
+
+    page_data['status'] = 'ready'
+    page_data_path = os.path.join(page_dir, 'page.json')
+    with open(page_data_path, 'w') as f:
+        json.dump(page_data, f)
+
+    if 'generated_pages' not in session:
+        session['generated_pages'] = {}
+    session['generated_pages'][str(page_num)] = 'ready'
+    save_session(session)
+
+    return page_data
+
+def prefetch_pages(session_id, current_page, voice, speed, n_ahead=3):
+    session = load_session(session_id)
+    if not session:
+        return
+    total = session['total_pages']
+    for p in range(current_page + 1, min(current_page + 1 + n_ahead, total)):
+        page_dir = os.path.join(get_session_dir(session_id), 'pages', str(p))
+        page_data_path = os.path.join(page_dir, 'page.json')
+        if os.path.exists(page_data_path):
+            continue
+        print(f'[prefetch] Pre-generating page {p+1}...')
+        try:
+            generate_page_audio(session_id, p, voice, speed)
+        except Exception as e:
+            print(f'[prefetch] Error on page {p+1}: {e}')
 
 @app.route('/')
 def index():
@@ -82,89 +168,121 @@ def upload_pdf():
     pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{session_id}.pdf')
     file.save(pdf_path)
 
-    raw_lines = extract_lines(pdf_path)
-    total_chars = sum(len(l['text']) for l in raw_lines)
-    total_lines = len(raw_lines)
+    doc = pymupdf.open(pdf_path)
+    total_pages = len(doc)
+    page_sizes = []
+    for i in range(total_pages):
+        rect = doc[i].rect
+        page_sizes.append({'width': rect.width, 'height': rect.height})
+    doc.close()
+
+    session = {
+        'session_id': session_id,
+        'filename': file.filename,
+        'total_pages': total_pages,
+        'pdf_path': pdf_path,
+        'page_sizes': page_sizes,
+        'generated_pages': {},
+        'current_voice': 'af_heart',
+        'current_speed': 1.0
+    }
+    save_session(session)
 
     return jsonify({
         'session_id': session_id,
-        'total_lines': total_lines,
-        'total_chars': total_chars,
-        'message': 'PDF uploaded. Proceed to generate audio.'
+        'filename': file.filename,
+        'total_pages': total_pages,
+        'page_sizes': page_sizes
     })
 
-@app.route('/api/generate', methods=['POST'])
-def generate_audio():
+@app.route('/api/session/<session_id>')
+def get_session(session_id):
+    session = load_session(session_id)
+    if not session:
+        return jsonify({'error': 'Session not found'}), 404
+    return jsonify({
+        'session_id': session['session_id'],
+        'filename': session['filename'],
+        'total_pages': session['total_pages'],
+        'page_sizes': session['page_sizes'],
+        'generated_pages': session.get('generated_pages', {})
+    })
+
+@app.route('/api/pdf/<session_id>')
+def serve_pdf(session_id):
+    session = load_session(session_id)
+    if not session:
+        return jsonify({'error': 'Session not found'}), 404
+    return send_file(session['pdf_path'], mimetype='application/pdf')
+
+@app.route('/api/generate-page', methods=['POST'])
+def generate_page():
     data = request.get_json()
     session_id = data.get('session_id')
-    if not session_id:
-        return jsonify({'error': 'No session_id'}), 400
-
+    page_num = data.get('page_num')
     voice = data.get('voice', 'af_heart')
     speed = float(data.get('speed', 1.0))
 
-    pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{session_id}.pdf')
-    if not os.path.exists(pdf_path):
-        return jsonify({'error': 'PDF not found. Upload first.'}), 400
+    if not session_id or page_num is None:
+        return jsonify({'error': 'Missing session_id or page_num'}), 400
 
-    raw_lines = extract_lines(pdf_path)
-    groups = group_lines(raw_lines, max_chars=300)
+    session = load_session(session_id)
+    if not session:
+        return jsonify({'error': 'Session not found'}), 404
 
-    segments = []
-    audio_dir = os.path.join(app.config['AUDIO_FOLDER'], session_id)
-    os.makedirs(audio_dir, exist_ok=True)
+    page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
+    page_data_path = os.path.join(page_dir, 'page.json')
+    if os.path.exists(page_data_path):
+        with open(page_data_path) as f:
+            page_data = json.load(f)
+        return jsonify(page_data)
 
-    total = len(groups)
-    for idx, group in enumerate(groups):
-        text = group['text']
-        audio_path = os.path.join(audio_dir, f'seg_{idx:04d}.wav')
+    page_data = generate_page_audio(session_id, page_num, voice, speed)
+    if page_data is None:
+        return jsonify({'error': 'Failed to generate audio'}), 500
 
-        audio_data = []
-        for result in get_pipeline()(text, voice=voice, speed=speed):
-            if result.audio is not None:
-                audio_data.append(result.audio)
-        if audio_data:
-            if hasattr(audio_data[0], 'cpu'):
-                full_audio = torch.cat(audio_data).cpu().numpy()
-            else:
-                full_audio = np.concatenate(audio_data)
-        else:
-            continue
+    threading.Thread(target=prefetch_pages, args=(session_id, page_num, voice, speed), daemon=True).start()
 
-        sf.write(audio_path, full_audio, 24000)
-        duration = len(full_audio) / 24000
+    return jsonify(page_data)
 
-        seg_lines = [{'page': l['page'], 'text': l['text']} for l in group['lines']]
-        segments.append({
-            'index': idx,
-            'text': text,
-            'lines': seg_lines,
-            'audio_url': f'/static/audio/{session_id}/seg_{idx:04d}.wav',
-            'duration': duration
-        })
+@app.route('/api/page-status/<session_id>/<int:page_num>')
+def page_status(session_id, page_num):
+    page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
+    page_data_path = os.path.join(page_dir, 'page.json')
+    if os.path.exists(page_data_path):
+        with open(page_data_path) as f:
+            data = json.load(f)
+        return jsonify({'status': data['status'], 'total_segments': data['total_segments']})
+    return jsonify({'status': 'not_generated', 'total_segments': 0})
 
-    manifest = {'session_id': session_id, 'segments': segments, 'total_segments': len(segments)}
-    manifest_path = os.path.join(audio_dir, 'manifest.json')
-    with open(manifest_path, 'w') as f:
-        json.dump(manifest, f)
+@app.route('/api/generate-next-pages', methods=['POST'])
+def generate_next_pages():
+    data = request.get_json()
+    session_id = data.get('session_id')
+    current_page = data.get('current_page')
+    voice = data.get('voice', 'af_heart')
+    speed = float(data.get('speed', 1.0))
+    n_ahead = int(data.get('n_ahead', 3))
 
-    return jsonify(manifest)
-
-@app.route('/api/load/<session_id>')
-def load_session(session_id):
-    manifest_path = os.path.join(app.config['AUDIO_FOLDER'], session_id, 'manifest.json')
-    if os.path.exists(manifest_path):
-        with open(manifest_path) as f:
-            return jsonify(json.load(f))
-    return jsonify({'error': 'Session not found'}), 404
+    threading.Thread(target=prefetch_pages, args=(session_id, current_page, voice, speed, n_ahead), daemon=True).start()
+    return jsonify({'status': 'prefetch_started'})
 
 @app.route('/api/voices')
 def list_voices():
-    voices = [
-        'af_heart','af_bella','af_sarah','af_sky','af_nicole','af_alloy','af_aoede','af_jessica','af_kore','af_nova','af_river',
-        'am_adam','am_echo','am_eric','am_fenrir','am_liam','am_michael','am_onyx','am_puck','am_santa',
-    ]
-    return jsonify(voices)
+    return jsonify([
+        'af_heart','af_bella','af_sarah','af_sky','af_nicole',
+        'af_alloy','af_aoede','af_jessica','af_kore','af_nova','af_river',
+        'am_adam','am_echo','am_eric','am_fenrir','am_liam','am_michael',
+        'am_onyx','am_puck','am_santa',
+    ])
+
+@app.route('/static/sessions/<path:filename>')
+def serve_session_file(filename):
+    return send_from_directory(app.config['SESSIONS_FOLDER'], filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8081, debug=False)
+    app.run(host='0.0.0.0', port=8081, debug=False, threaded=True)
+
+def create_app():
+    import flask
+    return app
