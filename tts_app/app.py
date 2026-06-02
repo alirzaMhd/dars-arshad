@@ -59,7 +59,57 @@ def extract_page_text(pdf_path, page_num):
             p = p.strip()
             if p:
                 paragraphs.append(p)
+    doc.close()
     return paragraphs
+
+def find_segment_rects(page, text):
+    """Locate a text snippet on the page and return rects in PDF point coords."""
+    if not text or not text.strip():
+        return []
+    queries = [text.strip(), re.sub(r'\s+', ' ', text).strip()]
+    for q in queries:
+        try:
+            found = page.search_for(q)
+        except Exception:
+            found = []
+        if found:
+            return [[float(r.x0), float(r.y0), float(r.x1), float(r.y1)] for r in found]
+    for length in (120, 80, 50, 30):
+        snippet = re.sub(r'\s+', ' ', text).strip()[:length].strip()
+        if not snippet:
+            continue
+        try:
+            found = page.search_for(snippet)
+        except Exception:
+            found = []
+        if found:
+            return [[float(r.x0), float(r.y0), float(r.x1), float(r.y1)] for r in found]
+    return []
+
+def extract_page_segments(pdf_path, page_num, max_chars=300):
+    """Return segments with text + bounding boxes in PDF point coordinates."""
+    doc = pymupdf.open(pdf_path)
+    if page_num < 0 or page_num >= len(doc):
+        doc.close()
+        return []
+    page = doc[page_num]
+    blocks = page.get_text("blocks")
+    raw_paragraphs = []
+    for block in blocks:
+        text = block[4].strip()
+        if not text:
+            continue
+        for p in re.split(r'\n\s*\n', text):
+            p = p.strip()
+            if p:
+                raw_paragraphs.append(p)
+    segments_text = split_paragraphs(raw_paragraphs, max_chars)
+    segments = []
+    for text in segments_text:
+        rects = find_segment_rects(page, text)
+        segments.append({'text': text, 'rects': rects})
+    doc.close()
+    return segments
 
 def split_paragraphs(paragraphs, max_chars=300):
     groups = []
@@ -96,10 +146,19 @@ def generate_page_audio(session_id, page_num, voice, speed):
         json.dump({'status': 'generating', 'progress': 0, 'total': 0}, f)
 
     paragraphs = extract_page_text(pdf_path, page_num)
-    segments = split_paragraphs(paragraphs)
+    text_segments = split_paragraphs(paragraphs)
+
+    doc = pymupdf.open(pdf_path)
+    page = doc[page_num]
+    segments = []
+    for text in text_segments:
+        rects = find_segment_rects(page, text)
+        segments.append({'text': text, 'rects': rects})
+    doc.close()
     page_data['total_segments'] = len(segments)
 
-    for idx, text in enumerate(segments):
+    for idx, seg in enumerate(segments):
+        text = seg['text']
         audio_path = os.path.join(audio_dir, f'seg_{idx:04d}.wav')
         audio_data = []
         for result in get_pipeline()(text, voice=voice, speed=speed):
@@ -118,6 +177,7 @@ def generate_page_audio(session_id, page_num, voice, speed):
         page_data['segments'].append({
             'index': idx,
             'text': text,
+            'rects': seg['rects'],
             'audio_url': f'/static/sessions/{session_id}/pages/{page_num}/audio/seg_{idx:04d}.wav',
             'duration': duration
         })

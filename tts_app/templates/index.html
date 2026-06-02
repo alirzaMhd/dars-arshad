@@ -1,73 +1,176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kokoro TTS PDF Reader</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-  :root { --bg: #0f0f1a; --surface: #1a1a2e; --border: #2a2a4a; --text: #e0e0e0; --muted: #888; --accent: #7c3aed; --accent-light: #a78bfa; --success: #4ade80; --danger: #dc2626; }
+  /* ─── Themes ─── */
+  :root[data-theme="light"] {
+    --bg: #f3f3f3; --surface: #ffffff; --surface-2: #ececec; --border: #d4d4d4;
+    --text: #1a1a1a; --muted: #6b6b6b; --accent: #2563eb; --accent-light: #3b82f6;
+    --highlight: rgba(255, 196, 0, 0.30); --highlight-active: rgba(255, 153, 0, 0.55);
+    --highlight-done: rgba(160, 160, 160, 0.20);
+    --pdf-filter: none; --pdf-bg: #525252; --dock-bg: #ffffff; --input-bg: #ffffff;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0f1a; --surface: #1a1a2e; --surface-2: #252545; --border: #2a2a4a;
+    --text: #e6e6f0; --muted: #8888a8; --accent: #7c3aed; --accent-light: #a78bfa;
+    --highlight: rgba(255, 200, 60, 0.22); --highlight-active: rgba(255, 200, 60, 0.55);
+    --highlight-done: rgba(140, 140, 180, 0.12);
+    --pdf-filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.95);
+    --pdf-bg: #0a0a12; --dock-bg: #1a1a2e; --input-bg: #252545;
+  }
+  :root[data-theme="sepia"] {
+    --bg: #f1e7d0; --surface: #ece0c4; --surface-2: #dccfa8; --border: #b8a378;
+    --text: #4a3520; --muted: #7a6240; --accent: #b45309; --accent-light: #d97706;
+    --highlight: rgba(220, 130, 30, 0.28); --highlight-active: rgba(220, 110, 20, 0.55);
+    --highlight-done: rgba(170, 130, 80, 0.22);
+    --pdf-filter: sepia(0.55) brightness(0.97) contrast(0.92) saturate(0.85);
+    --pdf-bg: #c8b48a; --dock-bg: #ece0c4; --input-bg: #dccfa8;
+  }
+  :root[data-theme="black"] {
+    --bg: #000000; --surface: #0c0c0c; --surface-2: #1a1a1a; --border: #2a2a2a;
+    --text: #d0d0d0; --muted: #707070; --accent: #6366f1; --accent-light: #818cf8;
+    --highlight: rgba(255, 200, 50, 0.30); --highlight-active: rgba(255, 200, 50, 0.60);
+    --highlight-done: rgba(80, 80, 80, 0.25);
+    --pdf-filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.15);
+    --pdf-bg: #000000; --dock-bg: #0c0c0c; --input-bg: #1a1a1a;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; overflow: hidden;
+    transition: background 0.25s, color 0.25s;
+  }
   .hidden { display: none !important; }
-  .toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; z-index: 10; position: relative; }
-  .toolbar .brand { font-weight: 700; color: var(--accent-light); font-size: 1.1rem; white-space: nowrap; }
-  .toolbar .sep { width: 1px; height: 28px; background: var(--border); }
-  .toolbar .file-name { color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-  .toolbar button, .toolbar select { background: #252545; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; transition: background 0.15s; }
-  .toolbar button:hover { background: #30305a; }
-  .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .toolbar select { padding: 5px 8px; }
+  button { font-family: inherit; }
+
+  /* ─── Toolbar ─── */
+  .toolbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 7px 12px; display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; flex: 0 0 auto; min-height: 46px;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .toolbar .brand { font-weight: 700; color: var(--accent-light); font-size: 1rem; white-space: nowrap; }
+  .toolbar .sep { width: 1px; height: 24px; background: var(--border); flex: 0 0 auto; }
+  .toolbar .file-name { color: var(--muted); font-size: 0.82rem; max-width: 180px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar button, .toolbar select, .toolbar input[type="number"] {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px; font-size: 0.8rem; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .toolbar input[type="number"] { width: 56px; text-align: center; cursor: text; }
+  .toolbar input[type="range"] { vertical-align: middle; accent-color: var(--accent); }
+  .toolbar button:hover:not(:disabled), .toolbar select:hover { background: var(--border); }
+  .toolbar button:disabled { opacity: 0.35; cursor: not-allowed; }
   .toolbar label { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-  .btn-primary { background: var(--accent) !important; color: white !important; }
-  .btn-primary:hover { background: #6d28d9 !important; }
-  .btn-primary:disabled { background: #4a4a6a !important; color: #888 !important; }
-  .btn-success { background: #059669 !important; color: white !important; }
-  .btn-danger { background: var(--danger) !important; color: white !important; }
+  .toolbar .muted { color: var(--muted); font-size: 0.85rem; padding: 0 4px; }
+  .btn-primary { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+  .btn-primary:hover { background: var(--accent-light) !important; }
+  .btn-primary:disabled { background: #555577 !important; border-color: #555577 !important; color: #aaa !important; }
+  .toolbar .icon-btn { padding: 5px 9px; min-width: 30px; }
+  .toolbar .icon-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .toolbar .group { display: flex; align-items: center; gap: 4px; }
 
-  .main { display: flex; height: calc(100vh - 53px); }
-  .pdf-viewer { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 20px; position: relative; transition: background 0.3s; }
-  .pdf-viewer.dark { background: #0a0a12; }
-  .pdf-viewer:not(.dark) { background: #525252; }
-  .pdf-viewer canvas { box-shadow: 0 2px 20px rgba(0,0,0,0.3); border-radius: 2px; }
+  /* ─── Main PDF area ─── */
+  .main { flex: 1; overflow: hidden; display: flex; }
+  .pdf-area {
+    flex: 1; overflow: auto; background: var(--pdf-bg); padding: 24px;
+    display: flex; justify-content: center; align-items: flex-start;
+    transition: background 0.25s;
+  }
+  .page-wrapper {
+    position: relative; display: inline-block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5); border-radius: 2px;
+  }
+  .page-wrapper canvas { display: block; filter: var(--pdf-filter); border-radius: 2px; }
+  .highlight-overlay {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .highlight-rect {
+    position: absolute; background: var(--highlight); border-radius: 2px;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .highlight-rect.active {
+    background: var(--highlight-active);
+    box-shadow: 0 0 0 1px var(--accent-light), 0 0 12px var(--highlight-active);
+    z-index: 2;
+  }
+  .highlight-rect.done { background: var(--highlight-done); }
 
-  .reader-panel { width: 0; overflow: hidden; background: var(--surface); border-left: 1px solid var(--border); transition: width 0.3s ease; display: flex; flex-direction: column; }
-  .reader-panel.open { width: 420px; min-width: 320px; }
-  .reader-panel .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .reader-panel .panel-header h3 { font-size: 0.95rem; color: var(--accent-light); }
-  .reader-panel .panel-header span { font-size: 0.8rem; color: var(--muted); }
-  .reader-panel .panel-controls { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .reader-panel .panel-controls button { background: #252545; border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px; color: var(--text); cursor: pointer; font-size: 0.85rem; }
-  .reader-panel .panel-controls button:hover { background: #30305a; }
-  .reader-panel .panel-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .reader-panel .progress-row { padding: 8px 16px; border-bottom: 1px solid var(--border); }
-  .reader-panel .progress-row .progress-bar { height: 4px; background: #2a2a4a; border-radius: 2px; overflow: hidden; }
-  .reader-panel .progress-row .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); width: 0%; transition: width 0.3s; }
-  .reader-panel .progress-row .progress-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
-  .reader-panel .paragraphs { flex: 1; overflow-y: auto; padding: 12px 16px; }
-  .reader-panel .paragraphs .para { padding: 10px 14px; margin: 4px 0; border-radius: 8px; font-size: 0.92rem; line-height: 1.7; color: #999; transition: all 0.2s; border-left: 3px solid transparent; cursor: pointer; }
-  .reader-panel .paragraphs .para:hover { background: #ffffff08; }
-  .reader-panel .paragraphs .para.active { color: var(--text); background: #7c3aed22; border-left-color: var(--accent-light); }
-  .reader-panel .paragraphs .para.done { color: #555; }
+  /* ─── Audio dock ─── */
+  .audio-dock {
+    background: var(--dock-bg); border-top: 1px solid var(--border);
+    flex: 0 0 auto; padding: 8px 16px;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .dock-row { display: flex; align-items: center; gap: 10px; }
+  .dock-row + .dock-row { margin-top: 6px; }
+  .dock-row button {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .dock-row button:hover:not(:disabled) { background: var(--border); }
+  .dock-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dock-row .play-btn {
+    background: var(--accent); color: white; border-color: var(--accent);
+    width: 40px; height: 40px; border-radius: 50%; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dock-row .play-btn:hover:not(:disabled) { background: var(--accent-light); }
+  .dock-time { font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--muted); min-width: 42px; }
+  .dock-progress {
+    flex: 1; height: 6px; background: var(--surface-2); border-radius: 3px;
+    overflow: hidden; cursor: pointer; position: relative; min-width: 100px;
+  }
+  .dock-progress:hover { height: 8px; }
+  .dock-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    width: 0%; transition: width 0.1s linear; border-radius: 3px;
+  }
+  .dock-progress.small { flex: 0 0 200px; height: 4px; }
+  .dock-seg { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
+  .dock-row select {
+    background: var(--input-bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 0.8rem;
+  }
+  .dock-row input[type="range"] { accent-color: var(--accent); width: 90px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border);
+    border-top-color: var(--accent-light); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gen-text { font-size: 0.8rem; color: var(--muted); }
+  .gen-row { font-size: 0.82rem; }
 
-  .upload-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  /* ─── Upload overlay ─── */
+  .upload-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; }
   .upload-overlay.hidden { display: none; }
-  .upload-box { background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; padding: 60px 40px; text-align: center; max-width: 500px; width: 90%; cursor: pointer; transition: all 0.3s; }
-  .upload-box:hover, .upload-box.dragover { border-color: var(--accent-light); background: #1e1e3a; }
+  .upload-box { background: var(--surface); border: 2px dashed var(--border); border-radius: 16px;
+    padding: 60px 40px; text-align: center; max-width: 500px; width: 90%; cursor: pointer;
+    transition: all 0.3s; }
+  .upload-box:hover, .upload-box.dragover { border-color: var(--accent-light); background: var(--surface-2); }
   .upload-box .icon { font-size: 56px; margin-bottom: 16px; }
   .upload-box h2 { margin-bottom: 8px; color: var(--accent-light); }
   .upload-box p { color: var(--muted); font-size: 0.9rem; }
   .upload-box input { display: none; }
 
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent-light); border-radius: 50%; animation: spin 0.6s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .gen-indicator { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.82rem; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .gen-indicator .bar { flex: 1; height: 4px; background: #2a2a4a; border-radius: 2px; overflow: hidden; max-width: 120px; }
-  .gen-indicator .bar .fill { height: 100%; background: var(--accent-light); width: 0%; transition: width 1s; }
+  /* ─── Theme indicator & fullscreen ─── */
+  body.fullscreen .toolbar { display: none; }
+  body.fullscreen .audio-dock { padding: 6px 12px; }
 
-  @media (max-width: 768px) {
-    .reader-panel.open { width: 100% !important; position: fixed; inset: 0; z-index: 500; }
-    .reader-panel.open ~ .pdf-viewer { display: none; }
+  @media (max-width: 720px) {
+    .toolbar { padding: 6px 8px; gap: 6px; }
+    .toolbar .file-name { display: none; }
+    .pdf-area { padding: 10px; }
+    .dock-row input[type="range"] { width: 60px; }
   }
 </style>
 </head>
@@ -83,20 +186,42 @@
 </div>
 
 <div class="toolbar" id="toolbar">
-  <span class="brand">Kokoro Reader</span>
+  <span class="brand">📖 Kokoro Reader</span>
   <span class="sep"></span>
   <span class="file-name" id="fileName">No file</span>
   <span class="sep"></span>
-  <button id="prevPageBtn" title="Previous page">◀</button>
-  <label><span id="pageInfo">- / -</span></label>
-  <button id="nextPageBtn" title="Next page">▶</button>
+
+  <div class="group">
+    <button id="prevPageBtn" class="icon-btn" title="Previous page (←)">◀</button>
+    <input type="number" id="pageInput" min="1" value="1" title="Jump to page">
+    <span class="muted" id="pageTotal">/ -</span>
+    <button id="nextPageBtn" class="icon-btn" title="Next page (→)">▶</button>
+  </div>
+
   <span class="sep"></span>
-  <button id="zoomOutBtn" title="Zoom out">🔍−</button>
-  <label><span id="zoomLabel">100</span>%</label>
-  <button id="zoomInBtn" title="Zoom in">🔍+</button>
-  <button id="fitPageBtn" title="Fit to width">⊞</button>
-  <span class="sep"></span>
-  <button id="darkToggle" title="Toggle dark mode">🌙</button>
+
+  <div class="group">
+    <button id="zoomOutBtn" class="icon-btn" title="Zoom out (Ctrl+−)">−</button>
+    <select id="zoomSelect" title="Zoom level">
+      <option value="0.5">50%</option>
+      <option value="0.75">75%</option>
+      <option value="1.0">100%</option>
+      <option value="1.25">125%</option>
+      <option value="1.5" selected>150%</option>
+      <option value="2.0">200%</option>
+      <option value="3.0">300%</option>
+      <option value="4.0">400%</option>
+      <option value="fit-width">Fit Width</option>
+      <option value="fit-page">Fit Page</option>
+      <option value="actual">Actual Size</option>
+    </select>
+    <button id="zoomInBtn" class="icon-btn" title="Zoom in (Ctrl++)">+</button>
+  </div>
+
+  <button id="rotateBtn" class="icon-btn" title="Rotate 90° (R)">↻</button>
+  <button id="fullscreenBtn" class="icon-btn" title="Fullscreen (F)">⛶</button>
+  <button id="themeBtn" class="icon-btn" title="Theme (T)">🌓</button>
+
   <span class="sep" id="configSep" style="display:none"></span>
   <select id="voiceSelect" style="display:none">
     <option value="af_heart">af_heart (warm)</option>
@@ -110,37 +235,42 @@
     <option value="am_michael">am_michael (male)</option>
     <option value="am_onyx">am_onyx (male)</option>
   </select>
-  <label style="display:none" id="speedLabel">Speed: <span id="speedVal">1.0</span>x
-    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width:60px;vertical-align:middle">
+  <label style="display:none" id="speedLabel">Speed <span id="speedVal">1.0</span>x
+    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
   </label>
   <button class="btn-primary" id="readAloudBtn" style="display:none">🎧 Read Aloud</button>
 </div>
 
 <div class="main">
-  <div class="pdf-viewer dark" id="pdfViewer">
-    <canvas id="pdfCanvas"></canvas>
+  <div class="pdf-area" id="pdfArea">
+    <div class="page-wrapper" id="pageWrapper">
+      <canvas id="pdfCanvas"></canvas>
+      <div class="highlight-overlay" id="highlightOverlay"></div>
+    </div>
   </div>
-  <div class="reader-panel" id="readerPanel">
-    <div class="panel-header">
-      <h3>📖 Audio Reader</h3>
-      <span id="panelPageInfo">Page 1</span>
+</div>
+
+<div class="audio-dock" id="audioDock">
+  <div class="dock-row">
+    <button id="prevSegBtn" title="Previous paragraph (P)">⏮</button>
+    <button id="playBtn" class="play-btn" title="Play / Pause (Space)">▶</button>
+    <button id="nextSegBtn" title="Next paragraph (N)">⏭</button>
+    <button id="stopBtn" title="Stop">⏹</button>
+
+    <span class="dock-time" id="timeCurrent">0:00</span>
+    <div class="dock-progress" id="dockProgress" title="Click to seek">
+      <div class="dock-progress-fill" id="dockProgressFill"></div>
     </div>
-    <div class="panel-controls" id="panelControls">
-      <button id="playBtn">▶ Play</button>
-      <button id="pauseBtn" disabled>⏸ Pause</button>
-      <button id="stopBtn">⏹ Stop</button>
-    </div>
-    <div class="gen-indicator hidden" id="genIndicator">
-      <span class="spinner"></span>
-      <span id="genText">Generating page audio...</span>
-      <div class="bar"><div class="fill" id="genFill"></div></div>
-    </div>
-    <div class="progress-row">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="progress-info"><span id="timeCurrent">0:00</span><span id="segInfo">0/0</span><span id="timeTotal">0:00</span></div>
-    </div>
-    <div class="paragraphs" id="paragraphsContainer">
-      <div style="color:var(--muted);text-align:center;padding:40px 20px">Click "Read Aloud" on a page to start listening</div>
+    <span class="dock-time" id="timeTotal">0:00</span>
+
+    <span class="dock-seg" id="segInfo">0 / 0</span>
+    <span class="muted" style="color:var(--muted);font-size:0.78rem" id="pageStatus">—</span>
+  </div>
+  <div class="dock-row gen-row hidden" id="genIndicator">
+    <span class="spinner"></span>
+    <span class="gen-text" id="genText">Generating audio…</span>
+    <div class="dock-progress small" id="genProgress">
+      <div class="dock-progress-fill" id="genFill"></div>
     </div>
   </div>
 </div>
@@ -149,31 +279,77 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const $ = id => document.getElementById(id);
-const uploadBox = $('uploadBox'), fileInput = $('fileInput'), uploadOverlay = $('uploadOverlay');
-const fileName = $('fileName'), pdfViewer = $('pdfViewer'), canvas = $('pdfCanvas');
-const ctx = canvas.getContext('2d');
-const pageInfo = $('pageInfo'), prevPageBtn = $('prevPageBtn'), nextPageBtn = $('nextPageBtn');
-const zoomInBtn = $('zoomInBtn'), zoomOutBtn = $('zoomOutBtn'), zoomLabel = $('zoomLabel'), fitPageBtn = $('fitPageBtn');
-const darkToggle = $('darkToggle'), voiceSelect = $('voiceSelect'), speedSlider = $('speedSlider');
-const speedVal = $('speedVal'), speedLabel = $('speedLabel'), readAloudBtn = $('readAloudBtn'), configSep = $('configSep');
-const readerPanel = $('readerPanel'), panelPageInfo = $('panelPageInfo');
-const playBtn = $('playBtn'), pauseBtn = $('pauseBtn'), stopBtn = $('stopBtn');
-const paragraphsContainer = $('paragraphsContainer');
-const progressFill = $('progressFill'), timeCurrent = $('timeCurrent'), timeTotal = $('timeTotal'), segInfo = $('segInfo');
-const genIndicator = $('genIndicator'), genText = $('genText'), genFill = $('genFill');
+const THEMES = ['light', 'dark', 'sepia', 'black'];
+const THEME_ICONS = { light: '☀️', dark: '🌙', sepia: '📜', black: '⬛' };
 
-let sessionId = null, pdfDoc = null, currentPage = 1, scale = 1.5, isDark = true;
-let segments = [], currentSegIdx = 0, audioEl = null, isPlaying = false, isPaused = false;
-let pollTimer = null, stopPolling = false;
+const state = {
+  sessionId: null,
+  pdfDoc: null,
+  currentPage: 1,
+  scale: 1.5,
+  rotation: 0,
+  theme: 'dark',
+  segments: [],
+  currentSegIdx: 0,
+  audioEl: null,
+  isPlaying: false,
+  isPaused: false,
+  generating: false,
+  pollTimer: null,
+  stopPolling: false,
+  pageRenderTask: null,
+  zoomLocked: false,
+};
 
-uploadBox.addEventListener('click', () => fileInput.click());
-uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('dragover'); });
-uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('dragover'));
-uploadBox.addEventListener('drop', e => {
-  e.preventDefault(); uploadBox.classList.remove('dragover');
+const el = {
+  uploadOverlay: $('uploadOverlay'), uploadBox: $('uploadBox'), fileInput: $('fileInput'),
+  fileName: $('fileName'),
+  pdfArea: $('pdfArea'), pageWrapper: $('pageWrapper'), pdfCanvas: $('pdfCanvas'),
+  highlightOverlay: $('highlightOverlay'),
+  pageInput: $('pageInput'), pageTotal: $('pageTotal'),
+  prevPageBtn: $('prevPageBtn'), nextPageBtn: $('nextPageBtn'),
+  zoomOutBtn: $('zoomOutBtn'), zoomInBtn: $('zoomInBtn'), zoomSelect: $('zoomSelect'),
+  rotateBtn: $('rotateBtn'), fullscreenBtn: $('fullscreenBtn'), themeBtn: $('themeBtn'),
+  voiceSelect: $('voiceSelect'), speedSlider: $('speedSlider'), speedVal: $('speedVal'),
+  speedLabel: $('speedLabel'), readAloudBtn: $('readAloudBtn'), configSep: $('configSep'),
+  prevSegBtn: $('prevSegBtn'), playBtn: $('playBtn'), nextSegBtn: $('nextSegBtn'),
+  stopBtn: $('stopBtn'),
+  timeCurrent: $('timeCurrent'), timeTotal: $('timeTotal'),
+  dockProgress: $('dockProgress'), dockProgressFill: $('dockProgressFill'),
+  segInfo: $('segInfo'), pageStatus: $('pageStatus'),
+  genIndicator: $('genIndicator'), genText: $('genText'), genFill: $('genFill'),
+};
+
+const ctx = el.pdfCanvas.getContext('2d');
+
+// ─── Theme ───
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  el.themeBtn.textContent = THEME_ICONS[theme] || '🌓';
+  state.theme = theme;
+  try { localStorage.setItem('kokoro-theme', theme); } catch {}
+}
+function cycleTheme() {
+  const idx = THEMES.indexOf(state.theme);
+  applyTheme(THEMES[(idx + 1) % THEMES.length]);
+}
+(function initTheme() {
+  let saved = 'dark';
+  try { saved = localStorage.getItem('kokoro-theme') || 'dark'; } catch {}
+  if (!THEMES.includes(saved)) saved = 'dark';
+  applyTheme(saved);
+})();
+el.themeBtn.addEventListener('click', cycleTheme);
+
+// ─── Upload ───
+el.uploadBox.addEventListener('click', () => el.fileInput.click());
+el.uploadBox.addEventListener('dragover', e => { e.preventDefault(); el.uploadBox.classList.add('dragover'); });
+el.uploadBox.addEventListener('dragleave', () => el.uploadBox.classList.remove('dragover'));
+el.uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); el.uploadBox.classList.remove('dragover');
   if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
-fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+el.fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
 
 async function handleFile(file) {
   if (!file.name.endsWith('.pdf')) return alert('Please select a PDF file');
@@ -182,127 +358,224 @@ async function handleFile(file) {
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
-    sessionId = data.session_id;
-    fileName.textContent = data.filename;
-    uploadOverlay.classList.add('hidden');
-    voiceSelect.style.display = ''; speedLabel.style.display = ''; configSep.style.display = ''; readAloudBtn.style.display = '';
-    const pdfRes = await fetch(`/api/pdf/${sessionId}`);
+    state.sessionId = data.session_id;
+    el.fileName.textContent = data.filename;
+    el.uploadOverlay.classList.add('hidden');
+    el.voiceSelect.style.display = ''; el.speedLabel.style.display = ''; el.configSep.style.display = ''; el.readAloudBtn.style.display = '';
+    el.pageTotal.textContent = `/ ${data.total_pages}`;
+    const pdfRes = await fetch(`/api/pdf/${state.sessionId}`);
     const pdfBlob = await pdfRes.blob();
     const pdfUrl = URL.createObjectURL(pdfBlob);
-    pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-    currentPage = 1; renderPage(); updateNav();
-    panelPageInfo.textContent = `Page 1 of ${pdfDoc.numPages}`;
+    state.pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+    state.currentPage = 1; el.pageInput.value = 1;
+    await renderPage(); updateNav();
+    el.pageStatus.textContent = `Page ${state.currentPage} / ${state.pdfDoc.numPages}`;
   } catch(e) { alert('Upload failed: ' + e.message); }
 }
 
+// ─── PDF rendering ───
 async function renderPage() {
-  if (!pdfDoc) return;
-  const page = await pdfDoc.getPage(currentPage);
-  const viewport = page.getViewport({ scale });
-  canvas.width = viewport.width; canvas.height = viewport.height;
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  pageInfo.textContent = `${currentPage} / ${pdfDoc.numPages}`;
+  if (!state.pdfDoc) return;
+  if (state.pageRenderTask) { try { state.pageRenderTask.cancel(); } catch {} }
+  const page = await state.pdfDoc.getPage(state.currentPage);
+  const viewport = page.getViewport({ scale: state.scale, rotation: state.rotation });
+  el.pdfCanvas.width = viewport.width;
+  el.pdfCanvas.height = viewport.height;
+  el.pdfCanvas.style.width = viewport.width + 'px';
+  el.pdfCanvas.style.height = viewport.height + 'px';
+  el.pageWrapper.style.width = viewport.width + 'px';
+  el.pageWrapper.style.height = viewport.height + 'px';
+  el.highlightOverlay.style.width = viewport.width + 'px';
+  el.highlightOverlay.style.height = viewport.height + 'px';
+  state.pageRenderTask = page.render({ canvasContext: ctx, viewport });
+  try { await state.pageRenderTask.promise; } catch (e) { if (e.name !== 'RenderingCancelledException') throw e; }
+  renderHighlights(page, viewport);
   updateNav();
-  panelPageInfo.textContent = `Page ${currentPage} of ${pdfDoc.numPages}`;
+  if (!state.zoomLocked) {
+    el.zoomSelect.value = String(state.scale);
+  }
+  el.pageStatus.textContent = `Page ${state.currentPage} / ${state.pdfDoc.numPages}`;
+  updateProgress();
 }
 
+function renderHighlights(page, viewport) {
+  el.highlightOverlay.innerHTML = '';
+  if (!state.segments.length) return;
+  const scale = state.scale;
+  state.segments.forEach((seg, idx) => {
+    if (!seg.rects) return;
+    seg.rects.forEach(rect => {
+      let r;
+      try {
+        r = viewport.convertToViewportRectangle(rect[0], rect[1], rect[2], rect[3]);
+      } catch { return; }
+      const [x0, y0, x1, y1] = r;
+      const div = document.createElement('div');
+      div.className = 'highlight-rect';
+      div.dataset.idx = idx;
+      div.style.left = Math.min(x0, x1) + 'px';
+      div.style.top = Math.min(y0, y1) + 'px';
+      div.style.width = Math.abs(x1 - x0) + 'px';
+      div.style.height = Math.abs(y1 - y0) + 'px';
+      el.highlightOverlay.appendChild(div);
+    });
+  });
+  applyHighlightClasses();
+}
+
+function applyHighlightClasses() {
+  document.querySelectorAll('.highlight-rect').forEach(d => {
+    const i = +d.dataset.idx;
+    d.classList.remove('active', 'done');
+    if (i < state.currentSegIdx) d.classList.add('done');
+    else if (i === state.currentSegIdx) d.classList.add('active');
+  });
+}
+
+function scrollToActiveHighlight() {
+  const active = el.highlightOverlay.querySelector('.highlight-rect.active');
+  if (!active) return;
+  const wrapRect = el.pageWrapper.getBoundingClientRect();
+  const areaRect = el.pdfArea.getBoundingClientRect();
+  const target = el.pdfArea.scrollTop + (active.offsetTop - (areaRect.height / 2) + (active.offsetHeight / 2));
+  el.pdfArea.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+}
+
+// ─── Navigation ───
 function updateNav() {
-  if (!pdfDoc) return;
-  prevPageBtn.disabled = currentPage <= 1;
-  nextPageBtn.disabled = currentPage >= pdfDoc.numPages;
+  if (!state.pdfDoc) return;
+  el.prevPageBtn.disabled = state.currentPage <= 1;
+  el.nextPageBtn.disabled = state.currentPage >= state.pdfDoc.numPages;
+  el.pageInput.max = state.pdfDoc.numPages;
 }
-
-prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderPage(); resetReader(); }});
-nextPageBtn.addEventListener('click', () => { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(); resetReader(); }});
-
-zoomInBtn.addEventListener('click', () => { scale = Math.min(5, scale + 0.25); zoomLabel.textContent = Math.round(scale/1.5*100); renderPage(); });
-zoomOutBtn.addEventListener('click', () => { scale = Math.max(0.25, scale - 0.25); zoomLabel.textContent = Math.round(scale/1.5*100); renderPage(); });
-fitPageBtn.addEventListener('click', () => {
-  if (!pdfDoc) return;
-  scale = (pdfViewer.getBoundingClientRect().width - 80) / 612;
-  zoomLabel.textContent = Math.round(scale/1.5*100);
+el.prevPageBtn.addEventListener('click', () => { if (state.currentPage > 1) { state.currentPage--; el.pageInput.value = state.currentPage; renderPage(); }});
+el.nextPageBtn.addEventListener('click', () => { if (state.pdfDoc && state.currentPage < state.pdfDoc.numPages) { state.currentPage++; el.pageInput.value = state.currentPage; renderPage(); }});
+el.pageInput.addEventListener('change', () => {
+  const v = parseInt(el.pageInput.value, 10);
+  if (!state.pdfDoc || isNaN(v)) return;
+  const clamped = Math.max(1, Math.min(state.pdfDoc.numPages, v));
+  el.pageInput.value = clamped;
+  state.currentPage = clamped;
   renderPage();
 });
-darkToggle.addEventListener('click', () => { isDark = !isDark; pdfViewer.classList.toggle('dark', isDark); darkToggle.textContent = isDark ? '🌙' : '☀️'; });
-speedSlider.addEventListener('input', () => { speedVal.textContent = parseFloat(speedSlider.value).toFixed(1); });
 
-// ─── Audio Reader ───
-
-readAloudBtn.addEventListener('click', async () => {
-  if (!sessionId || !pdfDoc || generating) return;
-  readerPanel.classList.add('open');
-  resetReader();
-  startGeneration(currentPage - 1);
+// ─── Zoom ───
+function setZoom(newScale, fromSelect = false) {
+  state.scale = Math.max(0.25, Math.min(8, newScale));
+  state.zoomLocked = false;
+  const matchOpt = Array.from(el.zoomSelect.options).find(o => parseFloat(o.value) === state.scale);
+  if (matchOpt) el.zoomSelect.value = matchOpt.value;
+  else if (!fromSelect) el.zoomSelect.value = String(state.scale);
+  renderPage();
+}
+el.zoomInBtn.addEventListener('click', () => setZoom(state.scale + 0.25));
+el.zoomOutBtn.addEventListener('click', () => setZoom(state.scale - 0.25));
+el.zoomSelect.addEventListener('change', async () => {
+  const v = el.zoomSelect.value;
+  if (v === 'fit-width' || v === 'fit-page') {
+    if (!state.pdfDoc) return;
+    const page = await state.pdfDoc.getPage(state.currentPage);
+    const baseVp = page.getViewport({ scale: 1, rotation: state.rotation });
+    const availW = el.pdfArea.clientWidth - 48;
+    const availH = el.pdfArea.clientHeight - 48;
+    const fitW = availW / baseVp.width;
+    const fitH = availH / baseVp.height;
+    setZoom(v === 'fit-width' ? fitW : Math.min(fitW, fitH));
+    state.zoomLocked = true;
+  } else if (v === 'actual') {
+    setZoom(1.0);
+  } else {
+    setZoom(parseFloat(v), true);
+  }
 });
 
-let generating = false;
+// Ctrl + wheel zoom
+el.pdfArea.addEventListener('wheel', e => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    if (e.deltaY < 0) setZoom(state.scale + 0.1);
+    else setZoom(state.scale - 0.1);
+  }
+}, { passive: false });
+
+// ─── Rotate / Fullscreen ───
+el.rotateBtn.addEventListener('click', () => {
+  state.rotation = (state.rotation + 90) % 360;
+  renderPage();
+});
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+}
+el.fullscreenBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', () => {
+  document.body.classList.toggle('fullscreen', !!document.fullscreenElement);
+});
+
+// ─── TTS configuration ───
+el.speedSlider.addEventListener('input', () => {
+  el.speedVal.textContent = parseFloat(el.speedSlider.value).toFixed(1);
+  if (state.audioEl) state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
+});
+
+// ─── Read Aloud ───
+el.readAloudBtn.addEventListener('click', async () => {
+  if (!state.sessionId || !state.pdfDoc || state.generating) return;
+  resetReader();
+  startGeneration(state.currentPage - 1);
+});
 
 async function startGeneration(pageNum) {
-  generating = true;
-  genIndicator.classList.remove('hidden');
-  genText.textContent = 'Starting generation...';
-  genFill.style.width = '0%';
-  playBtn.disabled = true;
-
+  state.generating = true;
+  el.genIndicator.classList.remove('hidden');
+  el.genText.textContent = 'Starting…';
+  el.genFill.style.width = '0%';
+  el.playBtn.disabled = true;
+  el.prevSegBtn.disabled = true; el.nextSegBtn.disabled = true;
   try {
     const res = await fetch('/api/generate-page', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        session_id: sessionId, page_num: pageNum,
-        voice: voiceSelect.value, speed: parseFloat(speedSlider.value)
+        session_id: state.sessionId, page_num: pageNum,
+        voice: el.voiceSelect.value, speed: parseFloat(el.speedSlider.value)
       })
     });
     const data = await res.json();
-    if (data.error) { genIndicator.classList.add('hidden'); generating = false; alert(data.error); return; }
-
-    if (data.status === 'ready') {
-      segments = data.segments;
-      genIndicator.classList.add('hidden');
-      generating = false;
-      renderParagraphs();
-      currentSegIdx = 0;
-      playSegment(0);
-      return;
-    }
-
+    if (data.error) { finishGen(); alert(data.error); return; }
+    if (data.status === 'ready') { onPageReady(data.segments); return; }
     pollGeneration(pageNum);
-  } catch(e) {
-    genIndicator.classList.add('hidden'); generating = false;
-    alert('Generation request failed: ' + e.message);
-  }
+  } catch (e) { finishGen(); alert('Generation request failed: ' + e.message); }
+}
+
+function finishGen() {
+  state.generating = false;
+  el.genIndicator.classList.add('hidden');
 }
 
 async function pollGeneration(pageNum) {
-  stopPolling = false;
+  state.stopPolling = false;
   const poll = async () => {
-    if (stopPolling) return;
+    if (state.stopPolling) return;
     try {
-      const res = await fetch(`/api/page-status/${sessionId}/${pageNum}`);
+      const res = await fetch(`/api/page-status/${state.sessionId}/${pageNum}`);
       const data = await res.json();
       if (data.status === 'ready') {
-        const res2 = await fetch(`/api/page-data/${sessionId}/${pageNum}`);
-        const pageData = await res2.json();
-        segments = pageData.segments;
-        genIndicator.classList.add('hidden');
-        generating = false;
-        renderParagraphs();
-        currentSegIdx = 0;
-        playSegment(0);
+        const r2 = await fetch(`/api/page-data/${state.sessionId}/${pageNum}`);
+        const pageData = await r2.json();
+        onPageReady(pageData.segments);
         prefetchNextPages();
         return;
       }
       if (data.status === 'generating') {
         const pct = data.total > 0 ? (data.progress / data.total) * 100 : 0;
-        genFill.style.width = pct + '%';
-        genText.textContent = `Generating audio... ${data.progress}/${data.total} segments`;
-        pollTimer = setTimeout(poll, 2000);
-      } else {
-        pollTimer = setTimeout(poll, 2000);
+        el.genFill.style.width = pct + '%';
+        el.genText.textContent = `Generating audio… ${data.progress}/${data.total} paragraphs`;
       }
-    } catch(e) {
-      pollTimer = setTimeout(poll, 3000);
-    }
+      state.pollTimer = setTimeout(poll, 1500);
+    } catch { state.pollTimer = setTimeout(poll, 3000); }
   };
   poll();
 }
@@ -310,124 +583,153 @@ async function pollGeneration(pageNum) {
 async function prefetchNextPages() {
   try {
     await fetch('/api/generate-next-pages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        session_id: sessionId, current_page: currentPage - 1,
-        voice: voiceSelect.value, speed: parseFloat(speedSlider.value), n_ahead: 3
+        session_id: state.sessionId, current_page: state.currentPage - 1,
+        voice: el.voiceSelect.value, speed: parseFloat(el.speedSlider.value), n_ahead: 3
       })
     });
-  } catch(e) {}
+  } catch {}
 }
 
-function renderParagraphs() {
-  paragraphsContainer.innerHTML = '';
-  segments.forEach((seg, idx) => {
-    const div = document.createElement('div');
-    div.className = 'para'; div.id = `para-${idx}`;
-    div.textContent = seg.text;
-    div.addEventListener('click', () => {
-      if (audioEl) { audioEl.pause(); audioEl = null; }
-      currentSegIdx = idx; playSegment(idx);
-    });
-    paragraphsContainer.appendChild(div);
-  });
-  segInfo.textContent = `0/${segments.length}`;
-  updateProgress();
+function onPageReady(segments) {
+  state.segments = segments;
+  state.currentSegIdx = 0;
+  finishGen();
+  updatePlayBtns();
+  el.segInfo.textContent = `0 / ${segments.length}`;
+  renderPage().then(() => playSegment(0));
 }
 
 function playSegment(idx) {
-  if (idx >= segments.length) {
-    if (pdfDoc && currentPage < pdfDoc.numPages) {
-      advanceToNextPage();
-    } else {
-      stopReading();
-    }
-    return;
-  }
-  const seg = segments[idx];
+  if (idx >= state.segments.length) { advanceToNextPage(); return; }
+  if (idx < 0) idx = 0;
+  const seg = state.segments[idx];
   if (!seg) return;
-  if (audioEl) { audioEl.pause(); audioEl = null; }
-  audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
-  audioEl.playbackRate = parseFloat(speedSlider.value);
-  audioEl.play().catch(() => {});
-  isPlaying = true; isPaused = false; currentSegIdx = idx;
-  updatePlayBtns(); highlightPara(idx); updateProgress();
-  audioEl.addEventListener('ended', () => playSegment(idx + 1));
-  audioEl.addEventListener('error', () => playSegment(idx + 1));
-}
-
-function highlightPara(idx) {
-  document.querySelectorAll('.para.active, .para.done').forEach(el => el.classList.remove('active', 'done'));
-  const el = $(`para-${idx}`);
-  if (el) { el.classList.add('active'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  for (let i = 0; i < idx; i++) { const e = $(`para-${i}`); if (e) e.classList.add('done'); }
+  if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
+  state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
+  state.audioEl.play().catch(() => {});
+  state.isPlaying = true; state.isPaused = false; state.currentSegIdx = idx;
+  updatePlayBtns();
+  applyHighlightClasses();
+  scrollToActiveHighlight();
+  updateProgress();
+  const segStartTime = state.segments.slice(0, idx).reduce((s, x) => s + (x.duration || 0), 0);
+  state.audioEl.addEventListener('timeupdate', () => {
+    const elapsed = segStartTime + (state.audioEl.currentTime || 0);
+    const total = state.segments.reduce((s, x) => s + (x.duration || 0), 0);
+    if (total > 0) el.dockProgressFill.style.width = (elapsed / total * 100) + '%';
+    el.timeCurrent.textContent = fmt(elapsed);
+  });
+  state.audioEl.addEventListener('ended', () => playSegment(idx + 1));
+  state.audioEl.addEventListener('error', () => playSegment(idx + 1));
 }
 
 function updateProgress() {
-  if (!segments.length) return;
-  progressFill.style.width = ((currentSegIdx) / segments.length * 100) + '%';
-  segInfo.textContent = `${currentSegIdx}/${segments.length}`;
+  if (!state.segments.length) {
+    el.dockProgressFill.style.width = '0%';
+    el.timeCurrent.textContent = '0:00';
+    el.timeTotal.textContent = '0:00';
+    el.segInfo.textContent = '0 / 0';
+    return;
+  }
   let elapsed = 0, total = 0;
-  segments.forEach((s, i) => {
-    if (i < currentSegIdx) elapsed += s.duration || 0;
+  state.segments.forEach((s, i) => {
+    if (i < state.currentSegIdx) elapsed += s.duration || 0;
     total += s.duration || 0;
   });
-  timeCurrent.textContent = fmt(elapsed); timeTotal.textContent = fmt(total);
+  if (state.audioEl && !state.isPaused) elapsed += state.audioEl.currentTime || 0;
+  el.timeTotal.textContent = fmt(total);
+  el.timeCurrent.textContent = fmt(elapsed);
+  el.segInfo.textContent = `${state.currentSegIdx} / ${state.segments.length}`;
+  el.dockProgressFill.style.width = total > 0 ? (elapsed / total * 100) + '%' : '0%';
 }
 
 function updatePlayBtns() {
-  playBtn.disabled = isPlaying && !isPaused;
-  pauseBtn.disabled = !isPlaying || isPaused;
+  const has = state.segments.length > 0;
+  el.playBtn.disabled = !has;
+  el.playBtn.textContent = state.isPlaying && !state.isPaused ? '⏸' : '▶';
+  el.prevSegBtn.disabled = !has || state.currentSegIdx <= 0;
+  el.nextSegBtn.disabled = !has || state.currentSegIdx >= state.segments.length - 1;
 }
 
-playBtn.addEventListener('click', () => {
-  if (isPaused && audioEl) { audioEl.play(); isPlaying = true; isPaused = false; updatePlayBtns(); return; }
-  if (segments.length) playSegment(currentSegIdx);
+el.playBtn.addEventListener('click', () => {
+  if (state.isPaused && state.audioEl) {
+    state.audioEl.play(); state.isPlaying = true; state.isPaused = false; updatePlayBtns(); return;
+  }
+  if (state.segments.length) playSegment(state.currentSegIdx);
 });
-pauseBtn.addEventListener('click', () => { if (audioEl) { audioEl.pause(); isPaused = true; isPlaying = false; updatePlayBtns(); } });
-stopBtn.addEventListener('click', stopReading);
+el.prevSegBtn.addEventListener('click', () => { if (state.segments.length && state.currentSegIdx > 0) playSegment(state.currentSegIdx - 1); });
+el.nextSegBtn.addEventListener('click', () => { if (state.segments.length && state.currentSegIdx < state.segments.length - 1) playSegment(state.currentSegIdx + 1); });
+el.stopBtn.addEventListener('click', () => stopReading());
 
 function stopReading() {
-  if (audioEl) { audioEl.pause(); audioEl = null; }
-  isPlaying = false; isPaused = false; currentSegIdx = 0;
-  updatePlayBtns(); progressFill.style.width = '0%'; timeCurrent.textContent = '0:00'; segInfo.textContent = `0/${segments.length}`;
-  document.querySelectorAll('.para.active, .para.done').forEach(el => el.classList.remove('active', 'done'));
+  if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0;
+  updatePlayBtns();
+  el.dockProgressFill.style.width = '0%';
+  el.timeCurrent.textContent = '0:00';
+  el.segInfo.textContent = state.segments.length ? `0 / ${state.segments.length}` : '0 / 0';
+  applyHighlightClasses();
 }
 
 function resetReader() {
-  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
-  stopPolling = true; generating = false;
-  if (audioEl) { audioEl.pause(); audioEl = null; }
-  isPlaying = false; isPaused = false; currentSegIdx = 0; segments = [];
-  paragraphsContainer.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px 20px">Click "Read Aloud" on a page to start listening</div>';
-  progressFill.style.width = '0%'; timeCurrent.textContent = '0:00'; segInfo.textContent = '0/0'; timeTotal.textContent = '0:00';
-  genIndicator.classList.add('hidden');
+  if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
+  state.stopPolling = true; state.generating = false;
+  if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0; state.segments = [];
+  el.genIndicator.classList.add('hidden');
+  el.dockProgressFill.style.width = '0%';
+  el.timeCurrent.textContent = '0:00';
+  el.timeTotal.textContent = '0:00';
+  el.segInfo.textContent = '0 / 0';
   updatePlayBtns();
+  el.highlightOverlay.innerHTML = '';
 }
 
 async function advanceToNextPage() {
-  currentPage++;
+  if (!state.pdfDoc || state.currentPage >= state.pdfDoc.numPages) { stopReading(); return; }
+  state.currentPage++; el.pageInput.value = state.currentPage;
   await renderPage();
-  resetReader();
-  readerPanel.classList.add('open');
-  startGeneration(currentPage - 1);
+  startGeneration(state.currentPage - 1);
 }
+
+// Click-to-seek on the dock progress bar
+el.dockProgress.addEventListener('click', e => {
+  if (!state.segments.length) return;
+  const rect = el.dockProgress.getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  const total = state.segments.reduce((s, x) => s + (x.duration || 0), 0);
+  const targetTime = ratio * total;
+  let acc = 0, idx = 0;
+  for (let i = 0; i < state.segments.length; i++) {
+    const d = state.segments[i].duration || 0;
+    if (acc + d > targetTime) { idx = i; break; }
+    acc += d; idx = i + 1;
+  }
+  if (idx >= state.segments.length) idx = state.segments.length - 1;
+  playSegment(idx);
+  if (state.audioEl) state.audioEl.currentTime = Math.max(0, targetTime - acc);
+});
 
 function fmt(secs) {
   const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ─── Keyboard shortcuts ───
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') prevPageBtn.click();
-  else if (e.key === 'ArrowRight') nextPageBtn.click();
-  else if (e.key === ' ' && e.target === document.body) {
-    e.preventDefault();
-    if (readerPanel.classList.contains('open')) {
-      if (isPlaying) pauseBtn.click(); else if (segments.length) playBtn.click();
-    }
-  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); el.prevPageBtn.click(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); el.nextPageBtn.click(); }
+  else if (e.key === ' ') { e.preventDefault(); el.playBtn.click(); }
+  else if (e.key === 'n' || e.key === 'N') { el.nextSegBtn.click(); }
+  else if (e.key === 'p' || e.key === 'P') { el.prevSegBtn.click(); }
+  else if (e.key === 'r' || e.key === 'R') { el.rotateBtn.click(); }
+  else if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
+  else if (e.key === 't' || e.key === 'T') { cycleTheme(); }
+  else if (e.key === 'Escape' && document.fullscreenElement) { document.exitFullscreen?.(); }
 });
 </script>
 </body>
