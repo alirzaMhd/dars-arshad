@@ -6,8 +6,8 @@ Usage:
   python study2media.py <markdown_file>
 
 Generates:
-  - Suggestion for a study video (waits for approval)
-  - TTS-generated audiobook using Chatterbox Turbo (MIT, open-source)
+  - Study video (slides from each section)
+  - TTS audiobook using Chatterbox Turbo (MIT, open-source)
 """
 
 import argparse
@@ -45,34 +45,6 @@ def strip_markdown(text):
     text = re.sub(r"^[-*]\s", "", text, flags=re.MULTILINE)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
-
-
-def suggest_video_approach(chapters, title):
-    """Print a video creation suggestion and ask for approval."""
-    print("\n" + "=" * 70)
-    print(f"  VIDEO SUGGESTION FOR: {title}")
-    print("=" * 70)
-    print("""
-  Proposed Approach:
-  • Each section/chapter becomes a text slide
-  • Slides fade in/out with synchronized TTS narration
-  • Subtitles embedded as overlays
-  • Resolution: 1920x1080, 30fps
-  • Background: dark gradient with white text
-  • Estimated slides: ~{num_slides}
-  • Audio track from Chatterbox Turbo TTS (sync'd with slides)
-  • Total estimated duration: ~{duration_min} min
-
-  Tools: moviepy (installed: ✓)
-""".format(num_slides=len(chapters), duration_min=max(1, len(chapters) * 2)))
-
-    while True:
-        resp = input("  Generate video? (y/N): ").strip().lower()
-        if resp == "y":
-            return True
-        elif resp in ("n", ""):
-            return False
-        print("  Please answer y or n.")
 
 
 def create_study_video(chapters, title, output_path):
@@ -194,17 +166,12 @@ Output locations:
     )
     parser.add_argument("markdown_file", help="Path to the study guide markdown file (split by ### headings)")
     parser.add_argument(
-        "--skip-video", action="store_true", help="Skip video step entirely"
+        "--skip-video", action="store_true", help="Skip video generation"
     )
     parser.add_argument(
         "--output",
         default=None,
         help="Output base name (without extension; defaults to markdown filename)",
-    )
-    parser.add_argument(
-        "--generate-video",
-        action="store_true",
-        help="Generate video non-interactively (bypasses approval prompt)",
     )
     args = parser.parse_args()
 
@@ -219,23 +186,15 @@ Output locations:
     print(f"\n  Loaded {len(chapters)} sections from {os.path.basename(args.markdown_file)}")
     print(f"  Total size: ~{len(full_text)} chars")
 
-    # --- Step 1: Video (suggest and wait for approval) ---
-    if not args.skip_video and not args.generate_video:
-        approved = suggest_video_approach(chapters, title)
-        if approved:
-            out_video = os.path.join(VIDEO_DIR, f"{base_name}.mp4")
-            os.makedirs(VIDEO_DIR, exist_ok=True)
-            print("\n  Generating video...")
-            create_study_video(chapters, title, out_video)
-            print(f"  Video saved: {out_video}")
-        else:
-            print("  Skipping video generation.")
-    elif args.generate_video:
+    # --- Step 1: Video ---
+    if not args.skip_video:
         out_video = os.path.join(VIDEO_DIR, f"{base_name}.mp4")
         os.makedirs(VIDEO_DIR, exist_ok=True)
-        print("\n  Generating video (approved)...")
+        print("\n  Generating video...")
         create_study_video(chapters, title, out_video)
         print(f"  Video saved: {out_video}")
+    else:
+        print("  Skipping video generation.")
 
     # --- Step 2: TTS Audiobook ---
     print("\n" + "=" * 70)
