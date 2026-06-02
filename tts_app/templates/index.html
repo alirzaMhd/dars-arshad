@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kokoro TTS PDF Reader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 1.8rem; color: #a78bfa; }
+  .subtitle { text-align: center; margin-bottom: 24px; color: #888; font-size: 0.9rem; }
+
+  .card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+
+  .upload-zone { border: 2px dashed #3a3a5a; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: #a78bfa; background: #1e1e3a; }
+  .upload-zone.has-file { border-color: #4ade80; }
+  .upload-zone input { display: none; }
+  .upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-zone .filename { color: #4ade80; margin-top: 8px; font-weight: 500; }
+
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .controls select, .controls input { background: #252545; color: #e0e0e0; border: 1px solid #3a3a5a; border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; }
+  .controls select { flex: 1; min-width: 150px; }
+  .controls input[type="range"] { flex: 1; min-width: 100px; accent-color: #a78bfa; }
+  .controls label { font-size: 0.85rem; color: #aaa; }
+
+  .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: #7c3aed; color: white; }
+  .btn-primary:hover { background: #6d28d9; }
+  .btn-primary:disabled { background: #4a4a6a; color: #888; cursor: not-allowed; }
+  .btn-success { background: #059669; color: white; }
+  .btn-success:hover { background: #047857; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-outline { background: transparent; border: 1px solid #3a3a5a; color: #e0e0e0; }
+  .btn-outline:hover { border-color: #a78bfa; }
+
+  .progress-bar { width: 100%; height: 4px; background: #2a2a4a; border-radius: 2px; margin: 12px 0; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a78bfa); width: 0%; transition: width 0.3s; }
+  .progress-text { font-size: 0.85rem; color: #888; text-align: center; }
+
+  .reader-area { margin-top: 20px; }
+  .reader-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .reader-controls { display: flex; gap: 8px; align-items: center; }
+
+  .text-display { background: #12121e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 20px; max-height: 500px; overflow-y: auto; font-size: 1rem; line-height: 1.8; }
+  .text-display .line { padding: 2px 8px; border-radius: 4px; transition: all 0.15s; margin: 1px 0; }
+  .text-display .line.active { background: #7c3aed55; border-left: 3px solid #a78bfa; }
+  .text-display .line.played { color: #666; }
+  .text-display .segment-divider { height: 1px; background: #2a2a4a; margin: 8px 0; }
+
+  .timeline { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  .timeline input[type="range"] { flex: 1; accent-color: #a78bfa; }
+  .timeline span { font-size: 0.85rem; color: #888; min-width: 80px; }
+
+  .status { text-align: center; color: #888; font-size: 0.9rem; margin: 8px 0; }
+  .status.error { color: #f87171; }
+  .status.success { color: #4ade80; }
+
+  @media (max-width: 600px) {
+    .container { padding: 12px; }
+    .card { padding: 16px; }
+    .controls { flex-direction: column; }
+    .controls select, .controls input[type="range"] { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Kokoro TTS PDF Reader</h1>
+  <p class="subtitle">Upload a PDF, and listen to it read aloud with line-by-line highlighting</p>
+
+  <div class="card">
+    <div class="upload-zone" id="uploadZone">
+      <div class="icon">📄</div>
+      <p>Drop a PDF here or click to browse</p>
+      <p style="font-size:0.85rem;color:#888;margin-top:8px">Maximum file size: 50MB</p>
+      <input type="file" id="fileInput" accept=".pdf">
+      <div class="filename" id="fileName" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="card" id="configCard" style="display:none">
+    <div class="controls">
+      <select id="voiceSelect">
+        <option value="af_heart">❤️ af_heart (Female, warm)</option>
+        <option value="af_bella">af_bella (Female)</option>
+        <option value="af_sarah">af_sarah (Female)</option>
+        <option value="af_sky">af_sky (Female)</option>
+        <option value="af_nicole">af_nicole (Female)</option>
+        <option value="af_alloy">af_alloy (Female)</option>
+        <option value="af_aoede">af_aoede (Female)</option>
+        <option value="af_jessica">af_jessica (Female)</option>
+        <option value="af_kore">af_kore (Female)</option>
+        <option value="af_nova">af_nova (Female)</option>
+        <option value="af_river">af_river (Female)</option>
+        <option value="am_adam">am_adam (Male)</option>
+        <option value="am_echo">am_echo (Male)</option>
+        <option value="am_eric">am_eric (Male)</option>
+        <option value="am_fenrir">am_fenrir (Male)</option>
+        <option value="am_liam">am_liam (Male)</option>
+        <option value="am_michael">am_michael (Male)</option>
+        <option value="am_onyx">am_onyx (Male)</option>
+        <option value="am_puck">am_puck (Male)</option>
+        <option value="am_santa">am_santa (Male)</option>
+      </select>
+      <label>
+        Speed: <span id="speedLabel">1.0</span>x
+        <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
+      </label>
+      <button class="btn btn-primary" id="generateBtn">Generate Audio</button>
+    </div>
+    <div class="progress-bar" id="progressBar" style="display:none"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText"></div>
+  </div>
+
+  <div class="card reader-area" id="readerCard" style="display:none">
+    <div class="reader-header">
+      <span id="readerTitle">Reader</span>
+      <div class="reader-controls">
+        <button class="btn btn-outline" id="playBtn">▶ Play</button>
+        <button class="btn btn-outline" id="pauseBtn" disabled>⏸ Pause</button>
+        <button class="btn btn-outline" id="stopBtn">⏹ Stop</button>
+      </div>
+    </div>
+    <div class="text-display" id="textDisplay"></div>
+    <div class="timeline">
+      <span id="timeCurrent">0:00</span>
+      <input type="range" id="segmentSlider" min="0" max="0" value="0">
+      <span id="timeTotal">0:00</span>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const configCard = document.getElementById('configCard');
+const voiceSelect = document.getElementById('voiceSelect');
+const speedSlider = document.getElementById('speedSlider');
+const speedLabel = document.getElementById('speedLabel');
+const generateBtn = document.getElementById('generateBtn');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const readerCard = document.getElementById('readerCard');
+const readerTitle = document.getElementById('readerTitle');
+const textDisplay = document.getElementById('textDisplay');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const stopBtn = document.getElementById('stopBtn');
+const segmentSlider = document.getElementById('segmentSlider');
+const timeCurrent = document.getElementById('timeCurrent');
+const timeTotal = document.getElementById('timeTotal');
+const status = document.getElementById('status');
+
+let sessionId = null;
+let segments = [];
+let currentSegIdx = 0;
+let audioEl = null;
+let isPlaying = false;
+let isPaused = false;
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+speedSlider.addEventListener('input', () => {
+  speedLabel.textContent = parseFloat(speedSlider.value).toFixed(1);
+});
+
+async function handleFile(file) {
+  if (!file.name.endsWith('.pdf')) {
+    setStatus('Please select a PDF file', 'error');
+    return;
+  }
+  fileName.textContent = `✅ ${file.name}`;
+  fileName.style.display = 'block';
+  uploadZone.classList.add('has-file');
+  configCard.style.display = 'block';
+  readerCard.style.display = 'none';
+  setStatus('Uploading PDF...', '');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) { setStatus(data.error, 'error'); return; }
+    sessionId = data.session_id;
+    setStatus(`Uploaded! ${data.total_lines} lines extracted. Click "Generate Audio".`, 'success');
+  } catch(e) {
+    setStatus('Upload failed: ' + e.message, 'error');
+  }
+}
+
+generateBtn.addEventListener('click', async () => {
+  if (!sessionId) { setStatus('Upload a PDF first', 'error'); return; }
+  generateBtn.disabled = true;
+  progressBar.style.display = 'block';
+  progressFill.style.width = '0%';
+  setStatus('Generating audio... this may take a while.', '');
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, voice: voiceSelect.value, speed: parseFloat(speedSlider.value) })
+    });
+    const data = await res.json();
+    if (data.error) { setStatus(data.error, 'error'); generateBtn.disabled = false; return; }
+
+    segments = data.segments;
+    progressFill.style.width = '100%';
+    setStatus(`Audio generated! ${segments.length} segments ready.`, 'success');
+    renderReader();
+    readerCard.style.display = 'block';
+  } catch(e) {
+    setStatus('Generation failed: ' + e.message, 'error');
+  }
+  generateBtn.disabled = false;
+});
+
+function renderReader() {
+  textDisplay.innerHTML = '';
+  segments.forEach((seg, idx) => {
+    const div = document.createElement('div');
+    div.id = `seg-${idx}`;
+    div.dataset.segIndex = idx;
+    seg.lines.forEach((line, li) => {
+      const lineDiv = document.createElement('div');
+      lineDiv.className = 'line';
+      lineDiv.id = `line-${idx}-${li}`;
+      lineDiv.textContent = line.text;
+      div.appendChild(lineDiv);
+    });
+    if (idx < segments.length - 1) {
+      const hr = document.createElement('div');
+      hr.className = 'segment-divider';
+      div.appendChild(hr);
+    }
+    textDisplay.appendChild(div);
+  });
+
+  segmentSlider.max = segments.length - 1;
+  segmentSlider.value = 0;
+  updateTimeDisplay();
+
+  readerTitle.textContent = `Reader (${segments.length} segments)`;
+}
+
+segmentSlider.addEventListener('input', () => {
+  if (!audioEl) return;
+  const idx = parseInt(segmentSlider.value);
+  if (idx !== currentSegIdx) {
+    if (audioEl) { audioEl.pause(); audioEl = null; }
+    currentSegIdx = idx;
+    highlightSegment(idx);
+    playSegment(idx);
+  }
+});
+
+playBtn.addEventListener('click', () => {
+  if (segments.length === 0) return;
+  if (isPaused && audioEl) {
+    audioEl.play();
+    isPlaying = true;
+    isPaused = false;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    return;
+  }
+  playSegment(currentSegIdx);
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (audioEl) {
+    audioEl.pause();
+    isPaused = true;
+    isPlaying = false;
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+  isPlaying = false;
+  isPaused = false;
+  currentSegIdx = 0;
+  segmentSlider.value = 0;
+  playBtn.disabled = false;
+  pauseBtn.disabled = true;
+  clearHighlights();
+  updateTimeDisplay();
+});
+
+function playSegment(idx) {
+  if (idx >= segments.length) {
+    setStatus('Finished reading!', 'success');
+    isPlaying = false;
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+    return;
+  }
+  const seg = segments[idx];
+  if (!seg) return;
+
+  if (audioEl) { audioEl.pause(); audioEl = null; }
+
+  audioEl = new Audio(seg.audio_url);
+  audioEl.playbackRate = parseFloat(speedSlider.value);
+  audioEl.play();
+  isPlaying = true;
+  isPaused = false;
+  playBtn.disabled = true;
+  pauseBtn.disabled = false;
+
+  highlightSegment(idx);
+
+  audioEl.addEventListener('ended', () => {
+    currentSegIdx = idx + 1;
+    segmentSlider.value = currentSegIdx;
+    updateTimeDisplay();
+    playSegment(currentSegIdx);
+  });
+
+  audioEl.addEventListener('timeupdate', () => {
+    if (audioEl && audioEl.duration) {
+      seg.currentTime = audioEl.currentTime;
+      updateTimeDisplay();
+    }
+  });
+
+  audioEl.addEventListener('error', () => {
+    setStatus('Audio playback error, skipping...', 'error');
+    currentSegIdx = idx + 1;
+    segmentSlider.value = currentSegIdx;
+    playSegment(currentSegIdx);
+  });
+}
+
+function highlightSegment(idx) {
+  document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
+  const segEl = document.getElementById(`seg-${idx}`);
+  if (segEl) {
+    segEl.querySelectorAll('.line').forEach(el => el.classList.add('active'));
+    segEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
+}
+
+function updateTimeDisplay() {
+  const total = segments.reduce((sum, s) => sum + (s.duration || 0), 0);
+  const elapsed = segments.slice(0, currentSegIdx).reduce((sum, s) => sum + (s.duration || 0), 0);
+  timeCurrent.textContent = formatTime(elapsed);
+  timeTotal.textContent = formatTime(total);
+}
+
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function setStatus(msg, type) {
+  status.textContent = msg;
+  status.className = 'status' + (type ? ' ' + type : '');
+}
+</script>
+</body>
+</html>
