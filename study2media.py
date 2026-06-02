@@ -89,7 +89,7 @@ def create_study_video(chapters, title, output_path):
             y += 10
 
         frame = np.array(img)
-        clip = ImageClip(frame).with_duration(12)
+        clip = ImageClip(frame, duration=12)
         clips.append(clip)
 
     if not clips:
