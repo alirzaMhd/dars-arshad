@@ -96,6 +96,7 @@
   .page-wrapper canvas { display: block; filter: var(--pdf-filter); border-radius: 2px; }
   .highlight-overlay {
     position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+    z-index: 2;
   }
   .highlight-rect {
     position: absolute; background: var(--highlight); border-radius: 2px;
@@ -987,13 +988,28 @@ function onPageReady(segments) {
   renderPage().then(() => playSegment(0));
 }
 
+function preloadNext(idx) {
+  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
+  if (idx >= state.segments.length) return;
+  const seg = state.segments[idx];
+  if (!seg) return;
+  state.nextAudio = new Audio(seg.audio_url + '?t=' + Date.now());
+  state.nextAudio.preload = 'auto';
+  state.nextAudio.load();
+}
+
 function playSegment(idx) {
   if (idx >= state.segments.length) { advanceToNextPage(); return; }
   if (idx < 0) idx = 0;
   const seg = state.segments[idx];
   if (!seg) return;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
+  if (state.nextAudio && state.nextAudio.dataset.segIdx == idx) {
+    state.audioEl = state.nextAudio;
+    state.nextAudio = null;
+  } else {
+    state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
+  }
   state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
   state.audioEl.play().catch(() => {});
   state.isPlaying = true; state.isPaused = false; state.currentSegIdx = idx;
@@ -1010,6 +1026,7 @@ function playSegment(idx) {
   });
   state.audioEl.addEventListener('ended', () => playSegment(idx + 1));
   state.audioEl.addEventListener('error', () => playSegment(idx + 1));
+  preloadNext(idx + 1);
 }
 
 function updateProgress() {
@@ -1051,7 +1068,9 @@ el.nextSegBtn.addEventListener('click', () => { if (state.segments.length && sta
 el.stopBtn.addEventListener('click', () => stopReading());
 
 function stopReading() {
+  state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0;
   updatePlayBtns();
   el.dockProgressFill.style.width = '0%';
@@ -1064,6 +1083,7 @@ function resetReader() {
   if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
   state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
+  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0; state.segments = [];
   el.genIndicator.classList.add('hidden');
   el.dockProgressFill.style.width = '0%';
@@ -1106,7 +1126,9 @@ function fmt(secs) {
 
 // ─── Keyboard shortcuts ───
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (state.chat.open) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); el.prevPageBtn.click(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); el.nextPageBtn.click(); }
   else if (e.key === ' ') { e.preventDefault(); el.playBtn.click(); }
