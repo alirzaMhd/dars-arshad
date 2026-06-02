@@ -176,10 +176,10 @@
     overflow: hidden; opacity: 1; line-height: 1;
     text-size-adjust: none; forced-color-adjust: none;
     transform-origin: 0 0; z-index: 1;
-    user-select: text; -webkit-user-select: text;
+    pointer-events: auto; user-select: text; -webkit-user-select: text;
   }
   .textLayer span,
-  .textLayer br { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+  .textLayer br { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; user-select: text; -webkit-user-select: text; }
   .textLayer ::selection { background: rgba(124, 58, 237, 0.35); }
   .textLayer .endOfContent { display: block; }
 
@@ -768,13 +768,15 @@ async function renderPage() {
     const textContent = await page.getTextContent();
     const textLayerDiv = el.textLayer;
     textLayerDiv.innerHTML = '';
-    const textLayer = new pdfjsLib.TextLayer({
-      textContentSource: textContent,
+    const renderTask = pdfjsLib.renderTextLayer({
+      textContent,
       container: textLayerDiv,
       viewport,
+      textDivs: [],
+      enhanceTextSelection: true,
     });
-    state.textRenderTask = textLayer.render();
-    await state.textRenderTask.promise;
+    state.textRenderTask = renderTask;
+    await renderTask.promise;
   } catch (e) { if (e.name !== 'RenderingCancelledException') console.warn('Text layer render error', e); }
   renderHighlights(page, viewport);
   updateNav();
@@ -788,13 +790,19 @@ async function renderPage() {
 function renderHighlights(page, viewport) {
   el.highlightOverlay.innerHTML = '';
   if (!state.segments.length) return;
-  const scale = state.scale;
+  // PyMuPDF uses top-left origin (y-down), PDF.js uses bottom-left origin (y-up).
+  // Get page height in PDF units so we can flip Y coordinates.
+  const pdfPageH = page.getViewport({ scale: 1, rotation: 0 }).height;
   state.segments.forEach((seg, idx) => {
     if (!seg.rects) return;
     seg.rects.forEach(rect => {
       let r;
       try {
-        r = viewport.convertToViewportRectangle(rect[0], rect[1], rect[2], rect[3]);
+        // Flip Y: PyMuPDF (y=0 at top) → PDF.js (y=0 at bottom)
+        r = viewport.convertToViewportRectangle(
+          rect[0], pdfPageH - rect[1],
+          rect[2], pdfPageH - rect[3]
+        );
       } catch { return; }
       const [x0, y0, x1, y1] = r;
       const div = document.createElement('div');
