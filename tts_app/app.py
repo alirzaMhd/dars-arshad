@@ -66,6 +66,8 @@ def find_segment_rects(page, text):
     """Locate a text snippet on the page and return rects in PDF point coords."""
     if not text or not text.strip():
         return []
+
+    # Strategy 1: search_for with various whitespace normalizations
     queries = [text.strip(), re.sub(r'\s+', ' ', text).strip()]
     for q in queries:
         try:
@@ -84,6 +86,57 @@ def find_segment_rects(page, text):
             found = []
         if found:
             return [[float(r.x0), float(r.y0), float(r.x1), float(r.y1)] for r in found]
+
+    # Strategy 2: word-level matching fallback
+    # Build a word-level representation of the page to handle whitespace/encoding mismatches
+    norm_text = re.sub(r'\s+', ' ', text).strip()
+    try:
+        words = page.get_text("words")
+    except Exception:
+        words = []
+    if words and norm_text:
+        # words: [(x0,y0,x1,y1,"word",block_no,line_no,word_no), ...]
+        word_strs = [w[4] for w in words]
+        # Build normalized page text with separator tracking
+        sep = [' '] * len(word_strs)
+        page_norm = ''
+        word_spans = []  # (start_char, end_char, rect)
+        for i, ws in enumerate(word_strs):
+            start = len(page_norm)
+            if page_norm and not page_norm[-1].isspace():
+                page_norm += ' '
+                start += 1
+            page_norm += ws
+            end = len(page_norm)
+            word_spans.append((start, end, (words[i][0], words[i][1], words[i][2], words[i][3])))
+
+        # Try to find the normalized text in the page text
+        idx = page_norm.find(norm_text)
+        if idx >= 0:
+            end_idx = idx + len(norm_text)
+            # Collect rects for words overlapping with [idx, end_idx)
+            result = []
+            for ws in word_spans:
+                if ws[0] < end_idx and ws[1] > idx:
+                    result.append(list(ws[2]))
+            if result:
+                return result
+
+        # Try fuzzy matching with shorter substrings
+        for length in (120, 80, 50, 30):
+            snippet = norm_text[:length].strip()
+            if not snippet:
+                continue
+            idx = page_norm.find(snippet)
+            if idx >= 0:
+                end_idx = idx + len(snippet)
+                result = []
+                for ws in word_spans:
+                    if ws[0] < end_idx and ws[1] > idx:
+                        result.append(list(ws[2]))
+                if result:
+                    return result
+
     return []
 
 def extract_page_segments(pdf_path, page_num, max_chars=300):
