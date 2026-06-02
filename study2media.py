@@ -174,21 +174,37 @@ def generate_audiobook(text_chunks, output_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert a study guide markdown to video + TTS audiobook"
+        description="Convert a study guide markdown to video + TTS audiobook",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python study2media.py study-guide-CLRS-4ed-2026-06-01.md
+  python study2media.py study-guide-CLRS-4ed-2026-06-01.md --skip-video
+  python study2media.py study-guide-CLRS-4ed-2026-06-01.md --output my-clrs-guide
+
+Workflow:
+  1. Parses a markdown study guide into sections (split by "### ")
+  2. Optionally generates a 1920×1080 MP4 video: each section → a text slide
+  3. Always generates a TTS audiobook (.wav) using Chatterbox Turbo
+
+Output locations:
+  Videos:   /content/dars-arshad/videos/<name>.mp4
+  Audiobooks: /content/dars-arshad/audiobooks/<name>.wav
+""",
     )
-    parser.add_argument("markdown_file", help="Path to the study guide markdown file")
+    parser.add_argument("markdown_file", help="Path to the study guide markdown file (split by ### headings)")
     parser.add_argument(
-        "--skip-video", action="store_true", help="Skip video suggestion/generation"
+        "--skip-video", action="store_true", help="Skip video step entirely"
     )
     parser.add_argument(
         "--output",
         default=None,
-        help="Output base name (without extension)",
+        help="Output base name (without extension; defaults to markdown filename)",
     )
     parser.add_argument(
         "--generate-video",
         action="store_true",
-        help="Generate video without asking (used after approval)",
+        help="Generate video non-interactively (bypasses approval prompt)",
     )
     args = parser.parse_args()
 
