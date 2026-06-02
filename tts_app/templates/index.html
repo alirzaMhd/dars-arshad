@@ -1117,6 +1117,540 @@ document.addEventListener('keydown', e => {
   else if (e.key === 't' || e.key === 'T') { cycleTheme(); }
   else if (e.key === 'Escape' && document.fullscreenElement) { document.exitFullscreen?.(); }
 });
+
+// ─── Right-click context menu ───
+const CTX_ACTIONS = [
+  { id: 'chat',  icon: '💬', label: 'Chat about this',       action: '' },
+  { id: 'explain', icon: '📖', label: 'Explain',              action: 'Explain this passage in detail.' },
+  { id: 'summarize', icon: '📝', label: 'Summarize',          action: 'Summarize this passage in 3-5 bullet points.' },
+  { id: 'define', icon: '🔤', label: 'Define key terms',     action: 'Define the key terms in this passage.' },
+  { id: 'simplify', icon: '🧒', label: 'Simplify (ELI5)',    action: 'Explain this passage like I am 5 years old.' },
+  { id: 'critique', icon: '🧠', label: 'Critique',           action: 'Critique the argument or claims in this passage.' },
+  { id: 'questions', icon: '❓', label: 'Generate questions', action: 'Generate 5 study questions from this passage.' },
+  { id: 'keyterms', icon: '🔑', label: 'List key terms',    action: 'List the key terms introduced in this passage.' },
+  { id: 'related', icon: '🔗', label: 'Find related passages', action: 'Find other passages in the PDF related to this one and quote them briefly.' },
+  { id: 'code', icon: '🧑‍💻', label: 'Extract code/formulas', action: 'Extract any code snippets or formulas from this passage.' },
+  { id: 'translate', icon: '🌐', label: 'Translate',           action: '', submenu: [
+    { id: 'tr-en', label: 'English', action: 'Translate this passage to English.' },
+    { id: 'tr-fa', label: 'فارسی (Persian)', action: 'Translate this passage to Persian (Farsi).' },
+    { id: 'tr-fr', label: 'Français', action: 'Translate this passage to French.' },
+    { id: 'tr-de', label: 'Deutsch', action: 'Translate this passage to German.' },
+    { id: 'tr-zh', label: '中文', action: 'Translate this passage to Chinese (Simplified).' },
+  ]},
+];
+
+function buildCtxMenu() {
+  el.ctxMenu.innerHTML = '';
+  CTX_ACTIONS.forEach(item => {
+    if (item.submenu) {
+      const wrap = document.createElement('div');
+      wrap.className = 'item submenu';
+      wrap.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span><span class="arrow">▸</span>`;
+      const sub = document.createElement('div');
+      sub.className = 'submenu-items';
+      item.submenu.forEach(s => {
+        const subItem = document.createElement('div');
+        subItem.className = 'item';
+        subItem.textContent = s.label;
+        subItem.addEventListener('click', e => {
+          e.stopPropagation();
+          hideCtxMenu();
+          runCtxAction(s.action);
+        });
+        sub.appendChild(subItem);
+      });
+      wrap.appendChild(sub);
+      el.ctxMenu.appendChild(wrap);
+    } else {
+      const d = document.createElement('div');
+      d.className = 'item';
+      d.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
+      d.addEventListener('click', e => {
+        e.stopPropagation();
+        hideCtxMenu();
+        if (item.id === 'chat') openChatWithFocus(prefillFromSelection());
+        else runCtxAction(item.action);
+      });
+      el.ctxMenu.appendChild(d);
+    }
+  });
+}
+function showCtxMenu(x, y) {
+  buildCtxMenu();
+  el.ctxMenu.classList.remove('hidden');
+  el.ctxMenu.style.left = '0px'; el.ctxMenu.style.top = '0px';
+  const rect = el.ctxMenu.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 8;
+  const maxY = window.innerHeight - rect.height - 8;
+  el.ctxMenu.style.left = Math.min(x, maxX) + 'px';
+  el.ctxMenu.style.top = Math.min(y, maxY) + 'px';
+}
+function hideCtxMenu() { el.ctxMenu.classList.add('hidden'); }
+function getSelectionText() {
+  const s = window.getSelection();
+  return s ? s.toString().trim() : '';
+}
+function prefillFromSelection() {
+  const t = getSelectionText();
+  if (!t) return;
+  state.chat.focus = t;
+  renderFocus();
+  openChat();
+  if (t.length > 1500) state.chat.focus = t.slice(0, 1500);
+  return t;
+}
+function runCtxAction(action) {
+  if (!state.sessionId) return alert('Upload a PDF first');
+  const focus = getSelectionText() || state.chat.focus;
+  if (!focus) return;
+  state.chat.focus = focus.length > 4000 ? focus.slice(0, 4000) : focus;
+  renderFocus();
+  openChat();
+  ensureChat().then(() => sendChatMessage(action || 'Discuss this passage.', true));
+}
+
+document.addEventListener('contextmenu', e => {
+  const t = getSelectionText();
+  if (t && t.length > 0) {
+    e.preventDefault();
+    showCtxMenu(e.clientX, e.clientY);
+  }
+});
+document.addEventListener('click', e => {
+  if (!el.ctxMenu.classList.contains('hidden') && !el.ctxMenu.contains(e.target)) hideCtxMenu();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideCtxMenu(); });
+
+// ─── Chat sidebar ───
+function openChat() {
+  state.chat.open = true;
+  el.chatSidebar.classList.add('open');
+  el.hoverTab.classList.add('open');
+  el.chatTabIcon.textContent = '✕';
+  document.body.classList.add('chat-open');
+  if (state.sessionId) {
+    loadChatModels();
+    loadChatSessions();
+    ensureChat();
+  }
+}
+function closeChat() {
+  state.chat.open = false;
+  el.chatSidebar.classList.remove('open');
+  el.hoverTab.classList.remove('open');
+  el.chatTabIcon.textContent = '💬';
+  document.body.classList.remove('chat-open');
+}
+function toggleChat() { state.chat.open ? closeChat() : openChat(); }
+el.chatTabBtn.addEventListener('click', toggleChat);
+el.chatCloseBtn.addEventListener('click', closeChat);
+el.hoverTab.addEventListener('mouseenter', () => { if (!state.chat.open) el.chatTabLabel.style.opacity = '1'; });
+el.hoverTab.addEventListener('mouseleave', () => { if (!state.chat.open) el.chatTabLabel.style.opacity = ''; });
+
+function renderFocus() {
+  const f = state.chat.focus;
+  if (f && f.trim()) {
+    el.chatFocusText.textContent = f;
+    el.chatFocus.classList.remove('hidden');
+  } else {
+    el.chatFocus.classList.add('hidden');
+  }
+}
+el.chatFocusClear.addEventListener('click', () => { state.chat.focus = ''; renderFocus(); });
+
+async function loadChatModels() {
+  if (state.chat.models.length) {
+    populateModelSelect();
+    return;
+  }
+  try {
+    const r = await fetch('/api/chat/models');
+    const data = await r.json();
+    state.chat.models = data.models || [];
+    populateModelSelect();
+  } catch (e) {
+    el.chatModelSelect.innerHTML = '<option value="opencode/big-pickle">big-pickle (default)</option>';
+  }
+}
+function populateModelSelect() {
+  const sel = el.chatModelSelect;
+  const cur = state.chat.model || sel.value;
+  sel.innerHTML = '';
+  state.chat.models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.textContent = m.name;
+    opt.title = m.id;
+    sel.appendChild(opt);
+  });
+  if (cur && state.chat.models.find(m => m.id === cur)) sel.value = cur;
+  else if (!sel.value && state.chat.models.length) sel.value = state.chat.models[0].id;
+  state.chat.model = sel.value;
+}
+el.chatModelSelect.addEventListener('change', async () => {
+  state.chat.model = el.chatModelSelect.value;
+  if (state.chat.chatId) {
+    try { await fetch(`/api/chat/session/${state.chat.chatId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: state.chat.model }) }); } catch {}
+  }
+});
+
+async function loadChatSessions() {
+  if (!state.sessionId) return;
+  try {
+    const r = await fetch(`/api/chat/sessions/${state.sessionId}`);
+    const data = await r.json();
+    renderSessionChips(data.chats || []);
+  } catch (e) { console.warn('loadChatSessions', e); }
+}
+function renderSessionChips(chats) {
+  el.chatSessions.innerHTML = '';
+  chats.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'chat-chip' + (c.id === state.chat.chatId ? ' active' : '');
+    chip.title = c.title;
+    chip.textContent = c.title;
+    const x = document.createElement('span');
+    x.className = 'x'; x.textContent = '✕';
+    x.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('Delete this chat?')) return;
+      try { await fetch(`/api/chat/session/${c.id}`, { method: 'DELETE' }); } catch {}
+      if (state.chat.chatId === c.id) state.chat.chatId = null;
+      loadChatSessions();
+    });
+    chip.appendChild(x);
+    chip.addEventListener('click', () => openChatById(c.id));
+    el.chatSessions.appendChild(chip);
+  });
+}
+
+el.chatNewBtn.addEventListener('click', () => {
+  state.chat.chatId = null;
+  state.chat.messages = [];
+  state.chat.focus = '';
+  renderFocus();
+  renderMessages();
+  ensureChat();
+});
+
+async function ensureChat() {
+  if (!state.sessionId) return;
+  if (state.chat.chatId) {
+    await openChatById(state.chat.chatId);
+    return;
+  }
+  try {
+    const r = await fetch('/api/chat/sessions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdf_session_id: state.sessionId, model: state.chat.model || 'opencode/big-pickle' }),
+    });
+    const data = await r.json();
+    state.chat.chatId = data.chat.id;
+    state.chat.model = data.chat.model;
+    populateModelSelect();
+    loadChatSessions();
+    await loadPdfMeta();
+  } catch (e) { console.warn('ensureChat', e); }
+}
+async function openChatById(chatId) {
+  try {
+    const r = await fetch(`/api/chat/session/${chatId}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    state.chat.chatId = chatId;
+    state.chat.messages = (data.chat.messages || []).map(stripMsgArtifacts);
+    state.chat.model = data.chat.model || state.chat.model;
+    populateModelSelect();
+    renderMessages();
+    loadChatSessions();
+    loadPdfMeta();
+  } catch (e) { console.warn('openChatById', e); }
+}
+async function loadPdfMeta() {
+  if (!state.sessionId || state.chat.pdfMeta) return;
+  try {
+    const r = await fetch(`/api/chat/pdf-text/${state.sessionId}`);
+    if (!r.ok) return;
+    const m = await r.json();
+    state.chat.pdfMeta = m;
+    el.chatContextBadge.textContent = `PDF: ${m.pages} pages, ${Math.round(m.chars/1000)}k chars`;
+    el.chatContextBadge.classList.remove('hidden');
+    el.chatTruncBadge.classList.toggle('hidden', !m.truncated);
+  } catch {}
+}
+
+function stripMsgArtifacts(m) {
+  if (m && typeof m.content === 'string') m.content = stripArtifacts(m.content);
+  if (m && typeof m.reasoning === 'string') m.reasoning = stripArtifacts(m.reasoning);
+  return m;
+}
+function stripArtifacts(text) {
+  if (!text) return '';
+  return text
+    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')
+    .replace(/[\u2500-\u257F\u2580-\u259F\u2800-\u28FF]/g, '')
+    .replace(/[█▀▁▂▃▄▅▆▇▉▊▋▌▍▎▏▔▕▖▗▘▙▚▛▜▝▞▟]/g, '')
+    .replace(/[⠁-⣿]/g, '')
+    .replace(/[\u2300-\u23FF]/g, '')
+    .replace(/[▓▒░]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function renderMessages() {
+  const c = el.chatMessages;
+  c.innerHTML = '';
+  if (!state.chat.messages.length && !state.chat.streaming) {
+    c.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px 12px;font-size:0.85rem">No messages yet. Ask about the PDF or right-click selected text to use a quick action.</div>';
+    return;
+  }
+  state.chat.messages.forEach((m, idx) => c.appendChild(buildMessageNode(m, idx)));
+  if (state.chat.streaming && state.chat.streamBuf !== undefined) {
+    const live = buildStreamingNode();
+    c.appendChild(live);
+  }
+  scrollChatToBottom();
+}
+function buildMessageNode(m, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = m.role === 'user' ? 'You' : 'AI';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (m.action) {
+    const t = document.createElement('span');
+    t.className = 'action-tag';
+    t.textContent = m.action;
+    bub.appendChild(t);
+  }
+  if (m.role === 'user' && m.focus) {
+    const fg = document.createElement('div');
+    fg.className = 'focus-tag';
+    fg.textContent = `📍 Focus: "${m.focus.length > 120 ? m.focus.slice(0, 120) + '…' : m.focus}"`;
+    bub.appendChild(fg);
+  }
+  if (m.reasoning) {
+    const det = document.createElement('details');
+    det.className = 'reasoning';
+    const sm = document.createElement('summary');
+    sm.textContent = '💭 Show thinking';
+    det.appendChild(sm);
+    const rdiv = document.createElement('div');
+    rdiv.textContent = m.reasoning;
+    det.appendChild(rdiv);
+    bub.appendChild(det);
+  }
+  const content = document.createElement('div');
+  content.innerHTML = renderMarkdown(m.content || '');
+  copyCodeButtons(content);
+  bub.appendChild(content);
+  if (m.role === 'assistant') wrap.appendChild(av);
+  wrap.appendChild(bub);
+  if (m.role === 'user') wrap.appendChild(av);
+  return wrap;
+}
+function buildStreamingNode() {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg assistant';
+  const av = document.createElement('div');
+  av.className = 'avatar'; av.textContent = 'AI';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if (state.chat.streamReasoning) {
+    const det = document.createElement('details');
+    det.className = 'reasoning'; det.open = true;
+    const sm = document.createElement('summary');
+    sm.textContent = '💭 Thinking…';
+    det.appendChild(sm);
+    const rdiv = document.createElement('div');
+    rdiv.textContent = state.chat.streamReasoning;
+    det.appendChild(rdiv);
+    bub.appendChild(det);
+  }
+  const content = document.createElement('div');
+  content.innerHTML = renderMarkdown(state.chat.streamBuf || '');
+  copyCodeButtons(content);
+  bub.appendChild(content);
+  wrap.appendChild(av);
+  wrap.appendChild(bub);
+  return wrap;
+}
+function renderMarkdown(text) {
+  if (!text) return '';
+  try {
+    if (window.marked) {
+      window.marked.setOptions({ breaks: true, gfm: true });
+      const raw = window.marked.parse(text);
+      return window.DOMPurify ? window.DOMPurify.sanitize(raw) : raw;
+    }
+  } catch {}
+  return text.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\n/g, '<br>');
+}
+function copyCodeButtons(container) {
+  container.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector('.copy-pre')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-pre';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code');
+      navigator.clipboard.writeText(code ? code.innerText : pre.innerText);
+      btn.textContent = 'Copied';
+      setTimeout(() => btn.textContent = 'Copy', 1200);
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+}
+function scrollChatToBottom(force) {
+  const c = el.chatMessages;
+  const atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+  if (force || atBottom) c.scrollTop = c.scrollHeight;
+}
+
+// ─── Send message (SSE) ───
+el.chatSendBtn.addEventListener('click', () => doSend());
+el.chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); }
+});
+el.chatInput.addEventListener('input', () => {
+  el.chatInput.style.height = 'auto';
+  el.chatInput.style.height = Math.min(120, el.chatInput.scrollHeight) + 'px';
+});
+async function doSend(prefilled) {
+  const text = prefilled || el.chatInput.value;
+  if (!text || !text.trim()) return;
+  if (!state.sessionId) return alert('Upload a PDF first');
+  el.chatInput.value = '';
+  el.chatInput.style.height = 'auto';
+  await ensureChat();
+  await sendChatMessage(text.trim(), false);
+}
+async function sendChatMessage(text, isAction) {
+  if (state.chat.streaming) return;
+  state.chat.streaming = true;
+  state.chat.streamBuf = '';
+  state.chat.streamReasoning = '';
+  const userMsg = {
+    id: 'tmp_' + Date.now(),
+    role: 'user',
+    content: text,
+    focus: state.chat.focus || null,
+    action: isAction ? (state.chat.pendingAction || 'Chat about this') : null,
+    timestamp: Date.now() / 1000,
+  };
+  state.chat.messages.push(userMsg);
+  renderMessages();
+  el.chatTyping.classList.remove('hidden');
+  el.chatTypingText.textContent = state.chat.streamReasoning ? 'Thinking…' : 'Starting…';
+  el.chatSendBtn.disabled = true;
+  let lastUserRender = Date.now();
+  let raf = null;
+  const tickRender = () => {
+    if (!state.chat.streaming) return;
+    const now = Date.now();
+    if (now - lastUserRender > 80) {
+      renderMessages();
+      lastUserRender = now;
+    }
+    raf = requestAnimationFrame(tickRender);
+  };
+  raf = requestAnimationFrame(tickRender);
+
+  try {
+    const r = await fetch('/api/chat/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: state.chat.chatId,
+        message: text,
+        focus: state.chat.focus || '',
+        action: isAction ? (state.chat.pendingAction || '') : '',
+      }),
+    });
+    if (!r.ok || !r.body) throw new Error('send failed: ' + r.status);
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const events = buf.split('\n\n');
+      buf = events.pop() || '';
+      for (const ev of events) {
+        const lines = ev.split('\n');
+        let evtName = 'message', data = '';
+        for (const ln of lines) {
+          if (ln.startsWith('event: ')) evtName = ln.slice(7).trim();
+          else if (ln.startsWith('data: ')) data += ln.slice(6);
+        }
+        if (!data) continue;
+        let payload;
+        try { payload = JSON.parse(data); } catch { continue; }
+        if (evtName === 'meta') { /* noop */ }
+        else if (evtName === 'text') {
+          state.chat.streamBuf += payload.chunk || '';
+          el.chatTypingText.textContent = 'Writing…';
+        }
+        else if (evtName === 'reasoning') {
+          state.chat.streamReasoning += payload.chunk || '';
+        }
+        else if (evtName === 'assistant') {
+          if (payload.message) state.chat.messages.push(stripMsgArtifacts(payload.message));
+        }
+        else if (evtName === 'error') {
+          state.chat.streamBuf += '\n\n⚠️ ' + (payload.error || 'error');
+        }
+      }
+    }
+  } catch (e) {
+    state.chat.streamBuf += '\n\n⚠️ ' + (e.message || String(e));
+  } finally {
+    cancelAnimationFrame(raf);
+    state.chat.streaming = false;
+    el.chatTyping.classList.add('hidden');
+    el.chatSendBtn.disabled = false;
+    if (state.chat.streamBuf) {
+      const finalMsg = {
+        id: 'tmp_a_' + Date.now(),
+        role: 'assistant',
+        content: stripArtifacts(state.chat.streamBuf),
+        reasoning: stripArtifacts(state.chat.streamReasoning) || null,
+        timestamp: Date.now() / 1000,
+      };
+      const last = state.chat.messages[state.chat.messages.length - 1];
+      if (!last || last.role !== 'assistant' || last.content !== finalMsg.content) {
+        state.chat.messages.push(finalMsg);
+      }
+    }
+    state.chat.streamBuf = '';
+    state.chat.streamReasoning = '';
+    state.chat.focus = '';
+    renderFocus();
+    renderMessages();
+    loadChatSessions();
+  }
+}
+
+// Clear action label after first use
+const _origRun = runCtxAction;
+
+// Hook action label so user sees what was triggered
+const _origSend = sendChatMessage;
+
+// ─── Extend keyboard shortcuts to handle chat ───
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+    e.preventDefault(); toggleChat(); return;
+  }
+  if (e.key === 'Escape' && state.chat.open) { closeChat(); return; }
+});
+
+// Refresh model list when chat opens
+el.chatModelSelect.addEventListener('focus', () => loadChatModels());
 </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import os, uuid, json, re, threading, time, importlib
+import os, uuid, json, re, threading, time, importlib, subprocess
 import numpy as np
 import soundfile as sf
 import pymupdf
@@ -445,8 +445,10 @@ def build_rag_prompt(pdf_meta: dict, history: list, user_msg: str, focus: str = 
 
 def list_chat_models() -> list:
     try:
-        out = subprocess.check_output(['opencode', 'models'], stderr=subprocess.DEVNULL, timeout=10).decode('utf-8', 'ignore')
-    except Exception:
+        out = subprocess.check_output(['opencode', 'models'], stderr=subprocess.PIPE, timeout=20)
+        out = out.decode('utf-8', 'ignore')
+    except Exception as e:
+        print(f'[chat] opencode models failed: {e!r}', flush=True)
         return [{'id': 'opencode/big-pickle', 'name': 'big-pickle (default)'}]
     models = []
     seen = set()
@@ -465,7 +467,7 @@ def list_chat_models() -> list:
     return models
 
 def opencode_stream_chat(prompt: str, model: str, opencode_session_id: str = None):
-    """Yield ('text'|'reasoning'|'done'|'error', payload) tuples from opencode run."""
+    """Yield ('text'|'reasoning'|'done'|'error'|'session', payload) tuples from opencode run."""
     args = [
         'opencode', 'run',
         '--format', 'json',
@@ -477,6 +479,7 @@ def opencode_stream_chat(prompt: str, model: str, opencode_session_id: str = Non
         args += ['--session', opencode_session_id]
     args.append(prompt)
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+    first_session_id = opencode_session_id
     try:
         while True:
             line = proc.stdout.readline()
@@ -489,26 +492,34 @@ def opencode_stream_chat(prompt: str, model: str, opencode_session_id: str = Non
                 evt = json.loads(line)
             except Exception:
                 continue
+            sid = evt.get('sessionID')
+            if sid and not first_session_id:
+                first_session_id = sid
+                yield ('session', {'sessionID': sid})
             etype = evt.get('type')
             part = evt.get('part') or {}
-            if etype == 'text':
+            if etype in ('text',):
                 chunk = part.get('text') or evt.get('text') or evt.get('content') or ''
                 if chunk:
                     yield ('text', strip_artifacts(chunk))
-            elif etype == 'reasoning':
+            elif etype in ('reasoning',):
                 chunk = part.get('text') or ''
                 if chunk:
                     yield ('reasoning', strip_artifacts(chunk))
-            elif etype == 'step-finish':
-                sid = evt.get('sessionID') or part.get('sessionID')
-                yield ('done', {'sessionID': sid})
+            elif etype in ('step-finish', 'step_finish'):
+                if first_session_id:
+                    yield ('done', {'sessionID': first_session_id})
+                else:
+                    yield ('done', {})
                 return
-            elif etype == 'error':
+            elif etype in ('error',):
                 err = part.get('error') or evt.get('error') or 'opencode error'
                 yield ('error', str(err))
         stderr = (proc.stderr.read() or '').strip() if proc.stderr else ''
         if proc.poll() not in (0, None) and stderr:
             yield ('error', strip_artifacts(stderr)[:500])
+        if first_session_id:
+            yield ('done', {'sessionID': first_session_id})
     finally:
         try:
             if proc.poll() is None:
@@ -748,6 +759,8 @@ def chat_send():
                     elif kind == 'reasoning':
                         full_reasoning += payload
                         yield f"event: reasoning\ndata: {json.dumps({'chunk': payload})}\n\n"
+                    elif kind == 'session':
+                        chat['opencode_session_id'] = payload['sessionID']
                     elif kind == 'done':
                         if payload.get('sessionID'):
                             chat['opencode_session_id'] = payload['sessionID']
