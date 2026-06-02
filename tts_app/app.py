@@ -317,6 +317,229 @@ def generate_and_prefetch(session_id, page_num, voice, speed):
     generate_page_audio(session_id, page_num, voice, speed)
     prefetch_pages(session_id, page_num, voice, speed)
 
+# ─── Chat / RAG helpers ───
+
+STRIP_ARTIFACTS_RE = re.compile(
+    r'[\u2500-\u257F\u2580-\u259F\u2800-\u28FF]'
+    r'|[█▀▁▂▃▄▅▆▇▉▊▋▌▍▎▏▔▕▖▗▘▙▚▛▜▝▞▟]'
+    r'|[⠁-⣿]'
+    r'|[\u2300-\u23FF]'
+    r'|[⟳⟲↻↺○◌◍◎●◉⏳⏰⌛⌚]'
+    r'|[▓▒░]'
+    r'|\x1b\[[0-9;?]*[a-zA-Z]'
+    r'|\x1b\][^\x07]*\x07'
+    r'|\x1b\[\?[0-9;]*[a-zA-Z]'
+    r'|\x1b\[>[0-9;]*[a-zA-Z]'
+)
+ANSI_RE = re.compile(r'\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\[\?[0-9;]*[a-zA-Z]|\x1b\[>[0-9;]*[a-zA-Z]')
+
+def strip_artifacts(text: str) -> str:
+    if not text:
+        return ''
+    text = ANSI_RE.sub('', text)
+    text = STRIP_ARTIFACTS_RE.sub('', text)
+    text = re.sub(r'[ \t]+\n', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'^\s+$', '', text, flags=re.MULTILINE)
+    return text.strip()
+
+CHAT_DIR_NAME = 'chats'
+PDF_TEXT_NAME = 'pdf_text.txt'
+PDF_TEXT_MAX_CHARS = 80_000
+PDF_TEXT_HEAD = 60_000
+PDF_TEXT_TAIL = 20_000
+
+def chat_dir(pdf_session_id: str) -> str:
+    d = os.path.join(get_session_dir(pdf_session_id), CHAT_DIR_NAME)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+def chat_path(pdf_session_id: str, chat_id: str) -> str:
+    return os.path.join(chat_dir(pdf_session_id), f'{chat_id}.json')
+
+def load_chat(pdf_session_id: str, chat_id: str):
+    p = chat_path(pdf_session_id, chat_id)
+    if not os.path.exists(p):
+        return None
+    with open(p) as f:
+        return json.load(f)
+
+def save_chat(chat: dict):
+    pdf_sid = chat['pdf_session_id']
+    p = chat_path(pdf_sid, chat['id'])
+    with open(p, 'w') as f:
+        json.dump(chat, f, ensure_ascii=False, indent=2)
+
+def extract_full_pdf_text(pdf_path: str) -> str:
+    doc = pymupdf.open(pdf_path)
+    parts = []
+    try:
+        for page in doc:
+            parts.append(page.get_text("text"))
+    finally:
+        doc.close()
+    return '\n\n'.join(parts).strip()
+
+def get_cached_pdf_text(pdf_session_id: str) -> dict:
+    session = load_session(pdf_session_id)
+    if not session:
+        return None
+    sdir = get_session_dir(pdf_session_id)
+    text_path = os.path.join(sdir, PDF_TEXT_NAME)
+    if not os.path.exists(text_path):
+        full = extract_full_pdf_text(session['pdf_path'])
+        with open(text_path, 'w') as f:
+            f.write(full)
+    else:
+        with open(text_path) as f:
+            full = f.read()
+    truncated = False
+    text = full
+    if len(full) > PDF_TEXT_MAX_CHARS:
+        text = full[:PDF_TEXT_HEAD] + '\n\n[... middle truncated for context window ...]\n\n' + full[-PDF_TEXT_TAIL:]
+        truncated = True
+    return {
+        'chars': len(full),
+        'truncated': truncated,
+        'text': text,
+        'pages': session.get('total_pages', 0),
+        'filename': session.get('filename', 'document.pdf'),
+    }
+
+def build_rag_prompt(pdf_meta: dict, history: list, user_msg: str, focus: str = '', system_action: str = '') -> str:
+    sys_lines = [
+        'You are a helpful assistant discussing a PDF with the user.',
+        f'The PDF "{pdf_meta["filename"]}" has {pdf_meta["pages"]} pages and {pdf_meta["chars"]} characters of text.',
+        'The full PDF text is included below as context. Answer questions about it accurately.',
+        'If the user has selected a passage, it is marked with >>> ... <<< markers — pay special attention to it.',
+        'Use markdown formatting. Be concise. Do not invent facts not present in the PDF.',
+    ]
+    if pdf_meta.get('truncated'):
+        sys_lines.append(
+            'NOTE: The PDF was very large; the middle portion was truncated to fit the context window. '
+            'Pages at the start and end are intact. If the user asks about a middle section you don\'t have, '
+            'say so and suggest they re-select that passage as context.'
+        )
+    if system_action:
+        sys_lines.append('')
+        sys_lines.append(f'TASK: {system_action}')
+    sys_block = '\n'.join(sys_lines)
+
+    pdf_block = f'=== PDF: {pdf_meta["filename"]} ===\n{pdf_meta["text"]}\n=== END PDF ==='
+
+    history_lines = []
+    for m in history[-12:]:
+        role = 'User' if m.get('role') == 'user' else 'Assistant'
+        history_lines.append(f'{role}: {m.get("content", "")}')
+    history_block = '\n'.join(history_lines) if history_lines else '(no prior messages)'
+
+    user_block = user_msg
+    if focus and focus.strip():
+        user_block = f'>>> FOCUSED PASSAGE FROM PDF <<<\n{focus.strip()}\n>>> END FOCUS <<<\n\n{user_block}'
+
+    return (
+        f'{sys_block}\n\n{pdf_block}\n\n'
+        f'--- Conversation so far ---\n{history_block}\n\n'
+        f'User: {user_block}\nAssistant:'
+    )
+
+def list_chat_models() -> list:
+    try:
+        out = subprocess.check_output(['opencode', 'models'], stderr=subprocess.DEVNULL, timeout=10).decode('utf-8', 'ignore')
+    except Exception:
+        return [{'id': 'opencode/big-pickle', 'name': 'big-pickle (default)'}]
+    models = []
+    seen = set()
+    for line in out.splitlines():
+        s = line.strip()
+        if not s or s.startswith('"') or s.lower().startswith('model'):
+            continue
+        for token in re.findall(r'[\w.\-]+/[\w.\-]+', s):
+            if token in seen:
+                continue
+            seen.add(token)
+            name = token.split('/', 1)[1] if '/' in token else token
+            models.append({'id': token, 'name': name})
+    if not models:
+        return [{'id': 'opencode/big-pickle', 'name': 'big-pickle (default)'}]
+    return models
+
+def opencode_stream_chat(prompt: str, model: str, opencode_session_id: str = None):
+    """Yield ('text'|'reasoning'|'done'|'error', payload) tuples from opencode run."""
+    args = [
+        'opencode', 'run',
+        '--format', 'json',
+        '--thinking',
+        '--dangerously-skip-permissions',
+        '--model', model,
+    ]
+    if opencode_session_id:
+        args += ['--session', opencode_session_id]
+    args.append(prompt)
+    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+    try:
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                evt = json.loads(line)
+            except Exception:
+                continue
+            etype = evt.get('type')
+            part = evt.get('part') or {}
+            if etype == 'text':
+                chunk = part.get('text') or evt.get('text') or evt.get('content') or ''
+                if chunk:
+                    yield ('text', strip_artifacts(chunk))
+            elif etype == 'reasoning':
+                chunk = part.get('text') or ''
+                if chunk:
+                    yield ('reasoning', strip_artifacts(chunk))
+            elif etype == 'step-finish':
+                sid = evt.get('sessionID') or part.get('sessionID')
+                yield ('done', {'sessionID': sid})
+                return
+            elif etype == 'error':
+                err = part.get('error') or evt.get('error') or 'opencode error'
+                yield ('error', str(err))
+        stderr = (proc.stderr.read() or '').strip() if proc.stderr else ''
+        if proc.poll() not in (0, None) and stderr:
+            yield ('error', strip_artifacts(stderr)[:500])
+    finally:
+        try:
+            if proc.poll() is None:
+                proc.kill()
+        except Exception:
+            pass
+
+def find_chat_by_id(chat_id: str):
+    """Locate a chat file by id across all pdf sessions."""
+    base = app.config['SESSIONS_FOLDER']
+    if not os.path.isdir(base):
+        return None, None
+    for pdf_sid in os.listdir(base):
+        candidate = os.path.join(base, pdf_sid, CHAT_DIR_NAME, f'{chat_id}.json')
+        if os.path.exists(candidate):
+            with open(candidate) as f:
+                return json.load(f), pdf_sid
+    return None, None
+
+def chat_to_meta(chat: dict) -> dict:
+    return {
+        'id': chat['id'],
+        'pdf_session_id': chat['pdf_session_id'],
+        'title': chat.get('title', 'New chat'),
+        'model': chat.get('model'),
+        'opencode_session_id': chat.get('opencode_session_id'),
+        'created_at': chat.get('created_at'),
+        'updated_at': chat.get('updated_at'),
+        'message_count': len(chat.get('messages', [])),
+    }
+
 @app.route('/api/page-status/<session_id>/<int:page_num>')
 def page_status(session_id, page_num):
     page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
@@ -364,6 +587,199 @@ def list_voices():
         'am_adam','am_echo','am_eric','am_fenrir','am_liam','am_michael',
         'am_onyx','am_puck','am_santa',
     ])
+
+# ─── Chat endpoints ───
+
+_chat_send_locks = {}
+_chat_send_locks_mu = threading.Lock()
+
+def _get_chat_lock(chat_id: str) -> threading.Lock:
+    with _chat_send_locks_mu:
+        lk = _chat_send_locks.get(chat_id)
+        if lk is None:
+            lk = threading.Lock()
+            _chat_send_locks[chat_id] = lk
+        return lk
+
+@app.route('/api/chat/models')
+def chat_models():
+    return jsonify({'models': list_chat_models()})
+
+@app.route('/api/chat/pdf-text/<pdf_session_id>')
+def chat_pdf_text(pdf_session_id):
+    meta = get_cached_pdf_text(pdf_session_id)
+    if not meta:
+        return jsonify({'error': 'PDF session not found'}), 404
+    return jsonify({
+        'chars': meta['chars'],
+        'pages': meta['pages'],
+        'truncated': meta['truncated'],
+        'filename': meta['filename'],
+    })
+
+@app.route('/api/chat/sessions', methods=['POST'])
+def create_chat_session():
+    data = request.get_json(silent=True) or {}
+    pdf_sid = data.get('pdf_session_id')
+    if not pdf_sid or not load_session(pdf_sid):
+        return jsonify({'error': 'pdf_session_id required'}), 400
+    chat_id = str(uuid.uuid4())[:12]
+    model = data.get('model') or 'opencode/big-pickle'
+    now = time.time()
+    chat = {
+        'id': chat_id,
+        'pdf_session_id': pdf_sid,
+        'title': data.get('title') or 'New chat',
+        'model': model,
+        'opencode_session_id': None,
+        'created_at': now,
+        'updated_at': now,
+        'messages': [],
+    }
+    save_chat(chat)
+    return jsonify({'chat': chat_to_meta(chat)}), 201
+
+@app.route('/api/chat/sessions/<pdf_session_id>')
+def list_chat_sessions(pdf_session_id):
+    if not load_session(pdf_session_id):
+        return jsonify({'error': 'PDF session not found'}), 404
+    d = chat_dir(pdf_session_id)
+    out = []
+    for fn in sorted(os.listdir(d), reverse=True):
+        if not fn.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(d, fn)) as f:
+                c = json.load(f)
+            out.append(chat_to_meta(c))
+        except Exception:
+            pass
+    out.sort(key=lambda c: c.get('updated_at') or 0, reverse=True)
+    return jsonify({'chats': out})
+
+@app.route('/api/chat/session/<chat_id>')
+def get_chat_session(chat_id):
+    chat, pdf_sid = find_chat_by_id(chat_id)
+    if not chat:
+        return jsonify({'error': 'Chat not found'}), 404
+    return jsonify({'chat': chat, 'meta': chat_to_meta(chat), 'pdf_session_id': pdf_sid})
+
+@app.route('/api/chat/session/<chat_id>', methods=['DELETE'])
+def delete_chat_session(chat_id):
+    chat, pdf_sid = find_chat_by_id(chat_id)
+    if not chat:
+        return jsonify({'error': 'Chat not found'}), 404
+    p = chat_path(pdf_sid, chat_id)
+    try:
+        os.remove(p)
+    except FileNotFoundError:
+        pass
+    return jsonify({'ok': True})
+
+@app.route('/api/chat/session/<chat_id>', methods=['PATCH'])
+def patch_chat_session(chat_id):
+    chat, pdf_sid = find_chat_by_id(chat_id)
+    if not chat:
+        return jsonify({'error': 'Chat not found'}), 404
+    data = request.get_json(silent=True) or {}
+    if 'title' in data and isinstance(data['title'], str):
+        chat['title'] = data['title'].strip()[:120] or chat['title']
+    if 'model' in data and isinstance(data['model'], str):
+        chat['model'] = data['model']
+    chat['updated_at'] = time.time()
+    save_chat(chat)
+    return jsonify({'meta': chat_to_meta(chat)})
+
+@app.route('/api/chat/send', methods=['POST'])
+def chat_send():
+    data = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id')
+    user_msg = (data.get('message') or '').strip()
+    focus = (data.get('focus') or '').strip()
+    action = (data.get('action') or '').strip()
+    if not chat_id or not user_msg:
+        return jsonify({'error': 'chat_id and message required'}), 400
+
+    chat, pdf_sid = find_chat_by_id(chat_id)
+    if not chat:
+        return jsonify({'error': 'Chat not found'}), 404
+
+    pdf_meta = get_cached_pdf_text(pdf_sid)
+    if not pdf_meta:
+        return jsonify({'error': 'PDF session not found'}), 404
+
+    def gen():
+        with _get_chat_lock(chat_id):
+            now = time.time()
+            user_entry = {
+                'id': f'm_{int(now*1000)}_u',
+                'role': 'user',
+                'content': user_msg,
+                'focus': focus[:4000] if focus else None,
+                'action': action or None,
+                'timestamp': now,
+            }
+            chat['messages'].append(user_entry)
+            chat['updated_at'] = now
+            if chat.get('title') in (None, '', 'New chat'):
+                first = (user_msg[:60] + ('…' if len(user_msg) > 60 else ''))
+                chat['title'] = first
+            save_chat(chat)
+
+            yield f"event: meta\ndata: {json.dumps({'chat_id': chat_id, 'user_message_id': user_entry['id'], 'title': chat['title']})}\n\n"
+
+            prompt = build_rag_prompt(
+                pdf_meta=pdf_meta,
+                history=chat['messages'][:-1],
+                user_msg=user_msg,
+                focus=focus,
+                system_action=action,
+            )
+            model = chat.get('model') or 'opencode/big-pickle'
+
+            full_text = ''
+            full_reasoning = ''
+            sid = chat.get('opencode_session_id')
+            try:
+                for kind, payload in opencode_stream_chat(prompt, model, sid):
+                    if kind == 'text':
+                        full_text += payload
+                        yield f"event: text\ndata: {json.dumps({'chunk': payload})}\n\n"
+                    elif kind == 'reasoning':
+                        full_reasoning += payload
+                        yield f"event: reasoning\ndata: {json.dumps({'chunk': payload})}\n\n"
+                    elif kind == 'done':
+                        if payload.get('sessionID'):
+                            chat['opencode_session_id'] = payload['sessionID']
+                    elif kind == 'error':
+                        yield f"event: error\ndata: {json.dumps({'error': payload})}\n\n"
+                        break
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+            full_text = strip_artifacts(full_text)
+            if full_text or full_reasoning:
+                now2 = time.time()
+                assistant_entry = {
+                    'id': f'm_{int(now2*1000)}_a',
+                    'role': 'assistant',
+                    'content': full_text,
+                    'reasoning': strip_artifacts(full_reasoning) or None,
+                    'timestamp': now2,
+                }
+                chat['messages'].append(assistant_entry)
+                chat['updated_at'] = now2
+                save_chat(chat)
+                yield f"event: assistant\ndata: {json.dumps({'message': assistant_entry})}\n\n"
+            yield "event: done\ndata: {}\n\n"
+
+    headers = {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+        'Connection': 'keep-alive',
+    }
+    return app.response_class(gen(), mimetype='text/event-stream', headers=headers)
 
 @app.route('/static/sessions/<path:filename>')
 def serve_session_file(filename):

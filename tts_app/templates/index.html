@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kokoro TTS PDF Reader</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <style>
   /* ─── Themes ─── */
   :root[data-theme="light"] {
@@ -166,6 +169,224 @@
   body.fullscreen .toolbar { display: none; }
   body.fullscreen .audio-dock { padding: 6px 12px; }
 
+  /* ─── PDF.js text layer (for selection + right-click) ─── */
+  .textLayer {
+    position: absolute; text-align: initial; inset: 0;
+    overflow: hidden; opacity: 1; line-height: 1;
+    text-size-adjust: none; forced-color-adjust: none;
+    transform-origin: 0 0; z-index: 1;
+    user-select: text; -webkit-user-select: text;
+  }
+  .textLayer span,
+  .textLayer br { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+  .textLayer ::selection { background: rgba(124, 58, 237, 0.35); }
+  .textLayer .endOfContent { display: block; }
+
+  /* ─── Color picker popover ─── */
+  .color-popover {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    width: 220px;
+  }
+  .color-popover .row { display: flex; align-items: center; gap: 8px; }
+  .color-popover .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 6px 0 10px; }
+  .color-popover .swatch {
+    width: 100%; aspect-ratio: 1; border-radius: 6px; border: 2px solid transparent;
+    cursor: pointer; padding: 0;
+  }
+  .color-popover .swatch.active { border-color: var(--accent-light); box-shadow: 0 0 0 2px var(--accent); }
+  .color-popover input[type=color] {
+    width: 36px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer;
+  }
+  .color-popover input[type=range] { flex: 1; accent-color: var(--accent); }
+  .color-popover label { font-size: 0.75rem; color: var(--muted); }
+
+  /* ─── Right-side hover tab (chat) ─── */
+  .hover-tab {
+    position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+    z-index: 200; display: flex; align-items: center; pointer-events: auto;
+  }
+  .hover-tab .tab-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px 0 0 8px;
+    padding: 14px 8px; cursor: pointer; box-shadow: -2px 4px 14px rgba(0,0,0,0.4);
+    writing-mode: vertical-rl; text-orientation: mixed; font-size: 0.78rem;
+    display: flex; align-items: center; gap: 6px; transition: padding 0.18s;
+  }
+  .hover-tab .tab-btn:hover { padding-right: 14px; }
+  .hover-tab.open .tab-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-right: none; }
+  .hover-tab .tab-icon { font-size: 1rem; writing-mode: horizontal-tb; }
+
+  /* ─── Chat sidebar ─── */
+  .chat-sidebar {
+    position: fixed; right: 0; top: 0; height: 100vh; width: 420px; z-index: 150;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.25s ease;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.35);
+  }
+  .chat-sidebar.open { transform: translateX(0); }
+  .chat-header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  }
+  .chat-header h3 { font-size: 0.95rem; color: var(--accent-light); }
+  .chat-header .spacer { flex: 1; }
+  .chat-header button {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: 0.82rem;
+  }
+  .chat-header button:hover { background: var(--border); }
+  .chat-sessions {
+    display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px;
+    border-bottom: 1px solid var(--border); flex: 0 0 auto;
+  }
+  .chat-sessions::-webkit-scrollbar { height: 6px; }
+  .chat-sessions::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .chat-chip {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 14px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer;
+    white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chat-chip .x { margin-left: 6px; opacity: 0.6; }
+  .chat-chip .x:hover { opacity: 1; }
+  .chat-meta {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--muted);
+    flex: 0 0 auto; flex-wrap: wrap;
+  }
+  .chat-meta select {
+    background: var(--input-bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 6px; font-size: 0.78rem;
+  }
+  .chat-meta .badge {
+    padding: 2px 6px; border-radius: 8px; background: var(--surface-2);
+    border: 1px solid var(--border); font-size: 0.7rem;
+  }
+  .chat-meta .badge.warn { background: rgba(220, 130, 30, 0.15); border-color: rgba(220, 130, 30, 0.35); color: #d97706; }
+  .chat-focus {
+    margin: 8px 12px 0; padding: 8px 10px; background: var(--surface-2);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent-light);
+    border-radius: 6px; font-size: 0.78rem; max-height: 100px; overflow-y: auto;
+    position: relative;
+  }
+  .chat-focus .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .chat-focus .text { white-space: pre-wrap; line-height: 1.4; }
+  .chat-focus .clear {
+    position: absolute; top: 4px; right: 4px; background: transparent;
+    border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem;
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .chat-msg { display: flex; gap: 8px; max-width: 100%; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-msg .avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 600; color: #fff;
+    background: var(--accent);
+  }
+  .chat-msg.user .avatar { background: #475569; }
+  .chat-msg .bubble {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px 12px; font-size: 0.85rem;
+    line-height: 1.5; max-width: calc(100% - 50px);
+    word-wrap: break-word; overflow-wrap: anywhere;
+  }
+  .chat-msg.user .bubble { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chat-msg .bubble p { margin: 0 0 6px; }
+  .chat-msg .bubble p:last-child { margin-bottom: 0; }
+  .chat-msg .bubble code { background: rgba(0,0,0,0.15); padding: 1px 4px; border-radius: 3px; font-size: 0.82em; }
+  .chat-msg .bubble pre {
+    background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 6px; overflow-x: auto;
+    font-size: 0.78rem; margin: 6px 0; position: relative;
+  }
+  .chat-msg .bubble pre code { background: transparent; padding: 0; }
+  .chat-msg .bubble ul, .chat-msg .bubble ol { margin: 4px 0 4px 18px; }
+  .chat-msg .bubble li { margin: 2px 0; }
+  .chat-msg .bubble h1, .chat-msg .bubble h2, .chat-msg .bubble h3 { margin: 8px 0 4px; font-size: 0.95rem; }
+  .chat-msg .bubble blockquote {
+    border-left: 3px solid var(--accent-light); padding-left: 8px; margin: 6px 0;
+    color: var(--muted);
+  }
+  .chat-msg .bubble .copy-pre {
+    position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.1);
+    color: #fff; border: none; border-radius: 3px; font-size: 0.7rem; padding: 2px 5px; cursor: pointer;
+  }
+  .chat-msg .bubble .action-tag {
+    display: inline-block; font-size: 0.7rem; background: var(--accent); color: #fff;
+    padding: 1px 6px; border-radius: 8px; margin-bottom: 4px;
+  }
+  .chat-msg .focus-tag {
+    font-size: 0.7rem; color: var(--muted); font-style: italic; margin-top: 4px;
+    border-top: 1px solid var(--border); padding-top: 4px;
+  }
+  .chat-msg .reasoning {
+    background: rgba(180, 130, 30, 0.08); border: 1px solid rgba(180, 130, 30, 0.2);
+    border-radius: 6px; padding: 4px 8px; margin: 4px 0; font-size: 0.75rem; color: var(--muted);
+  }
+  .chat-msg .reasoning summary { cursor: pointer; user-select: none; }
+  .chat-typing { padding: 4px 12px; font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .chat-typing .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); margin: 0 1px; animation: chatDot 1.2s infinite; }
+  .chat-typing .dots span:nth-child(2) { animation-delay: 0.15s; }
+  .chat-typing .dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes chatDot { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  .chat-jump {
+    position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #fff; border: none; border-radius: 14px;
+    padding: 4px 12px; font-size: 0.75rem; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .chat-input-row {
+    padding: 8px 12px; border-top: 1px solid var(--border);
+    display: flex; gap: 6px; align-items: flex-end; flex: 0 0 auto; position: relative;
+  }
+  .chat-input-row textarea {
+    flex: 1; background: var(--input-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px;
+    font-family: inherit; font-size: 0.85rem; resize: none; min-height: 36px; max-height: 120px;
+    outline: none;
+  }
+  .chat-input-row textarea:focus { border-color: var(--accent-light); }
+  .chat-input-row .send-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 0 12px; height: 36px; cursor: pointer; font-size: 1rem;
+  }
+  .chat-input-row .send-btn:disabled { background: #555577; cursor: not-allowed; opacity: 0.5; }
+
+  /* ─── Right-click context menu ─── */
+  .ctx-menu {
+    position: fixed; z-index: 9999; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5); min-width: 200px;
+    font-size: 0.85rem;
+  }
+  .ctx-menu .item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    cursor: pointer; border-radius: 4px; user-select: none; color: var(--text);
+  }
+  .ctx-menu .item:hover { background: var(--surface-2); }
+  .ctx-menu .item .icon { width: 18px; text-align: center; }
+  .ctx-menu .sep { height: 1px; background: var(--border); margin: 4px 0; }
+  .ctx-menu .submenu { position: relative; }
+  .ctx-menu .submenu .arrow { margin-left: auto; opacity: 0.6; }
+  .ctx-menu .submenu-items {
+    display: none; position: absolute; right: 100%; top: 0;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px; min-width: 130px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  }
+  .ctx-menu .submenu:hover .submenu-items { display: block; }
+
+  /* When chat is open, the PDF area shrinks */
+  body.chat-open .pdf-area { padding-right: 24px; }
+  body.chat-open .hover-tab .tab-btn { border-radius: 8px 0 0 8px; }
+
+  @media (max-width: 900px) {
+    .chat-sidebar { width: 100vw; }
+    .color-popover { right: -8px; }
+  }
   @media (max-width: 720px) {
     .toolbar { padding: 6px 8px; gap: 6px; }
     .toolbar .file-name { display: none; }
@@ -239,16 +460,85 @@
     <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
   </label>
   <button class="btn-primary" id="readAloudBtn" style="display:none">🎧 Read Aloud</button>
+  <span class="sep"></span>
+  <div style="position:relative">
+    <button id="colorBtn" class="icon-btn" title="Highlight color">🎨</button>
+    <div class="color-popover hidden" id="colorPopover">
+      <div class="row"><span style="font-size:0.78rem;color:var(--muted)">Highlight color</span></div>
+      <div class="swatches" id="colorSwatches">
+        <button class="swatch" data-color="#facc15" style="background:#facc15"></button>
+        <button class="swatch" data-color="#fb923c" style="background:#fb923c"></button>
+        <button class="swatch" data-color="#f87171" style="background:#f87171"></button>
+        <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
+        <button class="swatch" data-color="#a78bfa" style="background:#a78bfa"></button>
+        <button class="swatch" data-color="#60a5fa" style="background:#60a5fa"></button>
+        <button class="swatch" data-color="#34d399" style="background:#34d399"></button>
+        <button class="swatch" data-color="#fde68a" style="background:#fde68a"></button>
+      </div>
+      <div class="row">
+        <input type="color" id="colorPicker" value="#facc15" title="Custom color">
+        <label>opacity <span id="opacityVal">0.55</span></label>
+        <input type="range" id="opacitySlider" min="0.2" max="0.8" step="0.05" value="0.55">
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="main">
   <div class="pdf-area" id="pdfArea">
     <div class="page-wrapper" id="pageWrapper">
       <canvas id="pdfCanvas"></canvas>
+      <div class="textLayer" id="textLayer"></div>
       <div class="highlight-overlay" id="highlightOverlay"></div>
     </div>
   </div>
 </div>
+
+<!-- Right-side hover tab -->
+<div class="hover-tab" id="hoverTab">
+  <button class="tab-btn" id="chatTabBtn" title="Open chat (Ctrl+Shift+C)">
+    <span class="tab-icon" id="chatTabIcon">💬</span>
+    <span id="chatTabLabel">Chat</span>
+  </button>
+</div>
+
+<!-- Chat sidebar -->
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="chat-header">
+    <h3>💬 Chat with PDF</h3>
+    <span class="spacer"></span>
+    <button id="chatNewBtn" title="New chat">＋ New</button>
+    <button id="chatCloseBtn" title="Close (Esc)">✕</button>
+  </div>
+  <div class="chat-sessions" id="chatSessions"></div>
+  <div class="chat-meta">
+    <span>Model:</span>
+    <select id="chatModelSelect"><option value="">Loading…</option></select>
+    <span class="badge hidden" id="chatContextBadge">PDF: - pages</span>
+    <span class="badge warn hidden" id="chatTruncBadge">truncated</span>
+  </div>
+  <div class="chat-focus hidden" id="chatFocus">
+    <div class="label">FOCUSED PASSAGE</div>
+    <div class="text" id="chatFocusText"></div>
+    <button class="clear" id="chatFocusClear" title="Clear focus">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div style="color:var(--muted);text-align:center;padding:24px 12px;font-size:0.85rem">
+      No messages yet. Ask about the PDF or right-click selected text to use a quick action.
+    </div>
+  </div>
+  <div class="chat-typing hidden" id="chatTyping">
+    <span class="dots"><span></span><span></span><span></span></span>
+    <span id="chatTypingText">Thinking…</span>
+  </div>
+  <div class="chat-input-row">
+    <textarea id="chatInput" placeholder="Ask about the PDF…" rows="1"></textarea>
+    <button class="send-btn" id="chatSendBtn" title="Send (Enter)">➤</button>
+  </div>
+</div>
+
+<!-- Right-click context menu (dynamically populated) -->
+<div class="ctx-menu hidden" id="ctxMenu"></div>
 
 <div class="audio-dock" id="audioDock">
   <div class="dock-row">
@@ -289,6 +579,8 @@ const state = {
   scale: 1.5,
   rotation: 0,
   theme: 'dark',
+  highlightColor: '#facc15',
+  highlightOpacity: 0.55,
   segments: [],
   currentSegIdx: 0,
   audioEl: null,
@@ -298,14 +590,28 @@ const state = {
   pollTimer: null,
   stopPolling: false,
   pageRenderTask: null,
+  textRenderTask: null,
   zoomLocked: false,
+  chat: {
+    open: false,
+    chatId: null,
+    messages: [],
+    model: '',
+    models: [],
+    streaming: false,
+    streamBuf: '',
+    streamReasoning: '',
+    focus: '',
+    pdfMeta: null,
+    pendingAction: null,
+  },
 };
 
 const el = {
   uploadOverlay: $('uploadOverlay'), uploadBox: $('uploadBox'), fileInput: $('fileInput'),
   fileName: $('fileName'),
   pdfArea: $('pdfArea'), pageWrapper: $('pageWrapper'), pdfCanvas: $('pdfCanvas'),
-  highlightOverlay: $('highlightOverlay'),
+  textLayer: $('textLayer'), highlightOverlay: $('highlightOverlay'),
   pageInput: $('pageInput'), pageTotal: $('pageTotal'),
   prevPageBtn: $('prevPageBtn'), nextPageBtn: $('nextPageBtn'),
   zoomOutBtn: $('zoomOutBtn'), zoomInBtn: $('zoomInBtn'), zoomSelect: $('zoomSelect'),
@@ -318,6 +624,20 @@ const el = {
   dockProgress: $('dockProgress'), dockProgressFill: $('dockProgressFill'),
   segInfo: $('segInfo'), pageStatus: $('pageStatus'),
   genIndicator: $('genIndicator'), genText: $('genText'), genFill: $('genFill'),
+  colorBtn: $('colorBtn'), colorPopover: $('colorPopover'),
+  colorSwatches: $('colorSwatches'), colorPicker: $('colorPicker'),
+  opacitySlider: $('opacitySlider'), opacityVal: $('opacityVal'),
+  hoverTab: $('hoverTab'), chatTabBtn: $('chatTabBtn'), chatTabIcon: $('chatTabIcon'), chatTabLabel: $('chatTabLabel'),
+  chatSidebar: $('chatSidebar'),
+  chatNewBtn: $('chatNewBtn'), chatCloseBtn: $('chatCloseBtn'),
+  chatSessions: $('chatSessions'),
+  chatModelSelect: $('chatModelSelect'),
+  chatContextBadge: $('chatContextBadge'), chatTruncBadge: $('chatTruncBadge'),
+  chatFocus: $('chatFocus'), chatFocusText: $('chatFocusText'), chatFocusClear: $('chatFocusClear'),
+  chatMessages: $('chatMessages'),
+  chatTyping: $('chatTyping'), chatTypingText: $('chatTypingText'),
+  chatInput: $('chatInput'), chatSendBtn: $('chatSendBtn'),
+  ctxMenu: $('ctxMenu'),
 };
 
 const ctx = el.pdfCanvas.getContext('2d');
@@ -340,6 +660,57 @@ function cycleTheme() {
   applyTheme(saved);
 })();
 el.themeBtn.addEventListener('click', cycleTheme);
+
+// ─── Highlight color picker ───
+function hexToRgba(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+function applyHighlightColor() {
+  const c = state.highlightColor;
+  const a = state.highlightOpacity;
+  const aDone = Math.max(0.08, a * 0.35);
+  document.documentElement.style.setProperty('--highlight', hexToRgba(c, a * 0.55));
+  document.documentElement.style.setProperty('--highlight-active', hexToRgba(c, a));
+  document.documentElement.style.setProperty('--highlight-done', hexToRgba(c, aDone));
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color && s.dataset.color.toLowerCase() === c.toLowerCase());
+  });
+  el.opacityVal.textContent = state.highlightOpacity.toFixed(2);
+  el.opacitySlider.value = state.highlightOpacity;
+  el.colorPicker.value = c;
+  try {
+    localStorage.setItem('kokoro-hl-color', c);
+    localStorage.setItem('kokoro-hl-opacity', String(state.highlightOpacity));
+  } catch {}
+}
+function setHighlightColor(c) { state.highlightColor = c; applyHighlightColor(); }
+function setHighlightOpacity(o) { state.highlightOpacity = Math.max(0.1, Math.min(0.9, +o)); applyHighlightColor(); }
+(function initHighlightColor() {
+  try {
+    const c = localStorage.getItem('kokoro-hl-color');
+    const o = localStorage.getItem('kokoro-hl-opacity');
+    if (c && /^#[0-9a-f]{6}$/i.test(c)) state.highlightColor = c;
+    if (o) state.highlightOpacity = parseFloat(o) || 0.55;
+  } catch {}
+  applyHighlightColor();
+})();
+el.colorBtn.addEventListener('click', e => { e.stopPropagation(); el.colorPopover.classList.toggle('hidden'); });
+document.addEventListener('click', e => {
+  if (!el.colorPopover.classList.contains('hidden') && !el.colorPopover.contains(e.target) && e.target !== el.colorBtn) {
+    el.colorPopover.classList.add('hidden');
+  }
+});
+el.colorSwatches.addEventListener('click', e => {
+  const sw = e.target.closest('.swatch');
+  if (!sw) return;
+  setHighlightColor(sw.dataset.color);
+});
+el.colorPicker.addEventListener('input', e => setHighlightColor(e.target.value));
+el.opacitySlider.addEventListener('input', e => setHighlightOpacity(e.target.value));
 
 // ─── Upload ───
 el.uploadBox.addEventListener('click', () => el.fileInput.click());
@@ -377,6 +748,7 @@ async function handleFile(file) {
 async function renderPage() {
   if (!state.pdfDoc) return;
   if (state.pageRenderTask) { try { state.pageRenderTask.cancel(); } catch {} }
+  if (state.textRenderTask) { try { state.textRenderTask.cancel(); } catch {} }
   const page = await state.pdfDoc.getPage(state.currentPage);
   const viewport = page.getViewport({ scale: state.scale, rotation: state.rotation });
   el.pdfCanvas.width = viewport.width;
@@ -387,8 +759,22 @@ async function renderPage() {
   el.pageWrapper.style.height = viewport.height + 'px';
   el.highlightOverlay.style.width = viewport.width + 'px';
   el.highlightOverlay.style.height = viewport.height + 'px';
+  el.textLayer.style.width = viewport.width + 'px';
+  el.textLayer.style.height = viewport.height + 'px';
   state.pageRenderTask = page.render({ canvasContext: ctx, viewport });
   try { await state.pageRenderTask.promise; } catch (e) { if (e.name !== 'RenderingCancelledException') throw e; }
+  try {
+    const textContent = await page.getTextContent();
+    const textLayerDiv = el.textLayer;
+    textLayerDiv.innerHTML = '';
+    const textLayer = new pdfjsLib.TextLayer({
+      textContentSource: textContent,
+      container: textLayerDiv,
+      viewport,
+    });
+    state.textRenderTask = textLayer.render();
+    await state.textRenderTask.promise;
+  } catch (e) { if (e.name !== 'RenderingCancelledException') console.warn('Text layer render error', e); }
   renderHighlights(page, viewport);
   updateNav();
   if (!state.zoomLocked) {
