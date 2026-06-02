@@ -28,12 +28,6 @@ def get_pipeline():
                 _pipeline = KPipeline(lang_code='a')
     return _pipeline
 
-if os.environ.get('PRELOAD_PIPELINE') and os.environ.get('GUNICORN_CMD_ARGS') is None:
-    t0 = time.time()
-    print('Pre-loading Kokoro pipeline...', end='', flush=True)
-    get_pipeline()
-    print(f' done ({time.time()-t0:.1f}s)')
-
 def get_session_dir(session_id):
     return os.path.join(app.config['SESSIONS_FOLDER'], session_id)
 
@@ -96,10 +90,14 @@ def generate_page_audio(session_id, page_num, voice, speed):
     audio_dir = os.path.join(page_dir, 'audio')
     os.makedirs(audio_dir, exist_ok=True)
 
+    page_data = {'page': page_num, 'segments': [], 'total_segments': 0, 'status': 'generating'}
+    status_path = os.path.join(page_dir, 'status.json')
+    with open(status_path, 'w') as f:
+        json.dump({'status': 'generating', 'progress': 0, 'total': 0}, f)
+
     paragraphs = extract_page_text(pdf_path, page_num)
     segments = split_paragraphs(paragraphs)
-
-    page_data = {'page': page_num, 'segments': [], 'total_segments': len(segments), 'status': 'generating'}
+    page_data['total_segments'] = len(segments)
 
     for idx, text in enumerate(segments):
         audio_path = os.path.join(audio_dir, f'seg_{idx:04d}.wav')
@@ -124,10 +122,16 @@ def generate_page_audio(session_id, page_num, voice, speed):
             'duration': duration
         })
 
+        with open(status_path, 'w') as f:
+            json.dump({'status': 'generating', 'progress': idx + 1, 'total': len(segments)}, f)
+
     page_data['status'] = 'ready'
     page_data_path = os.path.join(page_dir, 'page.json')
     with open(page_data_path, 'w') as f:
         json.dump(page_data, f)
+
+    with open(status_path, 'w') as f:
+        json.dump({'status': 'ready', 'progress': len(segments), 'total': len(segments)}, f)
 
     if 'generated_pages' not in session:
         session['generated_pages'] = {}
@@ -232,28 +236,53 @@ def generate_page():
 
     page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
     page_data_path = os.path.join(page_dir, 'page.json')
+    status_path = os.path.join(page_dir, 'status.json')
+
     if os.path.exists(page_data_path):
         with open(page_data_path) as f:
             page_data = json.load(f)
+        threading.Thread(target=prefetch_pages, args=(session_id, page_num, voice, speed), daemon=True).start()
         return jsonify(page_data)
 
-    page_data = generate_page_audio(session_id, page_num, voice, speed)
-    if page_data is None:
-        return jsonify({'error': 'Failed to generate audio'}), 500
+    if os.path.exists(status_path):
+        with open(status_path) as f:
+            st = json.load(f)
+        if st['status'] == 'generating':
+            return jsonify({'status': 'generating', 'page': page_num, 'progress': st['progress'], 'total': st['total']})
 
-    threading.Thread(target=prefetch_pages, args=(session_id, page_num, voice, speed), daemon=True).start()
+    threading.Thread(target=generate_and_prefetch, args=(session_id, page_num, voice, speed), daemon=True).start()
+    return jsonify({'status': 'generating', 'page': page_num, 'progress': 0, 'total': 0})
 
-    return jsonify(page_data)
+def generate_and_prefetch(session_id, page_num, voice, speed):
+    generate_page_audio(session_id, page_num, voice, speed)
+    prefetch_pages(session_id, page_num, voice, speed)
 
 @app.route('/api/page-status/<session_id>/<int:page_num>')
 def page_status(session_id, page_num):
     page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
     page_data_path = os.path.join(page_dir, 'page.json')
+    status_path = os.path.join(page_dir, 'status.json')
+
     if os.path.exists(page_data_path):
         with open(page_data_path) as f:
             data = json.load(f)
-        return jsonify({'status': data['status'], 'total_segments': data['total_segments']})
+        return jsonify({'status': 'ready', 'total_segments': data['total_segments']})
+
+    if os.path.exists(status_path):
+        with open(status_path) as f:
+            st = json.load(f)
+        return jsonify({'status': st['status'], 'progress': st['progress'], 'total': st['total']})
+
     return jsonify({'status': 'not_generated', 'total_segments': 0})
+
+@app.route('/api/page-data/<session_id>/<int:page_num>')
+def page_data(session_id, page_num):
+    page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
+    page_data_path = os.path.join(page_dir, 'page.json')
+    if os.path.exists(page_data_path):
+        with open(page_data_path) as f:
+            return jsonify(json.load(f))
+    return jsonify({'error': 'Page data not found'}), 404
 
 @app.route('/api/generate-next-pages', methods=['POST'])
 def generate_next_pages():
