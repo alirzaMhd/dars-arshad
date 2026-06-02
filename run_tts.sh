@@ -34,28 +34,42 @@ print("=" * 60)
 print("Kokoro TTS PDF Reader")
 print("=" * 60)
 
+flask_log = os.path.join(APP_DIR, 'flask.log')
+flask_log_fp = open(flask_log, 'w')
 flask_proc = subprocess.Popen(
     [sys.executable, 'app.py'],
-    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    stdout=flask_log_fp, stderr=subprocess.STDOUT, text=True
 )
 processes.append(flask_proc)
 
 print("Waiting for Flask server...", end='', flush=True)
 start = time.time()
+ready = False
 while time.time() - start < 60:
+    if flask_proc.poll() is not None:
+        break
     try:
         s = socket.socket()
         s.settimeout(1)
         s.connect(('localhost', 8081))
         s.close()
-        print(" READY")
+        ready = True
         break
     except:
         print('.', end='', flush=True)
         time.sleep(0.5)
-else:
+
+if not ready:
     print("\nServer failed to start.")
+    print(f"Flask log: {flask_log}")
+    print("-" * 60)
+    flask_log_fp.flush()
+    with open(flask_log, 'r') as f:
+        print(f.read())
+    print("-" * 60)
     sys.exit(1)
+
+print(" READY")
 
 cloudflared_proc = subprocess.Popen(
     ['cloudflared', 'tunnel', '--url', 'http://localhost:8081'],
