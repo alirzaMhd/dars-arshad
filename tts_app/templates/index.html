@@ -586,6 +586,7 @@ const state = {
   segments: [],
   currentSegIdx: 0,
   audioEl: null,
+  preloads: [],
   isPlaying: false,
   isPaused: false,
   generating: false,
@@ -763,6 +764,7 @@ async function renderPage() {
   el.highlightOverlay.style.height = viewport.height + 'px';
   el.textLayer.style.width = viewport.width + 'px';
   el.textLayer.style.height = viewport.height + 'px';
+  el.textLayer.style.setProperty('--scale-factor', viewport.scale);
   state.pageRenderTask = page.render({ canvasContext: ctx, viewport });
   try { await state.pageRenderTask.promise; } catch (e) { if (e.name !== 'RenderingCancelledException') throw e; }
   try {
@@ -985,17 +987,24 @@ function onPageReady(segments) {
   finishGen();
   updatePlayBtns();
   el.segInfo.textContent = `0 / ${segments.length}`;
+  preloadPage(0);
   renderPage().then(() => playSegment(0));
 }
 
-function preloadNext(idx) {
-  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
-  if (idx >= state.segments.length) return;
-  const seg = state.segments[idx];
-  if (!seg) return;
-  state.nextAudio = new Audio(seg.audio_url + '?t=' + Date.now());
-  state.nextAudio.preload = 'auto';
-  state.nextAudio.load();
+function preloadPage(fromIdx) {
+  if (state.preloads) {
+    state.preloads.forEach(a => { a.src = ''; });
+  }
+  state.preloads = [];
+  for (let i = fromIdx; i < state.segments.length; i++) {
+    const seg = state.segments[i];
+    if (!seg) break;
+    const a = new Audio(seg.audio_url + '?t=' + Date.now());
+    a.preload = 'auto';
+    a.dataset.segIdx = i;
+    a.load();
+    state.preloads.push(a);
+  }
 }
 
 function playSegment(idx) {
@@ -1004,9 +1013,10 @@ function playSegment(idx) {
   const seg = state.segments[idx];
   if (!seg) return;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.nextAudio && state.nextAudio.dataset.segIdx == idx) {
-    state.audioEl = state.nextAudio;
-    state.nextAudio = null;
+  const preloaded = (state.preloads || []).find(a => +a.dataset.segIdx === idx);
+  if (preloaded) {
+    state.audioEl = preloaded;
+    state.preloads = state.preloads.filter(a => a !== preloaded);
   } else {
     state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
   }
@@ -1022,10 +1032,9 @@ function playSegment(idx) {
     const total = state.segments.reduce((s, x) => s + (x.duration || 0), 0);
     if (total > 0) el.dockProgressFill.style.width = (elapsed / total * 100) + '%';
     el.timeCurrent.textContent = fmt(elapsed);
-  });
+  }, { once: false });
   state.audioEl.addEventListener('ended', () => playSegment(idx + 1));
   state.audioEl.addEventListener('error', () => playSegment(idx + 1));
-  preloadNext(idx + 1);
 }
 
 function updateProgress() {
@@ -1069,7 +1078,7 @@ el.stopBtn.addEventListener('click', () => stopReading());
 function stopReading() {
   state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
+  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0;
   updatePlayBtns();
   el.dockProgressFill.style.width = '0%';
@@ -1082,7 +1091,7 @@ function resetReader() {
   if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
   state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.nextAudio) { state.nextAudio.src = ''; state.nextAudio = null; }
+  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0; state.segments = [];
   el.genIndicator.classList.add('hidden');
   el.dockProgressFill.style.width = '0%';
