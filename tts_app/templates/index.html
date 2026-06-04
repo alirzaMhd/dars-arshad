@@ -148,6 +148,8 @@
     border-radius: 6px; padding: 5px 8px; font-size: 0.8rem;
   }
   .dock-row input[type="range"] { accent-color: var(--accent); width: 90px; }
+  .dock-row #volumeSlider { width: 70px; }
+  #volumeBtn { min-width: 34px; text-align: center; font-size: 0.85rem; background: none; border: none; cursor: pointer; padding: 0; color: var(--text); }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border);
     border-top-color: var(--accent-light); border-radius: 50%; animation: spin 0.6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -555,6 +557,9 @@
     </div>
     <span class="dock-time" id="timeTotal">0:00</span>
 
+    <button id="volumeBtn" title="Mute / Unmute (M)">🔊</button>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" title="Volume">
+
     <span class="dock-seg" id="segInfo">0 / 0</span>
     <span class="muted" style="color:var(--muted);font-size:0.78rem" id="pageStatus">—</span>
   </div>
@@ -587,6 +592,8 @@ const state = {
   currentSegIdx: 0,
   audioEl: null,
   preloads: [],
+  volume: parseFloat(localStorage.getItem('kokoro-volume')) || 1.0,
+  muted: false,
   isPlaying: false,
   isPaused: false,
   generating: false,
@@ -628,6 +635,7 @@ const el = {
   timeCurrent: $('timeCurrent'), timeTotal: $('timeTotal'),
   dockProgress: $('dockProgress'), dockProgressFill: $('dockProgressFill'),
   segInfo: $('segInfo'), pageStatus: $('pageStatus'),
+  volumeBtn: $('volumeBtn'), volumeSlider: $('volumeSlider'),
   genIndicator: $('genIndicator'), genText: $('genText'), genFill: $('genFill'),
   colorBtn: $('colorBtn'), colorPopover: $('colorPopover'),
   colorSwatches: $('colorSwatches'), colorPicker: $('colorPicker'),
@@ -928,6 +936,29 @@ el.speedSlider.addEventListener('input', () => {
   if (state.audioEl) state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
 });
 
+// ─── Volume control ───
+function updateVolumeIcon() {
+  const v = state.muted ? 0 : state.volume;
+  el.volumeBtn.textContent = v === 0 ? '🔇' : v < 0.5 ? '🔉' : '🔊';
+}
+function applyVolume() {
+  const v = state.muted ? 0 : state.volume;
+  if (state.audioEl) state.audioEl.volume = v;
+  el.volumeSlider.value = state.volume;
+  updateVolumeIcon();
+}
+el.volumeSlider.addEventListener('input', () => {
+  state.volume = parseFloat(el.volumeSlider.value);
+  state.muted = false;
+  applyVolume();
+  try { localStorage.setItem('kokoro-volume', state.volume); } catch {}
+});
+el.volumeBtn.addEventListener('click', () => {
+  state.muted = !state.muted;
+  applyVolume();
+});
+applyVolume();
+
 // ─── Read Aloud ───
 el.readAloudBtn.addEventListener('click', async () => {
   if (!state.sessionId || !state.pdfDoc || state.generating) return;
@@ -1044,6 +1075,7 @@ function playSegment(idx) {
     state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
   }
   state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
+  state.audioEl.volume = state.muted ? 0 : state.volume;
   state.audioEl.currentTime = 0;
   state.audioEl.play().catch(() => {});
   state.isPlaying = true; state.isPaused = false; state.currentSegIdx = idx;
@@ -1198,6 +1230,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'r' || e.key === 'R') { el.rotateBtn.click(); }
   else if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
   else if (e.key === 't' || e.key === 'T') { cycleTheme(); }
+  else if (e.key === 'm' || e.key === 'M') { el.volumeBtn.click(); }
   else if (e.key === 'Escape' && document.fullscreenElement) { document.exitFullscreen?.(); }
 });
 
