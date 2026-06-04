@@ -1,4 +1,4 @@
-import os, uuid, json, re, threading, time, importlib, subprocess
+import os, uuid, json, re, threading, time, importlib, subprocess, shutil
 import numpy as np
 import soundfile as sf
 import pymupdf
@@ -642,6 +642,24 @@ def generate_next_pages():
 
     threading.Thread(target=prefetch_pages, args=(session_id, current_page, voice, speed, n_ahead), daemon=True).start()
     return jsonify({'status': 'prefetch_started'})
+
+@app.route('/api/clear-session-audio', methods=['POST'])
+def clear_session_audio():
+    data = request.get_json()
+    session_id = data.get('session_id')
+    if not session_id:
+        return jsonify({'error': 'Missing session_id'}), 400
+    pages_dir = os.path.join(get_session_dir(session_id), 'pages')
+    if os.path.exists(pages_dir):
+        for entry in os.listdir(pages_dir):
+            p = os.path.join(pages_dir, entry)
+            if os.path.isdir(p):
+                shutil.rmtree(p)
+    session = load_session(session_id)
+    if session:
+        session['generated_pages'] = {}
+        save_session(session)
+    return jsonify({'status': 'cleared'})
 
 @app.route('/api/voices')
 def list_voices():
