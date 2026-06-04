@@ -9,6 +9,13 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def convert_to_mp3(wav_path, mp3_path, sample_rate=24000):
+    subprocess.run(
+        ['ffmpeg', '-y', '-i', wav_path,
+         '-codec:a', 'libmp3lame', '-b:a', '64k', '-ar', str(sample_rate), '-ac', '1', mp3_path],
+        capture_output=True, check=True
+    )
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 app.config['AUDIO_FOLDER'] = os.path.join(BASE_DIR, 'static', 'audio')
 app.config['SESSIONS_FOLDER'] = os.path.join(BASE_DIR, 'static', 'sessions')
@@ -190,10 +197,8 @@ def generate_page_audio(session_id, page_num, voice, speed):
 
     pdf_path = session['pdf_path']
     page_dir = os.path.join(get_session_dir(session_id), 'pages', str(page_num))
-    audio_dir = os.path.join(page_dir, 'audio')
-    os.makedirs(audio_dir, exist_ok=True)
+    os.makedirs(page_dir, exist_ok=True)
 
-    page_data = {'page': page_num, 'segments': [], 'total_segments': 0, 'status': 'generating'}
     status_path = os.path.join(page_dir, 'status.json')
     with open(status_path, 'w') as f:
         json.dump({'status': 'generating', 'progress': 0, 'total': 0}, f)
@@ -208,11 +213,15 @@ def generate_page_audio(session_id, page_num, voice, speed):
         rects = find_segment_rects(page, text)
         segments.append({'text': text, 'rects': rects})
     doc.close()
-    page_data['total_segments'] = len(segments)
+    total_segments = len(segments)
+
+    all_audio = []
+    segment_meta = []
+    cumulative_time = 0.0
+    sample_rate = 24000
 
     for idx, seg in enumerate(segments):
         text = seg['text']
-        audio_path = os.path.join(audio_dir, f'seg_{idx:04d}.wav')
         audio_data = []
         for result in get_pipeline()(text, voice=voice, speed=speed):
             if result.audio is not None:
@@ -222,29 +231,53 @@ def generate_page_audio(session_id, page_num, voice, speed):
                 full_audio = torch.cat(audio_data).cpu().numpy()
             else:
                 full_audio = np.concatenate(audio_data)
-            sf.write(audio_path, full_audio, 24000)
-            duration = len(full_audio) / 24000
+            duration = len(full_audio) / sample_rate
+            all_audio.append(full_audio)
         else:
             duration = 0
 
-        page_data['segments'].append({
+        start_time = cumulative_time
+        cumulative_time += duration
+
+        segment_meta.append({
             'index': idx,
             'text': text,
             'rects': seg['rects'],
-            'audio_url': f'/static/sessions/{session_id}/pages/{page_num}/audio/seg_{idx:04d}.wav',
-            'duration': duration
+            'duration': duration,
+            'start_time': start_time,
+            'end_time': cumulative_time,
         })
 
         with open(status_path, 'w') as f:
-            json.dump({'status': 'generating', 'progress': idx + 1, 'total': len(segments)}, f)
+            json.dump({'status': 'generating', 'progress': idx + 1, 'total': total_segments}, f)
 
-    page_data['status'] = 'ready'
+    if all_audio:
+        combined = np.concatenate(all_audio)
+        temp_wav = os.path.join(page_dir, 'page_audio.wav')
+        sf.write(temp_wav, combined, sample_rate)
+        mp3_path = os.path.join(page_dir, 'page_audio.mp3')
+        convert_to_mp3(temp_wav, mp3_path, sample_rate)
+        os.remove(temp_wav)
+        audio_url = f'/static/sessions/{session_id}/pages/{page_num}/page_audio.mp3'
+    else:
+        audio_url = None
+        cumulative_time = 0
+
+    page_data = {
+        'page': page_num,
+        'segments': segment_meta,
+        'total_segments': total_segments,
+        'status': 'ready',
+        'audio_url': audio_url,
+        'total_duration': cumulative_time,
+    }
+
     page_data_path = os.path.join(page_dir, 'page.json')
     with open(page_data_path, 'w') as f:
         json.dump(page_data, f)
 
     with open(status_path, 'w') as f:
-        json.dump({'status': 'ready', 'progress': len(segments), 'total': len(segments)}, f)
+        json.dump({'status': 'ready', 'progress': total_segments, 'total': total_segments}, f)
 
     if 'generated_pages' not in session:
         session['generated_pages'] = {}

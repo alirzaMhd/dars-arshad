@@ -591,7 +591,9 @@ const state = {
   segments: [],
   currentSegIdx: 0,
   audioEl: null,
-  preloads: [],
+  pageAudioUrl: null,
+  preload: null,
+  seeking: false,
   volume: parseFloat(localStorage.getItem('kokoro-volume')) || 1.0,
   muted: false,
   isPlaying: false,
@@ -600,7 +602,6 @@ const state = {
   pollTimer: null,
   stopPolling: false,
   genId: 0,
-  audioController: null,
   pageRenderTask: null,
   textRenderTask: null,
   zoomLocked: false,
@@ -848,11 +849,10 @@ function updateNav() {
   el.pageInput.max = state.pdfDoc.numPages;
 }
 function stopAudioCleanup() {
-  if (state.audioController) { state.audioController.abort(); state.audioController = null; }
   state.stopPolling = true;
   if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
+  if (state.preload) { state.preload.src = ''; state.preload = null; }
   state.segments = []; state.currentSegIdx = 0;
   state.isPlaying = false; state.isPaused = false;
   updatePlayBtns();
@@ -985,7 +985,7 @@ async function startGeneration(pageNum) {
     });
     const data = await res.json();
     if (data.error) { finishGen(); alert(data.error); return; }
-    if (data.status === 'ready') { onPageReady(data.segments); return; }
+    if (data.status === 'ready') { onPageReady(data); return; }
     pollGeneration(pageNum, currentGen);
   } catch (e) { finishGen(); alert('Generation request failed: ' + e.message); }
 }
@@ -1006,7 +1006,7 @@ async function pollGeneration(pageNum, genId) {
       if (data.status === 'ready') {
         const r2 = await fetch(`/api/page-data/${state.sessionId}/${pageNum}`);
         const pageData = await r2.json();
-        onPageReady(pageData.segments);
+        onPageReady(pageData);
         prefetchNextPages();
         return;
       }
@@ -1033,30 +1033,24 @@ async function prefetchNextPages() {
   } catch {}
 }
 
-function onPageReady(segments) {
-  state.segments = segments;
+function onPageReady(pageData) {
+  state.segments = pageData.segments;
   state.currentSegIdx = 0;
+  state.pageAudioUrl = pageData.audio_url;
   finishGen();
   updatePlayBtns();
-  el.segInfo.textContent = `0 / ${segments.length}`;
-  preloadPage(0);
+  el.segInfo.textContent = `0 / ${pageData.segments.length}`;
+  preloadNextPageAudio();
   renderPage().then(() => playSegment(0));
 }
 
-function preloadPage(fromIdx) {
-  if (state.preloads) {
-    state.preloads.forEach(a => { if (a !== state.audioEl) a.src = ''; });
-  }
-  state.preloads = [];
-  for (let i = fromIdx; i < state.segments.length; i++) {
-    const seg = state.segments[i];
-    if (!seg) break;
-    const a = new Audio(seg.audio_url + '?t=' + Date.now());
-    a.preload = 'auto';
-    a.dataset.segIdx = i;
-    a.load();
-    state.preloads.push(a);
-  }
+function preloadNextPageAudio() {
+  if (state.preload) { state.preload.src = ''; state.preload = null; }
+  if (!state.sessionId || !state.pdfDoc || state.currentPage >= state.pdfDoc.numPages) return;
+  const nextUrl = `/static/sessions/${state.sessionId}/pages/${state.currentPage}/page_audio.mp3`;
+  const a = new Audio(nextUrl);
+  a.preload = 'auto'; a.load();
+  state.preload = a;
 }
 
 function playSegment(idx) {
@@ -1064,54 +1058,59 @@ function playSegment(idx) {
   if (idx < 0) idx = 0;
   const seg = state.segments[idx];
   if (!seg) return;
-  if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.audioController) { state.audioController.abort(); }
-  state.audioController = new AbortController();
-  const signal = state.audioController.signal;
-  const preloaded = (state.preloads || []).find(a => +a.dataset.segIdx === idx);
-  if (preloaded) {
-    state.audioEl = preloaded;
-  } else {
-    state.audioEl = new Audio(seg.audio_url + '?t=' + Date.now());
+
+  state.currentSegIdx = idx;
+
+  if (!state.audioEl) {
+    state.audioEl = new Audio();
+    state.audioEl.preload = 'auto';
+    state.audioEl.volume = state.muted ? 0 : state.volume;
+    state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
+    state.audioEl.addEventListener('timeupdate', onAudioTimeUpdate);
+    state.audioEl.addEventListener('seeked', () => { state.seeking = false; });
+    state.audioEl.addEventListener('ended', () => advanceToNextPage());
+    state.audioEl.addEventListener('error', () => advanceToNextPage());
+    state.audioEl.src = state.pageAudioUrl;
   }
-  state.audioEl.playbackRate = parseFloat(el.speedSlider.value);
-  state.audioEl.volume = state.muted ? 0 : state.volume;
-  state.audioEl.currentTime = 0;
-  state.audioEl.play().catch(() => {});
-  state.isPlaying = true; state.isPaused = false; state.currentSegIdx = idx;
-  updatePlayBtns();
-  applyHighlightClasses();
-  updateProgress();
-  preloadPage(idx);
-  const segStartTime = state.segments.slice(0, idx).reduce((s, x) => s + (x.duration || 0), 0);
-  state.audioEl.addEventListener('timeupdate', () => {
-    const elapsed = segStartTime + (state.audioEl.currentTime || 0);
-    const total = state.segments.reduce((s, x) => s + (x.duration || 0), 0);
-    if (total > 0) el.dockProgressFill.style.width = (elapsed / total * 100) + '%';
-    el.timeCurrent.textContent = fmt(elapsed);
-  }, { signal });
-  state.audioEl.addEventListener('ended', () => playSegment(idx + 1), { signal });
-  state.audioEl.addEventListener('error', () => playSegment(idx + 1), { signal });
+
+  state.seeking = true;
+  const doPlay = () => {
+    state.audioEl.currentTime = seg.start_time;
+    state.audioEl.play().catch(() => {});
+    state.isPlaying = true; state.isPaused = false;
+    updatePlayBtns();
+    applyHighlightClasses();
+    preloadNextPageAudio();
+  };
+
+  if (state.audioEl.readyState >= 2) {
+    doPlay();
+  } else {
+    state.audioEl.addEventListener(
+      'canplay', () => { if (state.currentSegIdx === idx) doPlay(); }, { once: true }
+    );
+    state.audioEl.load();
+  }
 }
 
-function updateProgress() {
-  if (!state.segments.length) {
-    el.dockProgressFill.style.width = '0%';
-    el.timeCurrent.textContent = '0:00';
-    el.timeTotal.textContent = '0:00';
-    el.segInfo.textContent = '0 / 0';
+function onAudioTimeUpdate() {
+  if (state.seeking || !state.audioEl || !state.segments.length) return;
+  const ct = state.audioEl.currentTime;
+  const seg = state.segments[state.currentSegIdx];
+  if (seg && ct >= seg.end_time) {
+    playSegment(state.currentSegIdx + 1);
     return;
   }
-  let elapsed = 0, total = 0;
-  state.segments.forEach((s, i) => {
-    if (i < state.currentSegIdx) elapsed += s.duration || 0;
-    total += s.duration || 0;
-  });
-  if (state.audioEl && !state.isPaused) elapsed += state.audioEl.currentTime || 0;
+  updateProgressFromTime(ct);
+}
+
+function updateProgressFromTime(currentTime) {
+  const last = state.segments[state.segments.length - 1];
+  const total = last ? last.end_time : 0;
+  el.timeCurrent.textContent = fmt(currentTime);
   el.timeTotal.textContent = fmt(total);
-  el.timeCurrent.textContent = fmt(elapsed);
   el.segInfo.textContent = `${state.currentSegIdx} / ${state.segments.length}`;
-  el.dockProgressFill.style.width = total > 0 ? (elapsed / total * 100) + '%' : '0%';
+  el.dockProgressFill.style.width = total > 0 ? (currentTime / total * 100) + '%' : '0%';
 }
 
 function updatePlayBtns() {
@@ -1143,10 +1142,9 @@ el.nextSegBtn.addEventListener('click', () => { if (state.segments.length && sta
 el.stopBtn.addEventListener('click', () => stopReading());
 
 function stopReading() {
-  if (state.audioController) { state.audioController.abort(); state.audioController = null; }
   state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
+  if (state.preload) { state.preload.src = ''; state.preload = null; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0;
   state.segments = [];
   updatePlayBtns();
@@ -1161,11 +1159,10 @@ function stopReading() {
 }
 
 function resetReader() {
-  if (state.audioController) { state.audioController.abort(); state.audioController = null; }
   if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
   state.stopPolling = true; state.generating = false;
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
+  if (state.preload) { state.preload.src = ''; state.preload = null; }
   state.isPlaying = false; state.isPaused = false; state.currentSegIdx = 0; state.segments = [];
   el.genIndicator.classList.add('hidden');
   el.dockProgressFill.style.width = '0%';
@@ -1181,11 +1178,10 @@ function resetReader() {
 }
 
 async function advanceToNextPage() {
-  if (state.audioController) { state.audioController.abort(); state.audioController = null; }
   state.stopPolling = true;
   if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
   if (state.audioEl) { state.audioEl.pause(); state.audioEl = null; }
-  if (state.preloads) { state.preloads.forEach(a => { a.src = ''; }); state.preloads = []; }
+  if (state.preload) { state.preload.src = ''; state.preload = null; }
   state.segments = []; state.currentSegIdx = 0;
   state.isPlaying = false; state.isPaused = false;
   if (!state.pdfDoc || state.currentPage >= state.pdfDoc.numPages) { stopReading(); return; }
@@ -1196,20 +1192,23 @@ async function advanceToNextPage() {
 
 // Click-to-seek on the dock progress bar
 el.dockProgress.addEventListener('click', e => {
-  if (!state.segments.length) return;
+  if (!state.segments.length || !state.audioEl) return;
   const rect = el.dockProgress.getBoundingClientRect();
   const ratio = (e.clientX - rect.left) / rect.width;
-  const total = state.segments.reduce((s, x) => s + (x.duration || 0), 0);
+  const total = state.segments[state.segments.length - 1].end_time;
   const targetTime = ratio * total;
-  let acc = 0, idx = 0;
+  let idx = 0;
   for (let i = 0; i < state.segments.length; i++) {
-    const d = state.segments[i].duration || 0;
-    if (acc + d > targetTime) { idx = i; break; }
-    acc += d; idx = i + 1;
+    if (state.segments[i].end_time > targetTime) { idx = i; break; }
   }
   if (idx >= state.segments.length) idx = state.segments.length - 1;
-  playSegment(idx);
-  if (state.audioEl) state.audioEl.currentTime = Math.max(0, targetTime - acc);
+  state.currentSegIdx = idx;
+  state.seeking = true;
+  state.audioEl.currentTime = targetTime;
+  if (state.audioEl.paused) state.audioEl.play().catch(() => {});
+  state.isPlaying = true; state.isPaused = false;
+  updatePlayBtns();
+  applyHighlightClasses();
 });
 
 function fmt(secs) {
