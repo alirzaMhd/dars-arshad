@@ -40,18 +40,21 @@ If they provide no path, ask once. Never invent book content.
 
 ## Output Length Preference
 
-Before asking, count the total number of lines in the book file (e.g., `wc -l <book>.txt`) and tell the user: **"The book is approximately <N> lines long."**
+Before asking, count the total number of lines in the book file (e.g., `wc -l <book>.txt`) and tell the user: **"The book is approximately <N> lines long. For 20/20 exam readiness, a comprehensive guide typically runs 1.5–3× the book's line count."**
 
 Then ask: **"How many lines would you like the study guide to be approximately?"** Offer these options:
-- **Comprehensive (no limit)** — extract everything (default)
-- **~2000 lines** — thorough but trimmed
-- **~1000 lines** — concise
-- **~500 lines** — compact
+- **Comprehensive (no limit)** — extract everything, no compression (default, strongly recommended for 20/20)
+- **~2000 lines** — trimmed (only suitable for short books or last-minute review)
+- **~1000 lines** — concise (NOT suitable for 20/20, only for overview)
 - **Custom** — let them type a number
 
-Store their choice as `$OUTPUT_LINES`. If they choose "Comprehensive" or don't specify, extract everything with no length limit. If they choose a specific number, respect that target by prioritizing the most exam-relevant content per chapter (focus on definitions, key processes, formulas, comparisons, and end-of-chapter material; trim examples and narrative).
+**IMPORTANT**: If the user selects anything other than "Comprehensive", add a warning: *"Shorter guides skip worked examples, end-of-chapter material, edge cases, visual diagrams, mnemonics, self-test templates, and cross-chapter links — which are essential for 20/20 exam readiness. Recommend Comprehensive unless this is a last-minute review."* Store their final choice as `$OUTPUT_LINES`.
+
+If they choose "Comprehensive" (or don't specify), extract everything with no length limit — every primitive, every example, every formula, every exercise. If they choose a specific number, respect that target but NEVER skip primitives wholesale; instead, be more concise within each primitive rather than dropping primitives.
 
 Update the study guide header to include: `> Target length: <value> lines.`
+
+**Hard rule: A study guide under 500 lines cannot achieve 20/20 coverage for any book over 200 lines. If you are producing a guide that short, inform the user that it will be insufficient for full exam preparation.**
 
 ## Workflow
 
@@ -80,10 +83,24 @@ If the book has >20 chapters, ask which subset to prioritize (whole book, exam-r
 
 For each chapter:
 1. Extract the slice with offset/limit
-2. Run the **universal extraction checklist** below. **Check every category.** If a category has zero content in that chapter, skip it. This systematic sweep ensures nothing examinable is missed.
+2. Run the **universal extraction checklist** below. **Check every category.** If a category has zero content in that chapter, write `None in this chapter.` rather than skipping. This systematic sweep ensures nothing examinable is missed.
 3. **Include all content**, not just highlights. Every named entity, every process step, every formula, every comparison, every edge case, every case study — extract it all.
 4. **Keep examples and anecdotes** if they help understand the concept. Do not drop them aggressively — only remove truly redundant repetition.
 5. Note any cross-chapter links discovered
+
+**Minimum primitive requirements per chapter:**
+- Every chapter MUST include at least **10 of the 17 primitives** populated with real content (not "None").
+- The following 8 primitives are **MANDATORY in every chapter** and may only be skipped if genuinely zero content exists in the source:
+  1. Named Entities
+  2. Sequential Processes
+  3. Classifications / Hierarchies
+  4. Comparisons / Trade-offs
+  5. Formulas & Equations (or Rules/Laws/Theorems for non-quantitative chapters)
+  6. Edge Cases / Traps
+  7. Visual Patterns (text-described diagrams)
+  8. End-of-Chapter Material
+- A chapter with fewer than 8 primitives populated is a **quality failure**. Re-read the chapter and extract more deeply.
+- For CS chapters, Data Structures & Types (#7) is also mandatory.
 
 #### Universal Extraction Checklist
 
@@ -109,9 +126,11 @@ For each chapter:
 
 Target: each chapter should yield **enough content to fully cover the chapter's material**. There is no upper limit on bullets or word count. A dense textbook chapter may yield 100+ bullets. Prefer structured formats over prose, but include enough detail that the reader can learn the material without referring back to the original book.
 
+**Quality benchmark**: A student should be able to read ONLY this guide and score 20/20 on the exam. If any section would force the student to open the original book, you need more detail.
+
 ### Step 5 — Write the comprehensive study guide
 
-Save as `study-guide-<book-title>-<YYYY-MM-DD>.md` with this template. **Include every section that has content.** Reorder sections so the most content-heavy ones come first. Skip empty sections entirely.
+Save as `study-guide-<book-title>-<YYYY-MM-DD>.md` with the template below. **Every chapter MUST use ALL the following sections** (in this exact order). For any section with no content, write `None in this chapter.` — do NOT skip or remove the section. Do NOT reorder sections by content heaviness; use the prescribed order.
 
 ```markdown
 # Study Guide: <Book Title>
@@ -130,12 +149,12 @@ Save as `study-guide-<book-title>-<YYYY-MM-DD>.md` with this template. **Include
 ##### <Name>
 - **Type**: Algorithm / Pathway / Cycle / Protocol / Workflow
 - **Goal**: ...
-- **Steps**: (1) ... (2) ... (3) ... (N) ... — **every step described in detail**
+- **Steps**: (1) ... (2) ... (3) ... (N) ... — **every step described in full detail**
 - **Input**: ... **Output**: ...
 - **Conditions / Invariants**: ...
 - **Complexity** (if applicable): Time O(?) Space O(?)
 - **Edge Cases**: ...
-- **Example**: walk through a concrete example with values
+- **Example**: walk through a concrete example with **specific numeric values** (not variables)
 
 #### Classifications & Hierarchies
 - **Hierarchy name**:
@@ -157,7 +176,7 @@ Save as `study-guide-<book-title>-<YYYY-MM-DD>.md` with this template. **Include
 - *var* = definition [units]
 - **When to use**: ...
 - **Constraints**: ...
-- **Example calculation**: ...
+- **Example calculation**: use specific numbers, show the arithmetic
 
 #### Rules, Laws & Theorems
 ##### <Name>
@@ -187,22 +206,27 @@ ASCII/text diagram here
 - **Key junctions**: ...
 
 #### End-of-Chapter Material
-- **Key terms** (reproduced from chapter): ...
+- **Bolded/key terms** (reproduced from chapter): ...
 - **Review questions** (with answers): ...
 - **Exercises** (with solutions if straightforward): ...
 
+#### Cross-Chapter Links
+- **Requires knowledge of**: Ch. X (concept), Ch. Y (algorithm)
+- **Referenced in later chapters**: Ch. Z
+- **Synthesis potential**: exam questions may combine this with Ch. X and Ch. Y
+
 ### Ch. 2 — <Title>
-... (same structure)
+... (same structure, MUST include ALL sections above)
 
 ---
 
 ## Cross-Cutting Topics
 
 ### Design Paradigms & Meta-Methods
-(extracted from across all chapters)
+(extracted from across all chapters, with chapter references)
 
 ### Proof & Argument Patterns
-(extracted from across all chapters)
+(extracted from across all chapters, with chapter references)
 
 ### Probability & Statistics Foundation
 (extracted from across all chapters)
@@ -216,6 +240,13 @@ ASCII/text diagram here
 ---
 
 ## Exam Questions by Type
+
+Generate at minimum:
+- **10 MCQ**
+- **5 Short Answer**
+- **5 Trace / Apply** (with full worked solutions)
+- **5 Diagram Label** (with labeling rubric)
+- **5 Essay / Long-Form** (with key points to include)
 
 ### MCQ
 1. **Q:** ...  **A:** ...  **Distractor:** ... (why wrong)
@@ -234,42 +265,155 @@ ASCII/text diagram here
 1. **Q:** ...  **Key points to include:** ..., ..., ...
 ```
 
-### Step 6 — Verify before saving
+### Step 6 — Verify before saving — PASS/FAIL CHECKLIST
 
-Re-read the output and check:
-- Is every chapter covered? (count must match the index)
-- Were all 17 universal primitives checked against each chapter? (no category skipped without consideration)
-- For each chapter, have you extracted **all** named entities, process steps, formulas, comparisons, edge cases, case studies, and end-of-chapter material?
-- Are all process steps complete (not truncated) — could a student follow them without the original book?
-- Are formulas given with every variable defined plus units/constraints?
-- Are comparisons fair (same dimensions used across both sides)?
-- Are case studies described with enough detail (method, results, significance) for an essay question?
-- Is the end-of-chapter material (bold terms, review questions, exercises) fully reproduced?
-- Are design paradigms and meta-methods extracted and consolidated from across all chapters?
-- Are proof/argument patterns captured with full structure + classic example?
-- Is the probability & statistics section present (if the source uses any stats)?
-- Are ethics topics captured (if the source covers ethics)?
-- Are exam questions formatted per the user's specified exam type?
-- **Is there any section where a reader would need to go back to the original book? If so, add more detail.**
-- Did you flag any section where the source was unclear?
+Run through EVERY item below. If any item FAILs, fix the issue before saving.
+
+**Coverage checks:**
+- [ ] Every chapter in the book is covered (count matches the index) — **FAIL if any chapter missing**
+- [ ] Every chapter has at least 10 of 17 primitives populated with real content — **FAIL if any chapter has fewer**
+- [ ] Cross-Chapter Links section exists in every chapter — **FAIL if missing from any**
+
+**Primitive depth checks (per chapter):**
+- [ ] All process steps are complete (not truncated) — a student could follow them without the original book — **FAIL if any step is vague or incomplete**
+- [ ] Every worked example uses specific numeric values, not variables — **FAIL if any example uses only variables**
+- [ ] Every formula has every variable defined with units/constraints — **FAIL if any variable is undefined**
+- [ ] Comparisons use identical dimensions across both sides — **FAIL if dimensions differ**
+- [ ] Case studies include all four: What, Method, Results (with numbers), Significance — **FAIL if any is missing**
+- [ ] End-of-chapter material is fully reproduced (bolded terms, review questions, exercises) — **FAIL if any exercise is missing**
+- [ ] At least one visual/text diagram per chapter (search trees, pathways, architectures, etc.) — **FAIL if absent**
+
+**Cross-cutting checks:**
+- [ ] Design Paradigms section exists with chapter references — **FAIL if missing**
+- [ ] Proof & Argument Patterns section exists with chapter references — **FAIL if missing**
+- [ ] Probability & Statistics section exists (if source uses any stats) — **FAIL if missing**
+- [ ] Mnemonics section exists with at least 5 mnemonics — **FAIL if fewer**
+- [ ] People & Dates section exists — **FAIL if missing**
+- [ ] Ethics topics are extracted wherever present in the source — **FAIL if ethics content is ignored**
+
+**Exam questions checks:**
+- [ ] At least 10 MCQ with correct answers and distractor explanations — **FAIL if fewer**
+- [ ] At least 5 Short Answer with rubrics — **FAIL if fewer**
+- [ ] At least 5 Trace/Apply with full worked solutions — **FAIL if fewer**
+- [ ] At least 5 Diagram Label prompts — **FAIL if fewer**
+- [ ] At least 5 Essay questions with key points — **FAIL if fewer**
+
+**Self-containment check:**
+- [ ] **No section forces a student to open the original book** — if any section would be unclear without the source, add more detail — **FAIL if any such section exists**
+- [ ] End-of-chapter exercises include solutions — **FAIL if solutions are missing**
+
+After passing all checks, save the file. If any check FAILs, go back and fix the content, then re-run the full checklist.
+
+### Step 7 — Line count conformance (if target was specified)
+
+If the user chose a specific line target (not "Comprehensive"):
+
+1. **Count the output**: `wc -l <study-guide-file>`
+2. **Check against target**: The output must be within ±10% of the target (e.g., ~2000 target → 1800–2200 lines acceptable).
+3. **If over target**: Trim by applying these rules in order (start from the least critical):
+   - First: condense verbose explanations and narrative prose (keep facts, cut fluff)
+   - Second: remove redundant examples (keep the clearest one per concept)
+   - Third: shorten Exam Questions section (minimum floor: 5 MCQ, 3 Short Answer, 3 Trace, 3 Diagram, 3 Essay)
+   - Fourth: shorten worked examples (keep the math, trim the narrative walkthrough)
+   - **NEVER remove**: entire primitives, end-of-chapter material, or any chapter's Cross-Chapter Links
+   - **NEVER drop below 8 primitives per chapter** — if trimming would violate this, inform the user that the target is too low for 20/20 quality
+4. **If under target by more than 50%**: this signals insufficient depth. Re-read the book and add missing content rather than padding.
+5. **Re-run Step 6 checklist** after trimming to ensure no pass condition was violated.
+
+### Step 8 — 20/20 certification check (FINAL GATE)
+
+Before delivering the study guide to the user, run this certification as an independent self-check. Every item MUST pass:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║              20/20 STUDY GUIDE CERTIFICATION            ║
+╠══════════════════════════════════════════════════════════╣
+║                                                          ║
+║  [  PASS / FAIL  ]  All chapters from the book are       ║
+║                     covered (count matches index)        ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every chapter has ≥10 of 17          ║
+║                     primitives with real content         ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every chapter has 8 mandatory        ║
+║                     primitives (Named Entities,          ║
+║                     Processes, Classifications,          ║
+║                     Comparisons, Formulas/Rules,         ║
+║                     Edge Cases, Visuals, End-of-Chapter) ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every process has complete steps     ║
+║                     — a student can follow them          ║
+║                     without the original book            ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every algorithm/formula/process      ║
+║                     has ≥1 worked example with           ║
+║                     specific numeric values              ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every formula has all variables      ║
+║                     defined with units/constraints       ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every chapter has a text-described   ║
+║                     visual diagram (ASCII or structured) ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every chapter has Cross-Chapter      ║
+║                     Links section                        ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Every chapter has End-of-Chapter     ║
+║                     material (key terms, review          ║
+║                     questions, exercises with solutions) ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Cross-cutting sections exist:        ║
+║                     Design Paradigms, Proof Patterns,    ║
+║                     Probability & Stats, Mnemonics (≥5), ║
+║                     People & Dates                       ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Exam questions meet minimums:        ║
+║                     10 MCQ, 5 Short Answer, 5 Trace,     ║
+║                     5 Diagram, 5 Essay                   ║
+║                                                          ║
+║  [  PASS / FAIL  ]  No section requires the original     ║
+║                     book — fully self-contained          ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Line count matches user's target     ║
+║                     (if specified, within ±10%)          ║
+║                                                          ║
+║  [  PASS / FAIL  ]  Ethics content captured wherever     ║
+║                     present in source                    ║
+║                                                          ║
+║══════════════════════════════════════════════════════════║
+║                                                          ║
+║  OVERALL: [  CERTIFIED 20/20  /  NOT YET  ]             ║
+║                                                          ║
+║  If NOT YET: list each FAIL reason, fix the content,     ║
+║  re-run Steps 6–8 from scratch. Do NOT deliver until     ║
+║  OVERALL = CERTIFIED 20/20.                              ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+Copy this certification block into the final delivery message to the user, filled in with PASS/FAIL results for each row and the OVERALL result. This makes the quality assessment transparent and auditable.
 
 ## Rules
 
 - **Never invent content.** If a chapter is missing or unreadable, say so in the output.
 - **Systematic extraction is mandatory.** Run every category in the universal checklist against every chapter. Do not skip categories preemptively — let the content decide.
+- **Minimum 10 primitives per chapter.** Every chapter MUST have at least 10 of 17 primitives with substantial content. Chapters with fewer are quality failures — re-read and extract deeper.
 - **Be comprehensive, not compressed.** Include every named entity, every process step, every formula, every comparison, every edge case. The goal is that the reader can learn solely from the study guide without needing the original book.
+- **Self-containment is the test.** If a student would need to open the original book to understand any concept, formula, or process, the guide is insufficient. Add more detail.
 - **Preserve the author's framing** for theories, definitions, and named items — paraphrase only connective tissue.
 - **Surface exam signals**: repetition, bold text, summary boxes, "key" / "important" / "remember" — these are almost always testable.
-- **Reproduce end-of-chapter material verbatim.** Bolded terms, key points boxes, review questions, and exercises are the single most exam-relevant content in any textbook. Include them fully.
-- **Generate mnemonics proactively.** If a list of 5+ items must be memorized (e.g., Big-O ordering, Krebs cycle intermediates, Kings of England), invent an acronym, rhyme, or chunk for it.
+- **Reproduce end-of-chapter material verbatim in every chapter.** Bolded terms, key points boxes, review questions, and exercises are the single most exam-relevant content in any textbook. Include them fully with solutions.
+- **Generate mnemonics proactively.** If a list of 5+ items must be memorized (e.g., Big-O ordering, Krebs cycle intermediates, Kings of England), invent an acronym, rhyme, or chunk for it. Add to the Mnemonics cross-cutting section.
 - **Generate self-test templates for any process/algorithm with ≥5 steps.** Leave blanks for key steps, inputs, or outputs so the student can fill them from memory. Reference the answer location.
-- **Capture ethics wherever present.** If the source discusses ethics (AI safety, animal testing, informed consent, dual-use), extract it as a dedicated item.
+- **Capture ethics wherever present.** If the source discusses ethics (AI safety, animal testing, informed consent, dual-use), extract it as a dedicated item in the relevant chapter and in the cross-cutting topics.
 - **Prioritize technical content** over narrative. Include both the formula and the explanatory context needed to understand it.
-- **Walk through examples.** For any algorithm, formula, or process, include at least one concrete worked example with values.
+- **Every algorithm, formula, or process MUST have at least one concrete worked example with specific numeric values.** Variables alone are insufficient. Show the arithmetic.
+- **Every chapter MUST have a text-described visual diagram** (ASCII art or structured text description) that can be redrawn from memory.
+- **Every chapter MUST have explicit Cross-Chapter Links** noting dependencies and forward references.
 - **Respect copyright.** Do not reproduce long verbatim passages. Brief quotes (≤25 words) for definitions are fine. Pseudocode and small code snippets (≤15 lines) that are idiomatic/canonical are fine. End-of-chapter material is typically short enough to include.
 - **No filler.** No "in this chapter we learned...". No "as discussed earlier". Just the facts.
 - **Structured over prose.** Use lists, tables, ASCII diagrams, and equations. Minimize paragraphs.
-- **There is no length limit.** Do not truncate or abbreviate content to save space. If coverage of a chapter requires 200 bullets, write 200 bullets.
+- **There is no length limit.** Do not truncate or abbreviate content to save space. If coverage of a chapter requires 200 bullets, write 200 bullets. A 20/20 study guide for a 1000-page textbook may be 5000+ lines.
 
 ## Large book strategy
 
