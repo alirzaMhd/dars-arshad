@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <style>
   /* ─── Themes ─── */
   :root[data-theme="light"] {
@@ -1599,8 +1601,21 @@ function renderMarkdown(text) {
   try {
     if (window.marked) {
       window.marked.setOptions({ breaks: true, gfm: true });
-      const raw = window.marked.parse(text);
-      return window.DOMPurify ? window.DOMPurify.sanitize(raw) : raw;
+      const dispMath = [];
+      const inlnMath = [];
+      text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => { const i = dispMath.length; dispMath.push(m); return `⧙D${i}⧘`; });
+      text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => { const i = inlnMath.length; inlnMath.push(m); return `⧙I${i}⧘`; });
+      let html = window.marked.parse(text);
+      html = window.DOMPurify ? window.DOMPurify.sanitize(html) : html;
+      if (window.katex) {
+        html = html.replace(/⧙D(\d+)⧘/g, (_, i) => {
+          try { return window.katex.renderToString(dispMath[+i], { displayMode: true, throwOnError: false }); } catch { return dispMath[+i] || ''; }
+        });
+        html = html.replace(/⧙I(\d+)⧘/g, (_, i) => {
+          try { return window.katex.renderToString(inlnMath[+i], { displayMode: false, throwOnError: false }); } catch { return inlnMath[+i] || ''; }
+        });
+      }
+      return html;
     }
   } catch {}
   return text.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\n/g, '<br>');
