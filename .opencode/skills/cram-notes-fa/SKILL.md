@@ -14,7 +14,7 @@ metadata:
 - Detect and list all chapters
 - Read each chapter one at a time (never the whole file at once)
 - Systematically extract **every examinable primitive** from each chapter using a universal taxonomy that works for any discipline (CS, Biology, Math, Physics, Chemistry, Medicine, Engineering, Law, History, etc.)
-- Produce a comprehensive Markdown study guide **written entirely in Persian (Farsi)** covering: definitions, procedures/algorithms/pathways, formulas, classifications/comparisons, rules/laws/theorems, data structures, proof/argument patterns, design paradigms (DP, greedy, CRISPR, PCR), visual diagrams (text), edge cases, evidence, case studies, cross-chapter dependencies, mnemonics, probability & statistics foundation, self-test fill-in templates, ethics, and likely exam questions
+- Produce a comprehensive Markdown study guide **written entirely in Persian (Farsi)** covering: definitions, procedures/algorithms/pathways, formulas, classifications/comparisons, rules/laws/theorems, data structures, proof/argument patterns, design paradigms (DP, greedy, CRISPR, PCR), visual diagrams (text), edge cases, evidence, case studies, cross-chapter dependencies, mnemonics, probability & statistics foundation, self-test fill-in templates, ethics
 - **No length limit — every examinable item is included.** The goal is that a student who reads the output cover-to-cover should be prepared for any question on the exam (score 20/20).
 
 ## When to use me
@@ -33,10 +33,9 @@ Do **not** use this when the user wants an ultra-short one-page cheat sheet.
 
 ## Input
 
-Ask the user to clarify only if the source is ambiguous. Default to: "Point me at the book (path or URL), tell me the subject, and the exam format (MCQ / short answer / essay / problem-solving / mixed) if you know it."
+Ask the user to clarify only if the source is ambiguous. Default to: "Point me at the book (path or URL) and tell me the subject if you know it."
 
 - **Subject** determines extraction bias (see Domain Heuristics below).
-- **Exam format** adjusts how exam questions are written (MCQ → include distractors; problem-solving → include trace-through problems).
 
 If they provide no path, ask once. Never invent book content.
 
@@ -199,7 +198,6 @@ Save as `راهنمای-مطالعه-<book-title>-<YYYY-MM-DD>.md` with the temp
 - **روش**: نحوه انجام
 - **نتایج**: چه یافته‌هایی (با اعداد)
 - **اهمیت**: چرا مهم است
-- **زاویه امتحانی**: چه سؤالی ممکن است بپرسند
 
 #### نمودارها و تصاویر
 ```
@@ -217,7 +215,7 @@ Save as `راهنمای-مطالعه-<book-title>-<YYYY-MM-DD>.md` with the temp
 #### ارتباطات بین‌فصلی
 - **نیازمند دانش**: فصل X (مفهوم)، فصل Y (الگوریتم)
 - **ارجاع در فصول بعدی**: فصل Z
-- **پتانسیل تلفیق**: سؤالات امتحانی ممکن است این فصل را با فصل X و Y ترکیب کنند
+
 
 ### فصل ۲ — <عنوان>
 ... (همان ساختار، بایستی شامل تمام بخش‌های بالا باشد)
@@ -240,33 +238,6 @@ Save as `راهنمای-مطالعه-<book-title>-<YYYY-MM-DD>.md` with the temp
 
 ### افراد و تاریخ‌ها
 (استخراج‌شده از تمام فصول)
-
----
-
-## سؤالات امتحانی بر اساس نوع
-
-حداقل تولید شود:
-- **۱۰ سؤال چندگزینه‌ای (MCQ)**
-- **۵ سؤال پاسخ کوتاه**
-- **۵ سؤال ردیابی / اعمال** (با راه‌حل کامل)
-- **۵ سؤال برچسب‌گذاری نمودار** (با معیار نمره‌دهی)
-- **۵ سؤال مقاله / پاسخ بلند** (با نکات کلیدی)
-
-### چندگزینه‌ای (MCQ)
-1. **س:** ...  **پ:** ...  **گزینه انحرافی:** ... (چرا اشتباه است)
-2. **س:** ...  **پ:** ...  **گزینه انحرافی:** ...
-
-### پاسخ کوتاه
-1. **س:** ...  **نمره‌دهی:** نکته ۱، نکته ۲، نکته ۳
-
-### ردیابی / اعمال
-1. **ورودی:** ... **اعمال <الگوریتم/فرایند>** → **خروجی مورد انتظار:** ... **دلیل:** ...
-
-### برچسب‌گذاری نمودار
-1. **نمودار:** <توضیح متنی> **برچسب:** عنصر A، عنصر B، عنصر C
-
-### مقاله / پاسخ بلند
-1. **س:** ...  **نکات کلیدی برای ذکر:** ...، ...، ...
 ```
 
 ### Step 6 — Verify before saving — PASS/FAIL CHECKLIST
@@ -296,13 +267,6 @@ Run through EVERY item below. If any item FAILs, fix the issue before saving.
 - [ ] People & Dates section exists — **FAIL if missing**
 - [ ] Ethics topics are extracted wherever present in the source — **FAIL if ethics content is ignored**
 
-**Exam questions checks:**
-- [ ] At least 10 MCQ with correct answers and distractor explanations — **FAIL if fewer**
-- [ ] At least 5 Short Answer with rubrics — **FAIL if fewer**
-- [ ] At least 5 Trace/Apply with full worked solutions — **FAIL if fewer**
-- [ ] At least 5 Diagram Label prompts — **FAIL if fewer**
-- [ ] At least 5 Essay questions with key points — **FAIL if fewer**
-
 **Self-containment check:**
 - [ ] **No section forces a student to open the original book** — if any section would be unclear without the source, add more detail — **FAIL if any such section exists**
 - [ ] End-of-chapter exercises include solutions — **FAIL if solutions are missing**
@@ -318,8 +282,7 @@ If the user chose a specific line target (not "Comprehensive"):
 3. **If over target**: Trim by applying these rules in order (start from the least critical):
    - First: condense verbose explanations and narrative prose (keep facts, cut fluff)
    - Second: remove redundant examples (keep the clearest one per concept)
-   - Third: shorten Exam Questions section (minimum floor: 5 MCQ, 3 Short Answer, 3 Trace, 3 Diagram, 3 Essay)
-   - Fourth: shorten worked examples (keep the math, trim the narrative walkthrough)
+   - Third: shorten worked examples (keep the math, trim the narrative walkthrough)
    - **NEVER remove**: entire primitives, end-of-chapter material, or any chapter's Cross-Chapter Links
    - **NEVER drop below 8 primitives per chapter** — if trimming would violate this, inform the user that the target is too low for 20/20 quality
 4. **If under target by more than 50%**: this signals insufficient depth. Re-read the book and add missing content rather than padding.
@@ -371,10 +334,6 @@ Before delivering the study guide to the user, run this certification as an inde
 ║                     Design Paradigms, Proof Patterns,    ║
 ║                     Probability & Stats, Mnemonics (≥5), ║
 ║                     People & Dates                       ║
-║                                                          ║
-║  [  PASS / FAIL  ]  Exam questions meet minimums:        ║
-║                     10 MCQ, 5 Short Answer, 5 Trace,     ║
-║                     5 Diagram, 5 Essay                   ║
 ║                                                          ║
 ║  [  PASS / FAIL  ]  No section requires the original     ║
 ║                     book — fully self-contained          ║
