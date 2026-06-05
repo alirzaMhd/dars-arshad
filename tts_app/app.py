@@ -563,6 +563,7 @@ def opencode_stream_chat(prompt: str, model: str, opencode_session_id: str = Non
     ]
     if opencode_session_id:
         args += ['--session', opencode_session_id]
+    prompt = prompt.replace('\x00', '')
     args.append(prompt)
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
     first_session_id = opencode_session_id
