@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RB-DELETE Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+
+/* === LAYOUT === */
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+/* === INFO PANEL === */
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+/* === TREE CANVAS === */
+.tree-container {
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+.tree-container canvas {
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #0a0a12;
+}
+
+/* === CONTROLS === */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+/* === RESULT === */
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section pre {
+  color: #fff;
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin: 8px 0;
+  white-space: pre-wrap;
+  text-align: left;
+  display: inline-block;
+}
+.result-section .legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 12px 0 5px;
+  flex-wrap: wrap;
+}
+.result-section .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: #ccc;
+}
+.result-section .legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+/* === CASE TABLE === */
+.case-table {
+  margin: 15px auto;
+  font-size: 0.82em;
+  border-collapse: collapse;
+}
+.case-table th, .case-table td {
+  padding: 5px 10px;
+  border: 1px solid #333;
+  text-align: left;
+}
+.case-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+}
+.case-table td {
+  background: #111;
+  color: #ccc;
+}
+.case-table tr.active-case td {
+  background: #1a0a00;
+  color: #ff6600;
+  border-color: #ff6600;
+}
+
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>RB-DELETE</h1>
+<p class="subtitle">Balanced Tree — Red-Black Tree Deletion</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="tree-container">
+      <canvas id="treeCanvas" width="700" height="370"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div><span class="label">Algorithm:</span> <span class="highlight">RB-DELETE / RB-DELETE-FIXUP</span></div>
+      <div><span class="label">Delete Key:</span> <span class="value" id="deleteKeyDisplay">31</span></div>
+      <div><span class="label">Current Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+      <div><span class="label">Node Info:</span> <span class="value" id="computingDisplay">—</span></div>
+    </div>
+
+    <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>★ Red-Black Tree After Deletion</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#111; border-color:#ff4444;"></div> Red Node</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#111; border-color:#00ccff;"></div> Black Node</div>
+      </div>
+      <pre id="treeDisplay"></pre>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>Delete a key from a <b>Red-Black Tree</b> while preserving all 5 RB properties.</p>
+        <p>Input: <span class="dim">[41, 38, 31, 12, 19, 8]</span> — Delete <span class="dim">31</span></p>
+        <h3 style="margin-top:10px;">Red-Black Properties</h3>
+        <p>1. Every node is <b style="color:#ff4444;">red</b> or <b style="color:#00ccff;">black</b></p>
+        <p>2. Root is always black</p>
+        <p>3. All NIL leaves are black</p>
+        <p>4. Red node → both children are black</p>
+        <p>5. Every path has same number of black nodes</p>
+        <h3 style="margin-top:10px;">Deletion Cases</h3>
+        <table class="case-table">
+          <tr><th>Case</th><th>Condition</th><th>Action</th></tr>
+          <tr><td style="color:#ff6600;">1</td><td>Sibling is red</td><td>Rotate P, recolor S→B, P→R</td></tr>
+          <tr><td style="color:#ff6600;">2</td><td>S black, both nephews black</td><td>Recolor S→R, move double-black up</td></tr>
+          <tr><td style="color:#ff6600;">3</td><td>S black, near nephew red, far black</td><td>Rotate S, recolor, falls to Case 4</td></tr>
+          <tr><td style="color:#ff6600;">4</td><td>S black, far nephew red</td><td>Rotate P, recolor S and far-nephew</td></tr>
+        </table>
+        <p class="note">Each case has a left/right mirror. Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NIL_KEY = null;
+const NIL_COLOR = 'B';
+const RED = 'R';
+const BLACK = 'B';
+const DELETE_KEY = 31;
+
+function createNode(key, color, parent, left, right) {
+  return { key, color, parent, left, right };
+}
+
+let NIL;
+function initNIL() {
+  NIL = createNode(NIL_KEY, BLACK, null, null, null);
+  NIL.parent = NIL;
+  NIL.left = NIL;
+  NIL.right = NIL;
+}
+
+function createRBNode(key) {
+  let n = createNode(key, RED, NIL, NIL, NIL);
+  return n;
+}
+
+function leftRotate(root, x) {
+  let y = x.right;
+  x.right = y.left;
+  if (y.left !== NIL) y.left.parent = x;
+  y.parent = x.parent;
+  if (x.parent === NIL) root = y;
+  else if (x === x.parent.left) x.parent.left = y;
+  else x.parent.right = y;
+  y.left = x;
+  x.parent = y;
+  return root;
+}
+
+function rightRotate(root, x) {
+  let y = x.left;
+  x.left = y.right;
+  if (y.right !== NIL) y.right.parent = x;
+  y.parent = x.parent;
+  if (x.parent === NIL) root = y;
+  else if (x === x.parent.right) x.parent.right = y;
+  else x.parent.left = y;
+  y.right = x;
+  x.parent = y;
+  return root;
+}
+
+function insertFixup(root, z) {
+  while (z.parent.color === RED) {
+    if (z.parent === z.parent.parent.left) {
+      let y = z.parent.parent.right;
+      if (y.color === RED) {
+        z.parent.color = BLACK;
+        y.color = BLACK;
+        z.parent.parent.color = RED;
+        z = z.parent.parent;
+      } else {
+        if (z === z.parent.right) {
+          z = z.parent;
+          root = leftRotate(root, z);
+        }
+        z.parent.color = BLACK;
+        z.parent.parent.color = RED;
+        root = rightRotate(root, z.parent.parent);
+      }
+    } else {
+      let y = z.parent.parent.left;
+      if (y.color === RED) {
+        z.parent.color = BLACK;
+        y.color = BLACK;
+        z.parent.parent.color = RED;
+        z = z.parent.parent;
+      } else {
+        if (z === z.parent.left) {
+          z = z.parent;
+          root = rightRotate(root, z);
+        }
+        z.parent.color = BLACK;
+        z.parent.parent.color = RED;
+        root = leftRotate(root, z.parent.parent);
+      }
+    }
+  }
+  root.color = BLACK;
+  return root;
+}
+
+function rbInsert(root, key) {
+  let z = createRBNode(key);
+  let y = NIL;
+  let x = root;
+  while (x !== NIL) {
+    y = x;
+    if (z.key < x.key) x = x.left;
+    else x = x.right;
+  }
+  z.parent = y;
+  if (y === NIL) root = z;
+  else if (z.key < y.key) y.left = z;
+  else y.right = z;
+  root = insertFixup(root, z);
+  return root;
+}
+
+function treeMinimum(x) {
+  while (x.left !== NIL) x = x.left;
+  return x;
+}
+
+function rbTransplant(root, u, v) {
+  if (u.parent === NIL) root = v;
+  else if (u === u.parent.left) u.parent.left = v;
+  else u.parent.right = v;
+  v.parent = u.parent;
+  return root;
+}
+
+function cloneTree(root) {
+  if (root === NIL) return NIL;
+  let n = createNode(root.key, root.color, null, null, null);
+  n.left = cloneTree(root.left);
+  n.right = cloneTree(root.right);
+  if (n.left !== NIL) n.left.parent = n;
+  if (n.right !== NIL) n.right.parent = n;
+  return n;
+}
+
+function buildSteps() {
+  initNIL();
+  let root = NIL;
+  let inserts = [41, 38, 31, 12, 19, 8];
+  for (let v of inserts) root = rbInsert(root, v);
+
+  steps = [];
+  let initialSnapshot = cloneTree(root);
+
+  steps.push({
+    type: 'init',
+    snapshot: cloneTree(root),
+    explanation: buildInitExplanation(root)
+  });
+
+  let z = root;
+  while (z !== NIL && z.key !== DELETE_KEY) {
+    if (DELETE_KEY < z.key) z = z.left;
+    else z = z.right;
+  }
+  if (z === NIL) return;
+
+  let yOrigColor = z.color;
+  let y = z;
+  let originalY = y;
+  let fixupNode = null;
+
+  steps.push({
+    type: 'find',
+    snapshot: cloneTree(root),
+    highlightKey: DELETE_KEY,
+    explanation: buildFindExplanation(z)
+  });
+
+  if (z.left === NIL) {
+    fixupNode = z.right;
+    root = rbTransplant(root, z, z.right);
+    steps.push({
+      type: 'transplant',
+      snapshot: cloneTree(root),
+      explanation: buildTransplantExplanation(DELETE_KEY, 'right child')
+    });
+  } else if (z.right === NIL) {
+    fixupNode = z.left;
+    root = rbTransplant(root, z, z.left);
+    steps.push({
+      type: 'transplant',
+      snapshot: cloneTree(root),
+      explanation: buildTransplantExplanation(DELETE_KEY, 'left child')
+    });
+  } else {
+    y = treeMinimum(z.right);
+    yOrigColor = y.color;
+    steps.push({
+      type: 'find_successor',
+      snapshot: cloneTree(root),
+      highlightKey: y.key,
+      explanation: buildSuccessorExplanation(z, y)
+    });
+
+    root = rbTransplant(root, y, y.right);
+    steps.push({
+      type: 'transplant_successor',
+      snapshot: cloneTree(root),
+      explanation: buildTransplantSuccessorExplanation(y.key, DELETE_KEY,
+        y.parent === z ? 'successor is direct child' : 'successor has right subtree')
+    });
+
+    z.key = y.key;
+    steps.push({
+      type: 'replace_with_successor',
+      snapshot: cloneTree(root),
+      highlightKey: y.key,
+      explanation: buildReplaceExplanation(DELETE_KEY, y.key, z.color, y.color)
+    });
+
+    fixupNode = y.right;
+  }
+
+  if (yOrigColor === BLACK) {
+    steps.push({
+      type: 'fixup_start',
+      snapshot: cloneTree(root),
+      explanation: buildFixupStartExplanation(DELETE_KEY)
+    });
+
+    let fixupTarget = fixupNode || NIL;
+
+    let fixupSteps = generateFixupSteps(root, fixupTarget);
+    for (let s of fixupSteps) {
+      steps.push(s);
+      root = s.rootState;
+    }
+  }
+
+  root.color = BLACK;
+  steps.push({
+    type: 'done',
+    snapshot: cloneTree(root),
+    explanation: buildDoneExplanation(root, DELETE_KEY)
+  });
+
+  initialTreeRoot = initialSnapshot;
+  finalTreeRoot = cloneTree(root);
+}
+
+let fixupCount = 0;
+function generateFixupSteps(root, x) {
+  let results = [];
+  let safety = 0;
+  while (x !== root && x.color === BLACK && safety < 50) {
+    safety++;
+    if (x === x.parent.left) {
+      let w = x.parent.right;
+      if (w === NIL) break;
+      if (w.color === RED) {
+        results.push({
+          type: 'fixup',
+          caseNum: 1,
+          caseLabel: 'Case 1',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase1Explanation(x.key, w.key, 'left', 'right')
+        });
+        w.color = BLACK;
+        x.parent.color = RED;
+        root = leftRotate(root, x.parent);
+        w = x.parent.right;
+        results.push({
+          type: 'fixup_rotate',
+          caseNum: 1,
+          caseLabel: 'Case 1 → Rotate Left',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase1RotateExplanation(x.key, w.key)
+        });
+      }
+      if (w.left.color === BLACK && w.right.color === BLACK) {
+        results.push({
+          type: 'fixup',
+          caseNum: 2,
+          caseLabel: 'Case 2',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase2Explanation(x.key, w.key)
+        });
+        w.color = RED;
+        x = x.parent;
+      } else {
+        if (w.right.color === BLACK) {
+          let wKey = w.key;
+          let wlKey = w.left.key !== null ? w.left.key : 'NIL';
+          results.push({
+            type: 'fixup',
+            caseNum: 3,
+            caseLabel: 'Case 3',
+            snapshot: cloneTree(root),
+            rootState: root,
+            explanation: buildCase3Explanation(x.key, wKey, wlKey)
+          });
+          w.left.color = BLACK;
+          w.color = RED;
+          root = rightRotate(root, w);
+          w = x.parent.right;
+          results.push({
+            type: 'fixup_rotate',
+            caseNum: 3,
+            caseLabel: 'Case 3 → Rotate Right',
+            snapshot: cloneTree(root),
+            rootState: root,
+            explanation: buildCase3RotateExplanation(x.key, w.key)
+          });
+        }
+        let wrKey = w.right.key !== null ? w.right.key : 'NIL';
+        results.push({
+          type: 'fixup',
+          caseNum: 4,
+          caseLabel: 'Case 4',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase4Explanation(x.key, w.key, wrKey)
+        });
+        w.color = x.parent.color;
+        x.parent.color = BLACK;
+        w.right.color = BLACK;
+        root = leftRotate(root, x.parent);
+        x = root;
+        results.push({
+          type: 'fixup_rotate',
+          caseNum: 4,
+          caseLabel: 'Case 4 → Rotate Left, Done',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase4DoneExplanation()
+        });
+      }
+    } else {
+      let w = x.parent.left;
+      if (w === NIL) break;
+      if (w.color === RED) {
+        results.push({
+          type: 'fixup',
+          caseNum: 1,
+          caseLabel: 'Case 1 (mirror)',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase1Explanation(x.key, w.key, 'right', 'left')
+        });
+        w.color = BLACK;
+        x.parent.color = RED;
+        root = rightRotate(root, x.parent);
+        w = x.parent.left;
+        results.push({
+          type: 'fixup_rotate',
+          caseNum: 1,
+          caseLabel: 'Case 1 (mirror) → Rotate Right',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase1RotateExplanation(x.key, w.key)
+        });
+      }
+      if (w.right.color === BLACK && w.left.color === BLACK) {
+        results.push({
+          type: 'fixup',
+          caseNum: 2,
+          caseLabel: 'Case 2 (mirror)',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase2Explanation(x.key, w.key)
+        });
+        w.color = RED;
+        x = x.parent;
+      } else {
+        if (w.left.color === BLACK) {
+          let wKey = w.key;
+          let wrKey = w.right.key !== null ? w.right.key : 'NIL';
+          results.push({
+            type: 'fixup',
+            caseNum: 3,
+            caseLabel: 'Case 3 (mirror)',
+            snapshot: cloneTree(root),
+            rootState: root,
+            explanation: buildCase3Explanation(x.key, wKey, wrKey)
+          });
+          w.right.color = BLACK;
+          w.color = RED;
+          root = leftRotate(root, w);
+          w = x.parent.left;
+          results.push({
+            type: 'fixup_rotate',
+            caseNum: 3,
+            caseLabel: 'Case 3 (mirror) → Rotate Left',
+            snapshot: cloneTree(root),
+            rootState: root,
+            explanation: buildCase3RotateExplanation(x.key, w.key)
+          });
+        }
+        let wlKey = w.left.key !== null ? w.left.key : 'NIL';
+        results.push({
+          type: 'fixup',
+          caseNum: 4,
+          caseLabel: 'Case 4 (mirror)',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase4Explanation(x.key, w.key, wlKey)
+        });
+        w.color = x.parent.color;
+        x.parent.color = BLACK;
+        w.left.color = BLACK;
+        root = rightRotate(root, x.parent);
+        x = root;
+        results.push({
+          type: 'fixup_rotate',
+          caseNum: 4,
+          caseLabel: 'Case 4 (mirror) → Rotate Right, Done',
+          snapshot: cloneTree(root),
+          rootState: root,
+          explanation: buildCase4DoneExplanation()
+        });
+      }
+    }
+  }
+  return results;
+}
+
+function nodeInfo(node, depth) {
+  if (!node || node === NIL) return null;
+  let left = nodeInfo(node.left, depth + 1);
+  let right = nodeInfo(node.right, depth + 1);
+  return { key: node.key, color: node.color, left, right };
+}
+
+function treeStructureStr(root, indent) {
+  if (!root || root === NIL) return indent + 'NIL (B)';
+  let s = indent + root.key + (root.color === RED ? ' (R)' : ' (B)') + '\n';
+  s += treeStructureStr(root.left, indent + '  L: ');
+  s += treeStructureStr(root.right, indent + '  R: ');
+  return s;
+}
+
+function buildInitExplanation(root) {
+  let inserts = [41, 38, 31, 12, 19, 8];
+  let struct = treeStructureStr(root, '');
+  return `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>Delete key <span class="dim">${DELETE_KEY}</span> from a <b>Red-Black Tree</b>.</p>
+      <p>Insertion order: <span class="dim">[${inserts.join(', ')}]</span></p>
+      <h3 style="margin-top:10px;">Current Tree</h3>
+      <pre style="color:#fff; font-size:0.82em; line-height:1.5; margin:6px 0; white-space:pre-wrap;">${struct}</pre>
+      <h3 style="margin-top:10px;">RB-DELETE Process</h3>
+      <p>1. Standard BST delete to remove the node</p>
+      <p>2. If deleted node was <b style="color:#ff4444;">red</b> → no fixup needed</p>
+      <p>3. If deleted node was <b style="color:#00ccff;">black</b> → violates property 5 (black-height), run <span class="dim">RB-DELETE-FIXUP</span></p>
+      <h3 style="margin-top:10px;">Fix-Up Cases (Double-Black at X)</h3>
+      <p>Let <span class="dim">W</span> = sibling of X</p>
+      <p><span class="split-info">Case 1:</span> W is red → rotate, recolor, reduce to Case 2/3/4</p>
+      <p><span class="split-info">Case 2:</span> W is black, both nephews black → recolor W red, move double-black up</p>
+      <p><span class="split-info">Case 3:</span> W is black, near-nephew red, far-nephew black → rotate W, recolor → Case 4</p>
+      <p><span class="split-info">Case 4:</span> W is black, far-nephew red → rotate P, recolor W & far-nephew → done</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+}
+
+function buildFindExplanation(node) {
+  return `
+    <div class="explain-section active">
+      <h3>Finding Key ${DELETE_KEY}</h3>
+      <p>Search the tree for key <span class="dim">${DELETE_KEY}</span> using BST search property.</p>
+      <p>Key <span class="dim">${DELETE_KEY}</span> found. Its color is <b style="color:${node.color === RED ? '#ff4444' : '#00ccff'};">${node.color === RED ? 'RED' : 'BLACK'}</b>.</p>
+      <p class="note">We need to determine which deletion case applies based on the node's children and color.</p>
+    </div>`;
+}
+
+function buildTransplantExplanation(delKey, replacement) {
+  return `
+    <div class="explain-section active">
+      <h3>BST Transplant — Remove ${delKey}</h3>
+      <p>Node <span class="dim">${delKey}</span> has only one child: <span class="dim">${replacement}</span>.</p>
+      <p>Replace <span class="dim">${delKey}</span> directly with its ${replacement}.</p>
+      <span class="formula-line">transplant(T, ${delKey}, ${replacement})</span>
+      <p class="note">Since ${delKey}'s only child is NIL, this simplifies to just removing the node.</p>
+    </div>`;
+}
+
+function buildSuccessorExplanation(z, succ) {
+  return `
+    <div class="explain-section active">
+      <h3>Find In-Order Successor</h3>
+      <p>Node <span class="dim">${DELETE_KEY}</span> has <b>two children</b>. We need its <b>in-order successor</b> — the smallest node in the right subtree.</p>
+      <p>Go right once, then keep going left: successor = <span class="split-info">${succ.key}</span></p>
+      <span class="formula-line">successor(${DELETE_KEY}) = min(right subtree) = ${succ.key}</span>
+      <p class="note">The successor will replace ${DELETE_KEY} in the tree, preserving BST ordering.</p>
+    </div>`;
+}
+
+function buildTransplantSuccessorExplanation(succKey, delKey, reason) {
+  return `
+    <div class="explain-section active">
+      <h3>Remove Successor ${succKey}</h3>
+      <p>Transplant the successor <span class="dim">${succKey}</span> out of its position (${reason}).</p>
+      <p>Replace ${succKey} with its right child (left child is NIL since ${succKey} is the minimum).</p>
+      <span class="formula-line">transplant(T, ${succKey}, ${succKey}.right)</span>
+      <p class="note">${succKey} is now free to take ${delKey}'s position.</p>
+    </div>`;
+}
+
+function buildReplaceExplanation(delKey, succKey, delColor, succColor) {
+  return `
+    <div class="explain-section active">
+      <h3>Replace ${delKey} → ${succKey}</h3>
+      <p>Copy successor <span class="dim">${succKey}</span> into the position of <span class="dim">${delKey}</span>.</p>
+      <p>Keep ${succKey}'s <b style="color:${succColor === RED ? '#ff4444' : '#00ccff'};">${succColor === RED ? 'RED' : 'BLACK'}</b> color (original was <b style="color:${delColor === RED ? '#ff4444' : '#00ccff'};">${delColor === RED ? 'RED' : 'BLACK'}</b>).</p>
+      <p>The deleted node's color was <span class="dim">${delColor}</span>.</p>
+      <p class="note">Since we deleted a black node, black-height may be violated on one side → need fixup.</p>
+    </div>`;
+}
+
+function buildFixupStartExplanation(delKey) {
+  return `
+    <div class="explain-section active">
+      <h3>RB-DELETE-FIXUP — Start</h3>
+      <p>The deleted node was <b style="color:#00ccff;">BLACK</b>. This violates Red-Black Property 5: all paths from a node to NIL leaves must have the same number of black nodes.</p>
+      <p>The "extra black" is represented as a <span class="dim">double-black</span> marker on a node.</p>
+      <p>Now we apply fix-up cases until the double-black is resolved.</p>
+      <span class="formula-line">RB-DELETE-FIXUP(T, x) — x = node with extra black</span>
+      <p class="note">Each iteration either absorbs the extra black or moves it upward. The loop terminates when x becomes red or reaches the root.</p>
+    </div>`;
+}
+
+function buildCase1Explanation(xKey, wKey, xSide, wSide) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 1 — Sibling ${wKey} is RED</h3>
+      <p><span class="dim">W</span> (sibling of ${xKey}) = <span class="dim">${wKey}</span> is <b style="color:#ff4444;">RED</b>.</p>
+      <p>This means ${wKey}'s children are both black, and ${wKey}'s child toward ${xKey} becomes the new sibling.</p>
+      <span class="formula-line">Recolor: W→B, P→R, then rotate P on ${wSide} side</span>
+      <p>After rotation, the new sibling is black → reduces to Case 2, 3, or 4.</p>
+      <p class="note">Case 1 is a "setup" case — it never terminates the fixup, but transforms into another case.</p>
+    </div>`;
+}
+
+function buildCase1RotateExplanation(xKey, wKey) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 1 — After Rotation</h3>
+      <p>Rotated around parent. New sibling of <span class="dim">${xKey}</span> is <span class="dim">${wKey}</span> (black).</p>
+      <p>Falls through to Case 2, 3, or 4 based on ${wKey}'s children.</p>
+    </div>`;
+}
+
+function buildCase2Explanation(xKey, wKey) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 2 — Sibling ${wKey} is Black, Both Nephews Black</h3>
+      <p><span class="dim">W</span> = <span class="dim">${wKey}</span> is black, and both of ${wKey}'s children are black.</p>
+      <span class="formula-line">Recolor W → RED, move double-black up to parent</span>
+      <p>Push the extra black upward: set x = x.parent. The parent absorbs the double-black.</p>
+      <p class="note">If parent is red, the loop terminates next iteration. If parent is black, we continue with another case.</p>
+    </div>`;
+}
+
+function buildCase3Explanation(xKey, wKey, nearChildKey) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 3 — Near Nephew ${nearChildKey} is RED</h3>
+      <p><span class="dim">W</span> = <span class="dim">${wKey}</span> is black. The <b>near</b> child (${nearChildKey}) is <b style="color:#ff4444;">RED</b>, but the <b>far</b> child is black.</p>
+      <span class="formula-line">Recolor near-child → B, W → R, rotate W on far side</span>
+      <p>After rotation, new W's far child is now the former near-child (red) → falls into Case 4.</p>
+      <p class="note">Case 3 is a "setup" for Case 4 — it positions the red node on the far side.</p>
+    </div>`;
+}
+
+function buildCase3RotateExplanation(xKey, wKey) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 3 — After Rotation</h3>
+      <p>Rotated around sibling. New sibling = <span class="dim">${wKey}</span> with red far child → Case 4.</p>
+    </div>`;
+}
+
+function buildCase4Explanation(xKey, wKey, farChildKey) {
+  return `
+    <div class="explain-section active">
+      <h3>Case 4 — Far Nephew ${farChildKey} is RED</h3>
+      <p><span class="dim">W</span> = <span class="dim">${wKey}</span> is black. The <b>far</b> child (${farChildKey}) is <b style="color:#ff4444;">RED</b>.</p>
+      <span class="formula-line">Recolor: W → P.color, P → B, far-child → B</span>
+      <span class="formula-line">Rotate parent P on W's side</span>
+      <p>This absorbs the extra black into the far-child's subtree, making all paths balanced.</p>
+      <p class="note">Case 4 is always the <b>terminating</b> case — the fixup is complete after this!</p>
+    </div>`;
+}
+
+function buildCase4DoneExplanation() {
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>Fixup Complete!</h3>
+      <p>After Case 4 rotation, the double-black is resolved. All paths have equal black-height.</p>
+      <p>Red-Black properties are restored.</p>
+    </div>`;
+}
+
+function buildDoneExplanation(root, delKey) {
+  let struct = treeStructureStr(root, '');
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ RB-DELETE Complete!</h3>
+      <p>Key <span class="result-line" style="display:inline;">${delKey}</span> has been removed and the tree rebalanced.</p>
+      <h3 style="margin-top:10px;">Final Tree Structure</h3>
+      <pre style="color:#fff; font-size:0.82em; line-height:1.5; margin:6px 0; white-space:pre-wrap;">${struct}</pre>
+      <h3 style="margin-top:10px;">Properties Verified</h3>
+      <p>✓ Root is black</p>
+      <p>✓ All NIL leaves are black</p>
+      <p>✓ No red-red parent-child violations</p>
+      <p>✓ All paths have equal black-height</p>
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Time:</span> O(log n) — height of balanced tree</p>
+      <p><span class="dim">Space:</span> O(1) — iterative (no recursion stack)</p>
+    </div>`;
+}
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let initialTreeRoot = null;
+let finalTreeRoot = null;
+
+function drawTree(snapshot, highlightKey) {
+  let canvas = document.getElementById('treeCanvas');
+  let ctx = canvas.getContext('2d');
+  canvas.width = 700;
+  canvas.height = 370;
+  ctx.clearRect(0, 0, 700, 370);
+
+  if (!snapshot || snapshot === NIL) return;
+
+  function subtreeWidth(node) {
+    if (!node || node === NIL) return 1;
+    return subtreeWidth(node.left) + subtreeWidth(node.right);
+  }
+
+  function drawNode(x, y, text, color, isHighlight) {
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.strokeStyle = isHighlight ? '#ffff00' : color;
+    ctx.lineWidth = isHighlight ? 3 : 2;
+    if (isHighlight) {
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 15;
+    }
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = isHighlight ? '#ffff00' : color;
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+  }
+
+  function drawEdge(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 + 18);
+    ctx.lineTo(x2, y2 - 18);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function draw(node, x, y, spread) {
+    if (!node || node === NIL) return;
+    let nodeColor = node.color === RED ? '#ff4444' : '#00ccff';
+    let isHL = (highlightKey !== undefined && highlightKey !== null && node.key === highlightKey);
+    drawNode(x, y, node.key, nodeColor, isHL);
+
+    if (node.left !== NIL) {
+      let lx = x - spread;
+      let ly = y + 65;
+      drawEdge(x, y, lx, ly);
+      draw(node.left, lx, ly, spread * 0.55);
+    }
+    if (node.right !== NIL) {
+      let rx = x + spread;
+      let ry = y + 65;
+      drawEdge(x, y, rx, ry);
+      draw(node.right, rx, ry, spread * 0.55);
+    }
+  }
+
+  let w = subtreeWidth(snapshot);
+  let startX = 350;
+  let startY = 35;
+  let spread = Math.min(160, 700 / (w + 1));
+  draw(snapshot, startX, startY, spread);
+}
+
+function applyStep(step) {
+  if (step.snapshot) {
+    drawTree(step.snapshot, step.highlightKey || null);
+  }
+
+  let phase = '';
+  let nodeInfo = '';
+  switch (step.type) {
+    case 'init':
+      phase = 'Initial Tree';
+      nodeInfo = `Tree built from [41, 38, 31, 12, 19, 8]`;
+      break;
+    case 'find':
+      phase = `Finding key ${step.highlightKey}`;
+      nodeInfo = `Search: found ${step.highlightKey}`;
+      break;
+    case 'transplant':
+    case 'transplant_successor':
+      phase = 'BST Transplant';
+      nodeInfo = 'Removing node from tree';
+      break;
+    case 'replace_with_successor':
+      phase = `Replace with successor ${step.highlightKey}`;
+      nodeInfo = `Copying ${step.highlightKey} into deleted position`;
+      break;
+    case 'fixup_start':
+      phase = 'RB-DELETE-FIXUP';
+      nodeInfo = 'Double-black detected — begin fixup';
+      break;
+    case 'fixup':
+      phase = step.caseLabel;
+      nodeInfo = `Applying ${step.caseLabel}`;
+      break;
+    case 'fixup_rotate':
+      phase = step.caseLabel;
+      nodeInfo = `Rotation complete`;
+      break;
+    case 'done':
+      phase = '✓ Complete!';
+      nodeInfo = `Key ${DELETE_KEY} deleted, tree rebalanced`;
+      break;
+  }
+
+  document.getElementById('phaseDisplay').textContent = phase;
+  document.getElementById('computingDisplay').textContent = nodeInfo;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let display = '';
+  if (finalTreeRoot && finalTreeRoot !== NIL) {
+    display = treeStructureStr(finalTreeRoot, '');
+  }
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = `Key ${DELETE_KEY} deleted`;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('treeDisplay').textContent = display;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(finalTreeRoot, DELETE_KEY);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>Delete key <span class="dim">${DELETE_KEY}</span> from a <b>Red-Black Tree</b>.</p>
+      <p>Input: <span class="dim">[41, 38, 31, 12, 19, 8]</span> — Delete <span class="dim">${DELETE_KEY}</span></p>
+      <h3 style="margin-top:10px;">Red-Black Properties</h3>
+      <p>1. Every node is <b style="color:#ff4444;">red</b> or <b style="color:#00ccff;">black</b></p>
+      <p>2. Root is always black</p>
+      <p>3. All NIL leaves are black</p>
+      <p>4. Red node → both children are black</p>
+      <p>5. Every path has same number of black nodes</p>
+      <h3 style="margin-top:10px;">Deletion Cases</h3>
+      <table class="case-table">
+        <tr><th>Case</th><th>Condition</th><th>Action</th></tr>
+        <tr><td style="color:#ff6600;">1</td><td>Sibling is red</td><td>Rotate P, recolor S→B, P→R</td></tr>
+        <tr><td style="color:#ff6600;">2</td><td>S black, both nephews black</td><td>Recolor S→R, move double-black up</td></tr>
+        <tr><td style="color:#ff6600;">3</td><td>S black, near nephew red, far black</td><td>Rotate S, recolor, falls to Case 4</td></tr>
+        <tr><td style="color:#ff6600;">4</td><td>S black, far nephew red</td><td>Rotate P, recolor S and far-nephew</td></tr>
+      </table>
+      <p class="note">Each case has a left/right mirror. Press Play or Step to begin.</p>
+    </div>`;
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  if (initialTreeRoot) drawTree(initialTreeRoot, null);
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+if (initialTreeRoot) drawTree(initialTreeRoot, null);
+</script>
+</body>
+</html>
