@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Union-Find with Union by Rank Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.root-highlight {
+  background: #002a1a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 14px #00ff8855;
+  transform: scale(1.08);
+  font-weight: bold;
+}
+
+.canvas-wrapper {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>Union-Find with Union by Rank</h1>
+<p class="subtitle">Disjoint Set Union — Union by Rank with Path Traversal</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="treeCanvas" width="820" height="320"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9199; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <span class="label">Operation:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Action:</span> <span class="value" id="computingDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count"><span id="stepNum">0</span></span> / <span class="count"><span id="totalSteps">0</span></span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Parent Array &mdash; parent[i] points to the parent of element i</div>
+      <div class="table-wrapper">
+        <table id="parentTable">
+          <thead><tr id="parentHeader"></tr></thead>
+          <tbody><tr id="parentRow"></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Rank Array &mdash; rank[i] is an upper bound on the height of the tree rooted at i</div>
+      <div class="table-wrapper">
+        <table id="rankTable">
+          <thead><tr id="rankHeader"></tr></thead>
+          <tbody><tr id="rankRow"></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="operationList" style="margin:15px 0;font-size:0.85em;color:#888;text-align:center;">
+      Union Operations: (0,1) &rarr; (2,3) &rarr; (4,5) &rarr; (6,7) &rarr; (0,2) &rarr; (4,6) &rarr; (0,4)
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>&#10004; Algorithm Complete!</h2>
+      <p style="color:#ccc;margin:8px 0;">All elements belong to the same set rooted at <span style="color:#00ff88;font-weight:bold;">0</span>.</p>
+      <p style="color:#ccc;margin:8px 0;">
+        Final rank of root <span class="dim">0</span> = <span class="result-line" id="finalRank" style="display:inline;"></span>
+      </p>
+      <p style="color:#ccc;margin:8px 0;">
+        <span class="dim">log&#8322;(</span>n<span class="dim">)</span> = <span id="logDisplay" class="result-line" style="display:inline;"></span>
+      </p>
+      <div id="resultDisplay" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#x1F4D6; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+const N = 8;
+const unionOps = [[0,1],[2,3],[4,5],[6,7],[0,2],[4,6],[0,4]];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let parent = [];
+let rank = [];
+let nodeStates = {};
+
+function initData() {
+  parent = Array(N).fill(0).map((_, i) => i);
+  rank = Array(N).fill(0);
+  nodeStates = {};
+  for (let i = 0; i < N; i++) nodeStates[i] = 'default';
+}
+
+function findPath(x) {
+  let path = [];
+  while (parent[x] !== x) {
+    path.push(x);
+    x = parent[x];
+  }
+  path.push(x);
+  return { path, root: x };
+}
+
+function buildSteps() {
+  steps = [];
+  initData();
+
+  for (let opIdx = 0; opIdx < unionOps.length; opIdx++) {
+    let [x, y] = unionOps[opIdx];
+
+    let pathX = findPath(x);
+    for (let i = 0; i < pathX.path.length; i++) {
+      let node = pathX.path[i];
+      let isRoot = (i === pathX.path.length - 1);
+      steps.push({
+        type: 'traverse',
+        opIdx: opIdx,
+        x: x, y: y,
+        node: node,
+        isRoot: isRoot,
+        isX: true,
+        path: pathX.path,
+        parent: [...parent],
+        rank: [...rank],
+        explanation: buildTraverseExplanation(opIdx, x, y, node, pathX.path, true, isRoot)
+      });
+    }
+
+    let pathY = findPath(y);
+    for (let i = 0; i < pathY.path.length; i++) {
+      let node = pathY.path[i];
+      let isRoot = (i === pathY.path.length - 1);
+      steps.push({
+        type: 'traverse',
+        opIdx: opIdx,
+        x: x, y: y,
+        node: node,
+        isRoot: isRoot,
+        isX: false,
+        path: pathY.path,
+        parent: [...parent],
+        rank: [...rank],
+        explanation: buildTraverseExplanation(opIdx, x, y, node, pathY.path, false, isRoot)
+      });
+    }
+
+    let rootX = pathX.root;
+    let rootY = pathY.root;
+
+    steps.push({
+      type: 'compare',
+      opIdx: opIdx,
+      x: x, y: y,
+      rootX: rootX, rootY: rootY,
+      parent: [...parent],
+      rank: [...rank],
+      explanation: buildCompareExplanation(opIdx, x, y, rootX, rootY)
+    });
+
+    let attachTarget = null;
+    let attachSource = null;
+    if (rank[rootX] < rank[rootY]) {
+      attachSource = rootX; attachTarget = rootY;
+    } else if (rank[rootX] > rank[rootY]) {
+      attachSource = rootY; attachTarget = rootX;
+    } else {
+      attachSource = rootY; attachTarget = rootX;
+    }
+
+    let prevParent = [...parent];
+    let prevRank = [...rank];
+    parent[attachSource] = attachTarget;
+    let rankUpdated = false;
+    if (rank[rootX] === rank[rootY]) {
+      rank[attachTarget]++;
+      rankUpdated = true;
+    }
+
+    steps.push({
+      type: 'union',
+      opIdx: opIdx,
+      x: x, y: y,
+      rootX: rootX, rootY: rootY,
+      attachSource: attachSource,
+      attachTarget: attachTarget,
+      rankUpdated: rankUpdated,
+      prevParent: prevParent,
+      prevRank: prevRank,
+      parent: [...parent],
+      rank: [...rank],
+      explanation: buildUnionExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated)
+    });
+  }
+
+  steps.push({
+    type: 'done',
+    parent: [...parent],
+    rank: [...rank],
+    explanation: ''
+  });
+}
+
+function buildTraverseExplanation(opIdx, x, y, node, path, isX, isRoot) {
+  let op = `Union(${x}, ${y})`;
+  let target = isX ? x : y;
+  let side = isX ? 'first' : 'second';
+  let pos = path.indexOf(node);
+  let total = path.length;
+  let desc = isRoot
+    ? `Found root! Node <span class="dim">${node}</span> is the root of <span class="dim">${target}</span>.`
+    : `Visiting node <span class="dim">${node}</span> — following parent pointer to find the root of <span class="dim">${target}</span>.`;
+  let pathStr = path.map((n, i) => i === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` : `<b style="color:#ff6600;">${n}</b>`).join(' &rarr; ');
+
+  return `<div class="explain-section active">
+    <h3>${op} — Finding Root of ${target}</h3>
+    <p>Traversing the <span class="dim">${side}</span> element in the union operation.</p>
+    <p>${desc}</p>
+    <p style="margin-left:8px;">Find path: ${pathStr}</p>
+    <p class="note">Step ${pos+1} of ${total} in this find traversal.</p>
+  </div>`;
+}
+
+function buildCompareExplanation(opIdx, x, y, rootX, rootY) {
+  let rX = rank[rootX], rY = rank[rootY];
+  let comp = rX < rY ? '&lt;' : (rX > rY ? '&gt;' : '=');
+  let decision = '';
+  if (rX < rY) decision = `Attach root <span class="dim">${rootX}</span> (rank ${rX}) under root <span class="dim">${rootY}</span> (rank ${rY}) — shorter tree under taller tree.`;
+  else if (rX > rY) decision = `Attach root <span class="dim">${rootY}</span> (rank ${rY}) under root <span class="dim">${rootX}</span> (rank ${rX}) — shorter tree under taller tree.`;
+  else decision = `Ranks are equal (both ${rX}). Attach <span class="dim">${rootY}</span> under <span class="dim">${rootX}</span> and increment rank of root <span class="dim">${rootX}</span> to ${rX + 1}.`;
+
+  return `<div class="explain-section active">
+    <h3>Union(${x}, ${y}) — Comparing Ranks</h3>
+    <p>Root of <span class="dim">${x}</span> = <span class="dim">${rootX}</span> (rank = <span class="dim">${rX}</span>)</p>
+    <p>Root of <span class="dim">${y}</span> = <span class="dim">${rootY}</span> (rank = <span class="dim">${rY}</span>)</p>
+    <p>rank[${rootX}] ${comp} rank[${rootY}]</p>
+    <p>${decision}</p>
+    <p class="note">Union by rank ensures the tree stays shallow (height &le; log n).</p>
+  </div>`;
+}
+
+function buildUnionExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated) {
+  let rX = rank[rootX], rY = rank[rootY];
+  let attachStr = `Attach <span class="dim">${attachSource}</span> under <span class="dim">${attachTarget}</span>.`;
+  let rankStr = rankUpdated
+    ? `Rank of <span class="dim">${attachTarget}</span> incremented to <span class="result-line" style="display:inline;">${rank[attachTarget]}</span> (was ${rank[attachTarget]-1}).`
+    : `Rank of root <span class="dim">${attachTarget}</span> stays at <span class="dim">${rank[attachTarget]}</span>.`;
+
+  let treeDesc = '';
+  if (rootX !== rootY) {
+    if (rankUpdated) {
+      treeDesc = `Both trees had equal rank ${rank[attachTarget]-1}. Choosing to attach ${attachSource}'s tree under ${attachTarget}'s tree preserves the invariant that rank equals the tree height.`;
+    } else {
+      let sr = rank[attachSource], tr = rank[attachTarget];
+      treeDesc = `Tree rooted at <span class="dim">${attachSource}</span> (rank ${sr}) is shorter. Attaching it under <span class="dim">${attachTarget}</span> (rank ${tr}) does not increase the taller tree's height.`;
+    }
+  }
+
+  return `<div class="explain-section active">
+    <h3>Union(${x}, ${y}) — Performing Union</h3>
+    <p>${attachStr}</p>
+    <p>${rankStr}</p>
+    <p>${treeDesc}</p>
+    <p class="note">The combined set now has <b>${countNodesInSet(attachTarget)}</b> elements. Rank ≈ log₂(size) = ${Math.ceil(Math.log2(countNodesInSet(attachTarget)))}.</p>
+  </div>`;
+}
+
+function countNodesInSet(root) {
+  let count = 0;
+  for (let i = 0; i < N; i++) {
+    let r = i;
+    while (parent[r] !== r) r = parent[r];
+    if (r === root) count++;
+  }
+  return count;
+}
+
+function buildProblemSetupHTML() {
+  return `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p><b>Union-Find</b> (Disjoint Set Union) maintains a collection of disjoint sets under two operations:</p>
+    <p style="margin-left:8px;">&bull; <b>Find(x)</b>: return the representative (root) of the set containing x</p>
+    <p style="margin-left:8px;">&bull; <b>Union(x, y)</b>: merge the sets containing x and y</p>
+    <h3 style="margin-top:10px;">Union by Rank</h3>
+    <p>Attach the <b>shorter</b> tree under the <b>taller</b> tree. Each node stores a <span class="dim">rank</span> (upper bound on height).</p>
+    <span class="formula-line">If rank[rootX] &lt; rank[rootY]: attach rootX under rootY</span>
+    <span class="formula-line">If rank[rootX] &gt; rank[rootY]: attach rootY under rootX</span>
+    <span class="formula-line">If equal: attach either under the other, increment its rank by 1</span>
+    <p class="note"><span class="dim">Elements:</span> 0, 1, 2, 3, 4, 5, 6, 7</p>
+    <p class="note"><span class="dim">Union sequence:</span> (0,1) &rarr; (2,3) &rarr; (4,5) &rarr; (6,7) &rarr; (0,2) &rarr; (4,6) &rarr; (0,4)</p>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let r = rank[0];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; Algorithm Complete!</h3>
+    <p>All <span class="dim">8</span> elements now belong to a single set rooted at <span class="result-line" style="display:inline;">0</span>.</p>
+    <p>Root rank = <span class="result-line" style="display:inline;">${r}</span></p>
+    <p><span class="dim">log&#8322;(8)</span> = 3, and rank = ${r} &asymp; log&#8322;(n) &#10003;</p>
+    <h3 style="margin-top:10px;">Final Forest Structure</h3>
+    <p>Root <span class="dim">0</span> has rank ${r}. The tree height is bounded by log&#8322;(n) because union by rank always attaches the shorter tree under the taller tree.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(&alpha;(n)) per operation (inverse Ackermann) with union by rank and path compression</p>
+    <p><span class="dim">Space:</span> O(n) for parent and rank arrays</p>
+  </div>`;
+}
+
+function initTables() {
+  let ph = document.getElementById('parentHeader');
+  let pr = document.getElementById('parentRow');
+  let rh = document.getElementById('rankHeader');
+  let rr = document.getElementById('rankRow');
+  ph.innerHTML = '<th>i</th>';
+  pr.innerHTML = '<td style="color:#555;">parent[i]</td>';
+  rh.innerHTML = '<th>i</th>';
+  rr.innerHTML = '<td style="color:#555;">rank[i]</td>';
+  for (let i = 0; i < N; i++) {
+    ph.innerHTML += `<th>${i}</th>`;
+    pr.innerHTML += `<td id="pc${i}">${parent[i]}</td>`;
+    rh.innerHTML += `<th>${i}</th>`;
+    rr.innerHTML += `<td id="rc${i}">${rank[i]}</td>`;
+  }
+}
+
+function clearHighlights() {
+  for (let i = 0; i < N; i++) {
+    let pc = document.getElementById('pc' + i);
+    let rc = document.getElementById('rc' + i);
+    if (pc) { pc.className = ''; }
+    if (rc) { rc.className = ''; }
+  }
+}
+
+function applyStep(step) {
+  clearHighlights();
+  drawForest(step.parent, step.rank, step);
+
+  if (step.type === 'traverse') {
+    let pc = document.getElementById('pc' + step.node);
+    let rc = document.getElementById('rc' + step.node);
+    if (pc) pc.className = step.isRoot ? 'root-highlight' : 'current';
+    if (rc) rc.className = step.isRoot ? 'root-highlight' : 'current';
+    let target = step.isX ? step.x : step.y;
+    let label = step.isRoot
+      ? `Found root ${step.node} for ${target}`
+      : `Traversing ${step.node} → find root of ${target}`;
+    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
+    document.getElementById('computingDisplay').textContent = label;
+
+  } else if (step.type === 'compare') {
+    let pcX = document.getElementById('pc' + step.rootX);
+    let rcX = document.getElementById('rc' + step.rootX);
+    let pcY = document.getElementById('pc' + step.rootY);
+    let rcY = document.getElementById('rc' + step.rootY);
+    if (pcX) pcX.className = 'root-highlight';
+    if (rcX) rcX.className = 'root-highlight';
+    if (pcY) pcY.className = 'current';
+    if (rcY) rcY.className = 'current';
+    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
+    document.getElementById('computingDisplay').textContent = `Compare ranks: rank[${step.rootX}]=${step.rank[step.rootX]} vs rank[${step.rootY}]=${step.rank[step.rootY]}`;
+
+  } else if (step.type === 'union') {
+    for (let i = 0; i < N; i++) {
+      let pc = document.getElementById('pc' + i);
+      let rc = document.getElementById('rc' + i);
+      if (pc) {
+        pc.textContent = step.parent[i];
+        if (i === step.attachSource) pc.className = 'computing';
+        else if (i === step.attachTarget) pc.className = 'root-highlight';
+        else if (step.parent[i] === i) pc.className = 'root-highlight';
+        else pc.className = '';
+      }
+      if (rc) {
+        rc.textContent = step.rank[i];
+      }
+    }
+    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
+    document.getElementById('computingDisplay').textContent = `Attached ${step.attachSource} under ${step.attachTarget}`;
+  }
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'done' ? '✅ Complete' : step.type === 'traverse' ? '🔍 Finding root' : step.type === 'compare' ? '⚖️ Comparing ranks' : '🔗 Union performed'}`;
+  if (step.type !== 'done') {
+    document.getElementById('explainArea').innerHTML = step.explanation;
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function drawForest(p, r, step) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let children = Array(N).fill(null).map(() => []);
+  let roots = [];
+  for (let i = 0; i < N; i++) {
+    if (p[i] === i) roots.push(i);
+    else children[p[i]].push(i);
+  }
+
+  let positions = {};
+  let leafCount = {};
+
+  function countLeaves(node) {
+    if (children[node].length === 0) {
+      leafCount[node] = 1;
+      return 1;
+    }
+    let total = 0;
+    for (let c of children[node]) total += countLeaves(c);
+    leafCount[node] = total;
+    return total;
+  }
+  for (let r of roots) countLeaves(r);
+
+  let startX = 30;
+  const yRoot = 50;
+  const ySpacing = 70;
+  const xPerLeaf = 55;
+
+  function positionSubtree(node, cx, y, totalWidth) {
+    positions[node] = { x: cx, y: y };
+    if (children[node].length === 0) return;
+    let childLeaves = children[node].map(c => leafCount[c]);
+    let totalChildLeaves = childLeaves.reduce((a, b) => a + b, 0);
+    let childX = cx - totalWidth / 2;
+    for (let child of children[node]) {
+      let w = leafCount[child] * xPerLeaf;
+      let childCx = childX + w / 2;
+      positionSubtree(child, childCx, y + ySpacing, w);
+      childX += w;
+    }
+  }
+
+  for (let r of roots) {
+    let width = Math.max(leafCount[r] * xPerLeaf, 60);
+    let cx = startX + width / 2;
+    positionSubtree(r, cx, yRoot, width);
+    startX += width + 30;
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (p[i] !== i && positions[i] && positions[p[i]]) {
+      drawEdge(ctx, positions[p[i]].x, positions[p[i]].y, positions[i].x, positions[i].y);
+    }
+  }
+
+  let highlightMap = {};
+  if (step.type === 'traverse') {
+    for (let node of step.path) {
+      let isRoot = node === step.path[step.path.length - 1];
+      highlightMap[node] = isRoot ? 'root' : 'find';
+    }
+  } else if (step.type === 'compare') {
+    highlightMap[step.rootX] = 'root';
+    highlightMap[step.rootY] = 'root';
+  } else if (step.type === 'union') {
+    highlightMap[step.attachTarget] = 'root';
+    highlightMap[step.attachSource] = 'active';
+    for (let i = 0; i < N; i++) {
+      if (p[i] === i && i !== step.attachSource && i !== step.attachTarget) {
+        highlightMap[i] = 'default';
+      }
+    }
+  } else if (step.type === 'done') {
+    for (let i = 0; i < N; i++) {
+      if (p[i] === i) highlightMap[i] = 'root';
+    }
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (!positions[i]) continue;
+    let { x, y } = positions[i];
+    let state = highlightMap[i] || 'default';
+    drawNode(ctx, x, y, String(i), state, r[i], p[i] === i);
+  }
+
+  let legendX = 10, legendY = H - 55;
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#555';
+  ctx.fillText('Legend:', legendX, legendY);
+  drawLegendDot(ctx, legendX + 70, legendY, '#00ccff', 'default');
+  drawLegendDot(ctx, legendX + 145, legendY, '#ff6600', 'traversing');
+  drawLegendDot(ctx, legendX + 240, legendY, '#00ff88', 'root');
+  drawLegendDot(ctx, legendX + 305, legendY, '#ffcc00', 'active');
+}
+
+function drawLegendDot(ctx, x, y, color, label) {
+  ctx.beginPath();
+  ctx.arc(x, y - 3, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.fillStyle = '#555';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 9, y + 1);
+}
+
+function drawEdge(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 + 22);
+  ctx.lineTo(x2, y2 - 22);
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawNode(ctx, x, y, text, state, r, isRoot) {
+  let strokeColor = '#00ccff';
+  let fillColor = '#0d0d20';
+  switch (state) {
+    case 'find': strokeColor = '#ff6600'; fillColor = '#1a0a00'; break;
+    case 'root': strokeColor = '#00ff88'; fillColor = '#0a1a12'; break;
+    case 'active': strokeColor = '#ffcc00'; fillColor = '#1a1a00'; break;
+    default: strokeColor = '#00ccff'; fillColor = '#0d0d20';
+  }
+
+  ctx.beginPath();
+  ctx.arc(x, y, 22, 0, Math.PI * 2);
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 2;
+  if (state === 'find') ctx.shadowBlur = 12;
+  else if (state === 'root') ctx.shadowBlur = 14;
+  else ctx.shadowBlur = 0;
+  ctx.shadowColor = strokeColor + '44';
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = strokeColor;
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y - 2);
+
+  if (isRoot) {
+    ctx.fillStyle = '#ff9944';
+    ctx.font = '10px Courier New';
+    ctx.fillText('r=' + r, x, y + 18);
+  }
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'All unions performed';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalRank').textContent = rank[0];
+  document.getElementById('logDisplay').textContent = `log₂(8) = 3, rank = ${rank[0]}`;
+  document.getElementById('resultDisplay').innerHTML = `
+    <p style="color:#ccc;margin:6px 0;">Parent array: [${parent.join(', ')}]</p>
+    <p style="color:#ccc;margin:6px 0;">Rank array: [${rank.join(', ')}]</p>
+    <p style="color:#00ff88;margin:10px 0;font-weight:bold;">All 8 elements in one set under root 0</p>
+  `;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initData();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  drawForest(parent, rank, { type: 'idle', highlight: {} });
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+drawForest(parent, rank, { type: 'idle' });
+</script>
+</body>
+</html>

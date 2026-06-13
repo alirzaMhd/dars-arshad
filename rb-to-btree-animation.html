@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RB↔B-Tree Correspondence Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.tree-container {
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+.tree-container canvas {
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #0a0a12;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 8px 0 5px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82em;
+  color: #ccc;
+}
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.map-table {
+  margin: 15px auto;
+  font-size: 0.82em;
+  border-collapse: collapse;
+}
+.map-table th, .map-table td {
+  padding: 6px 12px;
+  border: 1px solid #333;
+  text-align: center;
+}
+.map-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+}
+.map-table td {
+  background: #111;
+  color: #ccc;
+}
+.map-table tr.active-step td {
+  background: #1a0a00;
+  color: #ff6600;
+  border-color: #ff6600;
+}
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>RB Tree ↔ 2-3-4 Tree</h1>
+<p class="subtitle">Balanced Trees — Red-Black to B-Tree Correspondence</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <div class="tree-container">
+      <canvas id="treeCanvas" width="920" height="380"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div><span class="label">Algorithm:</span> <span class="highlight">RB ↔ 2-3-4 Tree Correspondence</span></div>
+      <div><span class="label">Current Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+      <div><span class="label">Examining:</span> <span class="value" id="computingDisplay">—</span></div>
+    </div>
+
+    <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>★ Correspondence Complete</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#111; border-color:#ff4444;"></div> Red Node</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#111; border-color:#00ccff;"></div> Black Node</div>
+        <div class="legend-item"><div style="background:#111; border:2px solid #00ff88; width:14px; height:14px; border-radius:3px;"></div> B-Tree Node</div>
+      </div>
+      <table class="map-table">
+        <tr><th>RB Tree Structure</th><th>B-Tree Node</th><th>Type</th></tr>
+        <tr><td>Black node 70 (no red children)</td><td>[70]</td><td style="color:#00ff88;">2-node</td></tr>
+        <tr><td>Black node 40 + red child 20</td><td>[20, 40]</td><td style="color:#ffcc00;">3-node</td></tr>
+        <tr><td>Black node 90 + red children 80, 100</td><td>[80, 90, 100]</td><td style="color:#ff6600;">4-node</td></tr>
+      </table>
+      <p style="color:#ccc; margin-top:10px;">Each black node merges with its red children into one B-tree node holding 1-3 keys.</p>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>This animation shows the correspondence between <b>Red-Black Trees</b> and <b>B-Trees with t=2</b> (2-3-4 trees).</p>
+        <p>The key insight: <span class="dim">merge each black node with its red children</span> to form a B-tree node containing 1-3 keys.</p>
+        <h3 style="margin-top:10px;">Correspondence Rules</h3>
+        <p>• <span class="dim">Black node</span> with <b>no</b> red children → <span class="split-info">2-node</span> (1 key)</p>
+        <p>• <span class="dim">Black node</span> with <b>one</b> red child → <span class="split-info">3-node</span> (2 keys)</p>
+        <p>• <span class="dim">Black node</span> with <b>two</b> red children → <span class="split-info">4-node</span> (3 keys)</p>
+        <h3 style="margin-top:10px;">Example RB Tree</h3>
+        <p>We will walk through each black node and transform it into the equivalent 2-3-4 tree node.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// Colors
+const C_BLACK = '#00ccff';
+const C_RED = '#ff4444';
+const C_GREEN = '#00ff88';
+const C_ORANGE = '#ff6600';
+const C_YELLOW = '#ffcc00';
+const C_DIM = '#888';
+
+// RB Tree data
+const rbNodes = {
+  70: { key: 70, color: 'B', x: 230, y: 50 },
+  40: { key: 40, color: 'B', x: 130, y: 150 },
+  90: { key: 90, color: 'B', x: 340, y: 150 },
+  20: { key: 20, color: 'R', x: 80, y: 250 },
+  80: { key: 80, color: 'R', x: 275, y: 250 },
+  100: { key: 100, color: 'R', x: 405, y: 250 }
+};
+
+const rbEdges = [
+  { from: 70, to: 40 },
+  { from: 70, to: 90 },
+  { from: 40, to: 20 },
+  { from: 90, to: 80 },
+  { from: 90, to: 100 }
+];
+
+// B-tree node definitions
+const btreeDefs = [
+  { keys: [70], cx: 680, cy: 65 },
+  { keys: [20, 40], cx: 560, cy: 185 },
+  { keys: [80, 90, 100], cx: 793, cy: 185 }
+];
+
+const btreeEdges = [
+  { fromIdx: 0, toIdx: 1 },
+  { fromIdx: 0, toIdx: 2 }
+];
+
+let btreeVisible = [false, false, false];
+let rbHighlights = [];
+let currentBtreeHighlight = -1;
+let stepType = '';
+
+function getBTreeNodeWidth(numKeys) {
+  return numKeys * 44 + (numKeys - 1) * 2 + 20;
+}
+function getBTreeNodeHeight() { return 36; }
+
+function drawTree(ctx) {
+  const canvas = ctx.canvas;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw divider
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(455, 0);
+  ctx.lineTo(455, canvas.height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Header labels
+  ctx.fillStyle = C_DIM;
+  ctx.font = 'bold 12px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Red-Black Tree', 227, 5);
+  ctx.fillText('2-3-4 Tree (B-Tree t=2)', 687, 5);
+
+  // Legend (bottom of canvas)
+  ctx.fillStyle = '#333';
+  ctx.fillRect(10, canvas.height - 28, 440, 24);
+  ctx.fillRect(465, canvas.height - 28, 445, 24);
+
+  // RB Legend
+  let lx = 20;
+  ctx.beginPath();
+  ctx.arc(lx + 7, canvas.height - 16, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = C_BLACK;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.fillStyle = C_DIM;
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Black', lx + 16, canvas.height - 16);
+
+  lx = 80;
+  ctx.beginPath();
+  ctx.arc(lx + 7, canvas.height - 16, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = C_RED;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.fillStyle = C_DIM;
+  ctx.fillText('Red', lx + 16, canvas.height - 16);
+
+  lx = 140;
+  ctx.beginPath();
+  ctx.arc(lx + 7, canvas.height - 16, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = C_ORANGE;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.fillStyle = C_DIM;
+  ctx.fillText('Currently examining', lx + 16, canvas.height - 16);
+
+  // BT Legend
+  let bx = 475;
+  let bw = getBTreeNodeWidth(1);
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, bx, canvas.height - 26, bw, 20, 4);
+  ctx.stroke();
+  ctx.fillStyle = C_DIM;
+  ctx.font = '10px Courier New';
+  ctx.fillText('B-tree node', bx + bw + 8, canvas.height - 16);
+
+  bx += bw + 95;
+  ctx.strokeStyle = C_ORANGE;
+  ctx.lineWidth = 2;
+  roundRect(ctx, bx, canvas.height - 26, bw, 20, 4);
+  ctx.stroke();
+  ctx.fillStyle = C_DIM;
+  ctx.fillText('Newly formed / highlighted', bx + bw + 8, canvas.height - 16);
+
+  // Draw RB edges (below nodes)
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  for (let e of rbEdges) {
+    const fn = rbNodes[e.from];
+    const tn = rbNodes[e.to];
+    const highlight = rbHighlights.includes(e.from) && rbHighlights.includes(e.to);
+    if (highlight) {
+      ctx.strokeStyle = C_ORANGE;
+      ctx.lineWidth = 2.5;
+    } else {
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.5;
+    }
+    ctx.beginPath();
+    ctx.moveTo(fn.x, fn.y + 16);
+    ctx.lineTo(tn.x, tn.y - 16);
+    ctx.stroke();
+  }
+
+  // Draw RB nodes
+  for (let key in rbNodes) {
+    const n = rbNodes[key];
+    const isHighlighted = rbHighlights.includes(n.key);
+    const isRedNodeHighlight = isHighlighted && n.color === 'R';
+    const isBlackNodeHighlight = isHighlighted && n.color === 'B';
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 16, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+
+    if (isBlackNodeHighlight) {
+      ctx.strokeStyle = C_ORANGE;
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#ff660044';
+      ctx.shadowBlur = 15;
+    } else if (isRedNodeHighlight) {
+      ctx.strokeStyle = C_ORANGE;
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#ff660044';
+      ctx.shadowBlur = 12;
+    } else if (n.color === 'B') {
+      ctx.strokeStyle = C_BLACK;
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = C_RED;
+      ctx.lineWidth = 2;
+    }
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Key text
+    ctx.fillStyle = isHighlighted ? C_ORANGE : (n.color === 'B' ? C_BLACK : C_RED);
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.key, n.x, n.y);
+
+    // NIL label for nodes with missing child
+    if (n.key === 40) {
+      ctx.fillStyle = '#555';
+      ctx.font = '9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('(right child NIL)', 205, n.y + 18);
+    }
+  }
+
+  // Draw B-tree
+  for (let i = 0; i < btreeDefs.length; i++) {
+    if (!btreeVisible[i]) continue;
+    const def = btreeDefs[i];
+    const isHL = (i === currentBtreeHighlight);
+    drawBTreeNode(ctx, def.cx, def.cy, def.keys, isHL);
+  }
+
+  // Draw B-tree edges
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  for (let e of btreeEdges) {
+    if (!btreeVisible[e.fromIdx] || !btreeVisible[e.toIdx]) continue;
+    const from = btreeDefs[e.fromIdx];
+    const to = btreeDefs[e.toIdx];
+    const fh = getBTreeNodeHeight();
+    const th = getBTreeNodeHeight();
+    ctx.beginPath();
+    ctx.moveTo(from.cx, from.cy + fh/2);
+    ctx.lineTo(to.cx, to.cy - th/2);
+    ctx.stroke();
+  }
+}
+
+function drawBTreeNode(ctx, cx, cy, keys, highlight) {
+  const kw = 44;
+  const gap = 2;
+  const pad = 10;
+  const h = getBTreeNodeHeight();
+  const w = keys.length * kw + (keys.length - 1) * gap + pad * 2;
+  const left = cx - w/2;
+  const top = cy - h/2;
+
+  ctx.fillStyle = highlight ? '#1a0a00' : '#0d0d1a';
+  ctx.strokeStyle = highlight ? C_ORANGE : '#00ff88';
+  ctx.lineWidth = highlight ? 3 : 1.5;
+  ctx.shadowColor = highlight ? '#ff660044' : 'transparent';
+  ctx.shadowBlur = highlight ? 12 : 0;
+  roundRect(ctx, left, top, w, h, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  for (let i = 0; i < keys.length; i++) {
+    const kx = left + pad + i * (kw + gap) + kw/2;
+    ctx.fillStyle = highlight ? C_ORANGE : '#00ff88';
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(keys[i], kx, cy);
+
+    if (i < keys.length - 1) {
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(kx + kw/2 + 1, top + 4);
+      ctx.lineTo(kx + kw/2 + 1, top + h - 4);
+      ctx.stroke();
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function buildSteps() {
+  steps = [];
+
+  // Step 0: Examine black node 70
+  steps.push({
+    type: 'examine_70',
+    explanation: buildStep1Explanation()
+  });
+
+  // Step 1: Examine black node 40 + red child 20
+  steps.push({
+    type: 'examine_40',
+    explanation: buildStep2Explanation()
+  });
+
+  // Step 2: Examine black node 90 + red children 80, 100
+  steps.push({
+    type: 'examine_90',
+    explanation: buildStep3Explanation()
+  });
+
+  // Step 3: Complete
+  steps.push({
+    type: 'done',
+    explanation: buildDoneExplanation()
+  });
+}
+
+function buildInitExplanation() {
+  return `
+<div class="explain-section active">
+  <h3>🐾 Initial Red-Black Tree</h3>
+  <p>We have a Red-Black Tree with 6 nodes. Each node is either <b style="color:#ff4444;">red</b> or <b style="color:#00ccff;">black</b>, satisfying all 5 RB properties.</p>
+  <p>The tree contains keys: <span class="dim">70, 40, 90, 20, 80, 100</span></p>
+  <h3 style="margin-top:10px;">Goal</h3>
+  <p>Transform this RB tree into an equivalent <b>2-3-4 tree</b> (B-tree with t=2) by merging each black node with its red children.</p>
+  <h3 style="margin-top:10px;">Rules</h3>
+  <p>• <span class="split-info">Black node + 0 red children</span> → B-tree node with <b>1 key</b> (2-node)</p>
+  <p>• <span class="split-info">Black node + 1 red child</span> → B-tree node with <b>2 keys</b> (3-node)</p>
+  <p>• <span class="split-info">Black node + 2 red children</span> → B-tree node with <b>3 keys</b> (4-node)</p>
+  <p class="note">Press Step to examine each black node.</p>
+</div>`;
+}
+
+function buildStep1Explanation() {
+  return `
+<div class="explain-section active">
+  <h3>Step 1: Examining Node <span class="dim">70</span> (Black)</h3>
+  <p>Node <b>70</b> is black. Its children are <b>40</b> (black) and <b>90</b> (black).</p>
+  <p>Neither child is red, so node 70 has <span class="dim">no red children to merge</span>.</p>
+  <p>→ Node 70 alone forms a <b>2-node</b> in the B-tree: <span class="split-info">[70]</span></p>
+  <p>A 2-node contains <b>1 key</b> and has <b>2 children</b> (the subtrees rooted at 40 and 90).</p>
+  <span class="formula-line">Black node + 0 red children = B-tree 2-node (1 key)</span>
+  <p class="note">The children of this B-tree node will be filled in by the subtrees below 40 and 90.</p>
+</div>`;
+}
+
+function buildStep2Explanation() {
+  return `
+<div class="explain-section active">
+  <h3>Step 2: Examining Node <span class="dim">40</span> (Black)</h3>
+  <p>Node <b>40</b> is black. Its left child <b>20</b> is <span style="color:#ff4444;">red</span>. Its right child is <span class="dim">NIL</span>.</p>
+  <p>Red nodes are "extra keys" within the black node's B-tree node. So <b>40</b> merges with its red child <b>20</b>.</p>
+  <p>→ Nodes 20 and 40 merge into a <b>3-node</b>: <span class="split-info">[20, 40]</span></p>
+  <p>A 3-node contains <b>2 keys</b> and has <b>3 children</b>.</p>
+  <span class="formula-line">Black node + 1 red child = B-tree 3-node (2 keys)</span>
+  <p class="note">The NIL child of 40 means this 3-node has only 2 non-empty subtrees in practice.</p>
+</div>`;
+}
+
+function buildStep3Explanation() {
+  return `
+<div class="explain-section active">
+  <h3>Step 3: Examining Node <span class="dim">90</span> (Black)</h3>
+  <p>Node <b>90</b> is black. Its left child <b>80</b> is <span style="color:#ff4444;">red</span>, and its right child <b>100</b> is <span style="color:#ff4444;">red</span>.</p>
+  <p>Both children are red — they merge with 90 into a single B-tree node.</p>
+  <p>→ Nodes 80, 90, and 100 merge into a <b>4-node</b>: <span class="split-info">[80, 90, 100]</span></p>
+  <p>A 4-node contains <b>3 keys</b> and has <b>4 children</b>.</p>
+  <span class="formula-line">Black node + 2 red children = B-tree 4-node (3 keys)</span>
+  <p class="note">All three cases (2-node, 3-node, 4-node) are now demonstrated in this tree.</p>
+</div>`;
+}
+
+function buildDoneExplanation() {
+  return `
+<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ Correspondence Complete!</h3>
+  <p>The RB tree has been fully mapped to a 2-3-4 tree. Here is the result:</p>
+  <table class="map-table">
+    <tr><th>RB Structure</th><th>B-Tree Node</th></tr>
+    <tr><td>Black 70 (no red children)</td><td style="color:#00ff88;">[70] — 2-node</td></tr>
+    <tr><td>Black 40 + red 20</td><td style="color:#ffcc00;">[20, 40] — 3-node</td></tr>
+    <tr><td>Black 90 + red 80, red 100</td><td style="color:#ff6600;">[80, 90, 100] — 4-node</td></tr>
+  </table>
+  <h3 style="margin-top:10px;">Key Insight</h3>
+  <p>The correspondence is exact: <span class="dim">every RB tree maps to a unique 2-3-4 tree</span>, and vice versa. Red nodes disappear into the B-tree node of their black parent.</p>
+  <h3 style="margin-top:10px;">Why This Matters</h3>
+  <p>The red-black deletion algorithm uses this correspondence to simplify case analysis. A "black node + red children" is treated as a single logical B-tree node.</p>
+  <p><span class="dim">Time:</span> O(log n) for all operations</p>
+  <p><span class="dim">Space:</span> O(n)</p>
+</div>`;
+}
+
+function initTables() {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  drawTree(ctx);
+}
+
+function clearHighlights() {
+  rbHighlights = [];
+  currentBtreeHighlight = -1;
+}
+
+function applyStep(step) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const idx = currentStep;
+  const stepNum = idx + 1;
+
+  clearHighlights();
+
+  if (idx === 0) {
+    rbHighlights = [70];
+    btreeVisible = [true, false, false];
+    currentBtreeHighlight = 0;
+    stepType = 'examine_70';
+    document.getElementById('phaseDisplay').textContent = 'Examining black node 70';
+    document.getElementById('computingDisplay').textContent = '70 → 2-node [70]';
+  } else if (idx === 1) {
+    rbHighlights = [40, 20];
+    btreeVisible = [true, true, false];
+    currentBtreeHighlight = 1;
+    stepType = 'examine_40';
+    document.getElementById('phaseDisplay').textContent = 'Examining black node 40 + red 20';
+    document.getElementById('computingDisplay').textContent = '40+20 → 3-node [20, 40]';
+  } else if (idx === 2) {
+    rbHighlights = [90, 80, 100];
+    btreeVisible = [true, true, true];
+    currentBtreeHighlight = 2;
+    stepType = 'examine_90';
+    document.getElementById('phaseDisplay').textContent = 'Examining black node 90 + red 80, red 100';
+    document.getElementById('computingDisplay').textContent = '90+80+100 → 4-node [80, 90, 100]';
+  } else if (idx >= 3) {
+    rbHighlights = [];
+    btreeVisible = [true, true, true];
+    currentBtreeHighlight = -1;
+    stepType = 'done';
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('computingDisplay').textContent = 'All merged';
+  }
+
+  drawTree(ctx);
+
+  let phaseLabel = '';
+  if (idx === 0) phaseLabel = `Step ${stepNum} / ${steps.length} — Examining node 70 (black → 2-node)`;
+  else if (idx === 1) phaseLabel = `Step ${stepNum} / ${steps.length} — Examining nodes 40 + 20 (black+red → 3-node)`;
+  else if (idx === 2) phaseLabel = `Step ${stepNum} / ${steps.length} — Examining nodes 90 + 80 + 100 (black+2red → 4-node)`;
+  else if (idx >= 3) phaseLabel = `Step ${stepNum} / ${steps.length} — ✅ Correspondence complete`;
+  document.getElementById('sidebarPhase').textContent = phaseLabel;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  btreeVisible = [false, false, false];
+  rbHighlights = [];
+  currentBtreeHighlight = -1;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'Correspondence mapped';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+document.getElementById('explainArea').innerHTML = buildInitExplanation();
+</script>
+</body>
+</html>
