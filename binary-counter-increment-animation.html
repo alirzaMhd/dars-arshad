@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Counter INCREMENT Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+/* === Counter Display === */
+.counter-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 20px 15px;
+  margin-bottom: 10px;
+}
+.bit-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+.side-label {
+  color: #888;
+  font-size: 0.75em;
+  width: 35px;
+  text-align: center;
+}
+.bits-container {
+  display: flex;
+  gap: 6px;
+}
+.bit-box {
+  width: 50px;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #444;
+  border-radius: 8px;
+  font-size: 1.3em;
+  font-weight: bold;
+  background: #0d0d1a;
+  color: #555;
+  transition: all 0.3s;
+  position: relative;
+}
+.bit-box .bit-index {
+  font-size: 0.45em;
+  color: #555;
+  margin-top: 2px;
+}
+.bit-box.one {
+  color: #00ccff;
+  border-color: #336;
+}
+.bit-box.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 12px #ffff0033;
+  transform: scale(1.08);
+}
+.bit-box.active {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.08);
+}
+.value-row {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-top: 12px;
+}
+.value-row .decimal {
+  color: #ffcc00;
+  font-weight: bold;
+}
+.value-row .binary {
+  color: #00ccff;
+}
+
+/* === Controls === */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+/* === Info Panel === */
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+/* === Step Counter === */
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+/* === Cost Chart === */
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 8px;
+}
+.cost-chart {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  align-items: flex-end;
+  height: 90px;
+  padding: 8px 2px;
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.cost-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  min-width: 14px;
+}
+.cost-bar {
+  width: 10px;
+  background: #222;
+  border-radius: 3px 3px 0 0;
+  transition: all 0.4s;
+  min-height: 2px;
+}
+.cost-bar-wrapper.completed .cost-bar {
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff8855;
+}
+.cost-bar-wrapper.current .cost-bar {
+  background: #ff6600;
+  box-shadow: 0 0 8px #ff660044;
+}
+.cost-bar-wrapper.completed.current .cost-bar {
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff8855;
+}
+.cost-label {
+  font-size: 0.6em;
+  color: #555;
+  margin-top: 2px;
+}
+.cost-label.active {
+  color: #ffcc00;
+}
+
+/* === Result === */
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.result-section .result-highlight {
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+</style>
+</head>
+<body>
+
+<h1>Binary Counter INCREMENT</h1>
+<p class="subtitle">Amortized Analysis — Increment Operation on k-bit Binary Counter</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <!-- 1. Counter Display -->
+    <div class="counter-section">
+      <div class="bit-row">
+        <span class="side-label">MSB</span>
+        <div class="bits-container" id="bitsContainer"></div>
+        <span class="side-label">LSB</span>
+      </div>
+      <div class="value-row" id="valueDisplay">
+        Value: <span class="decimal" id="decValue">0</span>
+        &nbsp;(<span class="binary" id="binValue">00000000</span>₂)
+      </div>
+    </div>
+
+    <!-- 2. Controls -->
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <!-- 3. Info Panel -->
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+      <span class="label">Increment:</span> <span class="value" id="incDisplay">#0</span>
+      <span class="label" style="margin-left:20px;">Bit:</span> <span class="value" id="bitDisplay">—</span><br>
+      <span class="label">Cost (this inc):</span> <span class="value highlight" id="costDisplay">0</span>
+      <span class="label" style="margin-left:20px;">Total flips:</span> <span class="value" id="totalCostDisplay">0</span>
+      <span class="label" style="margin-left:20px;">Avg cost:</span> <span class="value" id="avgCostDisplay">0.00</span>
+    </div>
+
+    <!-- 4. Step Counter -->
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <!-- 5. Cost Chart -->
+    <div class="table-section">
+      <div class="table-title">Cost per Increment (bit flips)</div>
+      <div class="cost-chart" id="costChart"></div>
+    </div>
+
+    <!-- 6. Result Section -->
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>✅ Animation Complete!</h2>
+      <p>Total bit flips: <span class="result-highlight" id="finalTotalFlips">0</span></p>
+      <p>Average cost: <span class="result-highlight" id="finalAvgCost">0.00</span> flips per increment</p>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p><b>INCREMENT(A, k)</b>: Add 1 to a <span class="dim">k</span>-bit binary counter stored in array A[0..k-1] (A[0] = LSB).</p>
+        <h3 style="margin-top:10px;">Pseudocode</h3>
+        <span class="formula-line" style="text-align:left;white-space:pre-line;line-height:1.4;">INCREMENT(A, k):
+&nbsp;&nbsp;i = 0
+&nbsp;&nbsp;while i &lt; k and A[i] == 1:
+&nbsp;&nbsp;&nbsp;&nbsp;A[i] = 0
+&nbsp;&nbsp;&nbsp;&nbsp;i = i + 1
+&nbsp;&nbsp;if i &lt; k:
+&nbsp;&nbsp;&nbsp;&nbsp;A[i] = 1</span>
+        <h3 style="margin-top:10px;">Key Insight</h3>
+        <p>Cost = <span class="dim">tᵢ + 1</span> where tᵢ = number of trailing 1s.</p>
+        <p class="note">Press Play or Step to begin incrementing from 0.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const K = 8;
+const MAX_INCREMENTS = 32;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let counterState = new Array(K).fill(0);
+let completedIncrements = new Set();
+let costsPerInc = [];
+let totalFlipsOverall = 0;
+
+// === Precomputation ===
+
+function getCostsPerIncrement() {
+  let costs = [];
+  let counter = new Array(K).fill(0);
+  for (let inc = 0; inc < MAX_INCREMENTS; inc++) {
+    let flips = 0;
+    let i = 0;
+    while (i < K && counter[i] === 1) { flips++; counter[i] = 0; i++; }
+    if (i < K) { flips++; counter[i] = 1; }
+    costs.push(flips);
+  }
+  return costs;
+}
+
+function buildSteps() {
+  steps = [];
+  let counter = new Array(K).fill(0);
+
+  for (let inc = 0; inc < MAX_INCREMENTS; inc++) {
+    let i = 0;
+    let flips = 0;
+    let startIdx = steps.length;
+
+    while (i < K && counter[i] === 1) {
+      flips++;
+      steps.push({
+        type: 'flip_1_to_0',
+        index: i,
+        inc: inc,
+        flipsSoFar: flips,
+        oldVal: 1,
+        newVal: 0,
+        counterAfter: null
+      });
+      counter[i] = 0;
+      i++;
+    }
+
+    if (i < K) {
+      flips++;
+      steps.push({
+        type: 'flip_0_to_1',
+        index: i,
+        inc: inc,
+        flipsSoFar: flips,
+        oldVal: 0,
+        newVal: 1,
+        counterAfter: null
+      });
+      counter[i] = 1;
+    }
+
+    for (let s = startIdx; s < steps.length; s++) {
+      steps[s].counterAfter = [...counter];
+      steps[s].totalFlipsThisInc = flips;
+    }
+  }
+
+  for (let s = 0; s < steps.length; s++) {
+    steps[s].explanation = buildExplanation(steps[s]);
+  }
+}
+
+function buildExplanation(step) {
+  if (step.type === 'flip_1_to_0') {
+    return `<div class="explain-section active">
+      <h3>Increment #${step.inc}: Flipping Bit ${step.index} (1→0)</h3>
+      <p>Bit A[<span class="dim">${step.index}</span>] is a trailing <span class="dim">1</span>.
+      Setting it to <span class="dim">0</span> and continuing leftward.</p>
+      <p>• Cost so far: <span class="dim">${step.flipsSoFar}</span> flip(s)</p>
+      <span class="formula-line">while A[${step.index}] == 1 → set A[${step.index}] = 0, i++</span>
+      <p class="note">Trailing 1s are flipped to 0 in the while loop.</p>
+    </div>`;
+  } else {
+    let ti = step.totalFlipsThisInc - 1;
+    return `<div class="explain-section active">
+      <h3>Increment #${step.inc} Complete: Flipping Bit ${step.index} (0→1)</h3>
+      <p>Found bit A[<span class="dim">${step.index}</span>] = <span class="dim">0</span>.
+      Setting it to <span class="dim">1</span>. <span class="split-info">Done!</span></p>
+      <p>• Total cost: <span class="split-info">${step.totalFlipsThisInc}</span> flip(s)
+      (tᵢ = ${ti} trailing 1s + 1)</p>
+      <span class="formula-line">Cost = ${ti} + 1 = ${step.totalFlipsThisInc}</span>
+      <p class="note">The algorithm terminates after setting the first 0-bit to 1.</p>
+    </div>`;
+  }
+}
+
+function buildFinishedExplanation() {
+  let avg = (steps.length / MAX_INCREMENTS).toFixed(2);
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>Performed <span class="dim">${MAX_INCREMENTS}</span> increments on an <span class="dim">${K}</span>-bit counter.</p>
+    <p>Total bit flips: <span class="result-line">${steps.length}</span></p>
+    <p>Average cost: <span class="result-line">${avg}</span> flips per increment</p>
+    <h3 style="margin-top:10px;">Amortized Analysis</h3>
+    <p>By the <span class="dim">aggregate method</span>, for n INCREMENT operations on a k-bit counter, bit i flips at most ⌊n/2ⁱ⌋ times.</p>
+    <span class="formula-line">Σᵢ₌₀^{k-1} ⌊n/2ⁱ⌋ &lt; 2n &nbsp;→&nbsp; O(1) amortized</span>
+    <p>The total cost for ${MAX_INCREMENTS} increments is <span class="result-line">${steps.length}</span>, giving an average of <span class="result-line">${avg}</span> — confirming <span class="dim">O(1)</span> amortized cost per operation.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Worst-case:</span> O(k) per operation (when all k bits flip)</p>
+    <p><span class="dim">Amortized:</span> O(1) per operation</p>
+  </div>`;
+}
+
+// === Initialization ===
+
+function initTables() {
+  let bitsHtml = '';
+  for (let i = K - 1; i >= 0; i--) {
+    bitsHtml += `<div class="bit-box" id="bit-${i}" data-index="${i}">
+      <span>0</span>
+      <span class="bit-index">A[${i}]</span>
+    </div>`;
+  }
+  document.getElementById('bitsContainer').innerHTML = bitsHtml;
+
+  costsPerInc = getCostsPerIncrement();
+  let maxCost = Math.max(...costsPerInc);
+  let chartHtml = '';
+  for (let inc = 0; inc < MAX_INCREMENTS; inc++) {
+    let h = Math.max(4, (costsPerInc[inc] / maxCost) * 100);
+    chartHtml += `<div class="cost-bar-wrapper" id="costBar-${inc}">
+      <div class="cost-bar" style="height:${h}%"></div>
+      <span class="cost-label">${costsPerInc[inc]}</span>
+    </div>`;
+  }
+  document.getElementById('costChart').innerHTML = chartHtml;
+}
+
+function resetState() {
+  counterState = new Array(K).fill(0);
+  completedIncrements = new Set();
+  totalFlipsOverall = 0;
+}
+
+function updateBitDisplay() {
+  for (let i = 0; i < K; i++) {
+    const el = document.getElementById(`bit-${i}`);
+    const span = el.querySelector('span:first-child');
+    span.textContent = counterState[i];
+    el.classList.remove('one', 'zero');
+    if (counterState[i] === 1) {
+      el.classList.add('one');
+    }
+  }
+}
+
+function updateValueDisplay() {
+  let dec = 0;
+  let bin = '';
+  for (let i = K - 1; i >= 0; i--) {
+    bin += counterState[i];
+    dec = dec * 2 + counterState[i];
+  }
+  document.getElementById('decValue').textContent = dec;
+  document.getElementById('binValue').textContent = bin;
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.bit-box').forEach(el => {
+    el.classList.remove('computing', 'active');
+  });
+}
+
+// === Step Application ===
+
+function applyStep(step) {
+  clearHighlights();
+
+  counterState[step.index] = step.newVal;
+  const bitEl = document.getElementById(`bit-${step.index}`);
+  const span = bitEl.querySelector('span:first-child');
+  span.textContent = step.newVal;
+  bitEl.classList.remove('one', 'zero');
+  if (step.newVal === 1) bitEl.classList.add('one');
+
+  if (step.type === 'flip_1_to_0') {
+    bitEl.classList.add('computing');
+  } else {
+    bitEl.classList.add('active');
+  }
+
+  if (step.type === 'flip_0_to_1') {
+    completedIncrements.add(step.inc);
+    totalFlipsOverall += step.totalFlipsThisInc;
+  }
+
+  updateValueDisplay();
+
+  let phase = step.type === 'flip_1_to_0'
+    ? 'Flipping trailing 1s...'
+    : 'Increment complete!';
+  document.getElementById('phaseDisplay').textContent = phase;
+  document.getElementById('incDisplay').textContent = `#${step.inc}`;
+  document.getElementById('bitDisplay').textContent = `A[${step.index}] → ${step.newVal}`;
+
+  if (step.type === 'flip_0_to_1') {
+    document.getElementById('costDisplay').textContent = step.totalFlipsThisInc;
+  } else {
+    document.getElementById('costDisplay').textContent = step.flipsSoFar + ' (in progress)';
+  }
+  document.getElementById('totalCostDisplay').textContent = totalFlipsOverall;
+
+  let completedCount = completedIncrements.size;
+  let avg = completedCount > 0 ? (totalFlipsOverall / completedCount).toFixed(2) : '0.00';
+  document.getElementById('avgCostDisplay').textContent = avg;
+
+  updateCostChart(step);
+
+  let phaseText = step.type === 'flip_1_to_0'
+    ? `Flipping trailing 1 at A[${step.index}]`
+    : `✓ Increment #${step.inc} done — flipped A[${step.index}] to 1`;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phaseText}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function updateCostChart(step) {
+  let wrappers = document.querySelectorAll('.cost-bar-wrapper');
+  wrappers.forEach(w => w.classList.remove('completed', 'current'));
+
+  for (let i = 0; i < MAX_INCREMENTS; i++) {
+    if (completedIncrements.has(i)) {
+      wrappers[i]?.classList.add('completed');
+    }
+  }
+  wrappers[step.inc]?.classList.add('current');
+}
+
+// === Animation Controls ===
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  resetState();
+
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('incDisplay').textContent = '#0';
+  document.getElementById('bitDisplay').textContent = '—';
+  document.getElementById('costDisplay').textContent = '0';
+  document.getElementById('totalCostDisplay').textContent = '0';
+  document.getElementById('avgCostDisplay').textContent = '0.00';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+
+  clearHighlights();
+  updateBitDisplay();
+  updateValueDisplay();
+
+  document.querySelectorAll('.cost-bar-wrapper').forEach(w => {
+    w.classList.remove('completed', 'current');
+  });
+
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p><b>INCREMENT(A, k)</b>: Add 1 to a <span class="dim">k</span>-bit binary counter stored in array A[0..k-1] (A[0] = LSB).</p>
+      <h3 style="margin-top:10px;">Pseudocode</h3>
+      <span class="formula-line" style="text-align:left;white-space:pre-line;line-height:1.4;">INCREMENT(A, k):
+&nbsp;&nbsp;i = 0
+&nbsp;&nbsp;while i &lt; k and A[i] == 1:
+&nbsp;&nbsp;&nbsp;&nbsp;A[i] = 0
+&nbsp;&nbsp;&nbsp;&nbsp;i = i + 1
+&nbsp;&nbsp;if i &lt; k:
+&nbsp;&nbsp;&nbsp;&nbsp;A[i] = 1</span>
+      <h3 style="margin-top:10px;">Key Insight</h3>
+      <p>Cost = <span class="dim">tᵢ + 1</span> where tᵢ = number of trailing 1s.</p>
+      <p class="note">Press Play or Step to begin incrementing from 0.</p>
+    </div>`;
+
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  let avg = (steps.length / MAX_INCREMENTS).toFixed(2);
+  document.getElementById('finalTotalFlips').textContent = steps.length;
+  document.getElementById('finalAvgCost').textContent = avg;
+
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// === Speed Slider ===
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// === Init ===
+
+buildSteps();
+initTables();
+resetState();
+updateBitDisplay();
+updateValueDisplay();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+
+</body>
+</html>

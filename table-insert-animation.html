@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TABLE-INSERT Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+/* === Table Display (slots) === */
+.table-display {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+.slots-container {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px auto;
+}
+.slot {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #444;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: bold;
+  background: #0d0d1a;
+  color: #aaa;
+  transition: all 0.4s;
+}
+.slot.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+.slot.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.1);
+}
+.slot.copied {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+.slot.empty {
+  background: #0a0a12;
+  color: #555;
+  border-color: #2a2a2a;
+}
+.table-meta {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin-top: 10px;
+}
+.table-meta .highlight {
+  color: #ffcc00;
+  font-weight: bold;
+}
+
+/* === Expansion Banner === */
+.expansion-banner {
+  text-align: center;
+  padding: 10px 16px;
+  margin: 0 auto 14px;
+  background: #1a1a00;
+  border: 2px solid #ffff00;
+  border-radius: 8px;
+  color: #ffff00;
+  font-weight: bold;
+  font-size: 0.9em;
+  animation: pulse 1s ease infinite alternate;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 5px #ffff0033; }
+  100% { box-shadow: 0 0 20px #ffff0055; }
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+tr.current-row td {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+}
+tr.current-row td:first-child {
+  color: #ffcc00;
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.result-section .result-highlight {
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+</style>
+</head>
+<body>
+
+<h1>TABLE-INSERT</h1>
+<p class="subtitle">Amortized Analysis — Dynamic Table Doubling</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <!-- 1. Table Display -->
+    <div class="table-display">
+      <div id="expansionBanner" class="expansion-banner" style="display:none;"></div>
+      <div class="slots-container" id="slotsContainer"></div>
+      <div class="table-meta" id="tableMeta">
+        Size: <span class="highlight" id="currentSize">0</span> &nbsp;|&nbsp;
+        Num: <span class="highlight" id="currentNum">0</span>
+      </div>
+    </div>
+
+    <!-- 2. Controls -->
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <!-- 3. Info Panel -->
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+      <span class="label">Insertion:</span> <span class="value" id="insDisplay">—</span>
+      <span class="label" style="margin-left:20px;">Table Size:</span> <span class="value" id="sizeDisplay">0</span>
+      <span class="label" style="margin-left:20px;">Elements:</span> <span class="value" id="numDisplay">0</span><br>
+      <span class="label">Step Cost:</span> <span class="value highlight" id="costDisplay">—</span>
+      <span class="label" style="margin-left:20px;">Total Cost:</span> <span class="value" id="totalCostDisplay">0</span>
+      <span class="label" style="margin-left:20px;">Insertion Cost:</span> <span class="value" id="insCostDisplay">—</span>
+    </div>
+
+    <!-- 4. Step Counter -->
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <!-- 5. Cost Table -->
+    <div class="table-section">
+      <div class="table-title">Cost Analysis per Insertion</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>i</th>
+              <th>Operation</th>
+              <th>Cost cᵢ</th>
+              <th>Total Σ</th>
+            </tr>
+          </thead>
+          <tbody id="costBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 6. Result Section -->
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>✅ All Insertions Complete!</h2>
+      <p>Total actual cost: <span class="result-highlight" id="finalTotalCost">0</span></p>
+      <p>Average cost per insertion: <span class="result-highlight" id="finalAvgCost">0.00</span></p>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p><b>Dynamic Tables</b> (e.g., Python lists, C++ <tt>std::vector</tt>) grow automatically when full. The <span class="dim">TABLE-INSERT</span> algorithm doubles the table size when full, copying all existing items.</p>
+        <h3 style="margin-top:10px;">Algorithm (CLRS)</h3>
+        <span class="formula-line" style="text-align:left;white-space:pre-line;line-height:1.4;">TABLE-INSERT(T, x):
+&nbsp;&nbsp;if T.size == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;allocate T.table with 1 slot
+&nbsp;&nbsp;if T.num == T.size:
+&nbsp;&nbsp;&nbsp;&nbsp;allocate new table with 2·T.size slots
+&nbsp;&nbsp;&nbsp;&nbsp;copy all items; free old table
+&nbsp;&nbsp;&nbsp;&nbsp;T.table = new; T.size = 2·T.size
+&nbsp;&nbsp;insert x; T.num++</span>
+        <h3 style="margin-top:10px;">Cost Model</h3>
+        <p>Cost = <span class="dim">1</span> (no expansion) or <span class="dim">i</span> (expansion at i-th insertion: copy i−1 items + insert 1)</p>
+        <p class="note">Press Play or Step to begin inserting.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MAX_INSERTIONS = 16;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// State tracking
+let tableState = { size: 0, num: 0, totalCost: 0 };
+let perInsCosts = [];
+let completedInsertions = new Set();
+
+// === Precomputation ===
+
+function getPerInsertionCosts() {
+  let costs = [];
+  let size = 0, num = 0;
+  for (let i = 1; i <= MAX_INSERTIONS; i++) {
+    if (size === 0) {
+      size = 1;
+    } else if (num === size) {
+      size *= 2;
+    }
+    num++;
+    costs.push({ ins: i, expansion: (num <= size && size > 1 && (num === size + 1 || num === size)), cost: 0 });
+  }
+  // Actually compute costs directly
+  size = 0; num = 0;
+  for (let i = 1; i <= MAX_INSERTIONS; i++) {
+    let cost;
+    if (size === 0) {
+      size = 1; cost = 1;
+    } else if (num === size) {
+      cost = i; size *= 2;
+    } else {
+      cost = 1;
+    }
+    num++;
+    costs[i - 1] = { ins: i, cost: cost, hadExpansion: (cost !== 1) };
+  }
+  return costs;
+}
+
+function buildSteps() {
+  steps = [];
+  let size = 0, num = 0, total = 0;
+
+  for (let i = 1; i <= MAX_INSERTIONS; i++) {
+    if (size === 0) {
+      size = 1;
+    } else if (num === size) {
+      let oldSize = size;
+      size *= 2;
+      let copyCost = oldSize;
+      total += copyCost;
+      steps.push({
+        type: 'expand',
+        i: i,
+        size: size,
+        num: num,
+        stepCost: copyCost,
+        totalCost: total,
+        oldSize: oldSize,
+        newSize: size,
+        insCost: perInsCosts[i - 1].cost
+      });
+    }
+
+    num++;
+    total += 1;
+    steps.push({
+      type: 'insert',
+      i: i,
+      size: size,
+      num: num,
+      stepCost: 1,
+      totalCost: total,
+      insCost: perInsCosts[i - 1].cost
+    });
+  }
+
+  for (let s = 0; s < steps.length; s++) {
+    steps[s].explanation = buildExplanation(steps[s]);
+  }
+}
+
+function buildExplanation(step) {
+  if (step.type === 'expand') {
+    return `<div class="explain-section active">
+      <h3>⚡ Expanding: Table Size ${step.oldSize} → ${step.newSize}</h3>
+      <p>Insertion <span class="dim">#${step.i}</span> finds the table full (<span class="dim">${step.oldSize}/${step.oldSize}</span> slots used).</p>
+      <p>Steps:</p>
+      <p>• Allocate new table with <span class="dim">${step.newSize}</span> slots</p>
+      <p>• Copy all <span class="dim">${step.oldSize}</span> existing items</p>
+      <p>• Free old table</p>
+      <span class="formula-line">Copy cost = ${step.oldSize} &nbsp;→&nbsp; Total for insertion #${step.i} = ${step.insCost}</span>
+      <p class="note">Expansion is costly, but happens infrequently — amortized O(1) across all insertions.</p>
+    </div>`;
+  } else {
+    let isAfterExpansion = step.insCost > 1;
+    if (isAfterExpansion) {
+      return `<div class="explain-section active">
+        <h3>Insert Item #${step.i}</h3>
+        <p>Placing item <span class="dim">${step.i}</span> in the newly expanded table (<span class="dim">${step.size}</span> slots).</p>
+        <p>• Insert cost: <span class="dim">1</span></p>
+        <span class="formula-line">Insert #${step.i}: copy cost (${step.insCost - 1}) + insert cost (1) = ${step.insCost}</span>
+        <p class="note">This insertion triggered the expansion — total cost = ${step.insCost}.</p>
+      </div>`;
+    } else {
+      return `<div class="explain-section active">
+        <h3>Insert Item #${step.i}</h3>
+        <p>Table has room (<span class="dim">${step.num - 1} &lt; ${step.size}</span>). Simply place item <span class="dim">${step.i}</span>.</p>
+        <p>• Cost: <span class="dim">1</span></p>
+        <span class="formula-line">Cost = 1 &nbsp;(no expansion needed)</span>
+        <p class="note">O(1) actual cost — the common case.</p>
+      </div>`;
+    }
+  }
+}
+
+function buildFinishedExplanation() {
+  let total = perInsCosts.reduce((s, c) => s + c.cost, 0);
+  let avg = (total / MAX_INSERTIONS).toFixed(2);
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>Inserted <span class="dim">${MAX_INSERTIONS}</span> items into the dynamic table.</p>
+    <p>Total actual cost: <span class="result-line">${total}</span></p>
+    <p>Average per insertion: <span class="result-line">${avg}</span></p>
+    <h3 style="margin-top:10px;">Amortized Analysis</h3>
+    <p>By the <span class="dim">aggregate method</span>, the total cost of n insertions is at most <span class="dim">2n</span>.</p>
+    <span class="formula-line">Total = n + Σ(2^{k}) where 2^{k} &lt; n  →  Total &lt; 3n</span>
+    <p>For n = ${MAX_INSERTIONS}: cost = <span class="result-line">${total} &lt; 3×${MAX_INSERTIONS} = ${3*MAX_INSERTIONS}</span></p>
+    <p>Using the <span class="dim">accounting method</span>, charging <span class="dim">$3</span> per insertion suffices: $1 for the insert, $1 for the item's future move, $1 for moving a neighbor.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Amortized time:</span> O(1) per insertion</p>
+    <p><span class="dim">Worst-case time:</span> O(n) for a single insertion (when table expands)</p>
+    <p><span class="dim">Space:</span> O(n)</p>
+  </div>`;
+}
+
+// === Initialization ===
+
+function renderSlots(size, num, highlightType) {
+  let html = '';
+  for (let idx = 0; idx < size; idx++) {
+    let itemNum = idx + 1;
+    let isFilled = idx < num;
+    let cls = 'slot';
+    if (isFilled) {
+      if (highlightType === 'copied') {
+        cls += ' copied';
+      } else if (highlightType === 'current' && idx === num - 1) {
+        cls += ' current';
+      } else {
+        cls += ' filled';
+      }
+    } else {
+      cls += ' empty';
+    }
+    html += `<div class="${cls}">${isFilled ? itemNum : ''}</div>`;
+  }
+  return html;
+}
+
+function initTables() {
+  // Initial empty table
+  document.getElementById('slotsContainer').innerHTML = renderSlots(0, 0, null);
+  document.getElementById('currentSize').textContent = '0';
+  document.getElementById('currentNum').textContent = '0';
+
+  // Build cost table
+  perInsCosts = getPerInsertionCosts();
+  let runningTotal = 0;
+  let html = '';
+  for (let k = 0; k < MAX_INSERTIONS; k++) {
+    let p = perInsCosts[k];
+    runningTotal += p.cost;
+    let op = p.hadExpansion ? 'Expand+Insert' : 'Insert';
+    html += `<tr id="costRow${p.ins}">
+      <td>${p.ins}</td>
+      <td>${op}</td>
+      <td>${p.cost}</td>
+      <td>${runningTotal}</td>
+    </tr>`;
+  }
+  document.getElementById('costBody').innerHTML = html;
+}
+
+function resetState() {
+  tableState = { size: 0, num: 0, totalCost: 0 };
+  completedInsertions = new Set();
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.slot').forEach(el => {
+    el.classList.remove('current', 'copied');
+  });
+  document.querySelectorAll('#costBody tr').forEach(el => {
+    el.classList.remove('current-row');
+  });
+}
+
+// === Step Application ===
+
+function applyStep(step) {
+  clearHighlights();
+
+  tableState.size = step.size;
+  tableState.num = step.num;
+  tableState.totalCost = step.totalCost;
+
+  let highlightType = null;
+  let bannerHtml = '';
+  let phaseText = '';
+
+  if (step.type === 'expand') {
+    highlightType = 'copied';
+    bannerHtml = `⚡ TABLE FULL — Expanding ${step.oldSize} → ${step.newSize} slots`;
+    phaseText = `⚡ Expanding to ${step.newSize} slots`;
+  } else {
+    highlightType = 'current';
+    let isAfterExp = step.insCost > 1;
+    if (isAfterExp) {
+      bannerHtml = '';
+      phaseText = `Inserted item #${step.i} (after expansion)`;
+    } else {
+      bannerHtml = '';
+      phaseText = `Inserted item #${step.i}`;
+    }
+    completedInsertions.add(step.i);
+  }
+
+  // Update banner
+  let bannerEl = document.getElementById('expansionBanner');
+  if (step.type === 'expand') {
+    bannerEl.style.display = 'block';
+    bannerEl.innerHTML = bannerHtml;
+  } else {
+    bannerEl.style.display = 'none';
+  }
+
+  // Render slots
+  document.getElementById('slotsContainer').innerHTML =
+    renderSlots(step.size, step.num, highlightType);
+
+  // Update meta
+  document.getElementById('currentSize').textContent = step.size;
+  document.getElementById('currentNum').textContent = step.num;
+
+  // Update info panel
+  document.getElementById('phaseDisplay').textContent = phaseText;
+  document.getElementById('insDisplay').textContent = `#${step.i}`;
+  document.getElementById('sizeDisplay').textContent = step.size;
+  document.getElementById('numDisplay').textContent = step.num;
+  document.getElementById('costDisplay').textContent = step.stepCost;
+  document.getElementById('totalCostDisplay').textContent = step.totalCost;
+  document.getElementById('insCostDisplay').textContent = step.insCost;
+
+  // Highlight cost table row
+  document.getElementById(`costRow${step.i}`)?.classList.add('current-row');
+
+  // Sidebar
+  let phaseDesc = step.type === 'expand'
+    ? `Expanding table ${step.oldSize}→${step.newSize} (insertion #${step.i})`
+    : `Inserted item #${step.i} (cost: ${step.insCost})`;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phaseDesc}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// === Animation Controls ===
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  resetState();
+
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('expansionBanner').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('insDisplay').textContent = '—';
+  document.getElementById('sizeDisplay').textContent = '0';
+  document.getElementById('numDisplay').textContent = '0';
+  document.getElementById('costDisplay').textContent = '—';
+  document.getElementById('totalCostDisplay').textContent = '0';
+  document.getElementById('insCostDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('currentSize').textContent = '0';
+  document.getElementById('currentNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+
+  clearHighlights();
+
+  document.getElementById('slotsContainer').innerHTML = renderSlots(0, 0, null);
+
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p><b>Dynamic Tables</b> (e.g., Python lists, C++ <tt>std::vector</tt>) grow automatically when full. The <span class="dim">TABLE-INSERT</span> algorithm doubles the table size when full, copying all existing items.</p>
+      <h3 style="margin-top:10px;">Algorithm (CLRS)</h3>
+      <span class="formula-line" style="text-align:left;white-space:pre-line;line-height:1.4;">TABLE-INSERT(T, x):
+&nbsp;&nbsp;if T.size == 0:
+&nbsp;&nbsp;&nbsp;&nbsp;allocate T.table with 1 slot
+&nbsp;&nbsp;if T.num == T.size:
+&nbsp;&nbsp;&nbsp;&nbsp;allocate new table with 2·T.size slots
+&nbsp;&nbsp;&nbsp;&nbsp;copy all items; free old table
+&nbsp;&nbsp;&nbsp;&nbsp;T.table = new; T.size = 2·T.size
+&nbsp;&nbsp;insert x; T.num++</span>
+      <h3 style="margin-top:10px;">Cost Model</h3>
+      <p>Cost = <span class="dim">1</span> (no expansion) or <span class="dim">i</span> (expansion at i-th insertion: copy i−1 items + insert 1)</p>
+      <p class="note">Press Play or Step to begin inserting.</p>
+    </div>`;
+
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() {
+  animating = false;
+  let total = perInsCosts.reduce((s, c) => s + c.cost, 0);
+  let avg = (total / MAX_INSERTIONS).toFixed(2);
+
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('finalTotalCost').textContent = total;
+  document.getElementById('finalAvgCost').textContent = avg;
+  document.getElementById('resultSection').style.display = 'block';
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// === Speed Slider ===
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// === Init ===
+
+perInsCosts = getPerInsertionCosts();
+buildSteps();
+initTables();
+resetState();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+
+</body>
+</html>

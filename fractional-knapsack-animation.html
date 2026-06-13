@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractional Knapsack Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+}
+th, td {
+  padding: 10px 14px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.8em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+tr.taken td {
+  background: #0a1a12;
+  color: #00ff88;
+}
+tr.taken td.item-name { color: #00ff88; }
+tr.partial td {
+  background: #1a1a00;
+  color: #ffff00;
+}
+tr.partial td.item-name { color: #ffff00; }
+tr.current td {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+}
+tr.skipped td {
+  background: #0a0a12;
+  color: #444;
+  opacity: 0.5;
+}
+tr.skipped td.item-name { color: #444; }
+
+.knapsack-visual {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+}
+.knapsack-bar {
+  width: 100%;
+  height: 44px;
+  background: #0a0a12;
+  border: 2px solid #444;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  transition: all 0.3s;
+}
+.knapsack-segment {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: bold;
+  transition: all 0.4s ease;
+  border-right: 1px solid rgba(0,0,0,0.3);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.knapsack-empty {
+  flex: 1;
+  height: 100%;
+  background: #0a0a12;
+}
+.knapsack-info {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.78em;
+  color: #555;
+}
+.knapsack-info .val { color: #00ff88; font-weight: bold; }
+.knapsack-info .warn { color: #ffcc00; font-weight: bold; }
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-detail {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.result-item {
+  text-align: center;
+}
+.result-item .rv {
+  font-size: 1.3em;
+  color: #00ff88;
+  font-weight: bold;
+}
+.result-item .rl {
+  font-size: 0.8em;
+  color: #888;
+}
+.result-items-list {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.result-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  color: #00ff88;
+  font-size: 0.85em;
+}
+</style>
+</head>
+<body>
+
+<h1>Fractional Knapsack</h1>
+<p class="subtitle">Greedy Algorithm — Maximum Value by Taking Fractions of Items</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="knapsack-visual">
+      <div class="table-title">Knapsack Capacity</div>
+      <div class="knapsack-bar" id="knapsackBar">
+        <div class="knapsack-empty"></div>
+      </div>
+      <div class="knapsack-info">
+        <span>Used: <span class="val" id="usedWeightDisplay">0</span> / <span id="capacityDisplay">100</span></span>
+        <span>Remaining: <span class="warn" id="remainingDisplay">100</span></span>
+        <span>Total Value: $<span class="val" id="totalValueDisplay">0</span></span>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">&#9679; Items Sorted by Value/Weight Ratio</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Item</th><th>Value</th><th>Weight</th><th>Ratio</th><th>Status</th></tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div><span class="label">Algorithm:</span> <span class="highlight">Fractional Knapsack (Greedy)</span></div>
+      <div><span class="label">Current Item:</span> <span class="value" id="currentItemDisplay">&mdash;</span></div>
+      <div><span class="label">Decision:</span> <span class="value" id="decisionDisplay">Waiting...</span></div>
+      <div><span class="label">Phase:</span> <span id="phaseDisplay" style="color:#00ccff;">Ready &mdash; Press Play</span></div>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; Fractional Knapsack Complete</h2>
+      <div class="result-detail">
+        <div class="result-item"><div class="rv" id="finalValue">0</div><div class="rl">Total Value</div></div>
+        <div class="result-item"><div class="rv" id="finalWeight">0</div><div class="rl">Weight Used</div></div>
+        <div class="result-item"><div class="rv" id="finalRemaining">0</div><div class="rl">Remaining Capacity</div></div>
+      </div>
+      <div id="resultItems" class="result-items-list"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+const ITEMS = [
+  { id: 0, name: 'A', value: 60, weight: 10, ratio: 6.0 },
+  { id: 1, name: 'B', value: 100, weight: 20, ratio: 5.0 },
+  { id: 2, name: 'C', value: 120, weight: 30, ratio: 4.0 },
+  { id: 3, name: 'D', value: 40, weight: 10, ratio: 4.0 },
+  { id: 4, name: 'E', value: 80, weight: 40, ratio: 2.0 },
+  { id: 5, name: 'F', value: 30, weight: 30, ratio: 1.0 }
+];
+const CAPACITY = 100;
+const ITEM_COLORS = ['#00ccff', '#00ff88', '#ffcc00', '#ff6600', '#ff66ff', '#888'];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function precomputeAll() {
+  let used = 0, totalValue = 0;
+  let taken = [];
+  for (let i = 0; i < ITEMS.length; i++) {
+    const item = ITEMS[i];
+    const remaining = CAPACITY - used;
+    if (item.weight <= remaining) {
+      used += item.weight;
+      totalValue += item.value;
+      taken.push({ item, fraction: 1, weightTaken: item.weight, valueTaken: item.value });
+    } else if (remaining > 0) {
+      const frac = remaining / item.weight;
+      used = CAPACITY;
+      totalValue += frac * item.value;
+      taken.push({ item, fraction: frac, weightTaken: remaining, valueTaken: frac * item.value });
+      break;
+    } else {
+      break;
+    }
+  }
+  return { used, totalValue, taken };
+}
+
+function buildInitExplanation() {
+  const rows = ITEMS.map(it =>
+    `<span class="dim">${it.name}</span> (v=${it.value}, w=${it.weight}, r=${it.ratio.toFixed(1)})`
+  ).join(', ');
+  return `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p><b>Fractional Knapsack:</b> Given items each with a <b>value</b> and <b>weight</b>, and a knapsack of capacity <span class="dim">W = ${CAPACITY}</span>, find the most valuable subset where we may take <b>fractions</b> of items.</p>
+    <p>Items (sorted by <span class="dim">value/weight ratio</span> descending):</p>
+    <p style="margin-left:8px;">${rows}</p>
+    <h3 style="margin-top:10px;">Greedy Strategy</h3>
+    <p>1. Sort items by <span class="dim">ratio = value / weight</span> descending.</p>
+    <p>2. For each item: if it <b>fits entirely</b>, take it all.</p>
+    <p>3. Otherwise, take the <b>largest fraction</b> that fits.</p>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildTakeFullExplanation(item, usedBefore, valueBefore, usedAfter, valueAfter) {
+  return `<div class="explain-section active">
+    <h3>Taking Item ${item.name} (Full)</h3>
+    <p>Item <span class="dim">${item.name}</span> has weight <span class="dim">${item.weight}</span> &le; remaining capacity <span class="dim">${CAPACITY - usedBefore}</span>.</p>
+    <p>Taking it <b>entirely</b> adds value <span class="split-info">+$${item.value}</span>.</p>
+    <span class="formula-line">used = ${usedBefore} + ${item.weight} = ${usedAfter} &nbsp;|&nbsp; value = $${valueBefore} + $${item.value} = $${valueAfter}</span>
+    <p class="note">Greedy choice: highest-ratio item always gives best immediate value per weight.</p>
+  </div>`;
+}
+
+function buildTakeFractionExplanation(item, usedBefore, valueBefore, fraction, usedAfter, valueAfter) {
+  return `<div class="explain-section active">
+    <h3>Taking Fraction of Item ${item.name}</h3>
+    <p>Item <span class="dim">${item.name}</span> has weight <span class="dim">${item.weight}</span> &gt; remaining capacity <span class="dim">${CAPACITY - usedBefore}</span>.</p>
+    <p>Taking <span class="split-info">${(fraction * 100).toFixed(1)}%</span> of the item (<span class="dim">${(fraction * item.weight).toFixed(1)}</span> out of <span class="dim">${item.weight}</span> weight units).</p>
+    <span class="formula-line">fraction = remaining / weight = ${(CAPACITY - usedBefore)} / ${item.weight} = ${fraction.toFixed(4)}</span>
+    <span class="formula-line">value added = $${item.value} &times; ${fraction.toFixed(3)} = $${(fraction * item.value).toFixed(1)}</span>
+    <p>After this step, the knapsack is <b>full</b>.</p>
+    <p class="note">Fractional knapsack achieves optimal by taking the best-ratio portion of the current item.</p>
+  </div>`;
+}
+
+function buildSkipExplanation(item) {
+  return `<div class="explain-section active">
+    <h3>Skipping Item ${item.name}</h3>
+    <p>Knapsack is already at <b>full capacity</b> (<span class="dim">${CAPACITY}/${CAPACITY}</span>).</p>
+    <p>Item <span class="dim">${item.name}</span> (ratio <span class="dim">${item.ratio.toFixed(1)})</span> cannot be taken &rarr; <span class="split-info">skip</span>.</p>
+    <span class="formula-line">remaining = 0 &rarr; stop processing further items</span>
+    <p class="note">All remaining items have lower ratios, offering less value per weight.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  const result = precomputeAll();
+  const pct = ((result.used / CAPACITY) * 100).toFixed(1);
+  const itemsDetail = result.taken.map(t => {
+    const label = t.fraction < 1 ? `${t.item.name} (${(t.fraction * 100).toFixed(0)}%)` : t.item.name;
+    return `<span class="dim">${label}</span>`;
+  }).join(', ');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; Algorithm Complete!</h3>
+    <p>Knapsack filled to <span class="result-line" style="display:inline;">${pct}%</span> capacity.</p>
+    <p>Total value: <span class="result-line" style="display:inline;">$${result.totalValue.toFixed(1)}</span></p>
+    <p>Items taken: ${itemsDetail}</p>
+    <h3 style="margin-top:10px;">Why This Works</h3>
+    <p><b>Greedy choice property:</b> The item with the highest value/weight ratio always provides the best "value per unit weight," and because we can take fractions, we never lose the option to use remaining capacity efficiently.</p>
+    <p><b>Optimal substructure:</b> After taking an item (or fraction), the remaining problem is a smaller fractional knapsack with the remaining items and capacity.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(n log n) &mdash; sorting by ratio</p>
+    <p><span class="dim">Space:</span> O(1) &mdash; in-place greedy scan</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+
+  steps.push({
+    type: 'init',
+    explanation: buildInitExplanation()
+  });
+
+  let used = 0;
+  let totalValue = 0;
+
+  for (let i = 0; i < ITEMS.length; i++) {
+    const item = ITEMS[i];
+    const remaining = CAPACITY - used;
+
+    if (item.weight <= remaining) {
+      const usedBefore = used;
+      const valueBefore = totalValue;
+      used += item.weight;
+      totalValue += item.value;
+      steps.push({
+        type: 'take_full',
+        itemIdx: i,
+        used: used,
+        totalValue: totalValue,
+        item: item,
+        explanation: buildTakeFullExplanation(item, usedBefore, valueBefore, used, totalValue)
+      });
+    } else if (remaining > 0) {
+      const usedBefore = used;
+      const valueBefore = totalValue;
+      const fraction = remaining / item.weight;
+      const valueAdded = fraction * item.value;
+      used = CAPACITY;
+      totalValue += valueAdded;
+      steps.push({
+        type: 'take_fraction',
+        itemIdx: i,
+        fraction: fraction,
+        used: used,
+        totalValue: totalValue,
+        item: item,
+        explanation: buildTakeFractionExplanation(item, usedBefore, valueBefore, fraction, used, totalValue)
+      });
+    } else {
+      steps.push({
+        type: 'skip',
+        itemIdx: i,
+        used: used,
+        totalValue: totalValue,
+        item: item,
+        explanation: buildSkipExplanation(item)
+      });
+    }
+  }
+}
+
+function initTables() {
+  let html = '';
+  for (let i = 0; i < ITEMS.length; i++) {
+    const it = ITEMS[i];
+    html += `<tr id="itemRow-${i}">
+      <td>${i + 1}</td>
+      <td class="item-name"><b>${it.name}</b></td>
+      <td>$${it.value}</td>
+      <td>${it.weight}</td>
+      <td style="color:#ff9944;">${it.ratio.toFixed(1)}</td>
+      <td id="itemStatus-${i}" style="color:#555;">pending</td>
+    </tr>`;
+  }
+  document.getElementById('itemsBody').innerHTML = html;
+}
+
+function clearHighlights() {
+  for (let i = 0; i < ITEMS.length; i++) {
+    const row = document.getElementById(`itemRow-${i}`);
+    if (row) row.className = '';
+  }
+}
+
+function updateKnapsackBar(used, totalValue, stepsUpTo) {
+  const bar = document.getElementById('knapsackBar');
+  bar.innerHTML = '';
+
+  let itemsTaken = [];
+  for (let s = 1; s <= stepsUpTo; s++) {
+    const step = steps[s];
+    if (step && (step.type === 'take_full' || step.type === 'take_fraction')) {
+      itemsTaken.push(step);
+    }
+  }
+
+  for (let t of itemsTaken) {
+    const seg = document.createElement('div');
+    seg.className = 'knapsack-segment';
+    const wi = t.type === 'take_full' ? t.item.weight : t.fraction * t.item.weight;
+    const widthPct = (wi / CAPACITY) * 100;
+    seg.style.width = widthPct + '%';
+    seg.style.background = ITEM_COLORS[t.item.id];
+    seg.style.color = '#000';
+    const label = t.type === 'take_full' ? t.item.name : t.item.name + ' ' + Math.round(t.fraction * 100) + '%';
+    seg.textContent = label;
+    bar.appendChild(seg);
+  }
+
+  if (used < CAPACITY) {
+    const empty = document.createElement('div');
+    empty.className = 'knapsack-empty';
+    bar.appendChild(empty);
+  }
+
+  document.getElementById('usedWeightDisplay').textContent = used;
+  document.getElementById('remainingDisplay').textContent = CAPACITY - used;
+  document.getElementById('totalValueDisplay').textContent = totalValue.toFixed(1);
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  let phaseText = '';
+  if (step.type === 'init') {
+    phaseText = 'Initial state &mdash; items sorted by ratio';
+    document.getElementById('currentItemDisplay').textContent = '&mdash;';
+    document.getElementById('decisionDisplay').textContent = 'Waiting...';
+    document.getElementById('phaseDisplay').textContent = 'Initialized';
+    updateKnapsackBar(0, 0, 0);
+  } else {
+    const item = step.item;
+    document.getElementById('currentItemDisplay').innerHTML =
+      `<span style="color:#ffcc00;">${item.name}</span> (v=$${item.value}, w=${item.weight}, r=${item.ratio.toFixed(1)})`;
+
+    if (step.type === 'take_full') {
+      phaseText = `Taking item ${item.name} (full)`;
+      document.getElementById('decisionDisplay').innerHTML =
+        `<span style="color:#00ff88;">Take full &mdash; weight ${item.weight} &le; remaining ${CAPACITY - (step.used - item.weight)}</span>`;
+      document.getElementById('phaseDisplay').textContent = `Taking entire item ${item.name}`;
+      const row = document.getElementById(`itemRow-${step.itemIdx}`);
+      if (row) row.className = 'taken';
+      document.getElementById(`itemStatus-${step.itemIdx}`).innerHTML =
+        `<span style="color:#00ff88;">&#10003; taken</span>`;
+    } else if (step.type === 'take_fraction') {
+      const pct = (step.fraction * 100).toFixed(1);
+      phaseText = `Taking ${pct}% of item ${item.name}`;
+      document.getElementById('decisionDisplay').innerHTML =
+        `<span style="color:#ffff00;">Take fraction &mdash; ${(step.fraction * item.weight).toFixed(1)}/${item.weight} (${pct}%)</span>`;
+      document.getElementById('phaseDisplay').textContent = `Taking fraction of item ${item.name}`;
+      const row = document.getElementById(`itemRow-${step.itemIdx}`);
+      if (row) row.className = 'partial';
+      document.getElementById(`itemStatus-${step.itemIdx}`).innerHTML =
+        `<span style="color:#ffff00;">${pct}% taken</span>`;
+    } else if (step.type === 'skip') {
+      phaseText = `Skipping item ${item.name}`;
+      document.getElementById('decisionDisplay').innerHTML =
+        `<span style="color:#888;">Skip &mdash; no remaining capacity</span>`;
+      document.getElementById('phaseDisplay').textContent = `Skipping item ${item.name}`;
+      const row = document.getElementById(`itemRow-${step.itemIdx}`);
+      if (row) row.className = 'skipped';
+      document.getElementById(`itemStatus-${step.itemIdx}`).innerHTML =
+        `<span style="color:#444;">&#10007; skipped</span>`;
+    }
+
+    const row = document.getElementById(`itemRow-${step.itemIdx}`);
+    if (row && step.type !== 'take_full' && step.type !== 'take_fraction' && step.type !== 'skip') {
+      row.className = 'current';
+    }
+
+    updateKnapsackBar(step.used, step.totalValue, currentStep);
+  }
+
+  document.getElementById('sidebarPhase').innerHTML =
+    `Step ${currentStep + 1} / ${steps.length} &mdash; ${phaseText}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+  const result = precomputeAll();
+  document.getElementById('phaseDisplay').textContent = '&#10003; Complete!';
+  document.getElementById('decisionDisplay').textContent = 'All items processed';
+
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalValue').textContent = '$' + result.totalValue.toFixed(1);
+  document.getElementById('finalWeight').textContent = result.used;
+  document.getElementById('finalRemaining').textContent = CAPACITY - result.used;
+
+  const itemsHtml = result.taken.map(t => {
+    const label = t.fraction < 1
+      ? `${t.item.name} (${(t.fraction * 100).toFixed(0)}% of $${t.item.value})`
+      : `${t.item.name} ($${t.item.value})`;
+    return `<span class="result-badge">${label}</span>`;
+  }).join('');
+  document.getElementById('resultItems').innerHTML = itemsHtml;
+
+  document.getElementById('sidebarPhase').innerHTML =
+    `Step ${steps.length} / ${steps.length} &mdash; &#10004; Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready &mdash; Press Play';
+  document.getElementById('currentItemDisplay').textContent = '&mdash;';
+  document.getElementById('decisionDisplay').textContent = 'Waiting...';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle &mdash; press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  const bar = document.getElementById('knapsackBar');
+  bar.innerHTML = '<div class="knapsack-empty"></div>';
+  document.getElementById('usedWeightDisplay').textContent = '0';
+  document.getElementById('remainingDisplay').textContent = CAPACITY;
+  document.getElementById('totalValueDisplay').textContent = '0';
+  for (let i = 0; i < ITEMS.length; i++) {
+    document.getElementById(`itemStatus-${i}`).innerHTML = '<span style="color:#555;">pending</span>';
+  }
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('explainArea').innerHTML = buildInitExplanation();
+</script>
+</body>
+</html>

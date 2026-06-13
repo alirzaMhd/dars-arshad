@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B-Tree Search & Insert Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.tree-container {
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+.tree-container canvas {
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #0a0a12;
+}
+.key-sequence {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 12px 0;
+}
+.key-badge {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #444;
+  border-radius: 6px;
+  font-size: 0.78em;
+  font-weight: bold;
+  background: #111;
+  color: #888;
+  transition: all 0.3s;
+}
+.key-badge.done {
+  border-color: #00ff88;
+  background: #0a1a12;
+  color: #00ff88;
+}
+.key-badge.current {
+  border-color: #ff6600;
+  background: #1a0a00;
+  color: #ff6600;
+  box-shadow: 0 0 10px #ff660044;
+  transform: scale(1.1);
+}
+.key-badge.pending {
+  border-color: #444;
+  background: #111;
+  color: #555;
+}
+.key-badge.search-target {
+  border-color: #00ccff;
+  background: #001a24;
+  color: #00ccff;
+  box-shadow: 0 0 12px #00ccff55;
+  transform: scale(1.15);
+  animation: pulse-search 1s ease infinite alternate;
+}
+@keyframes pulse-search {
+  0% { box-shadow: 0 0 8px #00ccff33; }
+  100% { box-shadow: 0 0 18px #00ccff77; }
+}
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>B-Tree Search & Insert</h1>
+<p class="subtitle">Data Structures — B-Tree Operations with t = 2</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="tree-container">
+      <canvas id="treeCanvas" width="900" height="540"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div><span class="label">Algorithm:</span> <span class="highlight" id="algoDisplay">B-TREE</span></div>
+      <div><span class="label" id="operationLabel">Operation:</span> <span class="value" id="currentKeyDisplay">--</span></div>
+      <div><span class="label">Current Phase:</span> <span class="value" id="phaseDisplay">Ready -- Press Play</span></div>
+      <div><span class="label">Node Info:</span> <span class="value" id="computingDisplay">--</span></div>
+    </div>
+
+    <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span></div>
+
+    <div id="keySequence" class="key-sequence"></div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>All Operations Complete</h2>
+      <p>Final B-Tree has height <span id="finalHeight" style="color:#00ff88;font-weight:bold;"></span> with root keys: <span id="finalRootKeys" style="color:#ffcc00;font-weight:bold;"></span></p>
+      <p><span class="note">Searched for <span id="searchResultKey" style="color:#00ccff;"></span>: <span id="searchResultText" style="color:#00ff88;"></span></span></p>
+      <p class="note" style="margin-top:8px;">All <span id="keyCount" style="color:#00ccff;"></span> keys inserted. Tree remains balanced.</p>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle -- press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+const T = 2;
+const MAX_KEYS = 2 * T - 1;
+const MIN_KEYS = T - 1;
+const ALL_KEYS = [33, 18, 25, 40, 55, 10, 50, 60, 70, 45, 20, 80, 90, 100, 30];
+const SEARCH_TARGET = 45;
+const INITIAL_KEYS_COUNT = 9;
+
+let _nextId = 0;
+function nextId() { return _nextId++; }
+
+class BNode {
+  constructor(leaf) {
+    this.id = nextId();
+    this.keys = [];
+    this.children = [];
+    this.leaf = leaf;
+  }
+  clone() {
+    let n = new BNode(this.leaf);
+    n.id = this.id;
+    n.keys = this.keys.slice();
+    n.children = this.children.map(c => c.clone());
+    return n;
+  }
+  isFull() { return this.keys.length >= MAX_KEYS; }
+}
+
+function cloneTree(node) { return node.clone(); }
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let initialTree = null;
+let finalTree = null;
+let searchFound = false;
+
+function lowerBound(arr, key) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) {
+    let mid = (lo + hi) >> 1;
+    if (arr[mid] < key) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+function splitChild(parent, idx) {
+  let child = parent.children[idx];
+  let mid = Math.floor(child.keys.length / 2);
+  let medianKey = child.keys[mid];
+
+  let right = new BNode(child.leaf);
+  right.keys = child.keys.splice(mid + 1);
+  child.keys.pop();
+
+  if (!child.leaf) {
+    right.children = child.children.splice(mid + 1);
+  }
+
+  parent.keys.splice(idx, 0, medianKey);
+  parent.children.splice(idx + 1, 0, right);
+}
+
+function insertKey(root, key, stepRecorder) {
+  let treeRoot = root;
+  stepRecorder('begin_insert', root, key, null, null, treeRoot);
+
+  if (root.keys.length === MAX_KEYS) {
+    let newRoot = new BNode(false);
+    newRoot.children.push(root);
+    treeRoot = newRoot;
+    splitChild(newRoot, 0);
+    stepRecorder('split_root', newRoot, key, newRoot, null, treeRoot);
+  }
+
+  insertNonFull(treeRoot, key, stepRecorder, treeRoot);
+  stepRecorder('done_insert', null, key, null, null, treeRoot);
+  return treeRoot;
+}
+
+function insertNonFull(node, key, stepRecorder, treeRoot) {
+  if (node.leaf) {
+    let idx = lowerBound(node.keys, key);
+    node.keys.splice(idx, 0, key);
+    stepRecorder('insert_leaf', node, key, node, { insertIdx: idx }, treeRoot);
+    return;
+  }
+
+  let i = lowerBound(node.keys, key);
+  stepRecorder('traverse', node, key, node.children[i], { childIdx: i }, treeRoot);
+
+  if (node.children[i].keys.length === MAX_KEYS) {
+    splitChild(node, i);
+    stepRecorder('split_child', node, key, node.children[i], { splitIdx: i, medianKey: node.keys[i] }, treeRoot);
+    if (key > node.keys[i]) i++;
+  }
+
+  insertNonFull(node.children[i], key, stepRecorder, treeRoot);
+}
+
+function generateSearchSteps(root, target) {
+  let treeRoot = root;
+  let stepIdx = INITIAL_KEYS_COUNT;
+
+  function pushSearchStep(type, node, extra) {
+    let hlIds = null;
+    let hlCell = null;
+
+    if (type === 'search_begin') {
+      hlIds = new Set();
+      if (node) hlIds.add(node.id);
+    } else if (type === 'search_compare') {
+      hlIds = new Set();
+      if (node) hlIds.add(node.id);
+      if (extra && extra.keyIndex !== undefined) {
+        hlCell = { nodeId: node ? node.id : null, keyIndex: extra.keyIndex };
+      }
+    } else if (type === 'search_traverse') {
+      hlIds = new Set();
+      if (node) hlIds.add(node.id);
+      if (extra && extra.childNode) hlIds.add(extra.childNode.id);
+    } else if (type === 'search_found' || type === 'search_not_found') {
+      hlIds = new Set();
+      if (node) hlIds.add(node.id);
+    }
+
+    steps.push({
+      type: type,
+      insertIdx: stepIdx,
+      key: target,
+      tree: cloneTree(treeRoot),
+      highlightIds: hlIds,
+      highlightCell: hlCell,
+      searchInfo: extra || {},
+      phase: type === 'search_begin' ? 'Search Phase' : 'Search Phase',
+    });
+  }
+
+  pushSearchStep('search_begin', root, { target: target });
+
+  let node = root;
+  let done = false;
+
+  while (node && !done) {
+    for (let i = 0; i <= node.keys.length; i++) {
+      if (i < node.keys.length && target === node.keys[i]) {
+        pushSearchStep('search_compare', node, { keyIndex: i, comparison: 'equal', keyVal: node.keys[i] });
+        pushSearchStep('search_found', node, { keyIndex: i, keyVal: node.keys[i] });
+        searchFound = true;
+        done = true;
+        break;
+      }
+      if (i < node.keys.length && target < node.keys[i]) {
+        pushSearchStep('search_compare', node, { keyIndex: i, comparison: 'less', keyVal: node.keys[i] });
+        if (node.leaf) {
+          pushSearchStep('search_not_found', node, { lastIndex: i, keyVal: node.keys[i] });
+          return;
+        }
+        pushSearchStep('search_traverse', node, { childIndex: i, childNode: node.children[i] });
+        node = node.children[i];
+        break;
+      }
+      if (i < node.keys.length) {
+        pushSearchStep('search_compare', node, { keyIndex: i, comparison: 'greater', keyVal: node.keys[i] });
+      }
+      if (i === node.keys.length) {
+        if (node.leaf) {
+          pushSearchStep('search_not_found', node, { lastIndex: i });
+          return;
+        }
+        pushSearchStep('search_traverse', node, { childIndex: i, childNode: node.children[i] });
+        node = node.children[i];
+        break;
+      }
+    }
+  }
+}
+
+function buildSteps() {
+  steps = [];
+  searchFound = false;
+  _nextId = 0;
+
+  let root = new BNode(true);
+  let silent = () => {};
+  for (let i = 0; i < INITIAL_KEYS_COUNT; i++) {
+    root = insertKey(root, ALL_KEYS[i], silent);
+  }
+  initialTree = cloneTree(root);
+
+  generateSearchSteps(root, SEARCH_TARGET);
+
+  let currentRoot = cloneTree(root);
+
+  for (let ki = INITIAL_KEYS_COUNT; ki < ALL_KEYS.length; ki++) {
+    let key = ALL_KEYS[ki];
+    let localRecorder = function(type, focusNode, insertKey, highlightNode, extra, treeRoot) {
+      let snapshotRoot = treeRoot !== undefined ? treeRoot : currentRoot;
+      let hlIds = null;
+
+      if (type === 'begin_insert' && focusNode) {
+        hlIds = new Set([focusNode.id]);
+      }
+      if (type === 'traverse') {
+        hlIds = new Set();
+        if (focusNode) hlIds.add(focusNode.id);
+        if (highlightNode) hlIds.add(highlightNode.id);
+      }
+      if (type === 'split_root') {
+        hlIds = new Set();
+        if (snapshotRoot) {
+          hlIds.add(snapshotRoot.id);
+          for (let c of snapshotRoot.children) hlIds.add(c.id);
+        }
+      }
+      if (type === 'split_child') {
+        hlIds = new Set();
+        if (focusNode) hlIds.add(focusNode.id);
+        if (highlightNode) hlIds.add(highlightNode.id);
+      }
+      if (type === 'insert_leaf') {
+        hlIds = new Set();
+        if (focusNode) hlIds.add(focusNode.id);
+      }
+      if (type === 'done_insert') {
+        hlIds = new Set();
+        if (snapshotRoot) hlIds.add(snapshotRoot.id);
+      }
+
+      steps.push({
+        type: type,
+        insertIdx: ki,
+        key: insertKey,
+        tree: cloneTree(snapshotRoot),
+        highlightIds: hlIds,
+        highlightCell: null,
+        searchInfo: null,
+      });
+    };
+
+    currentRoot = insertKey(currentRoot, key, localRecorder);
+    if (ki === ALL_KEYS.length - 1) {
+      finalTree = cloneTree(currentRoot);
+    }
+  }
+}
+
+function nodeKeysStr(node) {
+  if (!node || node.keys.length === 0) return '[ ]';
+  return '[' + node.keys.join(', ') + ']';
+}
+
+function nodeHasKey(node, key) {
+  if (!node) return false;
+  for (let i = 0; i < node.keys.length; i++) {
+    if (node.keys[i] === key) return true;
+  }
+  return false;
+}
+
+function buildExplanation(step) {
+  let k = step.key;
+  let t = step.type;
+  let si = step.searchInfo;
+
+  if (t === 'search_begin') {
+    return `
+      <div class="explain-section active">
+        <h3>Search for Key ${k}</h3>
+        <p>We start at the <b>root</b> because that is the single entry point into a B-Tree. Since all keys are stored in sorted order within each node, we can efficiently navigate to the correct subtree by comparing our target key with the keys at each level.</p>
+        <p>Current root: <span class="dim">${nodeKeysStr(step.tree)}</span></p>
+        <p><b>Why this works:</b> A B-Tree with minimum degree <span class="dim">t = ${T}</span> keeps its height bounded by <span class="dim">O(log<sub>t</sub> n)</span>. Each node holds between <span class="dim">t-1 = ${MIN_KEYS}</span> and <span class="dim">2t-1 = ${MAX_KEYS}</span> keys, meaning each internal node has between <span class="dim">t = ${T}</span> and <span class="dim">2t = ${2 * T}</span> children. This branching factor keeps the tree shallow and search fast — even with millions of keys, we only visit a handful of nodes.</p>
+        <p class="note">Search complexity: O(log n) comparisons — far better than a linked list's O(n).</p>
+      </div>`;
+  }
+
+  if (t === 'search_compare') {
+    let cmp = si.comparison || '';
+    let kv = si.keyVal !== undefined ? si.keyVal : '?';
+    if (cmp === 'greater') {
+      return `
+        <div class="explain-section active">
+          <h3>Compare: ${k} &gt; ${kv}</h3>
+          <p>We compare <span class="dim">${k}</span> with <span class="dim">${kv}</span> at the current node. Since <span class="dim">${k} &gt; ${kv}</span>, the target cannot be in the subtree to the left of <span class="dim">${kv}</span>.</p>
+          <span class="formula-line">${k} > ${kv}  —  continue scanning right within this node</span>
+          <p><b>Why scan left to right:</b> Keys inside a B-Tree node are stored in <b>sorted ascending order</b> (like an array). This lets us do a linear scan or binary search within the node. Because the node has at most <span class="dim">${MAX_KEYS}</span> keys, scanning is fast.</p>
+          <p class="note">If <span class="dim">${k}</span> were less than <span class="dim">${kv}</span>, we would descend to the child between the previous key and this one.</p>
+        </div>`;
+    }
+    if (cmp === 'less') {
+      return `
+        <div class="explain-section active">
+          <h3>Compare: ${k} &lt; ${kv}</h3>
+          <p>Comparing <span class="dim">${k}</span> with <span class="dim">${kv}</span>. Since <span class="dim">${k} &lt; ${kv}</span>, the target key belongs in the subtree to the <b>left</b> of <span class="dim">${kv}</span>.</p>
+          <span class="formula-line">${k} < ${kv}  —  descend to left child</span>
+          <p><b>Why descend here:</b> In a B-Tree, every internal node with <b>n</b> keys divides its search space into <b>n+1</b> ranges, each corresponding to one child pointer. Key <span class="dim">${k}</span> falls into the range that is less than <span class="dim">${kv}</span>, so we follow that child pointer.</p>
+          <p class="note">This is the same principle as a BST, but with multiple keys per node we eliminate larger ranges at each step.</p>
+        </div>`;
+    }
+    if (cmp === 'equal') {
+      return `
+        <div class="explain-section active">
+          <h3>Compare: ${k} == ${kv}</h3>
+          <p>Key <span class="dim">${k}</span> matches key <span class="dim">${kv}</span> at the current node!</p>
+          <span class="formula-line">${k} == ${kv}  —  match found</span>
+          <p class="result-line">Key ${k} exists in the B-Tree.</p>
+          <p><b>Why search stops here:</b> B-Trees store every key in both internal and leaf nodes (unlike B+ Trees which store keys only in leaves). The moment we find an exact match at any node, search is complete — no need to descend further.</p>
+        </div>`;
+    }
+    return `<div class="explain-section active"><p>Comparing ${k} in node.</p></div>`;
+  }
+
+  if (t === 'search_traverse') {
+    let ci = si.childIndex !== undefined ? si.childIndex : '?';
+    return `
+      <div class="explain-section active">
+        <h3>Descend to Child ${ci}</h3>
+        <p>Determined the correct child (index <span class="dim">${ci}</span>) to descend into. The search continues recursively at the next level.</p>
+        <p><b>Why child ${ci}:</b> After comparing with all keys in the current node, <span class="dim">${k}</span> falls into the gap between key <span class="dim">${ci === '0' ? '(none)' : si.keyVal !== undefined ? si.keyVal : '?'}</span> and the next key. B-Tree nodes have exactly <b>n+1</b> children for <b>n</b> keys, so each gap has a corresponding child pointer.</p>
+        <p><b>Why this is efficient:</b> At each level, we eliminate the search space by a factor proportional to the number of keys in the node. With <span class="dim">t = ${T}</span>, each node has up to <span class="dim">${2*T}</span> children, so the height is at most <span class="dim">log<sub>${T}</sub>(n)</span>.</p>
+        <p class="note">B-Tree height = O(log<sub>t</sub> n) — much shorter than a binary tree when t &gt; 2.</p>
+      </div>`;
+  }
+
+  if (t === 'search_found') {
+    return `
+      <div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Key ${k} Found</h3>
+        <p class="result-line">Key ${k} exists in the B-Tree!</p>
+        <p><b>Why we found it:</b> Our search path followed the sorted key structure at each node, narrowing the search range until an exact match was located. The search visited <span class="dim">${getStepNodeDepth(step)}</span> node levels.</p>
+        <p><b>What this demonstrates:</b> B-Tree search is deterministic and efficient — the sorted key arrangement and multi-way branching guarantee we can locate any key in O(log n) time, regardless of the insertion order.</p>
+      </div>`;
+  }
+
+  if (t === 'search_not_found') {
+    return `
+      <div class="explain-section active" style="border-left-color:#ff6600;">
+        <h3>Key ${k} Not Found</h3>
+        <p>Key <span class="dim">${k}</span> is <b>not</b> present in the B-Tree.</p>
+        <p><b>Why we know it's absent:</b> We reached a leaf node and the key was not among its keys. In a B-Tree, every key that exists must appear in some node along the search path. If we exhaust the search at a leaf without finding a match, the key simply is not in the tree.</p>
+        <p>Next phase: <span class="split-info">insert ${k}</span> into the tree at the position where it would belong.</p>
+        <p class="note">B-Tree insertion uses the same search path but splits full nodes before descending (preemptive splitting).</p>
+      </div>`;
+  }
+
+  if (t === 'begin_insert') {
+    let nodeStr = step.tree && step.tree.keys.length > 0 ? nodeKeysStr(step.tree) : '(empty)';
+    let isFull = step.tree && step.tree.isFull();
+    return `
+      <div class="explain-section active">
+        <h3>Inserting Key ${k}</h3>
+        <p>Start inserting key <b style="color:#ffcc00;">${k}</b> into the B-Tree.</p>
+        <p>Current root: <span class="dim">${nodeStr}</span></p>
+        <p><b>First check:</b> Is the root full (${MAX_KEYS} keys)? <span class="dim">${isFull ? 'YES' : 'No'}</span></p>
+        <p>${isFull
+          ? 'The root is full, so we must <b>split the root</b> first. This is the only case where the tree grows in height — a new root is created, and the old root\'s median key moves up.'
+          : 'The root has room. We proceed to find the correct leaf for insertion.'
+        }</p>
+        <p><b>Why degree t = ${T} matters:</b> The minimum degree <span class="dim">t</span> controls the tree's branching factor. Every node (except root) must have at least <span class="dim">t-1 = ${MIN_KEYS}</span> keys and at most <span class="dim">2t-1 = ${MAX_KEYS}</span> keys. This guarantees the tree stays balanced: wide and shallow rather than tall and skinny.</p>
+        <p><b>Why a node can hold ${MAX_KEYS} keys max:</b> When a node reaches <span class="dim">2t-1</span> keys, it is "full" and must split. Splitting at the median ensures both resulting nodes have exactly <span class="dim">t-1</span> keys (the minimum), keeping the tree properly balanced.</p>
+        <p class="note">B-Tree invariant: all leaves are at the same depth. This is the defining property of a perfectly balanced tree.</p>
+      </div>`;
+  }
+
+  if (t === 'split_root') {
+    let median = step.tree ? step.tree.keys[0] : '?';
+    let leftChild = step.tree && step.tree.children[0] ? nodeKeysStr(step.tree.children[0]) : '?';
+    let rightChild = step.tree && step.tree.children[1] ? nodeKeysStr(step.tree.children[1]) : '?';
+    return `
+      <div class="explain-section active">
+        <h3>Split Root Around ${median} — Tree Grows Taller</h3>
+        <p>The root has <span class="dim">${MAX_KEYS}</span> keys (it's a full <span class="dim">${MAX_KEYS + 1}-node</span>). We must <b>split</b> it to maintain the B-Tree invariant that no node exceeds <span class="dim">2t-1 = ${MAX_KEYS}</span> keys.</p>
+        <span class="formula-line">B-TREE-SPLIT-ROOT(T, root)</span>
+        <p><b>What happens:</b></p>
+        <p>• A <b>new root</b> is created (empty, becomes internal node)</p>
+        <p>• The old root's <span class="split-info">median key = ${median}</span> moves up to the new root</p>
+        <p>• The old root splits into two nodes:</p>
+        <p style="margin-left:12px;">Left child (keys &lt; ${median}): <span class="dim">${leftChild}</span></p>
+        <p style="margin-left:12px;">Right child (keys &gt; ${median}): <span class="dim">${rightChild}</span></p>
+        <p><b>Why this is the ONLY way height increases:</b> Unlike BSTs where height can grow from unbalanced insertions, B-Trees <b>only</b> grow at the root by splitting. This guarantees the tree is always perfectly balanced — all leaves remain at the same depth. Every time the root splits, the height increases by exactly 1.</p>
+        <p><b>Why we split BEFORE descending:</b> B-Trees use "preemptive splitting" — we split full nodes as we encounter them on the way down, not after inserting. This avoids the need for complex bottom-up rebalancing.</p>
+        <p class="note">Root splitting is rare (only happens once every ${MAX_KEYS} insertions in the root), but it's the fundamental mechanism that keeps B-Trees balanced.</p>
+      </div>`;
+  }
+
+  if (t === 'traverse') {
+    let childIdx = step.extra && step.extra.childIdx !== undefined ? step.extra.childIdx : '?';
+    return `
+      <div class="explain-section active">
+        <h3>Traverse to Child ${childIdx}</h3>
+        <p>Key <span class="dim">${k}</span> is not in the current node (which is internal). We must descend to the correct child subtree.</p>
+        <p><b>How we choose child ${childIdx}:</b> We find the position where <span class="dim">${k}</span> would fit among the node's sorted keys. The child at that position leads to the subtree containing all keys in that range. This is the same comparison logic as search — we're finding the insertion location.</p>
+        <p><b>Before descending, we check:</b> Is the target child full (${MAX_KEYS} keys)? If so, we <b>split it now</b>. This is crucial — by splitting full nodes before descending, we guarantee that when we eventually need to insert a key, the leaf will have room, and if the leaf needs to split, the parent will have space for the promoted median.</p>
+        <p><b>Why split before descending (preemptive splitting):</b> If we descended first and then tried to split on the way back up, we might encounter a full parent that cannot accept a promoted key — leading to cascading splits all the way back to the root. Preemptive splitting avoids this entire class of problems at the cost of splitting some nodes that might not strictly need it.</p>
+        <p class="note">This "split before you go" strategy is what makes the B-Tree insert algorithm elegantly single-pass.</p>
+      </div>`;
+  }
+
+  if (t === 'split_child') {
+    let median = step.extra && step.extra.medianKey !== undefined ? step.extra.medianKey : '?';
+    let splitIdx = step.extra && step.extra.splitIdx !== undefined ? step.extra.splitIdx : '?';
+    return `
+      <div class="explain-section active">
+        <h3>Split Full Child Around ${median}</h3>
+        <p>The child at index <span class="dim">${splitIdx}</span> is full (has ${MAX_KEYS} keys). Before we descend into it, we must <b>split</b> it.</p>
+        <span class="formula-line">B-TREE-SPLIT-CHILD(parent, ${splitIdx})</span>
+        <p><b>The split operation:</b></p>
+        <p>• The child's <span class="split-info">median key = ${median}</span> is promoted to the parent</p>
+        <p>• The child is split into two nodes, each with <span class="dim">t-1 = ${MIN_KEYS}</span> keys (the minimum allowed)</p>
+        <p><b>Why split at the median:</b> Choosing the middle key ensures both resulting nodes are equally balanced (each has exactly <span class="dim">t-1</span> keys). The median key moves to the parent, which now has one additional key and one additional child pointer. If the parent later becomes full, it too will split.</p>
+        <p><b>Why this prevents cascading:</b> Since we already checked that the parent had room before descending (or split it if it didn't), the parent can always accept the promoted median key. This is the elegance of preemptive splitting — it guarantees forward progress without backtracking.</p>
+        <p class="note">After splitting, the search range narrows: if ${k} &gt; ${median}, we go right (child ${splitIdx} + 1); otherwise, we stay left.</p>
+      </div>`;
+  }
+
+  if (t === 'insert_leaf') {
+    let nodeStr = step.tree ? nodeKeysStr(step.tree) : '?';
+    return `
+      <div class="explain-section active">
+        <h3>Insert ${k} into Leaf</h3>
+        <p>Reached a leaf node. All keys are inserted into leaves — internal nodes exist only for routing.</p>
+        <p><b>What happens:</b> We find the correct sorted position for <span class="dim">${k}</span> among the leaf's existing keys, shift larger keys to the right, and insert <span class="dim">${k}</span>.</p>
+        <span class="formula-line">sorted insert: shift keys right, place ${k}</span>
+        <p>Leaf now contains: <span class="dim">${nodeStr}</span></p>
+        <p><b>Why insertion always happens in a leaf:</b> New keys are always placed in leaves. If a leaf becomes full after insertion, the <b>next</b> insertion into that subtree will trigger a split when we traverse through it. This is why preemptive splitting works — we split full nodes before reaching the leaf, ensuring the leaf always has room for the new key.</p>
+        <p><b>Why all leaves are at the same depth:</b> This is the B-Tree's key invariant. Unlike standard BSTs where leaf depth varies, B-Trees grow only at the root. Every leaf is always at the same depth because splits propagate upward, never downward.</p>
+        <p class="note">If this leaf later fills up to ${MAX_KEYS} keys, the next traversal through it will trigger a split before any new insertion.</p>
+      </div>`;
+  }
+
+  if (t === 'done_insert') {
+    let keysStr = step.tree ? nodeKeysStr(step.tree) : '?';
+    let nextIdx = step.insertIdx + 1;
+    let nextKeyStr = nextIdx < ALL_KEYS.length ? 'Next up: key <span class="dim">' + ALL_KEYS[nextIdx] + '</span>' : 'All keys inserted! Done.';
+    return `
+      <div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Key ${k} Inserted</h3>
+        <p>Key <span class="result-line" style="display:inline;">${k}</span> successfully inserted into the B-Tree.</p>
+        <p>Current root keys: <span class="dim">${keysStr}</span></p>
+        <p><b>What just happened:</b> The algorithm traversed from the root to a leaf, splitting any full nodes encountered along the way, then inserted <span class="dim">${k}</span> in sorted position. The tree remains perfectly balanced — every leaf remains at the same depth.</p>
+        <p><b>B-Tree invariants maintained:</b></p>
+        <p>• Every node (except root): between <span class="dim">${MIN_KEYS}</span> and <span class="dim">${MAX_KEYS}</span> keys ✓</p>
+        <p>• Root: at least <span class="dim">1</span> key ✓</p>
+        <p>• All leaves at same depth ✓</p>
+        <p>• Node with n keys has n+1 children ✓</p>
+        <p class="note">${nextKeyStr}</p>
+      </div>`;
+  }
+
+  return `<div class="explain-section active"><p>Step type: ${t}</p></div>`;
+}
+
+function getStepNodeDepth(step) {
+  if (!step.tree) return 0;
+  let d = 0, n = step.tree;
+  while (n && !n.leaf) { d++; n = n.children[0]; }
+  return d;
+}
+
+function getNodeFillColor(node, highlightIds) {
+  if (!highlightIds || highlightIds.size === 0) {
+    let colors = ['#1a1a2e', '#16162a', '#121224', '#0e0e1e'];
+    let level = 0, n = node;
+    while (n._parentForLevel) { level++; n = n._parentForLevel; }
+    return colors[level % colors.length];
+  }
+  if (highlightIds.has(node.id)) {
+    return '#1a0a00';
+  }
+  let colors = ['#1a1a2e', '#16162a', '#121224', '#0e0e1e'];
+  let level = 0, n = node;
+  while (n._parentForLevel) { level++; n = n._parentForLevel; }
+  return colors[level % colors.length];
+}
+
+function assignParents(node, parent) {
+  if (!node) return;
+  node._parentForLevel = parent;
+  for (let c of node.children) assignParents(c, node);
+}
+
+const CELL_W = 34;
+const CELL_H = 28;
+const NODE_PAD = 10;
+const LEVEL_GAP = 70;
+const NODE_HEIGHT = CELL_H + 8;
+const CANVAS_W = 900;
+const CANVAS_H = 540;
+
+function drawTreeOnCanvas(ctx, root, highlightIds, highlightCell, stepType) {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  if (!root || root.keys.length === 0) {
+    ctx.fillStyle = '#555';
+    ctx.font = '18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Empty B-Tree', CANVAS_W / 2, CANVAS_H / 2);
+    return;
+  }
+
+  assignParents(root, null);
+
+  let margin = 20;
+  let availW = CANVAS_W - margin * 2;
+
+  recursivelyDraw(ctx, root, margin, 25, availW, highlightIds, highlightCell, stepType);
+}
+
+function recursivelyDraw(ctx, node, x, y, width, highlightIds, highlightCell, stepType) {
+  if (!node || node.keys.length === 0) return;
+
+  let selfW = node.keys.length * CELL_W + NODE_PAD * 2;
+  let nodeX = x + (width - selfW) / 2;
+  let nodeH = NODE_HEIGHT;
+  let isHL = highlightIds && highlightIds.has(node.id);
+  let isFound = stepType === 'search_found' && isHL;
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  let r = 6;
+  ctx.moveTo(nodeX + r, y);
+  ctx.lineTo(nodeX + selfW - r, y);
+  ctx.quadraticCurveTo(nodeX + selfW, y, nodeX + selfW, y + r);
+  ctx.lineTo(nodeX + selfW, y + nodeH - r);
+  ctx.quadraticCurveTo(nodeX + selfW, y + nodeH, nodeX + selfW - r, y + nodeH);
+  ctx.lineTo(nodeX + r, y + nodeH);
+  ctx.quadraticCurveTo(nodeX, y + nodeH, nodeX, y + nodeH - r);
+  ctx.lineTo(nodeX, y + r);
+  ctx.quadraticCurveTo(nodeX, y, nodeX + r, y);
+  ctx.closePath();
+
+  let fillColor = getNodeFillColor(node, highlightIds);
+  ctx.fillStyle = fillColor;
+
+  let strokeColor = '#555';
+  if (isHL) {
+    if (isFound) {
+      strokeColor = '#00ff88';
+      ctx.shadowColor = '#00ff88';
+    } else {
+      strokeColor = '#ff6600';
+      ctx.shadowColor = '#ff6600';
+    }
+    ctx.shadowBlur = 18;
+  }
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = isHL ? 2.5 : 1.5;
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  for (let i = 0; i < node.keys.length; i++) {
+    let kx = nodeX + NODE_PAD + i * CELL_W;
+
+    if (i > 0) {
+      ctx.beginPath();
+      ctx.moveTo(kx, y + 4);
+      ctx.lineTo(kx, y + nodeH - 4);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    let isCellHL = highlightCell && highlightCell.nodeId === node.id && highlightCell.keyIndex === i;
+
+    if (isCellHL) {
+      ctx.fillStyle = '#ff660022';
+      ctx.fillRect(kx, y + 2, CELL_W, nodeH - 4);
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(kx + 1, y + 3, CELL_W - 2, nodeH - 6);
+    }
+
+    let textColor = isCellHL ? '#ffcc00' : (isHL ? '#ffcc00' : '#e0e0e0');
+    if (isFound) textColor = '#00ff88';
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.keys[i], kx + CELL_W / 2, y + nodeH / 2);
+  }
+
+  if (!node.leaf && node.children.length > 0) {
+    let childSpacing = width / node.children.length;
+
+    for (let i = 0; i < node.children.length; i++) {
+      let cx = x + i * childSpacing;
+      let childW = childSpacing;
+      let childCenterX = cx + childW / 2;
+      let gapCount = node.keys.length + 1;
+      let gapX = nodeX + (i + 0.5) * (selfW / gapCount);
+
+      ctx.beginPath();
+      ctx.moveTo(gapX, y + nodeH);
+      ctx.lineTo(childCenterX, y + LEVEL_GAP);
+      ctx.strokeStyle = isHL ? '#666' : '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      recursivelyDraw(ctx, node.children[i], cx, y + LEVEL_GAP, childW, highlightIds, highlightCell, stepType);
+    }
+  }
+}
+
+function applyStep(step) {
+  let canvas = document.getElementById('treeCanvas');
+  let ctx = canvas.getContext('2d');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+
+  drawTreeOnCanvas(ctx, step.tree, step.highlightIds, step.highlightCell, step.type);
+
+  let phase = '';
+  let nodeInfo = '';
+  let opLabel = step.type.startsWith('search_') ? 'Search Key:' : 'Insert Key:';
+
+  switch (step.type) {
+    case 'search_begin':
+      phase = 'Search for ' + step.key;
+      nodeInfo = 'Starting search for ' + step.key;
+      break;
+    case 'search_compare':
+      phase = 'Compare ' + step.key + ' in node';
+      nodeInfo = 'Comparing ' + step.key + ' with keys';
+      break;
+    case 'search_traverse':
+      phase = 'Descend (search ' + step.key + ')';
+      nodeInfo = 'Going to child node';
+      break;
+    case 'search_found':
+      phase = 'Found ' + step.key;
+      nodeInfo = 'Key ' + step.key + ' exists in tree';
+      break;
+    case 'search_not_found':
+      phase = step.key + ' not found';
+      nodeInfo = 'Proceeding to insert ' + step.key;
+      break;
+    case 'begin_insert':
+      phase = 'Insert key ' + step.key;
+      nodeInfo = 'Beginning insertion of ' + step.key;
+      break;
+    case 'split_root':
+      phase = 'Split root (insert ' + step.key + ')';
+      nodeInfo = 'Root was full -- new root created';
+      break;
+    case 'traverse':
+      phase = 'Traverse (insert ' + step.key + ')';
+      nodeInfo = 'Descending to child for ' + step.key;
+      break;
+    case 'split_child':
+      phase = 'Split child (insert ' + step.key + ')';
+      nodeInfo = 'Child was full -- split around median';
+      break;
+    case 'insert_leaf':
+      phase = 'Insert ' + step.key + ' into leaf';
+      nodeInfo = 'Placing ' + step.key + ' in sorted position';
+      break;
+    case 'done_insert':
+      phase = step.key + ' inserted';
+      nodeInfo = (step.insertIdx - INITIAL_KEYS_COUNT + 1) + '/' + (ALL_KEYS.length - INITIAL_KEYS_COUNT) + ' new keys done';
+      break;
+    default:
+      phase = step.type;
+      nodeInfo = '';
+  }
+
+  let algoText = step.type.startsWith('search_') ? 'B-TREE-SEARCH' : 'B-TREE-INSERT';
+  document.getElementById('algoDisplay').textContent = algoText;
+  document.getElementById('operationLabel').textContent = opLabel;
+  document.getElementById('currentKeyDisplay').textContent = step.key !== undefined ? step.key : '--';
+  document.getElementById('phaseDisplay').textContent = phase;
+  document.getElementById('computingDisplay').textContent = nodeInfo;
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + (currentStep + 1) + ' / ' + steps.length + ' -- ' + phase;
+  document.getElementById('explainArea').innerHTML = buildExplanation(step);
+  document.getElementById('sidebar').scrollTop = 0;
+
+  let badges = document.querySelectorAll('.key-badge');
+  let isSearchStep = step.type.startsWith('search_');
+  badges.forEach((b, i) => {
+    b.classList.remove('current', 'done', 'pending', 'search-target');
+    if (isSearchStep && i === step.insertIdx) {
+      b.classList.add('search-target');
+    } else if (i < step.insertIdx) {
+      b.classList.add('done');
+    } else if (i === step.insertIdx) {
+      b.classList.add('current');
+    } else {
+      b.classList.add('pending');
+    }
+  });
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = 'All operations complete';
+  document.getElementById('computingDisplay').textContent = 'Search + ' + (ALL_KEYS.length - INITIAL_KEYS_COUNT) + ' inserts done';
+  document.getElementById('resultSection').style.display = 'block';
+  if (finalTree) {
+    document.getElementById('finalHeight').textContent = getTreeHeight(finalTree);
+    document.getElementById('finalRootKeys').textContent = finalTree.keys.join(', ');
+    document.getElementById('keyCount').textContent = countKeys(finalTree);
+  }
+  document.getElementById('searchResultKey').textContent = '' + SEARCH_TARGET;
+  document.getElementById('searchResultText').textContent = searchFound ? 'Found' : 'Not found (then inserted)';
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + steps.length + ' / ' + steps.length + ' -- Complete';
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function getTreeHeight(node) {
+  if (!node || node.leaf) return 1;
+  return 1 + getTreeHeight(node.children[0]);
+}
+
+function countKeys(node) {
+  if (!node) return 0;
+  let cnt = node.keys.length;
+  for (let c of node.children) cnt += countKeys(c);
+  return cnt;
+}
+
+function buildFinishedExplanation() {
+  let h = finalTree ? getTreeHeight(finalTree) : '?';
+  let rk = finalTree ? finalTree.keys.join(', ') : '?';
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>B-Tree Operations Complete</h3>
+      <p>Search for <span class="dim">${SEARCH_TARGET}</span>: ${searchFound ? 'Found' : 'Not found (then inserted)'}</p>
+      <p>All <span class="result-line" style="display:inline;">${ALL_KEYS.length}</span> keys have been processed.</p>
+      <h3 style="margin-top:10px;">Final Tree Properties</h3>
+      <p>Root keys: <span class="dim">[${rk}]</span></p>
+      <p>Height: <span class="dim">${h}</span></p>
+      <p>Total keys: <span class="dim">${ALL_KEYS.length}</span></p>
+      <h3 style="margin-top:10px;">Why B-Trees Work So Well</h3>
+      <p><b>B-Trees are the foundation of database indexing</b> because they minimize disk I/O. With a high branching factor (controlled by t), the tree height stays very small. For example, with t = ${T}, each node has up to ${2*T} children. A tree with height ${h} can hold <span class="dim">O(${2*T}<sup>${h}</sup>)</span> keys.</p>
+      <p><b>Key design decisions:</b></p>
+      <p>• <span class="split-info">Multi-way branching</span> — Each node holds many keys, reducing tree height and thus disk seeks</p>
+      <p>• <span class="split-info">Preemptive splitting</span> — Full nodes split before descending, preventing cascading rebalancing</p>
+      <p>• <span class="split-info">Root-only height growth</span> — The tree grows only at the top, keeping all leaves at equal depth</p>
+      <p>• <span class="split-info">Sorted keys per node</span> — Allows binary search within each node for efficient key lookup</p>
+      <h3 style="margin-top:10px;">Operations Performed</h3>
+      <p>• <span class="split-info">Search</span> — Compare target with node keys left-to-right, descend to correct child, repeat until found or leaf reached</p>
+      <p>• <span class="split-info">Root split</span> — When root accumulates ${MAX_KEYS} keys, a new root is created and the median promotes upward (height +1)</p>
+      <p>• <span class="split-info">Child split</span> — Split full nodes proactively during descent to guarantee parent has room for promoted median</p>
+      <p>• <span class="split-info">Leaf insertion</span> — Always inserts into a leaf; the leaf is guaranteed to have room because all 4-nodes were split during traversal</p>
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Time (search):</span> O(log n) — at most h nodes visited, each with O(t) key comparisons</p>
+      <p><span class="dim">Time (insert):</span> O(log n) — same traversal path, plus O(t) work per node for splitting</p>
+      <p><span class="dim">Space:</span> O(n) — each key stored exactly once in the tree</p>
+    </div>`;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('algoDisplay').textContent = 'B-TREE';
+  document.getElementById('operationLabel').textContent = 'Operation:';
+  document.getElementById('currentKeyDisplay').textContent = '--';
+  document.getElementById('phaseDisplay').textContent = 'Ready -- Press Play';
+  document.getElementById('computingDisplay').textContent = '--';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle -- press Play or Step to begin.';
+
+  buildSteps();
+
+  document.getElementById('totalSteps').textContent = steps.length;
+
+  let canvas = document.getElementById('treeCanvas');
+  let ctx = canvas.getContext('2d');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  if (initialTree) {
+    drawTreeOnCanvas(ctx, initialTree, null, null, null);
+  } else {
+    ctx.fillStyle = '#555';
+    ctx.font = '18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Empty B-Tree', CANVAS_W / 2, CANVAS_H / 2);
+  }
+
+  let badges = document.querySelectorAll('.key-badge');
+  badges.forEach((b, i) => {
+    b.classList.remove('done', 'current', 'pending', 'search-target');
+    if (i < INITIAL_KEYS_COUNT) b.classList.add('done');
+    else if (i === INITIAL_KEYS_COUNT) b.classList.add('search-target');
+    else b.classList.add('pending');
+  });
+
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>What is a B-Tree?</h3>
+      <p>A <b>B-Tree</b> is a self-balancing tree data structure that maintains sorted data for efficient insertion, deletion, and search. It is the <b>standard data structure for database indexing</b> and file systems because its high branching factor minimizes disk I/O.</p>
+      <h3 style="margin-top:10px;">Why Use a B-Tree Instead of a BST?</h3>
+      <p>A standard Binary Search Tree has height O(log n) in the best case, but each node holds only <b>one</b> key. A B-Tree packs up to <span class="dim">${MAX_KEYS}</span> keys per node, reducing tree height by a factor of up to <span class="dim">log<sub>${2*T}</sub>(n)</span>. For databases, this means far fewer disk seeks per query.</p>
+      <h3 style="margin-top:10px;">Properties (minimum degree t = ${T})</h3>
+      <p>• Every node (except root) has <span class="dim">${MIN_KEYS}</span> to <span class="dim">${MAX_KEYS}</span> keys — <b>why?</b> Minimum <span class="dim">t-1</span> prevents sparse nodes; maximum <span class="dim">2t-1</span> prevents node bloat</p>
+      <p>• Root can have as few as <span class="dim">1</span> key — <b>why?</b> The tree starts empty and grows only by root splits</p>
+      <p>• Internal nodes with <span class="dim">n</span> keys have <span class="dim">n+1</span> children — <b>why?</b> Each key defines a range boundary; n keys split the space into n+1 ranges</p>
+      <p>• All leaves are at the same depth — <b>why?</b> Height increases only when the root splits, so every leaf gains one level simultaneously</p>
+      <h3 style="margin-top:10px;">The Insert Algorithm Strategy</h3>
+      <p><b>"Split before descending"</b> — Unlike AVL or Red-Black Trees which insert first and then rebalance upward, B-Trees split full nodes <b>on the way down</b>. This ensures the insertion point always has room and the parent can always accept a promoted key. It is a single-pass algorithm with no backtracking.</p>
+      <h3 style="margin-top:10px;">Demo Flow</h3>
+      <p>1. <span class="dim">Search</span> for key <span class="split-info">${SEARCH_TARGET}</span> in the initial tree</p>
+      <p>2. <span class="dim">Insert</span> remaining keys — splitting full nodes before descending</p>
+      <p class="note">Initial tree built from: [${ALL_KEYS.slice(0, INITIAL_KEYS_COUNT).join(', ')}]</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+(function init() {
+  let seqDiv = document.getElementById('keySequence');
+  for (let k of ALL_KEYS) {
+    let span = document.createElement('span');
+    span.className = 'key-badge';
+    span.textContent = k;
+    seqDiv.appendChild(span);
+  }
+
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+
+  let canvas = document.getElementById('treeCanvas');
+  let ctx = canvas.getContext('2d');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  if (initialTree) {
+    drawTreeOnCanvas(ctx, initialTree, null, null, null);
+  } else {
+    ctx.fillStyle = '#555';
+    ctx.font = '18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Empty B-Tree', CANVAS_W / 2, CANVAS_H / 2);
+  }
+
+  let badges = document.querySelectorAll('.key-badge');
+  badges.forEach((b, i) => {
+    b.classList.remove('done', 'current', 'pending', 'search-target');
+    if (i < INITIAL_KEYS_COUNT) b.classList.add('done');
+    else if (i === INITIAL_KEYS_COUNT) b.classList.add('search-target');
+    else b.classList.add('pending');
+  });
+
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>What is a B-Tree?</h3>
+      <p>A <b>B-Tree</b> is a self-balancing tree data structure that maintains sorted data for efficient insertion, deletion, and search. It is the <b>standard data structure for database indexing</b> and file systems because its high branching factor minimizes disk I/O.</p>
+      <h3 style="margin-top:10px;">Why Use a B-Tree Instead of a BST?</h3>
+      <p>A standard Binary Search Tree has height O(log n) in the best case, but each node holds only <b>one</b> key. A B-Tree packs up to <span class="dim">${MAX_KEYS}</span> keys per node, reducing tree height by a factor of up to <span class="dim">log<sub>${2*T}</sub>(n)</span>. For databases, this means far fewer disk seeks per query.</p>
+      <h3 style="margin-top:10px;">Properties (minimum degree t = ${T})</h3>
+      <p>• Every node (except root) has <span class="dim">${MIN_KEYS}</span> to <span class="dim">${MAX_KEYS}</span> keys — <b>why?</b> Minimum <span class="dim">t-1</span> prevents sparse nodes; maximum <span class="dim">2t-1</span> prevents node bloat</p>
+      <p>• Root can have as few as <span class="dim">1</span> key — <b>why?</b> The tree starts empty and grows only by root splits</p>
+      <p>• Internal nodes with <span class="dim">n</span> keys have <span class="dim">n+1</span> children — <b>why?</b> Each key defines a range boundary; n keys split the space into n+1 ranges</p>
+      <p>• All leaves are at the same depth — <b>why?</b> Height increases only when the root splits, so every leaf gains one level simultaneously</p>
+      <h3 style="margin-top:10px;">The Insert Algorithm Strategy</h3>
+      <p><b>"Split before descending"</b> — Unlike AVL or Red-Black Trees which insert first and then rebalance upward, B-Trees split full nodes <b>on the way down</b>. This ensures the insertion point always has room and the parent can always accept a promoted key. It is a single-pass algorithm with no backtracking.</p>
+      <h3 style="margin-top:10px;">Demo Flow</h3>
+      <p>1. <span class="dim">Search</span> for key <span class="split-info">${SEARCH_TARGET}</span> in the initial tree</p>
+      <p>2. <span class="dim">Insert</span> remaining keys — splitting full nodes before descending</p>
+      <p class="note">Initial tree built from: [${ALL_KEYS.slice(0, INITIAL_KEYS_COUNT).join(', ')}]</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+})();
+</script>
+</body>
+</html>
