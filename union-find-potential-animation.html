@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Union-Find Potential Analysis</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.selector-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 5px;
+  font-size: 0.9em;
+  color: #ccc;
+}
+.selector-row select {
+  background: #1a1a2e;
+  color: #00ff88;
+  border: 2px solid #444;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.selector-row select:focus {
+  outline: none;
+  border-color: #00ff88;
+}
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 60px;
+  height: 36px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.root-highlight {
+  background: #002a1a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 14px #00ff8855;
+  transform: scale(1.08);
+  font-weight: bold;
+}
+td.compressed {
+  background: #001a0a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 12px #00ff8844;
+  font-weight: bold;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.potential-meter {
+  background: #0a0a18;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+}
+.potential-meter .pm-item {
+  text-align: center;
+}
+.potential-meter .pm-label {
+  color: #888;
+  font-size: 0.8em;
+}
+.potential-meter .pm-value {
+  color: #00ff88;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+.potential-meter .pm-value.negative {
+  color: #ff6600;
+}
+.potential-meter .pm-value.positive {
+  color: #00ff88;
+}
+.potential-meter .pm-value.neutral {
+  color: #ffcc00;
+}
+.potential-meter .pm-value.phi {
+  color: #00ccff;
+}
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>Union-Find Potential Analysis</h1>
+<p class="subtitle">Disjoint Set Union — Amortized Analysis via Potential Function Φ = Σ rank(x)</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="treeCanvas" width="900" height="360"></canvas>
+    </div>
+
+    <div class="selector-row">
+      <span>Run FIND-SET on</span>
+      <select id="findTarget">
+        <option value="3">Node 3 (deep)</option>
+        <option value="4">Node 4 (deep)</option>
+        <option value="1">Node 1 (mid)</option>
+        <option value="2">Node 2 (shallow)</option>
+        <option value="6">Node 6 (tree 2)</option>
+        <option value="7">Node 7 (tree 2)</option>
+      </select>
+      <button class="btn primary" onclick="prepareFind()">▶ Run</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="potential-meter" id="potentialMeter">
+      <div class="pm-item">
+        <div class="pm-label">Potential Φ</div>
+        <div class="pm-value phi" id="phiDisplay">8</div>
+      </div>
+      <div class="pm-item">
+        <div class="pm-label">ΔΦ</div>
+        <div class="pm-value neutral" id="deltaDisplay">0</div>
+      </div>
+      <div class="pm-item">
+        <div class="pm-label">Actual Cost</div>
+        <div class="pm-value" id="actualDisplay">0</div>
+      </div>
+      <div class="pm-item">
+        <div class="pm-label">Amortized Cost</div>
+        <div class="pm-value phi" id="amortizedDisplay">0</div>
+      </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <span class="label">Operation:</span> <span class="value" id="phaseDisplay">Ready — select a node</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Phase:</span> <span class="value" id="computingDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Path:</span> <span class="value" id="pathDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count"><span id="stepNum">0</span></span> / <span class="count"><span id="totalSteps">0</span></span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Forest State — <span style="color:#888;font-size:0.85em;">node (rank = depth)</span></div>
+      <div class="table-wrapper">
+        <table id="stateTable">
+          <thead><tr id="stateHeader"></tr></thead>
+          <tbody>
+            <tr id="parentRow"></tr>
+            <tr id="rankRow"></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>✅ FIND-SET Complete!</h2>
+      <p style="color:#ccc;margin:8px 0;">
+        Result: <span class="result-line" id="finalResult" style="display:inline;"></span>
+      </p>
+      <p style="color:#ccc;margin:8px 0;">
+        Final Φ = <span class="result-line" id="finalPhi" style="display:inline;"></span>
+      </p>
+      <div id="resultDisplay" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+const N = 8;
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let parent = [];
+let rank = [];
+
+let findTarget = 3;
+
+function initData() {
+  parent = Array(N).fill(0).map((_, i) => i);
+  parent[1] = 0; parent[2] = 0;
+  parent[3] = 1; parent[4] = 1;
+  parent[6] = 5; parent[7] = 5;
+
+  rank = Array(N).fill(0);
+  for (let i = 0; i < N; i++) {
+    rank[i] = computeDepth(i);
+  }
+}
+
+function computeDepth(x) {
+  let d = 0;
+  while (parent[x] !== x) {
+    x = parent[x];
+    d++;
+  }
+  return d;
+}
+
+function computePotential() {
+  let sum = 0;
+  for (let i = 0; i < N; i++) {
+    rank[i] = computeDepth(i);
+    sum += rank[i];
+  }
+  return sum;
+}
+
+function precomputeAll() {
+  let p = [...parent];
+  let r = [...rank];
+  let pot = 0;
+  for (let i = 0; i < N; i++) pot += r[i];
+  return { parent: p, rank: r, potential: pot };
+}
+
+function buildSteps() {
+  steps = [];
+  let x = findTarget;
+
+  let path = [x];
+  while (parent[path[path.length - 1]] !== path[path.length - 1]) {
+    path.push(parent[path[path.length - 1]]);
+  }
+
+  let currentPot = computePotential();
+
+  for (let i = 0; i < path.length; i++) {
+    let n = path[i];
+    let isRoot = (i === path.length - 1);
+    steps.push({
+      type: 'traverse',
+      node: n,
+      isRoot: isRoot,
+      depth: rank[n],
+      path: [...path],
+      pathIdx: i,
+      potential: currentPot,
+      cost: i,
+      delta: 0,
+      amortized: i,
+      parent: [...parent],
+      rank: [...rank],
+      explanation: buildTraverseExplanation(x, n, path, i, isRoot, currentPot)
+    });
+  }
+
+  for (let i = path.length - 2; i >= 0; i--) {
+    let n = path[i];
+    let oldDepth = rank[n];
+    let oldParent = parent[n];
+    let root = path[path.length - 1];
+
+    parent[n] = root;
+    let newDepth = computeDepth(n);
+    rank[n] = newDepth;
+
+    let oldPot = currentPot;
+    let newPot = computePotential();
+    let delta = newPot - oldPot;
+    currentPot = newPot;
+
+    let cost = path.length - 1;
+    let amortized = cost + delta;
+
+    steps.push({
+      type: 'compress',
+      node: n,
+      oldDepth: oldDepth,
+      newDepth: newDepth,
+      root: root,
+      oldParent: oldParent,
+      path: [...path],
+      pathIdx: i,
+      potential: newPot,
+      potBefore: oldPot,
+      delta: delta,
+      cost: cost,
+      amortized: amortized,
+      parent: [...parent],
+      rank: [...rank],
+      explanation: buildCompressExplanation(x, n, path, i, oldDepth, newDepth, oldParent, root, oldPot, newPot, delta, cost, amortized)
+    });
+  }
+
+  let initialPotential = 8;
+  let finalPot = computePotential();
+  let totalDelta = finalPot - initialPotential;
+  steps.push({
+    type: 'done',
+    path: [...path],
+    potential: finalPot,
+    cost: path.length - 1,
+    delta: totalDelta,
+    amortized: path.length - 1 + totalDelta,
+    parent: [...parent],
+    rank: [...rank],
+    explanation: ''
+  });
+}
+
+function buildTraverseExplanation(x, node, path, idx, isRoot, pot) {
+  let pathStr = path.map((n, i) =>
+    i === idx ? `<b style="color:#ff6600;">${n}</b>` :
+    i === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+    `<b style="color:#888;">${n}</b>`
+  ).join(' &rarr; ');
+
+  if (isRoot) {
+    let cost = path.length - 1;
+    return `<div class="explain-section active">
+      <h3>FIND-SET(${x}) &mdash; Root Found!</h3>
+      <p>Reached root <span class="result-line" style="display:inline;">${node}</span> after <span class="dim">${cost}</span> edge traversal(s).</p>
+      <p style="margin-left:8px;">Full path: ${pathStr}</p>
+      <p>Current potential: <span class="dim">Φ = ${pot}</span></p>
+      <p>Now compress the path: reparent each non-root node directly to root <span class="result-line" style="display:inline;">${node}</span>.</p>
+      <p class="note">Path compression flattens the tree, reducing the depth of visited nodes and thus decreasing Φ.</p>
+    </div>`;
+  }
+
+  let remaining = path.length - idx - 1;
+  return `<div class="explain-section active">
+    <h3>FIND-SET(${x}) &mdash; Traversing Node ${node}</h3>
+    <p>Visiting node <span class="dim">${node}</span> (rank = depth = <span class="dim">${rank[node]}</span>).</p>
+    <p>Following parent pointer: parent[<span class="dim">${node}</span>] = <span class="dim">${parent[node]}</span></p>
+    <p style="margin-left:8px;"><span class="dim">${remaining}</span> more node(s) to go. Current path: ${pathStr}</p>
+    <p class="note">Traversal costs <span class="dim">1</span> per edge. So far: cost = <span class="dim">${idx}</span>.</p>
+  </div>`;
+}
+
+function buildCompressExplanation(x, node, path, idx, oldDepth, newDepth, oldPar, root, potBefore, potAfter, delta, cost, amortized) {
+  let pathStr = path.map((n, i) =>
+    i === idx ? `<b style="color:#ffff00;">${n}</b>` :
+    i < idx ? `<b style="color:#00ff88;">${n}</b>` :
+    i === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+    `<b style="color:#888;">${n}</b>`
+  ).join(' &rarr; ');
+
+  let deltaStr = delta < 0 ? `<span style="color:#ff6600;">${delta}</span> (decrease)` :
+                 delta > 0 ? `<span style="color:#00ff88;">+${delta}</span> (increase)` :
+                 `<span style="color:#ffcc00;">${delta}</span> (no change)`;
+
+  let amortizedColor = amortized < cost ? '#00ff88' : '#ffcc00';
+  let decreaseAmt = oldDepth - newDepth;
+
+  return `<div class="explain-section active">
+    <h3>FIND-SET(${x}) &mdash; Compressing Node ${node}</h3>
+    <p>Change parent[<span class="dim">${node}</span>] from <span class="dim">${oldPar}</span> directly to root <span class="result-line" style="display:inline;">${root}</span>.</p>
+    <span class="formula-line">parent[${node}] = ${root}  (was ${oldPar})</span>
+    <p>Rank update: <span class="dim">rank(${node})</span>: <span style="color:#ff6600;">${oldDepth}</span> &rarr; <span style="color:#00ff88;">${newDepth}</span> (decrease of <span class="dim">${decreaseAmt}</span>)</p>
+    <h3 style="margin-top:10px;">Potential Update</h3>
+    <span class="formula-line">Φ_before = Σ rank = ${potBefore}</span>
+    <span class="formula-line">Φ_after  = Σ rank = ${potAfter}</span>
+    <span class="formula-line">ΔΦ = Φ_after − Φ_before = ${deltaStr}</span>
+    <h3 style="margin-top:10px;">Amortized Cost</h3>
+    <span class="formula-line">amortized = actual_cost + ΔΦ = ${cost} + (${delta}) = <span style="color:${amortizedColor};">${amortized}</span></span>
+    <p class="note">The <span class="dim">decrease</span> in potential offsets part of the traversal cost. Money saved from compression pays for the find!</p>
+  </div>`;
+}
+
+function buildProblemSetupHTML() {
+  return `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p><b>Potential Function Analysis</b> for <b>Union-Find</b> with path compression.</p>
+    <p>Each node has <span class="dim">rank(x) = depth(x)</span> (distance to root).</p>
+    <p><span class="dim">Potential:</span> Φ = Σ rank(x)</p>
+    <h3 style="margin-top:10px;">Key Formula</h3>
+    <span class="formula-line">amortized cost = actual_cost + ΔΦ</span>
+    <span class="formula-line">where ΔΦ = Φ_after − Φ_before (≤ 0 for FIND-SET)</span>
+    <h3 style="margin-top:10px;">Initial Forest</h3>
+    <p><span class="dim">Tree A:</span> 0(r=2) &rarr; 1(r=1), 2(r=0); 1 &rarr; 3(r=0), 4(r=0)</p>
+    <p><span class="dim">Tree B:</span> 5(r=1) &rarr; 6(r=0), 7(r=0)</p>
+    <p>Φ = <span class="dim">8</span></p>
+    <p class="note"><span class="dim">Key insight:</span> Path compression reduces ranks on the path, decreasing Φ. The potential decrease pays for traversal — amortized cost ≤ actual cost.</p>
+    <p class="note">Select a node and press <b>Run</b> to begin.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let pot = computePotential();
+  let totalSteps = steps.length;
+  let lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
+  let cost = lastStep ? lastStep.cost : 0;
+  let delta = pot - 8;
+  let amortized = cost + delta;
+
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ FIND-SET(${findTarget}) Complete!</h3>
+    <p>Result: <span class="result-line" style="display:inline;">FIND-SET(${findTarget}) = ${getRoot(findTarget)}</span></p>
+    <h3 style="margin-top:10px;">Amortized Analysis Summary</h3>
+    <p><span class="dim">Actual cost:</span> ${cost} (edges traversed)</p>
+    <p><span class="dim">ΔΦ:</span> ${delta} (potential ${delta < 0 ? 'decreased' : delta > 0 ? 'increased' : 'unchanged'})</p>
+    <p><span class="dim">Amortized cost:</span> <span class="result-line" style="display:inline;">${amortized}</span></p>
+    <span class="formula-line">amortized = actual + ΔΦ = ${cost} + (${delta}) = ${amortized}</span>
+    <h3 style="margin-top:10px;">Why This Matters</h3>
+    <p><span class="dim">Path compression reduces rank</span> on the path, lowering Φ for future operations. The "savings" from decreased potential <span class="dim">pay for</span> the traversal cost.</p>
+    <p>Over a sequence of operations, each FIND-SET has <span class="result-line" style="display:inline;">amortized O(α(n))</span> cost.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(α(n)) amortized per operation (inverse Ackermann)</p>
+    <p><span class="dim">Space:</span> O(n) for parent and rank arrays</p>
+  </div>`;
+}
+
+function getRoot(x) {
+  while (parent[x] !== x) x = parent[x];
+  return x;
+}
+
+function initTables() {
+  let sh = document.getElementById('stateHeader');
+  let pr = document.getElementById('parentRow');
+  let rr = document.getElementById('rankRow');
+
+  sh.innerHTML = '<th>i</th>';
+  pr.innerHTML = '<td style="color:#555;">p[i]</td>';
+  rr.innerHTML = '<td style="color:#555;">rank</td>';
+
+  for (let i = 0; i < N; i++) {
+    sh.innerHTML += `<th>${i}</th>`;
+    pr.innerHTML += `<td id="pc${i}">${parent[i]}</td>`;
+    rr.innerHTML += `<td id="rk${i}">${rank[i]}</td>`;
+  }
+}
+
+function clearHighlights() {
+  for (let i = 0; i < N; i++) {
+    let pc = document.getElementById('pc' + i);
+    let rk = document.getElementById('rk' + i);
+    if (pc) pc.className = '';
+    if (rk) rk.className = '';
+  }
+}
+
+function updatePotentialDisplay(pot, delta, cost, amortized) {
+  document.getElementById('phiDisplay').textContent = pot;
+  let deltaEl = document.getElementById('deltaDisplay');
+  deltaEl.textContent = delta;
+  deltaEl.className = 'pm-value ' + (delta < 0 ? 'negative' : delta > 0 ? 'positive' : 'neutral');
+
+  document.getElementById('actualDisplay').textContent = cost;
+  let amEl = document.getElementById('amortizedDisplay');
+  amEl.textContent = amortized;
+  amEl.className = 'pm-value phi';
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  if (step.type === 'traverse') {
+    for (let i = 0; i < N; i++) {
+      let pc = document.getElementById('pc' + i);
+      let rk = document.getElementById('rk' + i);
+      if (pc) pc.textContent = step.parent[i];
+      if (rk) rk.textContent = step.rank[i];
+    }
+
+    let pc = document.getElementById('pc' + step.node);
+    let rk = document.getElementById('rk' + step.node);
+    if (pc) pc.className = step.isRoot ? 'root-highlight' : 'current';
+    if (rk) rk.className = step.isRoot ? 'root-highlight' : 'current';
+
+    document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget})`;
+    if (step.isRoot) {
+      document.getElementById('computingDisplay').textContent = `🎯 Root ${step.node} found`;
+    } else {
+      document.getElementById('computingDisplay').textContent = `🔍 Traversing node ${step.node} (depth=${step.depth})`;
+    }
+    let pathStr = step.path.map((n, i) =>
+      i === step.pathIdx ? `<b style="color:#ff6600;">${n}</b>` :
+      i === step.path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+      `<span style="color:#888;">${n}</span>`
+    ).join('→');
+    document.getElementById('pathDisplay').innerHTML = pathStr;
+
+    updatePotentialDisplay(step.potential, 0, step.cost, step.amortized);
+
+  } else if (step.type === 'compress') {
+    for (let i = 0; i < N; i++) {
+      let pc = document.getElementById('pc' + i);
+      let rk = document.getElementById('rk' + i);
+      if (pc) {
+        pc.textContent = step.parent[i];
+        if (i === step.node) pc.className = 'computing';
+        else if (step.parent[i] === i) pc.className = 'root-highlight';
+        else if (step.parent[i] !== i && i !== step.node) {
+          pc.className = '';
+        }
+      }
+      if (rk) {
+        rk.textContent = step.rank[i];
+        if (i === step.node) rk.className = 'computing';
+        else if (step.parent[i] === i) rk.className = 'root-highlight';
+        else rk.className = '';
+      }
+    }
+
+    document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget})`;
+    document.getElementById('computingDisplay').textContent = `⚡ Compress: ${step.node} → root ${step.root} (rank ${step.oldDepth}→${step.newDepth})`;
+    let pathStr = step.path.map((n, i) =>
+      i === step.pathIdx ? `<b style="color:#ffff00;">${n}</b>` :
+      i < step.pathIdx ? `<b style="color:#00ff88;">${n}</b>` :
+      i === step.path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+      `<span style="color:#888;">${n}</span>`
+    ).join('→');
+    document.getElementById('pathDisplay').innerHTML = pathStr;
+
+    updatePotentialDisplay(step.potential, step.delta, step.cost, step.amortized);
+
+  } else if (step.type === 'done') {
+    for (let i = 0; i < N; i++) {
+      let pc = document.getElementById('pc' + i);
+      let rk = document.getElementById('rk' + i);
+      if (pc) {
+        pc.textContent = step.parent[i];
+        if (step.parent[i] === i) pc.className = 'root-highlight';
+        else pc.className = '';
+      }
+      if (rk) {
+        rk.textContent = step.rank[i];
+        if (step.parent[i] === i) rk.className = 'root-highlight';
+        else rk.className = '';
+      }
+    }
+
+    let root = getRoot(findTarget);
+    document.getElementById('phaseDisplay').textContent = `✓ FIND-SET(${findTarget}) = ${root}`;
+    document.getElementById('computingDisplay').textContent = 'Complete';
+    document.getElementById('pathDisplay').textContent = `→ ${root}`;
+  }
+
+  drawForest(step.parent || parent, step);
+}
+
+function drawForest(p, activeStep) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let children = Array(N).fill(null).map(() => []);
+  let roots = [];
+  for (let i = 0; i < N; i++) {
+    if (p[i] === i) roots.push(i);
+    else children[p[i]].push(i);
+  }
+
+  let positions = {};
+  let leafCount = {};
+
+  function countLeaves(node) {
+    if (children[node].length === 0) {
+      leafCount[node] = 1;
+      return 1;
+    }
+    let total = 0;
+    for (let c of children[node]) total += countLeaves(c);
+    leafCount[node] = total;
+    return total;
+  }
+  for (let r of roots) countLeaves(r);
+
+  const yRoot = 40;
+  const ySpacing = 65;
+  const xPerLeaf = 80;
+  let startX = 30;
+
+  function positionSubtree(node, cx, y, totalWidth) {
+    positions[node] = { x: cx, y: y };
+    if (children[node].length === 0) return;
+    let childLeaves = children[node].map(c => leafCount[c]);
+    let totalChildLeaves = childLeaves.reduce((a, b) => a + b, 0);
+    let childX = cx - totalWidth / 2;
+    for (let child of children[node]) {
+      let w = leafCount[child] * xPerLeaf;
+      let childCx = childX + w / 2;
+      positionSubtree(child, childCx, y + ySpacing, w);
+      childX += w;
+    }
+  }
+
+  for (let r of roots) {
+    let width = Math.max(leafCount[r] * xPerLeaf, 60);
+    let cx = startX + width / 2;
+    positionSubtree(r, cx, yRoot, width);
+    startX += width + 30;
+  }
+
+  let pathNodes = activeStep && activeStep.path ? new Set(activeStep.path) : new Set();
+
+  for (let i = 0; i < N; i++) {
+    if (p[i] !== i && positions[i] && positions[p[i]]) {
+      let isPathEdge = false;
+      if (activeStep && activeStep.path) {
+        for (let j = 0; j < activeStep.path.length - 1; j++) {
+          if (activeStep.path[j] === i && activeStep.path[j+1] === p[i]) {
+            isPathEdge = true;
+            break;
+          }
+          if (activeStep.path[j] === p[i] && activeStep.path[j+1] === i) {
+            isPathEdge = true;
+            break;
+          }
+        }
+      }
+      let edgeColor = '#555';
+      let edgeWidth = 1.5;
+      if (isPathEdge) {
+        let isCompressed = activeStep && activeStep.type === 'compress' &&
+          activeStep.path.indexOf(i) < activeStep.pathIdx;
+        edgeColor = isCompressed ? '#00ff88' : '#ff6600';
+        edgeWidth = 2.5;
+      }
+      drawEdge(ctx, positions[p[i]].x, positions[p[i]].y, positions[i].x, positions[i].y, edgeColor, edgeWidth);
+    }
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (!positions[i]) continue;
+    let { x, y } = positions[i];
+    let isRoot = p[i] === i;
+
+    let isActive = activeStep && activeStep.node === i;
+    let isPathNode = pathNodes.has(i);
+    let isCompressed = activeStep && activeStep.type === 'compress' &&
+      activeStep.path.indexOf(i) >= 0 &&
+      activeStep.path.indexOf(i) < activeStep.pathIdx;
+
+    let color = '#00ccff';
+    if (isRoot) color = '#00ff88';
+    if (isActive) {
+      if (activeStep.type === 'compress') color = '#ffff00';
+      else if (activeStep.isRoot) color = '#00ff88';
+      else color = '#ff6600';
+    } else if (isCompressed) {
+      color = '#00ff88';
+    } else if (isPathNode && !isActive) {
+      color = '#ff660066';
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d0d20';
+    ctx.fill();
+
+    if (isActive) {
+      ctx.shadowColor = activeStep.type === 'compress' ? '#ffff00' : '#ff6600';
+      ctx.shadowBlur = 18;
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isActive ? 3 : 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i), x, y - 4);
+
+    let rVal = rank[i];
+    if (activeStep && activeStep.rank) rVal = activeStep.rank[i];
+    ctx.fillStyle = '#ff9944';
+    ctx.font = '10px Courier New';
+    ctx.fillText(`r=${rVal}`, x, y + 19);
+
+    if (isRoot) {
+      ctx.fillStyle = '#555';
+      ctx.font = '8px Courier New';
+      ctx.fillText('root', x, y - 34);
+    }
+  }
+
+  let legendX = 10, legendY = H - 42;
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#555';
+  ctx.fillText('Legend:', legendX, legendY);
+  drawLegendDot(ctx, legendX + 70, legendY, '#00ccff', 'node');
+  drawLegendDot(ctx, legendX + 135, legendY, '#00ff88', 'root');
+  drawLegendDot(ctx, legendX + 200, legendY, '#ff6600', 'traversing');
+  drawLegendDot(ctx, legendX + 290, legendY, '#ffff00', 'compress');
+}
+
+function drawLegendDot(ctx, x, y, color, label) {
+  ctx.beginPath();
+  ctx.arc(x, y - 3, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.fillStyle = '#555';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 9, y + 1);
+}
+
+function drawEdge(ctx, x1, y1, x2, y2, color, width) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 + 22);
+  ctx.lineTo(x2, y2 - 22);
+  ctx.strokeStyle = color || '#555';
+  ctx.lineWidth = width || 1.5;
+  ctx.stroke();
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let root = getRoot(findTarget);
+  let pot = computePotential();
+  let cost = 0;
+  let path = [];
+  let n = findTarget;
+  while (true) {
+    path.push(n);
+    if (parent[n] === n) break;
+    n = parent[n];
+  }
+  cost = path.length - 1;
+  let initialPot = 8;
+  let delta = pot - initialPot;
+  let amortized = cost + delta;
+
+  document.getElementById('phaseDisplay').textContent = `✓ FIND-SET(${findTarget}) = ${root}`;
+  document.getElementById('computingDisplay').textContent = 'Complete';
+  document.getElementById('pathDisplay').textContent = `${findTarget} → ${root}`;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalResult').textContent = `FIND-SET(${findTarget}) = ${root}`;
+  document.getElementById('finalPhi').textContent = `Φ = ${pot} (ΔΦ = ${delta})`;
+
+  let resultHTML = `
+    <div style="display:flex;justify-content:center;gap:30px;flex-wrap:wrap;margin:10px 0;">
+      <div style="text-align:center;">
+        <div style="color:#888;font-size:0.8em;">Actual Cost</div>
+        <div style="color:#ffcc00;font-size:1.5em;font-weight:bold;">${cost}</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:#888;font-size:0.8em;">ΔΦ</div>
+        <div style="color:${delta < 0 ? '#ff6600' : '#00ff88'};font-size:1.5em;font-weight:bold;">${delta < 0 ? '' : '+'}${delta}</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:#888;font-size:0.8em;">Amortized Cost</div>
+        <div style="color:#00ff88;font-size:1.5em;font-weight:bold;">${amortized} <span style="font-size:0.6em;color:#888;">= ${cost} + (${delta})</span></div>
+      </div>
+    </div>
+    <p style="color:#ccc;margin:12px 0 6px;">
+      The potential <span style="color:#00ccff;">Φ</span> decreased from <span class="dim">8</span> to <span class="dim">${pot}</span>,
+      a change of <span style="color:#ff6600;">${delta}</span>.
+    </p>
+    <p style="color:#00ff88;font-weight:bold;">
+      ${delta < 0 ? 'The potential decrease pays for part of the traversal cost!' : 'Compression was already optimal — no potential decrease.'}
+    </p>
+    <p style="color:#aaa;font-style:italic;margin-top:8px;font-size:0.9em;">
+      Over a sequence of m operations, the total amortized cost is O(m α(n)).
+    </p>
+  `;
+  document.getElementById('resultDisplay').innerHTML = resultHTML;
+
+  updatePotentialDisplay(pot, delta, cost, amortized);
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initData();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — select a node';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('pathDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  let pot = computePotential();
+  updatePotentialDisplay(pot, 0, 0, 0);
+  drawForest(parent, null);
+}
+
+function prepareFind() {
+  resetAnimation();
+  findTarget = parseInt(document.getElementById('findTarget').value);
+  initData();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  let pot = computePotential();
+  document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget}) — Ready`;
+  document.getElementById('sidebarPhase').textContent =
+    `Step 0 / ${steps.length} — Press Play or Step to begin.`;
+  document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  updatePotentialDisplay(pot, 0, 0, 0);
+  drawForest(parent, null);
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initData();
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+let pot = computePotential();
+updatePotentialDisplay(pot, 0, 0, 0);
+drawForest(parent, null);
+</script>
+</body>
+</html>

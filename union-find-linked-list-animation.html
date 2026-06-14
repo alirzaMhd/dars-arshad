@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Union-Find Linked-List Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+#visualization {
+  min-height: 200px;
+  margin: 15px 0;
+}
+.set-card {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  transition: all 0.4s;
+}
+.set-card.highlighted {
+  border-color: #ff6600;
+  box-shadow: 0 0 12px #ff660044;
+}
+.set-card.inactive-set {
+  opacity: 0.4;
+}
+.set-card .set-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.set-card .set-title {
+  color: #00ccff;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+.set-card .set-title .rep-badge {
+  color: #00ff88;
+  background: #0a1a12;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #00ff8855;
+}
+.set-card .set-size-badge {
+  color: #888;
+  font-size: 0.8em;
+  background: #111;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.node-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.node-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #444;
+  border-radius: 8px;
+  font-size: 1.05em;
+  font-weight: bold;
+  background: #111;
+  color: #aaa;
+  position: relative;
+  transition: all 0.4s;
+  flex-shrink: 0;
+}
+.node-box.node-rep {
+  border-color: #00ff88;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.node-box.node-active {
+  border-color: #ff6600 !important;
+  color: #ff6600 !important;
+  background: #1a0a00 !important;
+  box-shadow: 0 0 14px #ff660044;
+  transform: scale(1.1);
+}
+.node-box.node-updated {
+  border-color: #ffff00 !important;
+  color: #ffff00 !important;
+  background: #1a1a00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+.node-box.node-inactive {
+  opacity: 0.35;
+}
+.node-box .node-label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6em;
+  color: #555;
+  white-space: nowrap;
+  font-weight: normal;
+}
+.node-box .rep-change-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a1a2e;
+  border: 1px solid #555;
+  font-size: 0.55em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+}
+.node-box.node-updated .rep-change-badge {
+  border-color: #ffff00;
+  color: #ffff00;
+}
+.arrow-connector {
+  color: #555;
+  font-size: 1.1em;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.null-marker {
+  color: #555;
+  font-size: 0.7em;
+  margin-left: 4px;
+  font-style: italic;
+}
+.rep-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 10px 0;
+  font-size: 0.75em;
+  color: #888;
+  flex-wrap: wrap;
+}
+.rep-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.rep-legend .legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #444;
+}
+.rep-legend .legend-swatch.green { border-color: #00ff88; background: #0a1a12; }
+.rep-legend .legend-swatch.orange { border-color: #ff6600; background: #1a0a00; }
+.rep-legend .legend-swatch.yellow { border-color: #ffff00; background: #1a1a00; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+  display: none;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-table {
+  margin: 12px auto;
+  border-collapse: collapse;
+}
+.result-table th, .result-table td {
+  padding: 6px 14px;
+  border: 1px solid #333;
+  text-align: center;
+}
+.result-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+}
+.result-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.result-table .highlight-change {
+  color: #ffff00;
+  font-weight: bold;
+}
+.insight-box {
+  background: #111128;
+  border-left: 3px solid #00ff88;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px auto;
+  text-align: left;
+  max-width: 500px;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+.insight-box h4 {
+  color: #00ff88;
+  margin-bottom: 4px;
+}
+.insight-box p {
+  color: #ccc;
+}
+.empty-state {
+  text-align: center;
+  color: #555;
+  padding: 30px;
+  font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+
+<h1>Union-Find (Disjoint Set)</h1>
+<p class="subtitle">Data Structures — Linked-List Representation (Weighted Union)</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <div id="visualization"></div>
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+    <div class="info-panel">
+      <span class="label">Operation:</span> <span class="value" id="phaseDisplay">Ready</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Elements:</span> <span class="value" id="computingDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Sets:</span> <span class="value" id="setCountDisplay">0</span>
+    </div>
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+    <div class="rep-legend">
+      <span><span class="legend-swatch green"></span> Set representative</span>
+      <span><span class="legend-swatch orange"></span> Active / being processed</span>
+      <span><span class="legend-swatch yellow"></span> Rep pointer updated</span>
+    </div>
+    <div id="resultSection" class="result-section">
+      <h2>✅ Algorithm Complete</h2>
+      <p>The <span class="result-line" style="display:inline;">final set</span> contains all elements with representative <span id="finalRep" class="result-line" style="display:inline;">1</span>.</p>
+      <div id="resultDetail"></div>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+let reps = {};
+let nexts = {};
+let sizes = {};
+let repChanges = {};
+
+// ---- Data Model ----
+const ELEMENTS = [1, 2, 3, 4, 5, 6];
+
+function initData() {
+  reps = {};
+  nexts = {};
+  sizes = {};
+  repChanges = {};
+  for (let e of ELEMENTS) {
+    reps[e] = e;
+    nexts[e] = null;
+    sizes[e] = 1;
+    repChanges[e] = 0;
+  }
+}
+
+function snapshot() {
+  return {
+    reps: {...reps},
+    nexts: {...nexts},
+    sizes: {...sizes},
+    repChanges: {...repChanges}
+  };
+}
+
+function getSets() {
+  let uniqueReps = [...new Set(Object.values(reps))];
+  return uniqueReps.map(r => {
+    let members = [];
+    let curr = r;
+    while (curr !== null && curr !== undefined) {
+      members.push(curr);
+      curr = nexts[curr];
+    }
+    return { rep: r, members };
+  }).sort((a, b) => a.rep - b.rep);
+}
+
+function findTail(head) {
+  let curr = head;
+  while (nexts[curr] !== null && nexts[curr] !== undefined) {
+    curr = nexts[curr];
+  }
+  return curr;
+}
+
+// ---- Build Steps ----
+function buildSteps() {
+  steps = [];
+  initData();
+
+  // Phase 1: MAKE-SET
+  for (let e of ELEMENTS) {
+    steps.push({
+      type: 'make_set',
+      elem: e,
+      state: snapshot(),
+      activeNodes: [e],
+      updatedNodes: [],
+      explanation: buildMakeExplanation(e)
+    });
+  }
+
+  // Helper to do a simple union and produce steps
+  function doSimpleUnion(x, y, label) {
+    let repX = reps[x], repY = reps[y];
+    // Prep step
+    steps.push({
+      type: 'union_prep',
+      elem: x, elem2: y,
+      label: label,
+      mode: 'simple',
+      rep1: repX, rep2: repY,
+      size1: sizes[repX], size2: sizes[repY],
+      state: snapshot(),
+      activeNodes: [repX, repY],
+      updatedNodes: [],
+      explanation: buildUnionPrepExplanation(x, y, repX, repY, sizes[repX], sizes[repY], 'simple', label)
+    });
+
+    // Perform: append repY after tail of repX
+    let tailX = findTail(repX);
+    nexts[tailX] = repY;
+
+    // Update reps of all elements in repY's list
+    let toUpdate = [];
+    let curr = repY;
+    while (curr !== null) {
+      reps[curr] = repX;
+      repChanges[curr]++;
+      toUpdate.push(curr);
+      curr = nexts[curr];
+    }
+    sizes[repX] += sizes[repY];
+    delete sizes[repY];
+
+    // Append step
+    steps.push({
+      type: 'union_append',
+      updatedList: toUpdate,
+      newRep: repX,
+      state: snapshot(),
+      activeNodes: [],
+      updatedNodes: toUpdate.slice(),
+      explanation: buildUnionAppendExplanation(repX, toUpdate, label)
+    });
+
+    // Done step
+    steps.push({
+      type: 'union_done',
+      newRep: repX,
+      newSize: sizes[repX],
+      state: snapshot(),
+      activeNodes: [],
+      updatedNodes: [],
+      explanation: buildUnionDoneExplanation(repX, sizes[repX], label)
+    });
+  }
+
+  function doWeightedUnion(x, y, label) {
+    let repX = reps[x], repY = reps[y];
+    let sizeX = sizes[repX], sizeY = sizes[repY];
+
+    // Choose shorter list to append to longer
+    let longerRep, shorterRep, longerSize, shorterSize;
+    if (sizeX >= sizeY) {
+      longerRep = repX; shorterRep = repY;
+      longerSize = sizeX; shorterSize = sizeY;
+    } else {
+      longerRep = repY; shorterRep = repX;
+      longerSize = sizeY; shorterSize = sizeX;
+    }
+
+    // Prep step
+    steps.push({
+      type: 'union_prep',
+      elem: x, elem2: y,
+      label: label,
+      mode: 'weighted',
+      rep1: repX, rep2: repY,
+      size1: sizeX, size2: sizeY,
+      longerRep: longerRep, shorterRep: shorterRep,
+      longerSize: longerSize, shorterSize: shorterSize,
+      state: snapshot(),
+      activeNodes: [repX, repY],
+      updatedNodes: [],
+      explanation: buildWeightedPrepExplanation(x, y, repX, repY, sizeX, sizeY, longerRep, shorterRep, label)
+    });
+
+    // Collect elements in shorter list (before any mutations)
+    let toUpdate = [];
+    let curr = shorterRep;
+    while (curr !== null) {
+      toUpdate.push(curr);
+      curr = nexts[curr];
+    }
+
+    // Update one element at a time, taking snapshots incrementally
+    for (let i = 0; i < toUpdate.length; i++) {
+      let elem = toUpdate[i];
+      if (i === 0) {
+        // First update: link the lists (append shorter after tail of longer)
+        let tailLong = findTail(longerRep);
+        nexts[tailLong] = shorterRep;
+        // First element: update its rep
+        reps[elem] = longerRep;
+        repChanges[elem]++;
+      } else {
+        // Subsequent elements: update rep only
+        reps[elem] = longerRep;
+        repChanges[elem]++;
+      }
+      steps.push({
+        type: 'union_update_rep',
+        elem: elem,
+        newRep: longerRep,
+        totalUpdated: toUpdate.slice(0, i + 1),
+        remaining: toUpdate.slice(i + 1),
+        state: snapshot(),
+        activeNodes: [elem],
+        updatedNodes: toUpdate.slice(0, i + 1),
+        explanation: buildUpdateRepExplanation(elem, longerRep, repChanges[elem], label)
+      });
+    }
+
+    // Update sizes after all rep updates
+    sizes[longerRep] += sizes[shorterRep];
+    delete sizes[shorterRep];
+
+    // Done step
+    steps.push({
+      type: 'union_done',
+      newRep: longerRep,
+      newSize: sizes[longerRep],
+      state: snapshot(),
+      activeNodes: [],
+      updatedNodes: [],
+      explanation: buildUnionDoneExplanation(longerRep, sizes[longerRep], label)
+    });
+  }
+
+  // Simple unions: {1,2}, {3,4}, {5,6}
+  doSimpleUnion(1, 2, 'UNION(1, 2)');
+  doSimpleUnion(3, 4, 'UNION(3, 4)');
+  doSimpleUnion(5, 6, 'UNION(5, 6)');
+
+  // Weighted union: UNION(2,4) — sets {1,2} (size 2) and {3,4} (size 2) — tie, keep first rep
+  doWeightedUnion(2, 4, 'UNION(2, 4)');
+
+  // Weighted union: UNION(3,6) — sets {1,2,3,4} (size 4) and {5,6} (size 2) — append {5,6}
+  doWeightedUnion(3, 6, 'UNION(3, 6)');
+
+  // FIND-SET(3)
+  steps.push({
+    type: 'find',
+    elem: 3,
+    foundRep: reps[3],
+    state: snapshot(),
+    activeNodes: [3],
+    updatedNodes: [],
+    explanation: buildFindExplanation(3, reps[3])
+  });
+}
+
+// ---- Explanation Builders ----
+function buildMakeExplanation(e) {
+  return `<div class="explain-section active">
+<h3>MAKE-SET(${e})</h3>
+<p>Create a new set containing <span class="dim">element ${e}</span> alone. The element becomes its own <b>representative</b>.</p>
+<p>Each new set is a singleton linked list:</p>
+<span class="formula-line">[${e}] → null</span>
+<p>The representative pointer of <span class="dim">${e}</span> points to itself: <span class="split-info">rep[${e}] = ${e}</span></p>
+<p class="note">After MAKE-SET, each element is its own set. UNION operations will merge them.</p>
+</div>`;
+}
+
+function buildUnionPrepExplanation(x, y, repX, repY, sizeX, sizeY, mode, label) {
+  let modeDesc = mode === 'simple' ? 'Simple (unweighted)' : 'Weighted-by-size';
+  return `<div class="explain-section active">
+<h3>${label} — Comparing Sets</h3>
+<p>Find the sets containing <span class="dim">${x}</span> and <span class="dim">${y}</span>:</p>
+<p>• <span class="dim">FIND-SET(${x})</span> = <span class="split-info">${repX}</span> (size = <span class="dim">${sizeX}</span>)</p>
+<p>• <span class="dim">FIND-SET(${y})</span> = <span class="split-info">${repY}</span> (size = <span class="dim">${sizeY}</span>)</p>
+<p>Strategy: <span class="split-info">${modeDesc}</span></p>
+${mode === 'simple'
+  ? `<p>Append the <span class="dim">second list</span> to the end of the <span class="dim">first list</span>. Then update the rep pointers of all elements in the appended list.</p><p class="note">Simple union can take O(n) time in the worst case because every element in the appended list needs its rep updated.</p>`
+  : `<p>Choose the <span class="dim">shorter list</span> to append to the <span class="dim">longer list</span>. This ensures each element's rep changes at most <span class="split-info">O(log n)</span> times.</p><p class="note">Since sizes are equal (both ${sizeX}), we keep the representative of the first set and append the second.</p>`}
+</div>`;
+}
+
+function buildWeightedPrepExplanation(x, y, repX, repY, sizeX, sizeY, longerRep, shorterRep, label) {
+  let longerSize = longerRep === repX ? sizeX : sizeY;
+  let shorterSize = shorterRep === repY ? sizeY : sizeX;
+  return `<div class="explain-section active">
+<h3>${label} — Weighted Union Compare</h3>
+<p>Find the sets containing <span class="dim">${x}</span> and <span class="dim">${y}</span>:</p>
+<p>• Set A (rep <span class="dim">${repX}</span>): <span class="split-info">size ${sizeX}</span></p>
+<p>• Set B (rep <span class="dim">${repY}</span>): <span class="split-info">size ${sizeY}</span></p>
+<p><b>Weighted union rule:</b> Append the <span class="dim">shorter</span> list to the <span class="dim">longer</span> list.</p>
+<p>Longer: rep <span class="split-info">${longerRep}</span> (size ${longerSize}) &nbsp;|&nbsp; Shorter: rep <span class="split-info">${shorterRep}</span> (size ${shorterSize})</p>
+<p>Only the <span class="dim">${shorterSize}</span> element(s) in the shorter list will have their rep updated.</p>
+<p class="note">Key insight: each time an element's rep changes, its set size at least doubles → at most ⌈log₂ n⌉ changes per element. Without weighting, an element could change rep O(n) times.</p>
+</div>`;
+}
+
+function buildUnionAppendExplanation(newRep, updatedList, label) {
+  let listStr = updatedList.map(e => `<span class="dim">${e}</span>`).join(', ');
+  return `<div class="explain-section active">
+<h3>${label} — Appending Lists</h3>
+<p>The second list is appended to the first. All <span class="dim">${updatedList.length}</span> element(s) in the appended list get their rep updated:</p>
+<p>Elements updated: ${listStr}</p>
+<span class="formula-line">rep[${updatedList.join('] = rep[')}] = ${newRep}</span>
+<p>New representative: <span class="split-info">${newRep}</span></p>
+<p class="note">In simple union, rep updates cost O(n). In weighted union, we minimize this by always appending the shorter list.</p>
+</div>`;
+}
+
+function buildUpdateRepExplanation(elem, newRep, changeCount, label) {
+  return `<div class="explain-section active">
+<h3>${label} — Updating rep[${elem}]</h3>
+<p>Element <span class="dim">${elem}</span> gets its representative pointer updated:</p>
+<span class="formula-line">rep[${elem}] := ${newRep}</span>
+<p>This is rep change #<span class="split-info">${changeCount}</span> for element ${elem}.</p>
+<p class="note">Each rep change doubles the minimum size of this element's set. After ${changeCount} change(s), its set has at least 2<sup>${changeCount}</sup> = ${Math.pow(2, changeCount)} elements.</p>
+</div>`;
+}
+
+function buildUnionDoneExplanation(newRep, newSize, label) {
+  return `<div class="explain-section active">
+<h3>${label} — Complete ✓</h3>
+<p>The two sets have been merged into one:</p>
+<p>• New representative: <span class="split-info">${newRep}</span></p>
+<p>• New set size: <span class="split-info">${newSize}</span></p>
+<p>The linked list is now a single chain with all elements pointing to <span class="dim">${newRep}</span> as their representative.</p>
+</div>`;
+}
+
+function buildFindExplanation(elem, rep) {
+  return `<div class="explain-section active">
+<h3>FIND-SET(${elem})</h3>
+<p>Access the representative pointer of element <span class="dim">${elem}</span>:</p>
+<span class="formula-line">rep[${elem}] = ${rep}</span>
+<p><span class="result-line" style="display:inline;">FIND-SET(${elem}) = ${rep}</span></p>
+<p>In the linked-list representation, <span class="split-info">FIND-SET is O(1)</span> because each element stores its representative directly.</p>
+<p class="note">This is the key advantage of the linked-list approach: find operations are constant-time. The trade-off is that UNION can be expensive.</p>
+</div>`;
+}
+
+function buildFinishedExplanation() {
+  let maxChanges = Math.max(...Object.values(repChanges));
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ All Operations Complete</h3>
+<p>All elements have been merged into a single set with rep <span class="split-info">1</span>.</p>
+<h3 style="margin-top:10px;">Rep Change Counts</h3>
+<p>Each element's rep pointer changed at most <span class="split-info">${maxChanges}</span> time(s).</p>
+<p>For n = ${ELEMENTS.length}, ⌈log₂ n⌉ = <span class="result-line" style="display:inline;">${Math.ceil(Math.log2(ELEMENTS.length))}</span></p>
+<h3 style="margin-top:10px;">Weighted Union Guarantee</h3>
+<p>With weighted union, each element's rep changes at most <span class="split-info">⌈log₂ n⌉</span> times. This is because:</p>
+<p>• Each time an element's rep changes, its set size <b>at least doubles</b></p>
+<p>• The maximum set size is n, so at most log₂ n changes per element</p>
+<p>Without weighting, an element could change rep <span class="dim">O(n)</span> times per operation.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">MAKE-SET:</span> O(1)</p>
+<p><span class="dim">FIND-SET:</span> O(1)</p>
+<p><span class="dim">UNION (weighted):</span> O(log n) amortized per element, O(n) worst-case</p>
+</div>`;
+}
+
+// ---- Rendering ----
+function renderState(state, activeNodes, updatedNodes) {
+  let { reps: r, nexts: n, sizes: s, repChanges: rc } = state;
+  let container = document.getElementById('visualization');
+  let uniqueReps = [...new Set(Object.values(r))].sort((a, b) => a - b);
+
+  if (uniqueReps.length === 0) {
+    container.innerHTML = '<div class="empty-state">No sets</div>';
+    return uniqueReps.length;
+  }
+
+  let html = '';
+  for (let rep of uniqueReps) {
+    let members = [];
+    let curr = rep;
+    while (curr !== null && curr !== undefined) {
+      members.push(curr);
+      curr = n[curr];
+    }
+    let size = s[rep] || members.length;
+
+    let isHighlighted = activeNodes && activeNodes.some(a => members.includes(a));
+    let isActiveSet = activeNodes && activeNodes.length > 0;
+
+    html += `<div class="set-card${isHighlighted ? ' highlighted' : ''}">`;
+    html += `<div class="set-header">`;
+    html += `<span class="set-title">✦ Set <span class="rep-badge">rep: ${rep}</span></span>`;
+    html += `<span class="set-size-badge">size: ${size}</span>`;
+    html += `</div><div class="node-row">`;
+
+    for (let i = 0; i < members.length; i++) {
+      let m = members[i];
+      let isRep = (m === rep);
+      let isActive = activeNodes && activeNodes.includes(m);
+      let isUpdated = updatedNodes && updatedNodes.includes(m);
+      let changes = rc[m] || 0;
+
+      let cls = 'node-box';
+      if (isUpdated) cls += ' node-updated';
+      else if (isActive) cls += ' node-active';
+      else if (isRep) cls += ' node-rep';
+
+      html += `<div class="${cls}" title="elem ${m}, rep changes: ${changes}">${m}`;
+      html += `<span class="rep-change-badge" title="Rep changes: ${changes}">${changes}</span>`;
+      html += `</div>`;
+
+      if (i < members.length - 1) {
+        html += `<span class="arrow-connector">→</span>`;
+      } else {
+        html += `<span class="arrow-connector">→</span><span class="null-marker">null</span>`;
+      }
+    }
+
+    html += `</div></div>`;
+  }
+
+  container.innerHTML = html;
+  return uniqueReps.length;
+}
+
+// ---- Step Application ----
+function applyStep(step) {
+  let state = step.state;
+  let active = step.activeNodes || [];
+  let updated = step.updatedNodes || [];
+  let setCount = renderState(state, active, updated);
+
+  document.getElementById('setCountDisplay').textContent = setCount;
+
+  let phaseText = '';
+  let computingText = '';
+
+  switch (step.type) {
+    case 'make_set':
+      phaseText = `MAKE-SET(${step.elem})`;
+      computingText = `Element ${step.elem}`;
+      break;
+    case 'union_prep':
+      phaseText = `${step.label} — Prepare`;
+      computingText = `FIND-SET(${step.elem}), FIND-SET(${step.elem2}) → reps ${step.rep1}, ${step.rep2}`;
+      break;
+    case 'union_append':
+      phaseText = `${step.label} — Append`;
+      computingText = `Update reps of [${step.updatedList.join(', ')}] → ${step.newRep}`;
+      break;
+    case 'union_update_rep':
+      phaseText = `${step.label} — Update rep`;
+      computingText = `rep[${step.elem}] → ${step.newRep} (change #${repChanges[step.elem]})`;
+      break;
+    case 'union_done':
+      phaseText = `${step.label} — Done ✓`;
+      computingText = `Set merged, size = ${step.newSize}, rep = ${step.newRep}`;
+      break;
+    case 'find':
+      phaseText = `FIND-SET(${step.elem})`;
+      computingText = `rep[${step.elem}] = ${step.foundRep}`;
+      break;
+    default:
+      phaseText = step.type;
+      computingText = '—';
+  }
+
+  document.getElementById('phaseDisplay').textContent = phaseText;
+  document.getElementById('computingDisplay').textContent = computingText;
+}
+
+function clearHighlights() {
+  // handled by re-rendering
+}
+
+// ---- Core Animation ----
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  let step = steps[currentStep];
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${getPhaseLabel(step.type)}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+  currentStep++;
+}
+
+function getPhaseLabel(type) {
+  switch (type) {
+    case 'make_set': return 'Creating singleton set';
+    case 'union_prep': return 'Preparing UNION';
+    case 'union_append': return 'Appending lists & updating reps';
+    case 'union_update_rep': return 'Updating rep pointer';
+    case 'union_done': return 'UNION complete';
+    case 'find': return 'FIND-SET operation';
+    default: return type;
+  }
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  buildSteps();
+  initData();
+
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('setCountDisplay').textContent = ELEMENTS.length;
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+<h3>Linked-List Representation</h3>
+<p>Each set is stored as a <b>linked list</b>. The <span class="dim">head</span> of each list is the <b>set representative</b>.</p>
+<p>Each element stores:</p>
+<p>• <span class="split-info">rep[x]</span> — pointer to the set representative (head of list)</p>
+<p>• <span class="split-info">next[x]</span> — pointer to next element in the list (or null)</p>
+<h3 style="margin-top:10px;">Operations</h3>
+<p><span class="dim">MAKE-SET(x):</span> Create singleton list with x as its own rep</p>
+<p><span class="dim">FIND-SET(x):</span> Return <span class="split-info">rep[x]</span> — O(1)</p>
+<p><span class="dim">UNION(x,y):</span> Concatenate lists, update reps of appended list</p>
+<h3 style="margin-top:10px;">Weighted Union</h3>
+<p>Always append the <span class="dim">shorter list</span> to the <span class="dim">longer list</span>. This guarantees each element's rep changes at most <span class="split-info">⌈log₂ n⌉</span> times.</p>
+<p class="note">Elements: 1 2 3 4 5 6. Press Play or Step to begin.</p>
+</div>`;
+  renderState(snapshot(), [], []);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalRep').textContent = '1';
+
+  let maxChanges = Math.max(...Object.values(repChanges));
+  let logN = Math.ceil(Math.log2(ELEMENTS.length));
+
+  let tableHtml = `<table class="result-table"><tr><th>Element</th>`;
+  for (let e of ELEMENTS) tableHtml += `<th>${e}</th>`;
+  tableHtml += `</tr><tr><th>Rep Changes</th>`;
+  for (let e of ELEMENTS) {
+    let c = repChanges[e];
+    let isMax = c === maxChanges;
+    tableHtml += `<td${isMax ? ' class="highlight-change"' : ''}>${c}</td>`;
+  }
+  tableHtml += `</tr></table>`;
+
+  tableHtml += `<div class="insight-box">
+<h4>📊 Analysis</h4>
+<p><b>Maximum rep changes:</b> ${maxChanges} (≤ ⌈log₂ ${ELEMENTS.length}⌉ = ${logN}) ✓</p>
+<p><b>Simple union</b> (unweighted) could change an element's rep <b>O(n)</b> times per element.</p>
+<p><b>Weighted union</b> guarantees at most <b>⌈log₂ n⌉</b> changes because each rep change doubles the element's set size.</p>
+</div>`;
+
+  document.getElementById('resultDetail').innerHTML = tableHtml;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ---- Speed Slider ----
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// ---- Init ----
+buildSteps();
+initData();
+renderState(snapshot(), [], []);
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('setCountDisplay').textContent = ELEMENTS.length;
+document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+<h3>Linked-List Representation</h3>
+<p>Each set is stored as a <b>linked list</b>. The <span class="dim">head</span> of each list is the <b>set representative</b>.</p>
+<p>Each element stores:</p>
+<p>• <span class="split-info">rep[x]</span> — pointer to the set representative (head of list)</p>
+<p>• <span class="split-info">next[x]</span> — pointer to next element in the list (or null)</p>
+<h3 style="margin-top:10px;">Operations</h3>
+<p><span class="dim">MAKE-SET(x):</span> Create singleton list with x as its own rep</p>
+<p><span class="dim">FIND-SET(x):</span> Return <span class="split-info">rep[x]</span> — O(1)</p>
+<p><span class="dim">UNION(x,y):</span> Concatenate lists, update reps of appended list</p>
+<h3 style="margin-top:10px;">Weighted Union</h3>
+<p>Always append the <span class="dim">shorter list</span> to the <span class="dim">longer list</span>. This guarantees each element's rep changes at most <span class="split-info">⌈log₂ n⌉</span> times.</p>
+<p class="note">Elements: 1 2 3 4 5 6. Press Play or Step to begin.</p>
+</div>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connected Components Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.sets-container {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 50px;
+}
+.set-box {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: #0d0d1a;
+  font-size: 0.9em;
+  transition: all 0.4s;
+}
+.set-box .set-member { font-weight: bold; }
+.set-box .set-label { color: #aaa; }
+.set-box .set-comma { color: #555; }
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+</style>
+</head>
+<body>
+
+<h1>CONNECTED COMPONENTS</h1>
+<p class="subtitle">Graph Algorithms — Union-Find / Disjoint-Set</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="700" height="280"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Operation:</span> <span class="value" id="opDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Current Partition</div>
+      <div id="setsDisplay" class="sets-container">
+        <div class="set-box" style="border-color:#888;"><span class="set-label">{</span><span class="set-member" style="color:#888;">?</span><span class="set-label">}</span></div>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Algorithm Complete</h2>
+      <p>Number of connected components:</p>
+      <div class="big-result" id="finalComponentCount">—</div>
+      <p id="resultDisplay"></p>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>We have a graph with <b>5 vertices</b> {<span class="dim">a, b, c, d, e</span>} and <b>4 undirected edges</b>.</p>
+        <p>Using <b>Union-Find (Disjoint-Set)</b>, we process each edge and merge connected vertices into the same component.</p>
+        <h3 style="margin-top:10px;">Algorithm</h3>
+        <p>1. <span class="dim">MAKE-SET(v)</span> for each vertex v</p>
+        <p>2. For each edge <span class="dim">(u,v)</span>: if <span class="dim">FIND-SET(u) ≠ FIND-SET(v)</span>, <span class="dim">UNION(u,v)</span></p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = ['a', 'b', 'c', 'd', 'e'];
+const edges = [
+  { u: 'a', v: 'b' },
+  { u: 'c', v: 'd' },
+  { u: 'b', v: 'c' },
+  { u: 'd', v: 'e' }
+];
+const nodePositions = {
+  a: { x: 70, y: 150 },
+  b: { x: 210, y: 150 },
+  c: { x: 350, y: 150 },
+  d: { x: 490, y: 150 },
+  e: { x: 630, y: 150 }
+};
+const nodeRadius = 24;
+const setColors = ['#00ff88', '#00ccff', '#ffcc00', '#ff66ff', '#ff9944', '#00ffaa'];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function findRootNoPc(parent, x) {
+  while (parent[x] !== x) x = parent[x];
+  return x;
+}
+
+function computeSets(parent) {
+  let map = {};
+  for (let v of vertices) {
+    let r = findRootNoPc(parent, v);
+    if (!map[r]) map[r] = [];
+    map[r].push(v);
+  }
+  return Object.values(map).map(s => [...s].sort());
+}
+
+function findWithPC(parent, rank, x) {
+  if (parent[x] !== x) {
+    parent[x] = findWithPC(parent, rank, parent[x]);
+  }
+  return parent[x];
+}
+
+function unionByRank(parent, rank, x, y) {
+  if (rank[x] > rank[y]) {
+    parent[y] = x;
+  } else if (rank[x] < rank[y]) {
+    parent[x] = y;
+  } else {
+    parent[y] = x;
+    rank[x]++;
+  }
+}
+
+function getSetColor(set) {
+  let sorted = [...set].sort();
+  let first = sorted[0];
+  let idx = vertices.indexOf(first);
+  return setColors[idx % setColors.length];
+}
+
+function getNodeColor(node, sets) {
+  for (let si = 0; si < sets.length; si++) {
+    if (sets[si].includes(node)) {
+      return getSetColor(sets[si]);
+    }
+  }
+  return '#888';
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initialization — MAKE-SET</h3>
+<p>Each vertex starts in its <span class="dim">own set</span>:</p>
+<p style="margin-left:8px;">• <span class="dim">MAKE-SET(a)</span></p>
+<p style="margin-left:8px;">• <span class="dim">MAKE-SET(b)</span></p>
+<p style="margin-left:8px;">• <span class="dim">MAKE-SET(c)</span></p>
+<p style="margin-left:8px;">• <span class="dim">MAKE-SET(d)</span></p>
+<p style="margin-left:8px;">• <span class="dim">MAKE-SET(e)</span></p>
+<p>Result: <span class="result-line">{a} {b} {c} {d} {e}</span></p>
+<p class="note">Each vertex is its own connected component initially.</p>
+</div>`;
+}
+
+function buildFindExplanation(u, v, rootU, rootV) {
+  let same = rootU === rootV;
+  let edgeLabel = `(${u},${v})`;
+  return `<div class="explain-section active">
+<h3>🔍 FIND-SET for edge ${edgeLabel}</h3>
+<p><span class="dim">FIND-SET(${u})</span> → <span class="result-line">${rootU}</span></p>
+<p><span class="dim">FIND-SET(${v})</span> → <span class="result-line">${rootV}</span></p>
+${same
+  ? `<p>Roots are the same (<span class="split-info">${rootU} = ${rootV}</span>), so <span class="dim">${u}</span> and <span class="dim">${v}</span> are already connected.</p><p class="note">No UNION needed — they belong to the same component.</p>`
+  : `<p>Roots differ (<span class="split-info">${rootU} ≠ ${rootV}</span>) → <span class="dim">UNION</span> required.</p><p class="note">These vertices are in different components and need to be merged.</p>`}
+</div>`;
+}
+
+function buildUnionExplanation(u, v, rootU, rootV, beforeSets, afterSet) {
+  return `<div class="explain-section active">
+<h3>🔗 UNION(${u},${v})</h3>
+<p>Merging the sets containing <span class="dim">${u}</span> (root: <span class="result-line">${rootU}</span>) and <span class="dim">${v}</span> (root: <span class="result-line">${rootV}</span>).</p>
+<p>Before: <span class="split-info">{${beforeSets[0].join(', ')}}</span> ∪ <span class="split-info">{${beforeSets[1].join(', ')}}</span></p>
+<p>After: <span class="result-line">{${afterSet.join(', ')}}</span></p>
+<p class="note">These two components are now connected via edge (${u},${v}).</p>
+</div>`;
+}
+
+function buildCompleteExplanation(numComponents) {
+  let resultText = numComponents === 1
+    ? `All 5 vertices {<span class="dim">a, b, c, d, e</span>} are in a <b>single connected component</b>.`
+    : `The graph has <span class="result-line" style="display:inline;">${numComponents} connected components</span>.`;
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>All ${edges.length} edges processed.</p>
+<p>${resultText}</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O((V+E) · α(V)) — nearly linear, where α is the inverse Ackermann function</p>
+<p><span class="dim">Space:</span> O(V) for parent and rank arrays</p>
+</div>`;
+}
+
+function buildSkippedExplanation(u, v, root) {
+  return `<div class="explain-section active">
+<h3>⏭ Already Connected — (${u},${v})</h3>
+<p><span class="dim">FIND-SET(${u})</span> = <span class="dim">FIND-SET(${v})</span> = <span class="result-line">${root}</span></p>
+<p>Both vertices already belong to the same component. No action needed.</p>
+<p class="note">This edge connects vertices already in the same set, so it does not reduce the number of components.</p>
+</div>`;
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let parent = {};
+  let rank = {};
+
+  for (let v of vertices) {
+    parent[v] = v;
+    rank[v] = 0;
+  }
+
+  steps.push({
+    type: 'init',
+    activeEdge: -1,
+    parent: { ...parent },
+    sets: computeSets(parent),
+    findU: null, findV: null, rootU: null, rootV: null,
+    phase: 'MAKE-SET complete — 5 isolated vertices',
+    edgeLabel: '—',
+    opLabel: 'MAKE-SET'
+  });
+
+  for (let ei = 0; ei < edges.length; ei++) {
+    let { u, v } = edges[ei];
+
+    let rootU = findWithPC(parent, rank, u);
+    let rootV = findWithPC(parent, rank, v);
+    let same = rootU === rootV;
+
+    let beforeSets = computeSets(parent);
+
+    steps.push({
+      type: 'find',
+      activeEdge: ei,
+      parent: { ...parent },
+      sets: beforeSets,
+      findU: u, findV: v,
+      rootU: rootU, rootV: rootV,
+      same: same,
+      phase: `Examining edge (${u},${v})`,
+      edgeLabel: `(${u},${v})`,
+      opLabel: 'FIND-SET'
+    });
+
+    if (!same) {
+      let beforeUset = beforeSets.find(s => s.includes(u));
+      let beforeVset = beforeSets.find(s => s.includes(v));
+
+      unionByRank(parent, rank, rootU, rootV);
+      let afterSets = computeSets(parent);
+      let afterUnionSet = afterSets.find(s => s.includes(u));
+
+      steps.push({
+        type: 'union',
+        activeEdge: ei,
+        parent: { ...parent },
+        sets: afterSets,
+        findU: u, findV: v,
+        rootU: rootU, rootV: rootV,
+        unionSets: [beforeUset, beforeVset],
+        unionResultSet: afterUnionSet,
+        same: false,
+        phase: `UNION(${u},${v}) — sets merged`,
+        edgeLabel: `(${u},${v})`,
+        opLabel: 'UNION'
+      });
+    } else {
+      steps.push({
+        type: 'skip',
+        activeEdge: ei,
+        parent: { ...parent },
+        sets: beforeSets,
+        findU: u, findV: v,
+        rootU: rootU, rootV: rootV,
+        same: true,
+        phase: `Skipping edge (${u},${v}) — already connected`,
+        edgeLabel: `(${u},${v})`,
+        opLabel: 'Already connected'
+      });
+    }
+  }
+
+  let finalSets = computeSets(parent);
+
+  steps.push({
+    type: 'complete',
+    activeEdge: -1,
+    parent: { ...parent },
+    sets: finalSets,
+    findU: null, findV: null,
+    rootU: null, rootV: null,
+    phase: '✓ Complete!',
+    edgeLabel: '—',
+    opLabel: 'Done',
+    numComponents: finalSets.length,
+    finalSetsDisplay: finalSets
+  });
+}
+
+// --- Drawing ---
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const activeEdgeIdx = step ? step.activeEdge : -1;
+  const sets = step ? step.sets : vertices.map(v => [v]);
+  const stepType = step ? step.type : 'init';
+
+  let findNodes = [];
+  if (step && (step.type === 'find' || step.type === 'union' || step.type === 'skip')) {
+    if (step.findU) findNodes.push(step.findU);
+    if (step.findV) findNodes.push(step.findV);
+    if (step.type === 'union' && step.rootU && step.rootV) {
+      if (!findNodes.includes(step.rootU)) findNodes.push(step.rootU);
+      if (!findNodes.includes(step.rootV)) findNodes.push(step.rootV);
+    }
+  }
+
+  let activeNode = null;
+  if (step && step.type === 'union') {
+    activeNode = step.findU;
+  }
+
+  for (let ei = 0; ei < edges.length; ei++) {
+    let { u, v } = edges[ei];
+    let p1 = nodePositions[u];
+    let p2 = nodePositions[v];
+    let isActive = ei === activeEdgeIdx;
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+
+    if (isActive) {
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 12;
+    } else {
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.8;
+      ctx.shadowBlur = 0;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (isActive && (stepType === 'union' || stepType === 'skip')) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = stepType === 'union' ? '#00ff8844' : '#ff660044';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+    }
+  }
+
+  let edgeLabels = ['(a,b)', '(c,d)', '(b,c)', '(d,e)'];
+  let labelY = 210;
+  ctx.font = '12px Courier New';
+  ctx.textAlign = 'center';
+  for (let ei = 0; ei < edges.length; ei++) {
+    let { u, v } = edges[ei];
+    let midX = (nodePositions[u].x + nodePositions[v].x) / 2;
+    ctx.fillStyle = ei === activeEdgeIdx ? '#ff6600' : '#555';
+    ctx.fillText(edgeLabels[ei], midX, labelY);
+  }
+
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let color = getNodeColor(v, sets);
+    let isFindHighlight = findNodes.includes(v);
+    let isActiveNode = v === activeNode;
+    let isEdgeEndpoint = step && (v === step.findU || v === step.findV) && stepType !== 'init' && stepType !== 'complete';
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+
+    let fillColor = color;
+    ctx.fillStyle = fillColor + '25';
+    ctx.fill();
+
+    if (isEdgeEndpoint) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 20;
+    } else if (isFindHighlight) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 12;
+    }
+    ctx.strokeStyle = isEdgeEndpoint ? '#ff6600' : (isFindHighlight ? color : '#666');
+    ctx.lineWidth = isEdgeEndpoint ? 3.5 : (isFindHighlight ? 3 : 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (stepType === 'complete') {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00ff8844';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = 'bold 18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toUpperCase(), pos.x, pos.y);
+
+    if (isEdgeEndpoint && step.rootU && step.rootV) {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = '11px Courier New';
+      let label;
+      if (v === step.findU) label = '→' + step.rootU;
+      else label = '→' + step.rootV;
+      ctx.fillText(label, pos.x + nodeRadius + 18, pos.y);
+    }
+  }
+
+  ctx.fillStyle = '#666';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('Vertices colored by set membership', 10, 18);
+}
+
+function renderSets(sets) {
+  let container = document.getElementById('setsDisplay');
+  if (!sets || sets.length === 0) {
+    container.innerHTML = '<span style="color:#888;">Initializing...</span>';
+    return;
+  }
+  let html = '';
+  for (let si = 0; si < sets.length; si++) {
+    let set = sets[si];
+    let color = getSetColor(set);
+    html += `<div class="set-box" style="border-color:${color};">`;
+    html += `<span class="set-label">{</span> `;
+    for (let vi = 0; vi < set.length; vi++) {
+      html += `<span class="set-member" style="color:${color}">${set[vi]}</span>`;
+      if (vi < set.length - 1) html += `<span class="set-comma">, </span>`;
+    }
+    html += ` <span class="set-label">}</span>`;
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+// --- Animation ---
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('edgeDisplay').textContent = step.edgeLabel || '—';
+  document.getElementById('opDisplay').textContent = step.opLabel || '—';
+
+  drawGraph(step);
+  renderSets(step.sets);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation();
+      break;
+    case 'find':
+      if (step.same) {
+        explanation = buildSkippedExplanation(step.findU, step.findV, step.rootU);
+      } else {
+        explanation = buildFindExplanation(step.findU, step.findV, step.rootU, step.rootV);
+      }
+      break;
+    case 'union': {
+      let beforeSets = step.unionSets || [step.sets.find(s => s.includes(step.findU)), step.sets.find(s => s.includes(step.findV))];
+      let afterSet = step.unionResultSet || step.sets.find(s => s.includes(step.findU));
+      if (beforeSets[0] && beforeSets[1] && afterSet) {
+        explanation = buildUnionExplanation(step.findU, step.findV, step.rootU, step.rootV, beforeSets, afterSet);
+      } else {
+        explanation = buildUnionExplanation(step.findU, step.findV, step.rootU, step.rootV, [[step.findU], [step.findV]], [step.findU, step.findV]);
+      }
+      break;
+    }
+    case 'skip':
+      explanation = buildSkippedExplanation(step.findU, step.findV, step.rootU);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation(step.numComponents);
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) {
+    finishAnimation();
+    return;
+  }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('opDisplay').textContent = 'Done';
+  document.getElementById('resultSection').style.display = 'block';
+
+  if (lastStep.numComponents === 1) {
+    document.getElementById('finalComponentCount').textContent = '1';
+    document.getElementById('resultDisplay').innerHTML =
+      `All 5 vertices {<b>a, b, c, d, e</b>} form a single connected component.`;
+  } else {
+    document.getElementById('finalComponentCount').textContent = lastStep.numComponents;
+    document.getElementById('resultDisplay').innerHTML =
+      `The graph has ${lastStep.numComponents} connected components.`;
+  }
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation(lastStep.numComponents);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('opDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>We have a graph with <b>5 vertices</b> {<span class="dim">a, b, c, d, e</span>} and <b>4 undirected edges</b>.</p>
+      <p>Using <b>Union-Find (Disjoint-Set)</b>, we process each edge and merge connected vertices into the same component.</p>
+      <h3 style="margin-top:10px;">Algorithm</h3>
+      <p>1. <span class="dim">MAKE-SET(v)</span> for each vertex v</p>
+      <p>2. For each edge <span class="dim">(u,v)</span>: if <span class="dim">FIND-SET(u) ≠ FIND-SET(v)</span>, <span class="dim">UNION(u,v)</span></p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+  clearHighlights();
+  buildSteps();
+  initDisplay();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function clearHighlights() {
+  // no-op: canvas redraw handles everything
+}
+
+function initDisplay() {
+  if (steps.length > 0) {
+    drawGraph(steps[0]);
+    renderSets(steps[0].sets);
+  }
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initDisplay();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

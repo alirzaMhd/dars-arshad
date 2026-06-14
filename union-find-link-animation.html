@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LINK(x, y) — Union by Rank Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.table-section { margin: 20px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 10px; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.filled { background: #0a1a12; color: #00ff88; border-color: #00ff8855; }
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; margin: 6px 0; font-size: 0.85em; line-height: 1.6; }
+.canvas-wrapper { text-align: center; }
+canvas { display: block; margin: 0 auto; border-radius: 10px; background: #0d0d1a; border: 1px solid #333; }
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 0.75em;
+  color: #888;
+  margin: 6px 0 4px;
+}
+.legend span { display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+
+<h1>LINK(x, y) — Union by Rank</h1>
+<p class="subtitle">Disjoint Set Union — Connecting roots with rank optimization</p>
+
+<div class="layout">
+<div class="main-panel">
+
+  <div class="canvas-wrapper">
+    <canvas id="forestCanvas" width="700" height="310"></canvas>
+    <div class="legend">
+      <span><span style="color:#00ccff;font-weight:bold;">◉</span> Root</span>
+      <span><span style="color:#aaa;font-weight:bold;">◉</span> Node</span>
+      <span><span style="color:#ff6600;font-weight:bold;">◉</span> Active LINK args</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+    <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+    <button class="btn" onclick="stepForward()">⏭ Step</button>
+    <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+    <div class="speed-control">
+      <label>Speed:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span id="speedLabel">5x</span>
+    </div>
+  </div>
+
+  <div class="info-panel" id="infoPanel">
+    <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+    <span class="label">Operation:</span> <span class="value" id="opDisplay">—</span><br>
+    <span class="label">rank(x):</span> <span class="value" id="rankXDisplay">—</span>,
+    <span class="label">rank(y):</span> <span class="value" id="rankYDisplay">—</span><br>
+    <span class="label">Decision:</span> <span class="value" id="decisionDisplay">—</span><br>
+    <span class="label">Action:</span> <span class="value" id="actionDisplay">—</span>
+  </div>
+
+  <div class="step-counter">
+    Step <span class="count"><span id="stepNum">0</span> / <span id="totalSteps">0</span></span>
+  </div>
+
+  <div class="table-section">
+    <div class="table-title">Parent Array p[ ] — <span style="color:#888;font-size:0.85em;">p[i] = root of i's tree</span></div>
+    <div class="table-wrapper">
+      <table id="parentTable"></table>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-title">Rank Array rank[ ] — <span style="color:#888;font-size:0.85em;">upper bound on tree height</span></div>
+    <div class="table-wrapper">
+      <table id="rankTable"></table>
+    </div>
+  </div>
+
+  <div id="resultSection" class="result-section" style="display:none;">
+    <h2>✓ All LINK Operations Complete</h2>
+    <p>All <span id="finalElemCount">6</span> elements are connected under a single root.</p>
+    <p>The forest is now a single tree — every element belongs to the same set.</p>
+    <div id="resultDisplay" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>📖 Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea">
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>The <b>LINK(x, y)</b> operation connects two <b>roots</b> in a Disjoint Set Union (Union-Find) data structure.</p>
+      <p>We maintain a forest where each node has a <span class="dim">parent pointer</span> p[&middot;] and a <span class="dim">rank</span> (an upper bound on tree height).</p>
+      <h3 style="margin-top:10px;">Union by Rank Rule</h3>
+      <span class="formula-line">if rank[x] &gt; rank[y]: p[y] = x</span>
+      <span class="formula-line">else: p[x] = y; if rank[x] == rank[y]: rank[y]++</span>
+      <p class="note">Always attach the tree with <b>smaller rank</b> under the tree with <b>larger rank</b>. This keeps tree height ≤ log₂(n).</p>
+      <p class="note">Elements: <span class="dim">1 2 3 4 5 6</span> &nbsp;|&nbsp; Each starts as its own root with rank 0.</p>
+      <p class="note">Press Play or Step to begin the LINK sequence.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const N = 6;
+let parent = [0, 1, 2, 3, 4, 5, 6];
+let rank = [0, 0, 0, 0, 0, 0, 0];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function precomputeAll() {
+  return { parent: parent.slice(), rank: rank.slice() };
+}
+
+function buildExplanation(x, y, xRank, yRank, compare, action, rankUpdate, parentArr, rankArr) {
+  let cmpText = compare === 'greater' ? '>' : compare === 'less' ? '<' : '==';
+  let actionText = action === 'y_p_x' ? 'y.p = x' : 'x.p = y';
+  let rankText = rankUpdate ? `rank[${rankUpdate[0]}]++ → ${rankUpdate[1]}` : 'No rank update';
+  let reasonText = compare === 'greater'
+    ? `rank[${x}] (${xRank}) &gt; rank[${y}] (${yRank}) → attach smaller tree under larger`
+    : compare === 'equal'
+    ? `rank[${x}] == rank[${y}] == ${xRank} → equal ranks, attach arbitrarily, increment new root's rank`
+    : `rank[${x}] (${xRank}) &lt; rank[${y}] (${yRank}) → attach smaller under larger`;
+
+  return `<div class="explain-section active">
+    <h3>LINK(${x}, ${y}) — Compare Ranks</h3>
+    <p><b>Arguments:</b> x = <span class="dim">${x}</span> (rank ${xRank}), y = <span class="dim">${y}</span> (rank ${yRank})</p>
+    <p>rank[${x}] ${cmpText} rank[${y}] &rarr; ${compare === 'greater' ? 'x.rank &gt; y.rank' : compare === 'less' ? 'x.rank &lt; y.rank' : 'ranks are equal'}</p>
+    <h3 style="margin-top:10px;">Execute</h3>
+    <span class="formula-line">if rank[${x}] &gt; rank[${y}]: p[${y}] = ${x}  else: p[${x}] = ${y}</span>
+    <p style="margin-left:8px;">&bull; <span class="split-info">${actionText}</span></p>
+    <p style="margin-left:8px;">&bull; ${rankText}</p>
+    <h3 style="margin-top:10px;">Why?</h3>
+    <p>${reasonText}</p>
+    <p class="note">Tree heights stay balanced — rank only increases when merging two trees of equal rank.</p>
+    <p class="note">Result: root <span class="dim">${rankArr.indexOf(Math.max(...rankArr))}</span> has rank <span class="dim">${Math.max(...rankArr)}</span></p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let root = 4;
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ All LINKs Complete!</h3>
+    <p>After ${steps.length} LINK operations, all <span class="dim">6</span> elements belong to a single tree.</p>
+    <p>The root is <span class="result-line">${root}</span> with rank <span class="result-line">${rank[root]}</span>.</p>
+    <h3 style="margin-top:10px;">Final Tree Structure</h3>
+    <p style="margin-left:8px;">&bull; Root <span class="dim">4</span> → children: 2, 3, 6</p>
+    <p style="margin-left:8px;">&bull; Node <span class="dim">2</span> → child: 1</p>
+    <p style="margin-left:8px;">&bull; Node <span class="dim">6</span> → child: 5</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(1) — constant-time pointer updates and rank comparison</p>
+    <p><span class="dim">Space:</span> O(n) — parent and rank arrays, each of length n</p>
+    <p class="note">Union by Rank + Path Compression together achieve nearly constant amortized time per operation (inverse Ackermann function).</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+  let p = [0, 1, 2, 3, 4, 5, 6];
+  let r = [0, 0, 0, 0, 0, 0, 0];
+
+  // Step 1: LINK(1, 2) — equal
+  let x = 1, y = 2;
+  let xRank = r[x], yRank = r[y];
+  p[x] = y;
+  r[y]++;
+  steps.push({
+    type: 'link', x, y, xRank, yRank, compare: 'equal',
+    action: 'x_p_y', rankUpdate: [y, r[y]],
+    parent: p.slice(), rank: r.slice(),
+    explanation: buildExplanation(x, y, xRank, yRank, 'equal', 'x_p_y', [y, r[y]], p, r)
+  });
+
+  // Step 2: LINK(3, 4) — equal
+  x = 3; y = 4;
+  xRank = r[x]; yRank = r[y];
+  p[x] = y;
+  r[y]++;
+  steps.push({
+    type: 'link', x, y, xRank, yRank, compare: 'equal',
+    action: 'x_p_y', rankUpdate: [y, r[y]],
+    parent: p.slice(), rank: r.slice(),
+    explanation: buildExplanation(x, y, xRank, yRank, 'equal', 'x_p_y', [y, r[y]], p, r)
+  });
+
+  // Step 3: LINK(2, 4) — equal (both rank 1)
+  x = 2; y = 4;
+  xRank = r[x]; yRank = r[y];
+  p[x] = y;
+  r[y]++;
+  steps.push({
+    type: 'link', x, y, xRank, yRank, compare: 'equal',
+    action: 'x_p_y', rankUpdate: [y, r[y]],
+    parent: p.slice(), rank: r.slice(),
+    explanation: buildExplanation(x, y, xRank, yRank, 'equal', 'x_p_y', [y, r[y]], p, r)
+  });
+
+  // Step 4: LINK(5, 6) — equal
+  x = 5; y = 6;
+  xRank = r[x]; yRank = r[y];
+  p[x] = y;
+  r[y]++;
+  steps.push({
+    type: 'link', x, y, xRank, yRank, compare: 'equal',
+    action: 'x_p_y', rankUpdate: [y, r[y]],
+    parent: p.slice(), rank: r.slice(),
+    explanation: buildExplanation(x, y, xRank, yRank, 'equal', 'x_p_y', [y, r[y]], p, r)
+  });
+
+  // Step 5: LINK(4, 6) — rank(4)=2 > rank(6)=1
+  x = 4; y = 6;
+  xRank = r[x]; yRank = r[y];
+  p[y] = x;
+  steps.push({
+    type: 'link', x, y, xRank, yRank, compare: 'greater',
+    action: 'y_p_x', rankUpdate: null,
+    parent: p.slice(), rank: r.slice(),
+    explanation: buildExplanation(x, y, xRank, yRank, 'greater', 'y_p_x', null, p, r)
+  });
+}
+
+function layoutForest() {
+  let children = {}, roots = [];
+  for (let i = 1; i <= N; i++) {
+    if (parent[i] === i) roots.push(i);
+    else {
+      if (!children[parent[i]]) children[parent[i]] = [];
+      children[parent[i]].push(i);
+    }
+  }
+  let positions = {};
+  function getWidth(node) {
+    if (!children[node] || children[node].length === 0) return 1;
+    return children[node].reduce((s, c) => s + getWidth(c), 0);
+  }
+  let cw = 700;
+  let totalWidth = roots.reduce((s, r) => s + getWidth(r), 0);
+  let spacing = Math.min((cw - 80) / Math.max(totalWidth, 1), 140);
+  spacing = Math.max(spacing, 65);
+  let totalPx = totalWidth * spacing;
+  let offset = (cw - totalPx) / 2 + spacing / 2;
+  function place(node, x, y) {
+    positions[node] = { x: Math.round(x), y: Math.round(y), isRoot: parent[node] === node };
+    if (children[node]) {
+      let kids = children[node];
+      let sw = getWidth(node);
+      let startX = x - (sw * spacing) / 2 + spacing / 2;
+      for (let i = 0; i < kids.length; i++) {
+        let ky = y + 90;
+        if (ky > 280) ky = 280;
+        place(kids[i], startX + i * spacing, ky);
+      }
+    }
+  }
+  for (let r of roots) {
+    place(r, offset, 60);
+    offset += getWidth(r) * spacing;
+  }
+  return positions;
+}
+
+function drawForest(activeX, activeY) {
+  const canvas = document.getElementById('forestCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let positions = layoutForest();
+  for (let i = 1; i <= N; i++) {
+    if (parent[i] !== i) {
+      let ch = positions[i];
+      let pa = positions[parent[i]];
+      if (ch && pa) {
+        let dy = pa.y - ch.y;
+        let dx = pa.x - ch.x;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          let nx = dx / dist;
+          let ny = dy / dist;
+          let sx = ch.x + nx * 18;
+          let sy = ch.y + ny * 18;
+          let ex = pa.x - nx * 18;
+          let ey = pa.y - ny * 18;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(ex, ey);
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          let angle = Math.atan2(ey - sy, ex - sx);
+          let headLen = 8;
+          ctx.beginPath();
+          ctx.moveTo(ex, ey);
+          ctx.lineTo(ex - headLen * Math.cos(angle - 0.35), ey - headLen * Math.sin(angle - 0.35));
+          ctx.lineTo(ex - headLen * Math.cos(angle + 0.35), ey - headLen * Math.sin(angle + 0.35));
+          ctx.closePath();
+          ctx.fillStyle = '#555';
+          ctx.fill();
+        }
+      }
+    }
+  }
+  for (let i = 1; i <= N; i++) {
+    if (!positions[i]) continue;
+    let p = positions[i];
+    let isActive = (i === activeX || i === activeY);
+    let color;
+    if (isActive) color = '#ff6600';
+    else if (parent[i] === i) color = '#00ccff';
+    else color = '#aaa';
+    ctx.save();
+    if (isActive) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 15;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = parent[i] === i ? 3 : 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    if (parent[i] === i) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i), p.x, p.y - 1);
+    ctx.fillStyle = isActive ? '#ffcc00' : '#888';
+    ctx.font = '11px Courier New';
+    ctx.textBaseline = 'top';
+    ctx.fillText('r=' + rank[i], p.x, p.y + 18 + 4);
+  }
+}
+
+function initTables() {
+  let phtml = '<table><tr><th>i</th>';
+  for (let i = 1; i <= N; i++) phtml += '<th>' + i + '</th>';
+  phtml += '</tr><tr><th>p[i]</th>';
+  for (let i = 1; i <= N; i++) phtml += '<td id="pc' + i + '">' + parent[i] + '</td>';
+  phtml += '</tr></table>';
+  document.getElementById('parentTable').innerHTML = phtml;
+
+  let rhtml = '<table><tr><th>i</th>';
+  for (let i = 1; i <= N; i++) rhtml += '<th>' + i + '</th>';
+  rhtml += '</tr><tr><th>rank[i]</th>';
+  for (let i = 1; i <= N; i++) rhtml += '<td id="rc' + i + '">' + rank[i] + '</td>';
+  rhtml += '</tr></table>';
+  document.getElementById('rankTable').innerHTML = rhtml;
+}
+
+function clearHighlights() {
+  for (let i = 1; i <= N; i++) {
+    let pc = document.getElementById('pc' + i);
+    let rc = document.getElementById('rc' + i);
+    if (pc) { pc.className = ''; pc.textContent = parent[i]; }
+    if (rc) { rc.className = ''; rc.textContent = rank[i]; }
+  }
+}
+
+function applyStep(step) {
+  parent = step.parent.slice();
+  rank = step.rank.slice();
+  clearHighlights();
+  drawForest(step.x, step.y);
+  for (let i = 1; i <= N; i++) {
+    let pc = document.getElementById('pc' + i);
+    let rc = document.getElementById('rc' + i);
+    if (pc) { pc.textContent = parent[i]; }
+    if (rc) { rc.textContent = rank[i]; }
+  }
+  let xc = document.getElementById('pc' + step.x);
+  let yc = document.getElementById('pc' + step.y);
+  let xr = document.getElementById('rc' + step.x);
+  let yr = document.getElementById('rc' + step.y);
+  if (xc) xc.className = 'current';
+  if (yc) yc.className = 'computing';
+  if (xr) xr.className = 'current';
+  if (yr) yr.className = 'computing';
+
+  document.getElementById('opDisplay').textContent = 'LINK(' + step.x + ', ' + step.y + ')';
+  document.getElementById('rankXDisplay').textContent = step.xRank;
+  document.getElementById('rankYDisplay').textContent = step.yRank;
+  if (step.compare === 'greater') {
+    document.getElementById('decisionDisplay').textContent = 'rank(' + step.x + ') > rank(' + step.y + ') → if branch';
+  } else if (step.compare === 'equal') {
+    document.getElementById('decisionDisplay').textContent = 'rank(' + step.x + ') == rank(' + step.y + ') → else branch, increment rank';
+  } else {
+    document.getElementById('decisionDisplay').textContent = 'rank(' + step.x + ') < rank(' + step.y + ') → else branch';
+  }
+  let act = step.action === 'y_p_x' ? 'p[' + step.y + '] = ' + step.x : 'p[' + step.x + '] = ' + step.y;
+  if (step.rankUpdate) act += ', rank[' + step.rankUpdate[0] + '] = ' + step.rankUpdate[1];
+  document.getElementById('actionDisplay').textContent = act;
+  document.getElementById('phaseDisplay').textContent = 'Executing LINK(' + step.x + ', ' + step.y + ')';
+
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — LINK(' + step.x + ', ' + step.y + ')';
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  parent = [0, 1, 2, 3, 4, 5, 6];
+  rank = [0, 0, 0, 0, 0, 0, 0];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('opDisplay').textContent = '—';
+  document.getElementById('rankXDisplay').textContent = '—';
+  document.getElementById('rankYDisplay').textContent = '—';
+  document.getElementById('decisionDisplay').textContent = '—';
+  document.getElementById('actionDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>The <b>LINK(x, y)</b> operation connects two <b>roots</b> in a Disjoint Set Union (Union-Find) data structure.</p>
+    <p>We maintain a forest where each node has a <span class="dim">parent pointer</span> p[&middot;] and a <span class="dim">rank</span> (an upper bound on tree height).</p>
+    <h3 style="margin-top:10px;">Union by Rank Rule</h3>
+    <span class="formula-line">if rank[x] &gt; rank[y]: p[y] = x</span>
+    <span class="formula-line">else: p[x] = y; if rank[x] == rank[y]: rank[y]++</span>
+    <p class="note">Always attach the tree with <b>smaller rank</b> under the tree with <b>larger rank</b>. This keeps tree height ≤ log₂(n).</p>
+    <p class="note">Elements: <span class="dim">1 2 3 4 5 6</span> &nbsp;|&nbsp; Each starts as its own root with rank 0.</p>
+    <p class="note">Press Play or Step to begin the LINK sequence.</p>
+  </div>`;
+  clearHighlights();
+  initTables();
+  drawForest(-1, -1);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('opDisplay').textContent = '—';
+  document.getElementById('decisionDisplay').textContent = 'All LINKs executed';
+  document.getElementById('actionDisplay').textContent = 'Forest is a single tree';
+  document.getElementById('resultSection').style.display = 'block';
+  let root = 4;
+  document.getElementById('finalElemCount').textContent = '6';
+  document.getElementById('resultDisplay').innerHTML =
+    '<p><span style="color:#00ff88;">●</span> Root <b style="color:#00ff88;">' + root +
+    '</b> &nbsp; rank = <b style="color:#00ff88;">' + rank[root] + '</b></p>' +
+    '<p style="color:#888;font-size:0.8em;margin-top:10px;">' +
+    'Tree height = ' + rank[root] + ' &nbsp;|&nbsp; All operations O(1)</p>';
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+  drawForest(-1, -1);
+  for (let i = 1; i <= N; i++) {
+    let pc = document.getElementById('pc' + i);
+    let rc = document.getElementById('rc' + i);
+    if (pc) pc.className = parent[i] === i ? 'filled' : '';
+    if (rc) rc.className = parent[i] === i ? 'filled' : '';
+  }
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+drawForest(-1, -1);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+
+</body>
+</html>

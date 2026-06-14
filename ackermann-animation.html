@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ackermann Function Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.too-large {
+  font-style: italic;
+  color: #555;
+}
+th.row-label, td.row-label {
+  width: 40px;
+  font-size: 0.8em;
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+
+.akk-section {
+  margin: 20px 0;
+}
+.akk-table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.akk-table-wrap {
+  overflow-x: auto;
+  padding: 5px;
+}
+
+.def-display {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 0 0 15px;
+  text-align: center;
+}
+.def-display .def-line {
+  font-size: 1em;
+  color: #00ccff;
+  margin: 8px 0;
+}
+.def-display .def-comment {
+  font-size: 0.85em;
+  color: #888;
+  font-style: italic;
+}
+
+#chainDisplay {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 0 0 15px;
+  min-height: 60px;
+}
+.composition-chain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.chain-label {
+  color: #ffcc00;
+  font-weight: bold;
+  font-size: 0.9em;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.chain-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 34px;
+  padding: 0 6px;
+  border: 2px solid #444;
+  border-radius: 5px;
+  background: #111;
+  color: #e0e0e0;
+  font-size: 0.85em;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+.chain-val.result {
+  border-color: #00ff88;
+  color: #00ff88;
+  background: #0a1a12;
+  box-shadow: 0 0 10px #00ff8855;
+}
+.chain-arrow {
+  color: #555;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<h1>Ackermann Function A<sub>k</sub>(j)</h1>
+<p class="subtitle">Iterated Composition — Total Computable, Not Primitive Recursive</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="def-display">
+      <div class="def-line">A<sub>0</sub>(j) = j + 1</div>
+      <div class="def-line">A<sub>k+1</sub>(j) = A<sub>k</sub><sup>(j+1)</sup>(j)</div>
+      <div class="def-comment">where the superscript (j+1) means applying A<sub>k</sub> repeatedly (j+1) times</div>
+    </div>
+
+    <div id="chainDisplay">
+      <div class="composition-chain">
+        <span class="chain-label">A<sub>0</sub>(j):</span>
+        <span style="color:#888;font-size:0.85em;">Press Play or Step to begin</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9199; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+      <span class="label">Computing:</span> <span class="value" id="computingDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Table of A<sub>k</sub>(j) Values</div>
+      <div class="table-wrapper">
+        <table id="ackTable"></table>
+      </div>
+    </div>
+
+    <div class="akk-section" id="akkSection" style="display:none;">
+      <div class="akk-table-title">A<sub>k</sub>(k) and Inverse &alpha;(n)</div>
+      <div class="akk-table-wrap">
+        <table id="akkTable"></table>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>&#9989; Animation Complete</h2>
+      <div id="finalDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+<div class="explain-section active">
+  <h3>Ackermann Function A<sub>k</sub>(j)</h3>
+  <p>The <b>Ackermann function</b> is a classic example of a <b>total computable function</b> that is <b>not primitive recursive</b>. It grows extremely fast through <b>iterated composition</b>.</p>
+  <p>Defined for <span class="dim">k &#x2265; 0</span> and <span class="dim">j &#x2265; 0</span>:</p>
+  <span class="formula-line">A<sub>0</sub>(j) = j + 1</span>
+  <span class="formula-line">A<sub>k+1</sub>(j) = A<sub>k</sub><sup>(j+1)</sup>(j)</span>
+  <p>where <span class="dim">A<sub>k</sub><sup>(j+1)</sup></span> means applying A<sub>k</sub> <span class="dim">(j+1) times</span> in succession.</p>
+  <h3 style="margin-top:10px;">Growth Pattern</h3>
+  <p>A<sub>0</sub> = successor (add 1) &bull; A<sub>1</sub> = doubling (2j+1) &bull; A<sub>2</sub> = exponential (2<sup>j+1</sup>(j+1)-1) &bull; A<sub>3</sub> = tetration &bull; ...</p>
+  <p class="note">Each level iterates the previous level's operation. Press Play or Step to begin.</p>
+</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const K_MAX = 3;
+const J_MAX = 4;
+let A = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function precomputeAll() {
+  A = Array.from({length: K_MAX + 1}, () => Array(J_MAX + 1).fill(-1));
+  for (let j = 0; j <= J_MAX; j++) A[0][j] = j + 1;
+  for (let j = 0; j <= J_MAX; j++) A[1][j] = 2 * j + 1;
+  for (let j = 0; j <= J_MAX; j++) A[2][j] = Math.pow(2, j + 1) * (j + 1) - 1;
+  A[3][0] = 1;
+  A[3][1] = 2047;
+  A[3][2] = Infinity;
+  A[3][3] = Infinity;
+  A[3][4] = Infinity;
+  return A;
+}
+
+function getA0Chain(j) {
+  return [j, j + 1];
+}
+
+function getA1Chain(j) {
+  let chain = [j];
+  let val = j;
+  for (let t = 0; t <= j; t++) {
+    val = A[0][val];
+    chain.push(val);
+  }
+  return chain;
+}
+
+function getA2Chain(j) {
+  let chain = [j];
+  let val = j;
+  for (let t = 0; t <= j; t++) {
+    val = A[1][val];
+    chain.push(val);
+  }
+  return chain;
+}
+
+function buildChainHTML(label, chain, fnLabel) {
+  let html = `<div class="composition-chain"><span class="chain-label">${label}:</span>`;
+  for (let c = 0; c < chain.length - 1; c++) {
+    html += `<span class="chain-val">${chain[c]}</span>`;
+    html += `<span class="chain-arrow">&rarr;${fnLabel}&rarr;</span>`;
+  }
+  html += `<span class="chain-val result">${chain[chain.length - 1]}</span>`;
+  html += `</div>`;
+  return html;
+}
+
+function buildSetupExplanation() {
+  return `
+<div class="explain-section active">
+  <h3>Problem Setup</h3>
+  <p>The <b>Ackermann function</b> A<sub>k</sub>(j) is defined by <b>iterated composition</b>:</p>
+  <span class="formula-line">A<sub>0</sub>(j) = j + 1</span>
+  <span class="formula-line">A<sub>k+1</sub>(j) = A<sub>k</sub><sup>(j+1)</sup>(j) &nbsp;(apply A<sub>k</sub> (j+1) times)</span>
+  <p>We will compute values for <span class="dim">k = 0, 1, 2, 3</span> and <span class="dim">j = 0, 1, 2, 3, 4</span>.</p>
+  <p>Then compute <span class="dim">A<sub>k</sub>(k)</span> and the <b>inverse Ackermann</b> <span class="dim">&alpha;(n)</span>.</p>
+  <p class="note">The inverse &alpha;(n) = min{k : A<sub>k</sub>(k) &#x2265; n} grows extremely slowly.</p>
+</div>`;
+}
+
+function buildA0Explanation(j) {
+  let val = j + 1;
+  return `
+<div class="explain-section active">
+  <h3>Base Case: A<sub>0</sub>(${j})</h3>
+  <p>By definition, <span class="dim">A<sub>0</sub>(j) = j + 1</span>. This is the <b>successor function</b>.</p>
+  <p>Substituting <span class="dim">j = ${j}</span>:</p>
+  <span class="formula-line">A<sub>0</sub>(${j}) = ${j} + 1 = ${val}</span>
+  <p>Result: <span class="result-line">A<sub>0</sub>(${j}) = ${val}</span></p>
+  <p class="note">Row k=0 is the simplest: just add 1. All higher levels build on this.</p>
+</div>`;
+}
+
+function buildA0FormulaExplanation() {
+  return `
+<div class="explain-section active">
+  <h3>A<sub>0</sub>(j) Complete</h3>
+  <p>All base case values computed. The pattern is trivial:</p>
+  <span class="formula-line">A<sub>0</sub>(j) = j + 1 &rArr; [${Array.from({length:J_MAX+1}, (_,i) => i+1).join(', ')}]</span>
+  <p class="note">This forms the foundation for all higher levels of the Ackermann hierarchy.</p>
+</div>`;
+}
+
+function buildA1Explanation(j) {
+  let chain = getA1Chain(j);
+  let steps = j + 1;
+  return `
+<div class="explain-section active">
+  <h3>Computing A<sub>1</sub>(${j})</h3>
+  <p>Apply A<sub>0</sub> <span class="dim">${steps}</span> time${steps > 1 ? 's' : ''}, starting from <span class="dim">j = ${j}</span>:</p>
+  <p style="margin-left:8px;">
+    A<sub>1</sub>(${j}) = A<sub>0</sub><sup>(${steps})</sup>(${j})<br>
+    <span class="dim">= A<sub>0</sub>(A<sub>0</sub>(...A<sub>0</sub>(${j})...))</span> (${steps} nested calls)
+  </p>
+  <span class="formula-line">Chain: ${chain.slice(0, -1).join(' &rarr; ')} &rarr; <b>${chain[chain.length - 1]}</b></span>
+  <p>The repeated +1 operations add up:</p>
+  <span class="formula-line">A<sub>1</sub>(${j}) = ${j} + 1 + 1 + ... + 1 = ${j} + (${j}+1) = ${2*j+1}</span>
+  <p>Result: <span class="result-line">A<sub>1</sub>(${j}) = ${2*j+1}</span></p>
+  <p class="note">A<sub>1</sub> doubles and adds 1: it's the function 2j+1.</p>
+</div>`;
+}
+
+function buildA1FormulaExplanation() {
+  return `
+<div class="explain-section active">
+  <h3>A<sub>1</sub>(j) Complete</h3>
+  <p>General formula for the A<sub>1</sub> row:</p>
+  <span class="formula-line">A<sub>1</sub>(j) = 2j + 1 &rArr; [${Array.from({length:J_MAX+1}, (_,i) => 2*i+1).join(', ')}]</span>
+  <p>Each A<sub>1</sub>(j) iterates A<sub>0</sub> (j+1) times, which adds 1 repeatedly &mdash; equivalent to adding (j+1) to j.</p>
+  <p class="note">Now we'll iterate A<sub>1</sub> to get A<sub>2</sub>, which grows much faster.</p>
+</div>`;
+}
+
+function buildA2Explanation(j) {
+  let chain = getA2Chain(j);
+  let steps = j + 1;
+  return `
+<div class="explain-section active">
+  <h3>Computing A<sub>2</sub>(${j})</h3>
+  <p>Apply A<sub>1</sub> <span class="dim">${steps}</span> time${steps > 1 ? 's' : ''}, starting from <span class="dim">j = ${j}</span>:</p>
+  <p style="margin-left:8px;">
+    A<sub>2</sub>(${j}) = A<sub>1</sub><sup>(${steps})</sup>(${j})<br>
+    <span class="dim">= A<sub>1</sub>(A<sub>1</sub>(...A<sub>1</sub>(${j})...))</span>
+  </p>
+  <span class="formula-line">Chain: ${chain.slice(0, -1).join(' &rarr; ')} &rarr; <b>${chain[chain.length - 1]}</b></span>
+  <p>Each A<sub>1</sub> application transforms x &rarr; 2x+1:</p>
+  <span class="formula-line">A<sub>2</sub>(${j}) = 2<sup>${j+1}</sup>&middot;(${j}+1) - 1 = ${A[2][j]}</span>
+  <p>Result: <span class="result-line">A<sub>2</sub>(${j}) = ${A[2][j]}</span></p>
+  <p class="note">This grows exponentially with j. For j=0..4, values are: 1, 7, 23, 63, 159.</p>
+</div>`;
+}
+
+function buildA2FormulaExplanation() {
+  return `
+<div class="explain-section active">
+  <h3>A<sub>2</sub>(j) Complete</h3>
+  <p>General formula for the A<sub>2</sub> row:</p>
+  <span class="formula-line">A<sub>2</sub>(j) = 2<sup>j+1</sup>(j+1) - 1</span>
+  <p class="note">The iteration of A<sub>1</sub> produces exponential growth. Each step doubles the previous value and adds 1.</p>
+</div>`;
+}
+
+function buildA3Explanation(j, val) {
+  if (j === 0) {
+    return `
+<div class="explain-section active">
+  <h3>A<sub>3</sub>(0)</h3>
+  <p>Apply A<sub>2</sub> <span class="dim">1</span> time starting from <span class="dim">0</span>:</p>
+  <span class="formula-line">A<sub>3</sub>(0) = A<sub>2</sub>(0) = 1</span>
+  <p>Result: <span class="result-line">A<sub>3</sub>(0) = 1</span></p>
+</div>`;
+  } else {
+    return `
+<div class="explain-section active">
+  <h3>A<sub>3</sub>(1)</h3>
+  <p>Apply A<sub>2</sub> <span class="dim">2</span> times starting from <span class="dim">1</span>:</p>
+  <span class="formula-line">A<sub>3</sub>(1) = A<sub>2</sub>(A<sub>2</sub>(1)) = A<sub>2</sub>(7)</span>
+  <span class="formula-line">A<sub>2</sub>(7) = 2<sup>8</sup>&middot;8 - 1 = 256&middot;8 - 1 = 2047</span>
+  <p>Result: <span class="result-line">A<sub>3</sub>(1) = 2047</span></p>
+  <p class="note">A<sub>3</sub>(j) grows enormously. For j&#x2265;2, values exceed millions. This is tetration-level growth.</p>
+</div>`;
+  }
+}
+
+function buildAkkExplanation() {
+  let akkVals = [A[0][0], A[1][1], A[2][2]];
+  let akkLabels = ['A<sub>0</sub>(0)', 'A<sub>1</sub>(1)', 'A<sub>2</sub>(2)'];
+  let akkStr = akkLabels.map((l, i) => `${l} = ${akkVals[i]}`).join(', ');
+  return `
+<div class="explain-section active">
+  <h3>A<sub>k</sub>(k) — Diagonal Values</h3>
+  <p>The diagonal <span class="dim">A<sub>k</sub>(k)</span> captures the growth of each level at its own index:</p>
+  <span class="formula-line">${akkStr}</span>
+  <p>A<sub>3</sub>(3) = applying A<sub>2</sub> four times starting from 3, which is <span class="dim">enormous</span> (tetration).</p>
+  <p>The <b>inverse Ackermann</b> function is defined as:</p>
+  <span class="formula-line">&alpha;(n) = min{k : A<sub>k</sub>(k) &#x2265; n}</span>
+  <p>It answers: "which level k first reaches or exceeds n on the diagonal?"</p>
+  <p class="note">&alpha;(n) grows extremely slowly: &alpha;(n) &#x2264; 4 for any n you can write in the observable universe.</p>
+</div>`;
+}
+
+function buildInverseExplanation(n, alpha) {
+  let prevK = alpha - 1;
+  let prevVal = prevK >= 0 ? `A<sub>${prevK}</sub>(${prevK}) = ${prevK === 0 ? 1 : prevK === 1 ? 3 : prevK === 2 ? 23 : '...'}` : '';
+  let curVal = `A<sub>${alpha}</sub>(${alpha})`;
+  let curActual = alpha === 0 ? 1 : alpha === 1 ? 3 : alpha === 2 ? 23 : alpha === 3 ? 'enormous' : '??';
+  let explanation = '';
+  if (prevVal) {
+    explanation = `
+  <p style="margin-left:8px;">
+    <span class="dim">${prevVal}</span> <span style="color:#888;">&lt;</span> ${n} <span style="color:#888;">&#x2264;</span> <span class="dim">${curVal} = ${curActual}</span>
+  </p>`;
+  } else {
+    explanation = `
+  <p style="margin-left:8px;">
+    ${n} <span style="color:#888;">&#x2264;</span> <span class="dim">${curVal} = ${curActual}</span>
+  </p>`;
+  }
+  return `
+<div class="explain-section active">
+  <h3>Inverse: &alpha;(${n})</h3>
+  <p>Find smallest <span class="dim">k</span> such that <span class="dim">A<sub>k</sub>(k) &#x2265; ${n}</span>:</p>
+  ${explanation}
+  <p>Result: <span class="result-line">&alpha;(${n}) = ${alpha}</span></p>
+  <p class="note">&alpha;(n) is used in the analysis of union-find with path compression and other near-constant-time algorithms.</p>
+</div>`;
+}
+
+function buildFinishedExplanation() {
+  return `
+<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>&#9989; Algorithm Complete!</h3>
+  <p>We have explored the <b>Ackermann function</b> A<sub>k</sub>(j) and its <b>inverse</b> &alpha;(n).</p>
+  <h3 style="margin-top:10px;">Summary</h3>
+  <p><span class="dim">A<sub>0</sub>(j) = j+1</span> &mdash; successor (addition)</p>
+  <p><span class="dim">A<sub>1</sub>(j) = 2j+1</span> &mdash; multiplication-like</p>
+  <p><span class="dim">A<sub>2</sub>(j) = 2<sup>j+1</sup>(j+1)-1</span> &mdash; exponential</p>
+  <p><span class="dim">A<sub>3</sub>(j)</span> &mdash; tetration (iterated exponentiation)</p>
+  <h3 style="margin-top:10px;">Inverse Ackermann</h3>
+  <p><span class="dim">&alpha;(n) = min{k : A<sub>k</sub>(k) &#x2265; n}</span></p>
+  <p>&alpha;(n) grows slower than log log n, log* n, or practically any function you can name.</p>
+  <h3 style="margin-top:10px;">Complexity</h3>
+  <p><span class="dim">Growth:</span> A<sub>k</sub>(j) is not primitive recursive &mdash; it outgrows any function definable without nested recursion.</p>
+  <p><span class="dim">Inverse:</span> &alpha;(n) &#x2264; 4 for all n &lt; 2<sup>2<sup>2<sup>2<sup>65536</sup></sup></sup></sup></p>
+  <p class="note">The Ackermann function was introduced by Wilhelm Ackermann in 1928 as an example of a computable function that is not primitive recursive.</p>
+</div>`;
+}
+
+function initTables() {
+  let table = document.getElementById('ackTable');
+  let html = '<tr><th class="row-label">k\\j</th>';
+  for (let j = 0; j <= J_MAX; j++) {
+    html += `<th>j=${j}</th>`;
+  }
+  html += '</tr>';
+  for (let k = 0; k <= K_MAX; k++) {
+    html += '<tr>';
+    html += `<th class="row-label">k=${k}</th>`;
+    for (let j = 0; j <= J_MAX; j++) {
+      html += `<td id="cell-${k}-${j}"></td>`;
+    }
+    html += '</tr>';
+  }
+  table.innerHTML = html;
+}
+
+function initAkkTable() {
+  let table = document.getElementById('akkTable');
+  let html = '<tr><th style="width:100px;">k</th><th style="width:100px;">A<sub>k</sub>(k)</th><th>Inverse &alpha;(n)</th></tr>';
+  let akkVals = [1, 3, 23, '&infin;'];
+  let alphas = [
+    {range: 'n = 0, 1', val: '&alpha;(n) = 0'},
+    {range: '2 &le; n &le; 3', val: '&alpha;(n) = 1'},
+    {range: '4 &le; n &le; 23', val: '&alpha;(n) = 2'},
+    {range: '24 &le; n &lt; huge', val: '&alpha;(n) = 3'}
+  ];
+  for (let k = 0; k <= K_MAX; k++) {
+    let aVal = akkVals[k];
+    let inv = alphas[k] || {range: '&mdash;', val: '&mdash;'};
+    let invDesc = k < alphas.length ? `${inv.range}: ${inv.val}` : '&mdash;';
+    html += `<tr><td style="font-weight:bold;background:#1a1a2e;color:#00ccff;">k=${k}</td>
+                 <td id="akk-cell-${k}">${aVal}</td>
+                 <td id="inv-cell-${k}" style="text-align:left;padding-left:10px;font-size:0.78em;">${invDesc}</td></tr>`;
+  }
+  table.innerHTML = html;
+}
+
+function clearHighlights() {
+  for (let k = 0; k <= K_MAX; k++) {
+    for (let j = 0; j <= J_MAX; j++) {
+      let cell = document.getElementById(`cell-${k}-${j}`);
+      if (cell) {
+        cell.className = '';
+      }
+    }
+  }
+}
+
+function buildSteps() {
+  precomputeAll();
+  steps = [];
+
+  steps.push({
+    type: 'setup',
+    explanation: buildSetupExplanation()
+  });
+
+  for (let j = 0; j <= J_MAX; j++) {
+    steps.push({
+      type: 'fill_a0',
+      k: 0, j: j,
+      value: A[0][j],
+      chain: getA0Chain(j),
+      explanation: buildA0Explanation(j)
+    });
+  }
+  steps.push({
+    type: 'formula',
+    k: -1, j: -1,
+    explanation: buildA0FormulaExplanation()
+  });
+
+  for (let j = 0; j <= J_MAX; j++) {
+    steps.push({
+      type: 'fill_a1',
+      k: 1, j: j,
+      value: A[1][j],
+      chain: getA1Chain(j),
+      explanation: buildA1Explanation(j)
+    });
+  }
+  steps.push({
+    type: 'formula',
+    k: -1, j: -1,
+    explanation: buildA1FormulaExplanation()
+  });
+
+  for (let j = 0; j <= J_MAX; j++) {
+    steps.push({
+      type: 'fill_a2',
+      k: 2, j: j,
+      value: A[2][j],
+      chain: getA2Chain(j),
+      explanation: buildA2Explanation(j)
+    });
+  }
+  steps.push({
+    type: 'formula',
+    k: -1, j: -1,
+    explanation: buildA2FormulaExplanation()
+  });
+
+  steps.push({
+    type: 'fill_a3',
+    k: 3, j: 0,
+    value: 1,
+    chain: [0, 1],
+    explanation: buildA3Explanation(0, 1)
+  });
+  steps.push({
+    type: 'fill_a3',
+    k: 3, j: 1,
+    value: 2047,
+    chain: [1, 7, 2047],
+    explanation: buildA3Explanation(1, 2047)
+  });
+
+  steps.push({
+    type: 'akk',
+    explanation: buildAkkExplanation()
+  });
+
+  let inverseDefs = [
+    {n: 1, alpha: 0},
+    {n: 2, alpha: 1},
+    {n: 4, alpha: 2},
+    {n: 24, alpha: 3}
+  ];
+  for (let inv of inverseDefs) {
+    steps.push({
+      type: 'inverse',
+      n: inv.n,
+      alpha: inv.alpha,
+      explanation: buildInverseExplanation(inv.n, inv.alpha)
+    });
+  }
+
+  steps.push({
+    type: 'done',
+    explanation: buildFinishedExplanation()
+  });
+
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  if (step.type === 'setup') {
+    document.getElementById('chainDisplay').innerHTML =
+      '<div class="composition-chain"><span style="color:#888;font-size:0.85em;">Definition shown. Ready to fill the table.</span></div>';
+    document.getElementById('phaseDisplay').textContent = 'Setup — Definition';
+    document.getElementById('computingDisplay').textContent = 'A\u2096(j) definition';
+    return;
+  }
+
+  if (step.type === 'fill_a0' || step.type === 'fill_a1' || step.type === 'fill_a2' || step.type === 'fill_a3') {
+    let k = step.k, j = step.j;
+    let cell = document.getElementById(`cell-${k}-${j}`);
+    if (cell) {
+      cell.className = 'filled current';
+      cell.textContent = (step.value === Infinity || step.value === '∞') ? '∞' : step.value;
+    }
+
+    let fnLabel = '';
+    let phase = '';
+    if (step.type === 'fill_a0') { fnLabel = 'A\u2080'; phase = 'Filling A\u2080 row'; }
+    else if (step.type === 'fill_a1') { fnLabel = 'A\u2081'; phase = 'Filling A\u2081 row'; }
+    else if (step.type === 'fill_a2') { fnLabel = 'A\u2082'; phase = 'Filling A\u2082 row'; }
+    else if (step.type === 'fill_a3') { fnLabel = 'A\u2083'; phase = 'Filling A\u2083 row'; }
+
+    let label = `${fnLabel}(${j})`;
+    let chainLabel = fnLabel;
+    let chainHTML = buildChainHTML(label, step.chain, chainLabel);
+    document.getElementById('chainDisplay').innerHTML = chainHTML;
+    document.getElementById('phaseDisplay').textContent = phase;
+    document.getElementById('computingDisplay').textContent = `${fnLabel}(${j}) = ${step.value === Infinity ? '∞' : step.value}`;
+  }
+
+  if (step.type === 'formula') {
+    document.getElementById('chainDisplay').innerHTML =
+      '<div class="composition-chain"><span style="color:#00ff88;font-size:0.85em;">&#10003; Row complete — formula shown in sidebar</span></div>';
+    document.getElementById('phaseDisplay').textContent = 'Formula Review';
+    document.getElementById('computingDisplay').textContent = 'General formula';
+  }
+
+  if (step.type === 'akk') {
+    document.getElementById('akkSection').style.display = 'block';
+    document.getElementById('chainDisplay').innerHTML =
+      '<div class="composition-chain"><span style="color:#ffcc00;font-size:0.85em;">Diagonal values A<sub>k</sub>(k) — shown in table below</span></div>';
+    document.getElementById('phaseDisplay').textContent = 'A\u2096(k) Diagonal';
+    document.getElementById('computingDisplay').textContent = 'Inverse Ackermann \u03B1(n)';
+  }
+
+  if (step.type === 'inverse') {
+    let cell = document.getElementById(`inv-cell-${step.alpha}`);
+    if (cell) {
+      cell.style.color = '#00ff88';
+      cell.style.fontWeight = 'bold';
+    }
+    let akkCell = document.getElementById(`akk-cell-${step.alpha}`);
+    if (akkCell) {
+      akkCell.className = 'filled current';
+    }
+    document.getElementById('chainDisplay').innerHTML =
+      `<div class="composition-chain"><span style="color:#ffcc00;font-size:0.85em;">\u03B1(${step.n}) = ${step.alpha}</span></div>`;
+    document.getElementById('phaseDisplay').textContent = 'Inverse Ackermann';
+    document.getElementById('computingDisplay').textContent = `\u03B1(${step.n}) = ${step.alpha}`;
+  }
+
+  if (step.type === 'done') {
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('phaseDisplay').textContent = '\u2713 Complete!';
+    document.getElementById('computingDisplay').textContent = 'Inverse Ackermann';
+    document.getElementById('chainDisplay').innerHTML =
+      '<div class="composition-chain"><span style="color:#00ff88;font-size:0.9em;">&#9989; Animation Complete</span></div>';
+  }
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${document.getElementById('phaseDisplay').textContent}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('akkSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '\u2014';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildSetupExplanation();
+  document.getElementById('chainDisplay').innerHTML =
+    '<div class="composition-chain"><span style="color:#888;font-size:0.85em;">Press Play or Step to begin</span></div>';
+  clearHighlights();
+  initTables();
+  initAkkTable();
+  buildSteps();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '\u2713 Complete!';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalDisplay').innerHTML = buildFinishedExplanation();
+  document.getElementById('computingDisplay').textContent = 'Done';
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — \u2705 Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initTables();
+initAkkTable();
+buildSteps();
+</script>
+</body>
+</html>

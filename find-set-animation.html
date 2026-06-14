@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIND-SET Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.canvas-wrapper {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 60px;
+  height: 36px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.root-highlight {
+  background: #002a1a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 14px #00ff8855;
+  transform: scale(1.08);
+  font-weight: bold;
+}
+td.compressed {
+  background: #001a0a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 12px #00ff8844;
+  font-weight: bold;
+}
+
+.call-stack {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 15px 0;
+  min-height: 80px;
+}
+.call-stack .cs-title {
+  color: #888;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+}
+.call-stack .cs-frames {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+.call-stack .cs-frame {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  border-left: 3px solid #444;
+  background: #111;
+  color: #aaa;
+  transition: all 0.3s;
+}
+.call-stack .cs-frame.active-call {
+  border-left-color: #ff6600;
+  background: #1a0a00;
+  color: #ff6600;
+  font-weight: bold;
+}
+.call-stack .cs-frame.active-return {
+  border-left-color: #00ff88;
+  background: #001a0a;
+  color: #00ff88;
+}
+.call-stack .cs-frame.base {
+  border-left-color: #00ccff;
+  background: #00101a;
+  color: #00ccff;
+}
+
+.pseudocode-box {
+  background: #0a0a18;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.9;
+}
+.pseudocode-box .line {
+  color: #888;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+.pseudocode-box .line.active-line {
+  background: #1a1a00;
+  color: #ffff00;
+  font-weight: bold;
+}
+.pseudocode-box .keyword { color: #00ccff; }
+.pseudocode-box .func-name { color: #ff9944; }
+.pseudocode-box .comment { color: #555; font-style: italic; }
+
+.selector-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 5px;
+  font-size: 0.9em;
+  color: #ccc;
+}
+.selector-row select {
+  background: #1a1a2e;
+  color: #00ff88;
+  border: 2px solid #444;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.selector-row select:focus {
+  outline: none;
+  border-color: #00ff88;
+}
+.selector-row .call-btn {
+  padding: 6px 16px;
+  border: 2px solid #00ff88;
+  background: #002a1a;
+  color: #00ff88;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.selector-row .call-btn:hover {
+  box-shadow: 0 0 15px #00ff8833;
+}
+.selector-row .call-btn:active { transform: scale(0.95); }
+.selector-row .call-btn:disabled {
+  border-color: #555;
+  background: #111;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+
+.tree-label {
+  color: #555;
+  font-size: 0.8em;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>FIND-SET(x)</h1>
+<p class="subtitle">Disjoint Set Union — Recursive Find with Path Compression</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="treeCanvas" width="900" height="320"></canvas>
+    </div>
+
+    <div class="selector-row">
+      <span>Call</span>
+      <select id="findTarget">
+        <option value="1">FIND-SET(1)</option>
+        <option value="2">FIND-SET(2)</option>
+        <option value="3">FIND-SET(3)</option>
+        <option value="4">FIND-SET(4)</option>
+        <option value="6">FIND-SET(6)</option>
+      </select>
+      <span>to begin</span>
+      <button class="call-btn" id="callBtn" onclick="runFindSet()">▶ Run</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <span class="label">Call:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Action:</span> <span class="value" id="computingDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Return:</span> <span class="value" id="returnDisplay">&mdash;</span>
+    </div>
+
+    <div class="pseudocode-box" id="pseudocodeBox">
+      <div class="line" id="pline0"><span class="func-name">FIND-SET</span>(x)</div>
+      <div class="line" id="pline1">&nbsp;&nbsp;<span class="keyword">if</span> x ≠ x.<span class="func-name">p</span>:</div>
+      <div class="line" id="pline2">&nbsp;&nbsp;&nbsp;&nbsp;x.<span class="func-name">p</span> = <span class="func-name">FIND-SET</span>(x.<span class="func-name">p</span>)</div>
+      <div class="line" id="pline3">&nbsp;&nbsp;<span class="keyword">return</span> x.<span class="func-name">p</span></div>
+      <div class="line" id="pline4" style="color:#555;font-style:italic;">&nbsp;&nbsp;<span class="comment">// returns the representative (root)</span></div>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count"><span id="stepNum">0</span></span> / <span class="count"><span id="totalSteps">0</span></span>
+    </div>
+
+    <div class="call-stack" id="callStack">
+      <div class="cs-title">▼ Call Stack</div>
+      <div class="cs-frames" id="csFrames">
+        <div style="color:#555;font-size:0.8em;text-align:center;padding:12px;">No active calls &mdash; select a target and press Run.</div>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Parent Array &mdash; <span style="color:#888;font-size:0.85em;">parent[x] = FIND-SET(x) after path compression</span></div>
+      <div class="table-wrapper">
+        <table id="parentTable">
+          <thead><tr id="parentHeader"></tr></thead>
+          <tbody><tr id="parentRow"></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>✅ FIND-SET Complete!</h2>
+      <p style="color:#ccc;margin:8px 0;">
+        <span class="result-line" id="finalResult" style="display:inline;"></span>
+      </p>
+      <p style="color:#ccc;margin:8px 0;">Final parent array: <span class="result-line" id="finalParent" style="display:inline;"></span></p>
+      <div id="resultDisplay" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+const N = 7;
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let parent = [];
+let findTarget = 4;
+
+function initData() {
+  parent = Array(N).fill(0).map((_, i) => i);
+  parent[1] = 0; parent[2] = 1; parent[3] = 2; parent[4] = 3;
+  parent[5] = 5; parent[6] = 5;
+}
+
+function precomputeAll() {
+  return { parent: [...parent] };
+}
+
+function findSetRecursive(x, path) {
+  path = path || [];
+  path.push(x);
+  if (parent[x] !== x) {
+    let root = findSetRecursive(parent[x], path);
+    parent[x] = root;
+    return root;
+  }
+  return x;
+}
+
+function buildSteps() {
+  steps = [];
+  let p = [...parent];
+  let x = findTarget;
+
+  let path = [];
+  let node = x;
+
+  while (true) {
+    path.push(node);
+    if (p[node] === node) break;
+    node = p[node];
+  }
+
+  for (let i = 0; i < path.length; i++) {
+    let n = path[i];
+    let isRoot = (i === path.length - 1);
+    steps.push({
+      type: 'call',
+      node: n,
+      caller: i > 0 ? path[i - 1] : null,
+      isRoot: isRoot,
+      depth: i,
+      path: [...path],
+      parent: [...p],
+      phase: isRoot ? 'base' : 'recurse',
+      explanation: buildCallExplanation(x, n, path, i, isRoot)
+    });
+  }
+
+  for (let i = path.length - 2; i >= 0; i--) {
+    let n = path[i];
+    let oldParent = p[n];
+    p[n] = path[path.length - 1];
+    steps.push({
+      type: 'compress',
+      node: n,
+      root: path[path.length - 1],
+      oldParent: oldParent,
+      depth: i,
+      path: [...path],
+      parent: [...p],
+      explanation: buildCompressExplanation(x, n, path[path.length - 1], oldParent, path, i)
+    });
+  }
+
+  for (let i = 0; i < path.length; i++) {
+    let n = path[i];
+    steps.push({
+      type: 'return',
+      node: n,
+      root: path[path.length - 1],
+      depth: i,
+      path: [...path],
+      parent: [...p],
+      explanation: buildReturnExplanation(x, n, path[path.length - 1], path, i)
+    });
+  }
+
+  steps.push({
+    type: 'done',
+    root: path[path.length - 1],
+    parent: [...p],
+    explanation: ''
+  });
+}
+
+function buildProblemSetupHTML() {
+  return `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p><b>FIND-SET(x)</b> returns the <b>representative</b> (root) of the set containing element x, applying <b>path compression</b>.</p>
+    <h3 style="margin-top:10px;">Algorithm (CLRS)</h3>
+    <span class="formula-line">FIND-SET(x)</span>
+    <span class="formula-line">&nbsp;&nbsp;if x ≠ x.p: x.p = FIND-SET(x.p)</span>
+    <span class="formula-line">&nbsp;&nbsp;return x.p</span>
+    <p style="margin-top:8px;">Each node visited has its parent updated to point <b>directly</b> to the root.</p>
+    <h3 style="margin-top:10px;">Initial Forest</h3>
+    <p><span class="dim">Tree A (depth 4):</span> 0 ← 1 ← 2 ← 3 ← 4</p>
+    <p><span class="dim">Tree B:</span> 5 ← 6</p>
+    <p class="note">Calling FIND-SET(4) will traverse nodes 4, 3, 2, 1, 0, then compress the path.</p>
+    <p class="note">Select a target element above and press <b>Run</b> to begin.</p>
+  </div>`;
+}
+
+function buildCallExplanation(target, node, path, i, isRoot) {
+  let pathStr = path.map((n, idx) =>
+    idx === i ? `<b style="color:#ff6600;">${n}</b>` :
+    idx < i ? `<b style="color:#888;">${n}</b>` :
+    idx === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+    `<b style="color:#555;">${n}</b>`
+  ).join(' → ');
+
+  if (isRoot) {
+    return `<div class="explain-section active">
+      <h3>FIND-SET(${target}) — Base Case: Node ${node} is Root</h3>
+      <p>Reached node <span class="dim">${node}</span> where parent[${node}] = <span class="dim">${node}</span>.</p>
+      <p>Since <span class="dim">x == x.p</span>, the condition <span class="formula-line" style="display:inline;">x ≠ x.p</span> is <b>false</b>.</p>
+      <p style="margin-left:8px;">We skip the recursive call and go directly to the <b>return</b> statement.</p>
+      <span class="formula-line">FIND-SET(${node}) = ${node}</span>
+      <p>Root <span class="result-line" style="display:inline;">${node}</span> found! Now returning the root back up the call chain.</p>
+      <p class="note">The recursion depth was ${path.length} — we traversed: ${pathStr}</p>
+    </div>`;
+  }
+
+  return `<div class="explain-section active">
+    <h3>FIND-SET(${target}) — Recursive Call on Node ${node}</h3>
+    <p>Visiting node <span class="dim">${node}</span>. Check: <span class="formula-line" style="display:inline;">x ≠ x.p ?</span></p>
+    <p>parent[<span class="dim">${node}</span>] = <span class="dim">${parent[node]}</span>, so <span class="dim">${node} ≠ ${parent[node]}</span> is <b>true</b>.</p>
+    <p>We recursively call <span class="formula-line" style="display:inline;">FIND-SET(${parent[node]})</span>.</p>
+    <p style="margin-left:8px;">Traversal so far: ${pathStr}</p>
+    <p class="note">Depth ${i + 1} of ${path.length}. The call stack grows deeper.</p>
+  </div>`;
+}
+
+function buildCompressExplanation(target, node, root, oldParent, path, i) {
+  return `<div class="explain-section active">
+    <h3>FIND-SET(${target}) — Path Compression: Node ${node}</h3>
+    <p>The recursive call <span class="formula-line" style="display:inline;">FIND-SET(${oldParent})</span> returned root <span class="result-line" style="display:inline;">${root}</span>.</p>
+    <p>Now compress: update parent[<span class="dim">${node}</span>] to point directly to root.</p>
+    <span class="formula-line">parent[${node}] = ${root}  (was ${oldParent})</span>
+    <p>Node <span class="dim">${node}</span> now points directly to the set's representative.</p>
+    <p>Future calls to FIND-SET(${node}) will run in <span class="result-line" style="display:inline;">O(1)</span> time.</p>
+    <p class="note">Path compression is the key optimization that makes Union-Find nearly constant time.</p>
+  </div>`;
+}
+
+function buildReturnExplanation(target, node, root, path, i) {
+  let isFirst = (i === path.length - 1);
+  if (isFirst) {
+    return `<div class="explain-section active">
+      <h3>FIND-SET(${target}) — Returning Root ${root}</h3>
+      <p>The base case returns <span class="result-line" style="display:inline;">${root}</span> up the call chain.</p>
+      <span class="formula-line">FIND-SET(${node}) = ${root}</span>
+      <p class="note">Each caller sets its own parent pointer to ${root} and returns ${root} upward.</p>
+    </div>`;
+  }
+  return `<div class="explain-section active">
+    <h3>FIND-SET(${target}) — Return Value Passed Through Node ${node}</h3>
+    <p>The recursive call returned <span class="result-line" style="display:inline;">${root}</span>.</p>
+    <p>Previously, parent[<span class="dim">${node}</span>] was <span class="dim">${path[i + 1]}</span>, and now parent[<span class="dim">${node}</span>] = <span class="result-line" style="display:inline;">${root}</span>.</p>
+    <span class="formula-line">return x.p → return ${root}</span>
+    <p class="note">Node ${node} now links directly to the root. The tree is getting flatter!</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let p = parent;
+  let depth = 0;
+  for (let i = 0; i < N; i++) {
+    if (p[i] !== i) depth++;
+  }
+  let root = p[findTarget];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ FIND-SET(${findTarget}) Complete!</h3>
+    <p>Result: <span class="result-line" style="display:inline;">FIND-SET(${findTarget}) = ${root}</span></p>
+    <p>Path compression applied to all ${depth} non-root nodes on the path.</p>
+    <h3 style="margin-top:10px;">Final State</h3>
+    <p>Parent array: [${p.join(', ')}]</p>
+    <h3 style="margin-top:10px;">Why Path Compression Matters</h3>
+    <p>Without compression, a deep chain makes <span class="dim">FIND-SET</span> O(n). With compression, subsequent finds on these nodes are <span class="result-line" style="display:inline;">O(1)</span>.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(α(n)) amortized per operation (inverse Ackermann)</p>
+    <p><span class="dim">Space:</span> O(n) for parent array + O(depth) recursion stack</p>
+  </div>`;
+}
+
+function initTables() {
+  let ph = document.getElementById('parentHeader');
+  let pr = document.getElementById('parentRow');
+  ph.innerHTML = '<th>i</th>';
+  pr.innerHTML = '<td style="color:#555;">p[i]</td>';
+  for (let i = 0; i < N; i++) {
+    ph.innerHTML += `<th>${i}</th>`;
+    pr.innerHTML += `<td id="pc${i}">${parent[i]}</td>`;
+  }
+}
+
+function clearHighlights() {
+  for (let i = 0; i < N; i++) {
+    let pc = document.getElementById('pc' + i);
+    if (pc) pc.className = '';
+  }
+  for (let i = 0; i <= 3; i++) {
+    let pl = document.getElementById('pline' + i);
+    if (pl) pl.className = 'line';
+  }
+}
+
+function updateCallStack(step) {
+  let container = document.getElementById('csFrames');
+  if (step.type === 'done') {
+    container.innerHTML = `<div style="color:#00ff88;font-size:0.8em;text-align:center;padding:8px;">✅ All calls completed. FIND-SET(${findTarget}) = ${step.root}</div>`;
+    return;
+  }
+  if (step.type === 'call' || step.type === 'compress' || step.type === 'return') {
+    let html = '';
+    let path = step.path;
+    let activeIdx = step.type === 'call' ? step.depth :
+                    step.type === 'compress' ? step.depth :
+                    step.depth;
+    for (let i = path.length - 1; i >= 0; i--) {
+      let n = path[i];
+      let isRoot = (i === path.length - 1);
+      let cls = 'cs-frame';
+      let label = '';
+      if (step.type === 'call') {
+        if (i === step.depth) { cls += ' active-call'; label = ' ← CALLING'; }
+        else if (i > step.depth) { cls += ''; label = ' (waiting)'; }
+        else { cls += ''; label = ' (done)'; }
+      } else if (step.type === 'compress') {
+        if (i === step.depth) { cls += ' active-return'; label = ' ← COMPRESSED'; }
+        else if (i > step.depth) { cls += ''; label = ' (done)'; }
+        else { cls += ''; label = ' (compressed)'; }
+      } else if (step.type === 'return') {
+        if (i === step.depth) { cls += ' active-return'; label = ' ← RETURNED'; }
+        else if (i > step.depth) { cls += ''; label = ' (done)'; }
+        else { cls += ''; label = ' (returned)'; }
+      }
+      if (isRoot && step.type === 'call' && i === step.depth) { cls = cls.replace('active-call', 'base'); label = ' ← BASE CASE'; }
+      let val = parent[n];
+      html += `<div class="${cls}">FIND-SET(${n}) &nbsp;→&nbsp; parent[${n}] = ${val}${label}</div>`;
+    }
+    container.innerHTML = html;
+  } else {
+    container.innerHTML = `<div style="color:#555;font-size:0.8em;text-align:center;padding:8px;">No active calls</div>`;
+  }
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  if (step.type === 'call') {
+    let pc = document.getElementById('pc' + step.node);
+    if (pc) {
+      pc.className = step.isRoot ? 'root-highlight' : 'current';
+    }
+    if (step.isRoot) {
+      document.getElementById('pline0').className = 'line active-line';
+      document.getElementById('pline1').className = 'line';
+      document.getElementById('pline2').className = 'line';
+      document.getElementById('pline3').className = 'line active-line';
+    } else {
+      document.getElementById('pline0').className = 'line active-line';
+      document.getElementById('pline1').className = 'line active-line';
+      document.getElementById('pline2').className = 'line active-line';
+      document.getElementById('pline3').className = 'line';
+    }
+    document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget})`;
+    document.getElementById('computingDisplay').textContent = step.isRoot ? `Base: ${step.node} is root` : `Calling FIND-SET(${parent[step.node]})`;
+    document.getElementById('returnDisplay').textContent = step.isRoot ? `${step.node}` : '...';
+
+  } else if (step.type === 'compress') {
+    for (let i = 0; i < N; i++) {
+      let pc = document.getElementById('pc' + i);
+      if (pc) {
+        pc.textContent = step.parent[i];
+        if (i === step.node) pc.className = 'computing';
+        else if (step.parent[i] === i) pc.className = 'root-highlight';
+        else pc.className = '';
+      }
+    }
+    document.getElementById('pline0').className = 'line';
+    document.getElementById('pline1').className = 'line active-line';
+    document.getElementById('pline2').className = 'line active-line';
+    document.getElementById('pline3').className = 'line';
+    document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget})`;
+    document.getElementById('computingDisplay').textContent = `Compress: parent[${step.node}] = ${step.root}`;
+    document.getElementById('returnDisplay').textContent = step.root;
+
+  } else if (step.type === 'return') {
+    let isRoot = (step.depth === step.path.length - 1);
+    if (isRoot) {
+      document.getElementById('pline0').className = 'line';
+      document.getElementById('pline1').className = 'line';
+      document.getElementById('pline2').className = 'line';
+      document.getElementById('pline3').className = 'line active-line';
+    } else {
+      document.getElementById('pline0').className = 'line';
+      document.getElementById('pline1').className = 'line';
+      document.getElementById('pline2').className = 'line';
+      document.getElementById('pline3').className = 'line active-line';
+    }
+    document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget})`;
+    document.getElementById('computingDisplay').textContent = `Return ${step.root} from FIND-SET(${step.node})`;
+    document.getElementById('returnDisplay').textContent = step.root;
+
+  } else if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = `✓ FIND-SET(${findTarget}) = ${step.root}`;
+    document.getElementById('computingDisplay').textContent = 'Complete';
+    document.getElementById('returnDisplay').textContent = step.root;
+    document.getElementById('pline0').className = 'line';
+    document.getElementById('pline1').className = 'line';
+    document.getElementById('pline2').className = 'line';
+    document.getElementById('pline3').className = 'line';
+  }
+
+  drawForest(step.parent || parent);
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'call' ? (step.isRoot ? '🎯 Base case' : '📞 Recursive call') : step.type === 'compress' ? '⚡ Path compression' : step.type === 'return' ? '⬆ Returning' : '✅ Complete'}`;
+  if (step.type !== 'done') {
+    document.getElementById('explainArea').innerHTML = step.explanation;
+  } else {
+    document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+
+  updateCallStack(step);
+}
+
+function drawForest(p) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let children = Array(N).fill(null).map(() => []);
+  let roots = [];
+  for (let i = 0; i < N; i++) {
+    if (p[i] === i) roots.push(i);
+    else children[p[i]].push(i);
+  }
+
+  let positions = {};
+  let leafCount = {};
+
+  function countLeaves(node) {
+    if (children[node].length === 0) {
+      leafCount[node] = 1;
+      return 1;
+    }
+    let total = 0;
+    for (let c of children[node]) total += countLeaves(c);
+    leafCount[node] = total;
+    return total;
+  }
+  for (let r of roots) countLeaves(r);
+
+  const yRoot = 40;
+  const ySpacing = 65;
+  const xPerLeaf = 70;
+  let startX = 30;
+
+  function positionSubtree(node, cx, y, totalWidth) {
+    positions[node] = { x: cx, y: y };
+    if (children[node].length === 0) return;
+    let childLeaves = children[node].map(c => leafCount[c]);
+    let totalChildLeaves = childLeaves.reduce((a, b) => a + b, 0);
+    let childX = cx - totalWidth / 2;
+    for (let child of children[node]) {
+      let w = leafCount[child] * xPerLeaf;
+      let childCx = childX + w / 2;
+      positionSubtree(child, childCx, y + ySpacing, w);
+      childX += w;
+    }
+  }
+
+  for (let r of roots) {
+    let width = Math.max(leafCount[r] * xPerLeaf, 60);
+    let cx = startX + width / 2;
+    positionSubtree(r, cx, yRoot, width);
+    startX += width + 30;
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (p[i] !== i && positions[i] && positions[p[i]]) {
+      drawEdge(ctx, positions[p[i]].x, positions[p[i]].y, positions[i].x, positions[i].y);
+    }
+  }
+
+  for (let i = 0; i < N; i++) {
+    if (!positions[i]) continue;
+    let { x, y } = positions[i];
+    let isRoot = p[i] === i;
+    let color = isRoot ? '#00ff88' : '#00ccff';
+
+    let pc = document.getElementById('pc' + i);
+    let cellClass = pc ? pc.className : '';
+    if (cellClass === 'current') color = '#ff6600';
+    else if (cellClass === 'computing') color = '#ffff00';
+    else if (cellClass === 'root-highlight') color = '#00ff88';
+
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d0d20';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i), x, y - 2);
+
+    if (isRoot) {
+      ctx.fillStyle = '#ff9944';
+      ctx.font = '10px Courier New';
+      ctx.fillText('root', x, y + 18);
+    }
+  }
+
+  let legendX = 10, legendY = H - 40;
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#555';
+  ctx.fillText('Legend:', legendX, legendY);
+  drawLegendDot(ctx, legendX + 70, legendY, '#00ccff', 'node');
+  drawLegendDot(ctx, legendX + 135, legendY, '#00ff88', 'root');
+  drawLegendDot(ctx, legendX + 200, legendY, '#ff6600', 'calling');
+  drawLegendDot(ctx, legendX + 280, legendY, '#ffff00', 'compress');
+}
+
+function drawLegendDot(ctx, x, y, color, label) {
+  ctx.beginPath();
+  ctx.arc(x, y - 3, 5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.fillStyle = '#555';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 9, y + 1);
+}
+
+function drawEdge(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 + 22);
+  ctx.lineTo(x2, y2 - 22);
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  document.getElementById('callBtn').disabled = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let p = parent;
+  document.getElementById('phaseDisplay').textContent = `✓ FIND-SET(${findTarget}) = ${p[findTarget]}`;
+  document.getElementById('computingDisplay').textContent = 'Complete';
+  document.getElementById('returnDisplay').textContent = p[findTarget];
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalResult').textContent = `FIND-SET(${findTarget}) = ${p[findTarget]}`;
+  document.getElementById('finalParent').textContent = `[${p.join(', ')}]`;
+  document.getElementById('resultDisplay').innerHTML = `
+    <p style="color:#ccc;margin:6px 0;">Nodes on path now point directly to root <span style="color:#00ff88;font-weight:bold;">${p[findTarget]}</span>.</p>
+    <p style="color:#ccc;margin:6px 0;">Parent array: [${p.join(', ')}]</p>
+    <p style="color:#00ff88;margin:10px 0;font-weight:bold;">Any future FIND-SET on these nodes runs in O(1)!</p>
+  `;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+  updateCallStack({ type: 'done', root: p[findTarget], path: [] });
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initData();
+  document.getElementById('callBtn').disabled = false;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('returnDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  drawForest(parent);
+  document.getElementById('csFrames').innerHTML =
+    `<div style="color:#555;font-size:0.8em;text-align:center;padding:12px;">No active calls &mdash; select a target and press Run.</div>`;
+}
+
+function runFindSet() {
+  resetAnimation();
+  findTarget = parseInt(document.getElementById('findTarget').value);
+  initData();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('phaseDisplay').textContent = `FIND-SET(${findTarget}) — Ready`;
+  document.getElementById('sidebarPhase').textContent =
+    `Step 0 / ${steps.length} — Press Play or Step to begin.`;
+  document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  drawForest(parent);
+  document.getElementById('callBtn').disabled = false;
+  document.getElementById('csFrames').innerHTML =
+    `<div style="color:#ffcc00;font-size:0.8em;text-align:center;padding:8px;">🎯 FIND-SET(${findTarget}) prepared. Press Play or Step.</div>`;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initData();
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+drawForest(parent);
+</script>
+</body>
+</html>

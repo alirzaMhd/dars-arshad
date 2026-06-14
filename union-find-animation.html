@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Union-Find with Union by Rank Animation</title>
+<title>UNION — Disjoint Set Union Animation</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -125,6 +125,20 @@ h1 {
 .info-panel .value { color: #ffcc00; font-weight: bold; }
 .info-panel .highlight { color: #00ff88; }
 
+.canvas-wrapper {
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
 .controls {
   display: flex;
   justify-content: center;
@@ -165,6 +179,7 @@ h1 {
   width: 80px;
   accent-color: #00ff88;
 }
+
 .step-counter {
   text-align: center;
   color: #888;
@@ -232,19 +247,63 @@ td.root-highlight {
   transform: scale(1.08);
   font-weight: bold;
 }
-
-.canvas-wrapper {
-  background: #0d0d20;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 10px;
-  margin: 15px 0;
-  text-align: center;
+td.link-highlight {
+  background: #1a0030 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+  box-shadow: 0 0 12px #ff66ff55;
+  font-weight: bold;
 }
-canvas {
-  display: block;
-  margin: 0 auto;
-  max-width: 100%;
+
+.phase-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 0 6px;
+  font-size: 0.85em;
+  color: #888;
+}
+.phase-indicator .phase-step {
+  padding: 4px 12px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #555;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.phase-indicator .phase-step.active {
+  border-color: #ff6600;
+  color: #ff6600;
+  background: #1a0a00;
+}
+.phase-indicator .phase-step.done {
+  border-color: #00ff88;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.phase-indicator .arrow {
+  color: #444;
+  font-size: 1.2em;
+}
+
+.operation-list {
+  margin: 15px 0;
+  font-size: 0.85em;
+  color: #888;
+  text-align: center;
+  line-height: 1.7;
+}
+.operation-list .op-done {
+  color: #555;
+  text-decoration: line-through;
+}
+.operation-list .op-active {
+  color: #ff6600;
+  font-weight: bold;
+}
+.operation-list .op-pending {
+  color: #888;
 }
 
 .result-section {
@@ -275,14 +334,24 @@ canvas {
 </head>
 <body>
 
-<h1>Union-Find with Union by Rank</h1>
-<p class="subtitle">Disjoint Set Union — Union by Rank with Path Traversal</p>
+<h1>UNION(x, y)</h1>
+<p class="subtitle">Disjoint Set Union — LINK(FIND-SET(x), FIND-SET(y)) with Union by Rank</p>
 
 <div class="layout">
   <div class="main-panel">
 
     <div class="canvas-wrapper">
-      <canvas id="treeCanvas" width="820" height="320"></canvas>
+      <canvas id="treeCanvas" width="880" height="340"></canvas>
+    </div>
+
+    <div class="phase-indicator" id="phaseIndicator">
+      <span class="phase-step" id="phaseFindX">FIND-SET(x)</span>
+      <span class="arrow">&rarr;</span>
+      <span class="phase-step" id="phaseFindY">FIND-SET(y)</span>
+      <span class="arrow">&rarr;</span>
+      <span class="phase-step" id="phaseLink">LINK(x, y)</span>
+      <span class="arrow">&rarr;</span>
+      <span class="phase-step" id="phaseDone">UNION Done</span>
     </div>
 
     <div class="controls">
@@ -298,9 +367,11 @@ canvas {
     </div>
 
     <div class="info-panel" id="infoPanel">
-      <span class="label">Operation:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
+      <span class="label">Union:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
       &nbsp;&nbsp;|&nbsp;&nbsp;
       <span class="label">Action:</span> <span class="value" id="computingDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Root:</span> <span class="value" id="rootDisplay">&mdash;</span>
     </div>
 
     <div class="step-counter">
@@ -308,7 +379,7 @@ canvas {
     </div>
 
     <div class="table-section">
-      <div class="table-title">Parent Array &mdash; parent[i] points to the parent of element i</div>
+      <div class="table-title">Parent Array &mdash; <span style="color:#888;font-size:0.85em;">parent[i] = representative after path compression</span></div>
       <div class="table-wrapper">
         <table id="parentTable">
           <thead><tr id="parentHeader"></tr></thead>
@@ -318,7 +389,7 @@ canvas {
     </div>
 
     <div class="table-section">
-      <div class="table-title">Rank Array &mdash; rank[i] is an upper bound on the height of the tree rooted at i</div>
+      <div class="table-title">Rank Array &mdash; <span style="color:#888;font-size:0.85em;">rank[i] = upper bound on tree height</span></div>
       <div class="table-wrapper">
         <table id="rankTable">
           <thead><tr id="rankHeader"></tr></thead>
@@ -327,18 +398,17 @@ canvas {
       </div>
     </div>
 
-    <div id="operationList" style="margin:15px 0;font-size:0.85em;color:#888;text-align:center;">
-      Union Operations: (0,1) &rarr; (2,3) &rarr; (4,5) &rarr; (6,7) &rarr; (0,2) &rarr; (4,6) &rarr; (0,4)
-    </div>
+    <div class="operation-list" id="opList"></div>
 
     <div class="result-section" id="resultSection" style="display:none;">
       <h2>&#10004; Algorithm Complete!</h2>
-      <p style="color:#ccc;margin:8px 0;">All elements belong to the same set rooted at <span style="color:#00ff88;font-weight:bold;">0</span>.</p>
       <p style="color:#ccc;margin:8px 0;">
-        Final rank of root <span class="dim">0</span> = <span class="result-line" id="finalRank" style="display:inline;"></span>
+        All <span class="dim">8</span> elements belong to a single set rooted at <span style="color:#00ff88;font-weight:bold;">0</span>.
       </p>
       <p style="color:#ccc;margin:8px 0;">
-        <span class="dim">log&#8322;(</span>n<span class="dim">)</span> = <span id="logDisplay" class="result-line" style="display:inline;"></span>
+        Root rank = <span class="result-line" id="finalRank" style="display:inline;"></span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span class="dim">log&#8322;(8)</span> = 3 &rArr; height bound satisfied &#10003;
       </p>
       <div id="resultDisplay" style="margin-top:15px;"></div>
     </div>
@@ -360,13 +430,10 @@ let animating = false;
 let animTimer = null;
 let parent = [];
 let rank = [];
-let nodeStates = {};
 
 function initData() {
   parent = Array(N).fill(0).map((_, i) => i);
   rank = Array(N).fill(0);
-  nodeStates = {};
-  for (let i = 0; i < N; i++) nodeStates[i] = 'default';
 }
 
 function findPath(x) {
@@ -379,6 +446,100 @@ function findPath(x) {
   return { path, root: x };
 }
 
+function buildProblemSetupHTML() {
+  return `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p><b>UNION(x, y)</b> merges the sets containing elements <span class="dim">x</span> and <span class="dim">y</span>.</p>
+    <p>The UNION operation is <b>decomposed</b> into two steps:</p>
+    <p style="margin-left:8px;">1. <span class="dim">FIND-SET(x)</span> &mdash; find the root of x's set</p>
+    <p style="margin-left:8px;">2. <span class="dim">FIND-SET(y)</span> &mdash; find the root of y's set</p>
+    <p style="margin-left:8px;">3. <span class="dim">LINK(rootX, rootY)</span> &mdash; attach the shorter tree under the taller tree</p>
+    <h3 style="margin-top:10px;">Key Formula</h3>
+    <span class="formula-line">UNION(x, y) = LINK(FIND-SET(x), FIND-SET(y))</span>
+    <p class="note"><span class="dim">Elements:</span> 0, 1, 2, 3, 4, 5, 6, 7</p>
+    <p class="note"><span class="dim">Union sequence:</span> (0,1) &rarr; (2,3) &rarr; (4,5) &rarr; (6,7) &rarr; (0,2) &rarr; (4,6) &rarr; (0,4)</p>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildFindExplanation(opIdx, x, y, node, path, i, isX) {
+  let target = isX ? x : y;
+  let side = isX ? 'first' : 'second';
+  let label = `FIND-SET(${target})`;
+  let pathStr = path.map((n, idx) =>
+    idx === i ? `<b style="color:#ff6600;">${n}</b>` :
+    idx === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` :
+    `<b style="color:#888;">${n}</b>`
+  ).join(' &rarr; ');
+
+  if (i === path.length - 1) {
+    return `<div class="explain-section active">
+      <h3>UNION(${x}, ${y}) &mdash; ${label} = ${node} (Root)</h3>
+      <p><span class="dim">FIND-SET(${target})</span> complete. Root = <span class="result-line" style="display:inline;">${node}</span>.</p>
+      <p style="margin-left:8px;">Traversal: ${pathStr}</p>
+      <p>The root will be used in the upcoming <span class="dim">LINK</span> step.</p>
+      <p class="note">After UNION, path compression may flatten this path.</p>
+    </div>`;
+  }
+
+  return `<div class="explain-section active">
+    <h3>UNION(${x}, ${y}) &mdash; ${label} traversing ${node}</h3>
+    <p>Following parent pointers for the <span class="dim">${side}</span> element.</p>
+    <p>parent[<span class="dim">${node}</span>] = <span class="dim">${parent[node]}</span></p>
+    <p style="margin-left:8px;">Path so far: ${pathStr}</p>
+    <p class="note">Step ${i+1} of ${path.length} in this FIND-SET.</p>
+  </div>`;
+}
+
+function buildCompareExplanation(opIdx, x, y, rootX, rootY) {
+  let rX = rank[rootX], rY = rank[rootY];
+  let comp = rX < rY ? '&lt;' : (rX > rY ? '&gt;' : '=');
+  let decision = '';
+  if (rX < rY) decision = `Attach <span class="dim">${rootX}</span> (rank ${rX}) under <span class="dim">${rootY}</span> (rank ${rY}) &mdash; shorter under taller.`;
+  else if (rX > rY) decision = `Attach <span class="dim">${rootY}</span> (rank ${rY}) under <span class="dim">${rootX}</span> (rank ${rX}) &mdash; shorter under taller.`;
+  else decision = `Both ranks = ${rX}. Attaching <span class="dim">${rootY}</span> under <span class="dim">${rootX}</span>, then increment rank[${rootX}] to ${rX + 1}.`;
+
+  return `<div class="explain-section active">
+    <h3>UNION(${x}, ${y}) &mdash; LINK: Compare Ranks</h3>
+    <span class="formula-line">UNION(${x}, ${y}) = LINK(FIND-SET(${x}), FIND-SET(${y}))</span>
+    <span class="formula-line">LINK( ${rootX} , ${rootY} )</span>
+    <p>rank[<span class="dim">${rootX}</span>] = ${rX} &nbsp;&nbsp;&nbsp; rank[<span class="dim">${rootY}</span>] = ${rY}</p>
+    <p>rank[${rootX}] ${comp} rank[${rootY}]</p>
+    <p>${decision}</p>
+    <p class="note">Union by rank ensures tree height &le; log&#8322;(n).</p>
+  </div>`;
+}
+
+function buildLinkExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated) {
+  let attachStr = `LINK: parent[<span class="dim">${attachSource}</span>] = <span class="result-line" style="display:inline;">${attachTarget}</span>`;
+  let rankStr = rankUpdated
+    ? `rank[<span class="dim">${attachTarget}</span>] was incremented to <span class="result-line" style="display:inline;">${rank[attachTarget]}</span> (was ${rank[attachTarget]-1})`
+    : `rank[<span class="dim">${attachTarget}</span>] stays at <span class="dim">${rank[attachTarget]}</span> (already taller)`;
+
+  return `<div class="explain-section active">
+    <h3>UNION(${x}, ${y}) &mdash; LINK Performed</h3>
+    <span class="formula-line">parent[${attachSource}] = ${attachTarget}</span>
+    <p>${attachStr}</p>
+    <p>${rankStr}</p>
+    <p class="note">UNION(${x}, ${y}) = LINK(${rootX}, ${rootY}) complete. The two sets are now merged under root ${attachTarget}.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let r = rank[0];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; Algorithm Complete!</h3>
+    <p>All <span class="dim">8</span> elements now belong to a single set rooted at <span class="result-line" style="display:inline;">0</span>.</p>
+    <p>Root rank = <span class="result-line" style="display:inline;">${r}</span> &asymp; log&#8322;(8) = 3 &#10003;</p>
+    <h3 style="margin-top:10px;">Final Forest Structure</h3>
+    <p>The tree height is bounded by log&#8322;(n) because <span class="dim">union by rank</span> always attaches the shorter tree under the taller tree.</p>
+    <p>The <span class="dim">LINK</span> step uses the roots found by <span class="dim">FIND-SET</span>, so the entire operation runs in O(&alpha;(n)).</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(&alpha;(n)) per operation (inverse Ackermann) with union by rank + path compression</p>
+    <p><span class="dim">Space:</span> O(n) for parent and rank arrays</p>
+  </div>`;
+}
+
 function buildSteps() {
   steps = [];
   initData();
@@ -386,57 +547,41 @@ function buildSteps() {
   for (let opIdx = 0; opIdx < unionOps.length; opIdx++) {
     let [x, y] = unionOps[opIdx];
 
-    let pathX = findPath(x);
-    for (let i = 0; i < pathX.path.length; i++) {
-      let node = pathX.path[i];
-      let isRoot = (i === pathX.path.length - 1);
+    let { path: pathX, root: rootX } = findPath(x);
+    for (let i = 0; i < pathX.length; i++) {
       steps.push({
-        type: 'traverse',
-        opIdx: opIdx,
-        x: x, y: y,
-        node: node,
-        isRoot: isRoot,
-        isX: true,
-        path: pathX.path,
-        parent: [...parent],
-        rank: [...rank],
-        explanation: buildTraverseExplanation(opIdx, x, y, node, pathX.path, true, isRoot)
+        type: 'find_x',
+        opIdx: opIdx, x: x, y: y,
+        node: pathX[i],
+        isRoot: i === pathX.length - 1,
+        path: pathX, pathIdx: i,
+        parent: [...parent], rank: [...rank],
+        explanation: buildFindExplanation(opIdx, x, y, pathX[i], pathX, i, true)
       });
     }
 
-    let pathY = findPath(y);
-    for (let i = 0; i < pathY.path.length; i++) {
-      let node = pathY.path[i];
-      let isRoot = (i === pathY.path.length - 1);
+    let { path: pathY, root: rootY } = findPath(y);
+    for (let i = 0; i < pathY.length; i++) {
       steps.push({
-        type: 'traverse',
-        opIdx: opIdx,
-        x: x, y: y,
-        node: node,
-        isRoot: isRoot,
-        isX: false,
-        path: pathY.path,
-        parent: [...parent],
-        rank: [...rank],
-        explanation: buildTraverseExplanation(opIdx, x, y, node, pathY.path, false, isRoot)
+        type: 'find_y',
+        opIdx: opIdx, x: x, y: y,
+        node: pathY[i],
+        isRoot: i === pathY.length - 1,
+        path: pathY, pathIdx: i,
+        parent: [...parent], rank: [...rank],
+        explanation: buildFindExplanation(opIdx, x, y, pathY[i], pathY, i, false)
       });
     }
-
-    let rootX = pathX.root;
-    let rootY = pathY.root;
 
     steps.push({
       type: 'compare',
-      opIdx: opIdx,
-      x: x, y: y,
+      opIdx: opIdx, x: x, y: y,
       rootX: rootX, rootY: rootY,
-      parent: [...parent],
-      rank: [...rank],
+      parent: [...parent], rank: [...rank],
       explanation: buildCompareExplanation(opIdx, x, y, rootX, rootY)
     });
 
-    let attachTarget = null;
-    let attachSource = null;
+    let attachSource, attachTarget, rankUpdated = false;
     if (rank[rootX] < rank[rootY]) {
       attachSource = rootX; attachTarget = rootY;
     } else if (rank[rootX] > rank[rootY]) {
@@ -448,140 +593,28 @@ function buildSteps() {
     let prevParent = [...parent];
     let prevRank = [...rank];
     parent[attachSource] = attachTarget;
-    let rankUpdated = false;
     if (rank[rootX] === rank[rootY]) {
       rank[attachTarget]++;
       rankUpdated = true;
     }
 
     steps.push({
-      type: 'union',
-      opIdx: opIdx,
-      x: x, y: y,
+      type: 'link',
+      opIdx: opIdx, x: x, y: y,
       rootX: rootX, rootY: rootY,
-      attachSource: attachSource,
-      attachTarget: attachTarget,
+      attachSource: attachSource, attachTarget: attachTarget,
       rankUpdated: rankUpdated,
-      prevParent: prevParent,
-      prevRank: prevRank,
-      parent: [...parent],
-      rank: [...rank],
-      explanation: buildUnionExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated)
+      prevParent: prevParent, prevRank: prevRank,
+      parent: [...parent], rank: [...rank],
+      explanation: buildLinkExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated)
     });
   }
 
   steps.push({
     type: 'done',
-    parent: [...parent],
-    rank: [...rank],
+    parent: [...parent], rank: [...rank],
     explanation: ''
   });
-}
-
-function buildTraverseExplanation(opIdx, x, y, node, path, isX, isRoot) {
-  let op = `Union(${x}, ${y})`;
-  let target = isX ? x : y;
-  let side = isX ? 'first' : 'second';
-  let pos = path.indexOf(node);
-  let total = path.length;
-  let desc = isRoot
-    ? `Found root! Node <span class="dim">${node}</span> is the root of <span class="dim">${target}</span>.`
-    : `Visiting node <span class="dim">${node}</span> — following parent pointer to find the root of <span class="dim">${target}</span>.`;
-  let pathStr = path.map((n, i) => i === path.length - 1 ? `<b style="color:#00ff88;">${n}</b>` : `<b style="color:#ff6600;">${n}</b>`).join(' &rarr; ');
-
-  return `<div class="explain-section active">
-    <h3>${op} — Finding Root of ${target}</h3>
-    <p>Traversing the <span class="dim">${side}</span> element in the union operation.</p>
-    <p>${desc}</p>
-    <p style="margin-left:8px;">Find path: ${pathStr}</p>
-    <p class="note">Step ${pos+1} of ${total} in this find traversal.</p>
-  </div>`;
-}
-
-function buildCompareExplanation(opIdx, x, y, rootX, rootY) {
-  let rX = rank[rootX], rY = rank[rootY];
-  let comp = rX < rY ? '&lt;' : (rX > rY ? '&gt;' : '=');
-  let decision = '';
-  if (rX < rY) decision = `Attach root <span class="dim">${rootX}</span> (rank ${rX}) under root <span class="dim">${rootY}</span> (rank ${rY}) — shorter tree under taller tree.`;
-  else if (rX > rY) decision = `Attach root <span class="dim">${rootY}</span> (rank ${rY}) under root <span class="dim">${rootX}</span> (rank ${rX}) — shorter tree under taller tree.`;
-  else decision = `Ranks are equal (both ${rX}). Attach <span class="dim">${rootY}</span> under <span class="dim">${rootX}</span> and increment rank of root <span class="dim">${rootX}</span> to ${rX + 1}.`;
-
-  return `<div class="explain-section active">
-    <h3>Union(${x}, ${y}) — Comparing Ranks</h3>
-    <p>Root of <span class="dim">${x}</span> = <span class="dim">${rootX}</span> (rank = <span class="dim">${rX}</span>)</p>
-    <p>Root of <span class="dim">${y}</span> = <span class="dim">${rootY}</span> (rank = <span class="dim">${rY}</span>)</p>
-    <p>rank[${rootX}] ${comp} rank[${rootY}]</p>
-    <p>${decision}</p>
-    <p class="note">Union by rank ensures the tree stays shallow (height &le; log n).</p>
-  </div>`;
-}
-
-function buildUnionExplanation(opIdx, x, y, rootX, rootY, attachSource, attachTarget, rankUpdated) {
-  let rX = rank[rootX], rY = rank[rootY];
-  let attachStr = `Attach <span class="dim">${attachSource}</span> under <span class="dim">${attachTarget}</span>.`;
-  let rankStr = rankUpdated
-    ? `Rank of <span class="dim">${attachTarget}</span> incremented to <span class="result-line" style="display:inline;">${rank[attachTarget]}</span> (was ${rank[attachTarget]-1}).`
-    : `Rank of root <span class="dim">${attachTarget}</span> stays at <span class="dim">${rank[attachTarget]}</span>.`;
-
-  let treeDesc = '';
-  if (rootX !== rootY) {
-    if (rankUpdated) {
-      treeDesc = `Both trees had equal rank ${rank[attachTarget]-1}. Choosing to attach ${attachSource}'s tree under ${attachTarget}'s tree preserves the invariant that rank equals the tree height.`;
-    } else {
-      let sr = rank[attachSource], tr = rank[attachTarget];
-      treeDesc = `Tree rooted at <span class="dim">${attachSource}</span> (rank ${sr}) is shorter. Attaching it under <span class="dim">${attachTarget}</span> (rank ${tr}) does not increase the taller tree's height.`;
-    }
-  }
-
-  return `<div class="explain-section active">
-    <h3>Union(${x}, ${y}) — Performing Union</h3>
-    <p>${attachStr}</p>
-    <p>${rankStr}</p>
-    <p>${treeDesc}</p>
-    <p class="note">The combined set now has <b>${countNodesInSet(attachTarget)}</b> elements. Rank ≈ log₂(size) = ${Math.ceil(Math.log2(countNodesInSet(attachTarget)))}.</p>
-  </div>`;
-}
-
-function countNodesInSet(root) {
-  let count = 0;
-  for (let i = 0; i < N; i++) {
-    let r = i;
-    while (parent[r] !== r) r = parent[r];
-    if (r === root) count++;
-  }
-  return count;
-}
-
-function buildProblemSetupHTML() {
-  return `<div class="explain-section active">
-    <h3>Problem Setup</h3>
-    <p><b>Union-Find</b> (Disjoint Set Union) maintains a collection of disjoint sets under two operations:</p>
-    <p style="margin-left:8px;">&bull; <b>Find(x)</b>: return the representative (root) of the set containing x</p>
-    <p style="margin-left:8px;">&bull; <b>Union(x, y)</b>: merge the sets containing x and y</p>
-    <h3 style="margin-top:10px;">Union by Rank</h3>
-    <p>Attach the <b>shorter</b> tree under the <b>taller</b> tree. Each node stores a <span class="dim">rank</span> (upper bound on height).</p>
-    <span class="formula-line">If rank[rootX] &lt; rank[rootY]: attach rootX under rootY</span>
-    <span class="formula-line">If rank[rootX] &gt; rank[rootY]: attach rootY under rootX</span>
-    <span class="formula-line">If equal: attach either under the other, increment its rank by 1</span>
-    <p class="note"><span class="dim">Elements:</span> 0, 1, 2, 3, 4, 5, 6, 7</p>
-    <p class="note"><span class="dim">Union sequence:</span> (0,1) &rarr; (2,3) &rarr; (4,5) &rarr; (6,7) &rarr; (0,2) &rarr; (4,6) &rarr; (0,4)</p>
-    <p class="note">Press Play or Step to begin.</p>
-  </div>`;
-}
-
-function buildFinishedExplanation() {
-  let r = rank[0];
-  return `<div class="explain-section active" style="border-left-color:#00ff88;">
-    <h3>&#10004; Algorithm Complete!</h3>
-    <p>All <span class="dim">8</span> elements now belong to a single set rooted at <span class="result-line" style="display:inline;">0</span>.</p>
-    <p>Root rank = <span class="result-line" style="display:inline;">${r}</span></p>
-    <p><span class="dim">log&#8322;(8)</span> = 3, and rank = ${r} &asymp; log&#8322;(n) &#10003;</p>
-    <h3 style="margin-top:10px;">Final Forest Structure</h3>
-    <p>Root <span class="dim">0</span> has rank ${r}. The tree height is bounded by log&#8322;(n) because union by rank always attaches the shorter tree under the taller tree.</p>
-    <h3 style="margin-top:10px;">Complexity</h3>
-    <p><span class="dim">Time:</span> O(&alpha;(n)) per operation (inverse Ackermann) with union by rank and path compression</p>
-    <p><span class="dim">Space:</span> O(n) for parent and rank arrays</p>
-  </div>`;
 }
 
 function initTables() {
@@ -590,9 +623,9 @@ function initTables() {
   let rh = document.getElementById('rankHeader');
   let rr = document.getElementById('rankRow');
   ph.innerHTML = '<th>i</th>';
-  pr.innerHTML = '<td style="color:#555;">parent[i]</td>';
+  pr.innerHTML = '<td style="color:#555;">p[i]</td>';
   rh.innerHTML = '<th>i</th>';
-  rr.innerHTML = '<td style="color:#555;">rank[i]</td>';
+  rr.innerHTML = '<td style="color:#555;">r[i]</td>';
   for (let i = 0; i < N; i++) {
     ph.innerHTML += `<th>${i}</th>`;
     pr.innerHTML += `<td id="pc${i}">${parent[i]}</td>`;
@@ -605,26 +638,62 @@ function clearHighlights() {
   for (let i = 0; i < N; i++) {
     let pc = document.getElementById('pc' + i);
     let rc = document.getElementById('rc' + i);
-    if (pc) { pc.className = ''; }
-    if (rc) { rc.className = ''; }
+    if (pc) pc.className = '';
+    if (rc) rc.className = '';
   }
+}
+
+function updatePhaseIndicators(phase) {
+  let pFX = document.getElementById('phaseFindX');
+  let pFY = document.getElementById('phaseFindY');
+  let pL = document.getElementById('phaseLink');
+  let pD = document.getElementById('phaseDone');
+  pFX.className = 'phase-step';
+  pFY.className = 'phase-step';
+  pL.className = 'phase-step';
+  pD.className = 'phase-step';
+  if (phase === 'find_x') pFX.className = 'phase-step active';
+  else if (phase === 'find_y') { pFX.className = 'phase-step done'; pFY.className = 'phase-step active'; }
+  else if (phase === 'compare' || phase === 'link') { pFX.className = 'phase-step done'; pFY.className = 'phase-step done'; pL.className = 'phase-step active'; }
+  else if (phase === 'done') { pFX.className = 'phase-step done'; pFY.className = 'phase-step done'; pL.className = 'phase-step done'; pD.className = 'phase-step done'; }
+}
+
+function updateOpList(step) {
+  let html = '<b style="color:#555;">Union operations (in order):</b> ';
+  for (let i = 0; i < unionOps.length; i++) {
+    let op = unionOps[i];
+    let opText = `(${op[0]},${op[1]})`;
+    if (step.type === 'done') {
+      html += `<span class="op-done">${opText}</span>`;
+    } else if (step.opIdx === i) {
+      html += `<span class="op-active">${opText}</span>`;
+    } else if (step.opIdx > i) {
+      html += `<span class="op-done">${opText}</span>`;
+    } else {
+      html += `<span class="op-pending">${opText}</span>`;
+    }
+    if (i < unionOps.length - 1) html += ' &rarr; ';
+  }
+  document.getElementById('opList').innerHTML = html;
 }
 
 function applyStep(step) {
   clearHighlights();
   drawForest(step.parent, step.rank, step);
 
-  if (step.type === 'traverse') {
+  if (step.type === 'find_x' || step.type === 'find_y') {
     let pc = document.getElementById('pc' + step.node);
     let rc = document.getElementById('rc' + step.node);
     if (pc) pc.className = step.isRoot ? 'root-highlight' : 'current';
     if (rc) rc.className = step.isRoot ? 'root-highlight' : 'current';
-    let target = step.isX ? step.x : step.y;
+    let target = step.type === 'find_x' ? step.x : step.y;
     let label = step.isRoot
-      ? `Found root ${step.node} for ${target}`
-      : `Traversing ${step.node} → find root of ${target}`;
-    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
+      ? `FIND-SET(${target}) = ${step.node} (root)`
+      : `FIND-SET(${target}) traversing ${step.node}`;
+    document.getElementById('phaseDisplay').textContent = `UNION(${step.x}, ${step.y})`;
     document.getElementById('computingDisplay').textContent = label;
+    document.getElementById('rootDisplay').textContent = step.isRoot ? step.node : '...';
+    updatePhaseIndicators(step.type);
 
   } else if (step.type === 'compare') {
     let pcX = document.getElementById('pc' + step.rootX);
@@ -635,34 +704,52 @@ function applyStep(step) {
     if (rcX) rcX.className = 'root-highlight';
     if (pcY) pcY.className = 'current';
     if (rcY) rcY.className = 'current';
-    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
-    document.getElementById('computingDisplay').textContent = `Compare ranks: rank[${step.rootX}]=${step.rank[step.rootX]} vs rank[${step.rootY}]=${step.rank[step.rootY]}`;
+    document.getElementById('phaseDisplay').textContent = `UNION(${step.x}, ${step.y})`;
+    document.getElementById('computingDisplay').textContent = `LINK: compare rank[${step.rootX}]=${step.rank[step.rootX]} vs rank[${step.rootY}]=${step.rank[step.rootY]}`;
+    document.getElementById('rootDisplay').textContent = `${step.rootX}, ${step.rootY}`;
+    updatePhaseIndicators('compare');
 
-  } else if (step.type === 'union') {
+  } else if (step.type === 'link') {
     for (let i = 0; i < N; i++) {
       let pc = document.getElementById('pc' + i);
       let rc = document.getElementById('rc' + i);
       if (pc) {
         pc.textContent = step.parent[i];
-        if (i === step.attachSource) pc.className = 'computing';
+        if (i === step.attachSource) pc.className = 'link-highlight';
         else if (i === step.attachTarget) pc.className = 'root-highlight';
         else if (step.parent[i] === i) pc.className = 'root-highlight';
         else pc.className = '';
       }
       if (rc) {
         rc.textContent = step.rank[i];
+        if (i === step.attachTarget && step.rankUpdated) rc.className = 'computing';
       }
     }
-    document.getElementById('phaseDisplay').textContent = `Union(${step.x}, ${step.y})`;
-    document.getElementById('computingDisplay').textContent = `Attached ${step.attachSource} under ${step.attachTarget}`;
+    document.getElementById('phaseDisplay').textContent = `UNION(${step.x}, ${step.y})`;
+    document.getElementById('computingDisplay').textContent = `LINK: parent[${step.attachSource}] = ${step.attachTarget}`;
+    document.getElementById('rootDisplay').textContent = step.attachTarget;
+    updatePhaseIndicators('link');
+
+  } else if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('computingDisplay').textContent = 'All unions performed';
+    document.getElementById('rootDisplay').textContent = '0';
+    updatePhaseIndicators('done');
   }
 
+  let sidebarLabel = '';
+  if (step.type === 'done') sidebarLabel = '✅ Complete';
+  else if (step.type === 'find_x' || step.type === 'find_y') sidebarLabel = `🔍 FIND-SET (${step.type === 'find_x' ? step.x : step.y})`;
+  else if (step.type === 'compare') sidebarLabel = '⚖️ LINK compare';
+  else if (step.type === 'link') sidebarLabel = '🔗 LINK performed';
+
   document.getElementById('sidebarPhase').textContent =
-    `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'done' ? '✅ Complete' : step.type === 'traverse' ? '🔍 Finding root' : step.type === 'compare' ? '⚖️ Comparing ranks' : '🔗 Union performed'}`;
+    `Step ${currentStep + 1} / ${steps.length} — ${sidebarLabel}`;
   if (step.type !== 'done') {
     document.getElementById('explainArea').innerHTML = step.explanation;
   }
   document.getElementById('sidebar').scrollTop = 0;
+  updateOpList(step);
 }
 
 function drawForest(p, r, step) {
@@ -696,7 +783,7 @@ function drawForest(p, r, step) {
   let startX = 30;
   const yRoot = 50;
   const ySpacing = 70;
-  const xPerLeaf = 55;
+  const xPerLeaf = 60;
 
   function positionSubtree(node, cx, y, totalWidth) {
     positions[node] = { x: cx, y: y };
@@ -726,7 +813,12 @@ function drawForest(p, r, step) {
   }
 
   let highlightMap = {};
-  if (step.type === 'traverse') {
+  if (step.type === 'find_x') {
+    for (let node of step.path) {
+      let isRoot = node === step.path[step.path.length - 1];
+      highlightMap[node] = isRoot ? 'root' : 'find';
+    }
+  } else if (step.type === 'find_y') {
     for (let node of step.path) {
       let isRoot = node === step.path[step.path.length - 1];
       highlightMap[node] = isRoot ? 'root' : 'find';
@@ -734,12 +826,12 @@ function drawForest(p, r, step) {
   } else if (step.type === 'compare') {
     highlightMap[step.rootX] = 'root';
     highlightMap[step.rootY] = 'root';
-  } else if (step.type === 'union') {
+  } else if (step.type === 'link') {
     highlightMap[step.attachTarget] = 'root';
     highlightMap[step.attachSource] = 'active';
     for (let i = 0; i < N; i++) {
       if (p[i] === i && i !== step.attachSource && i !== step.attachTarget) {
-        highlightMap[i] = 'default';
+        highlightMap[i] = 'defaultRoot';
       }
     }
   } else if (step.type === 'done') {
@@ -759,10 +851,11 @@ function drawForest(p, r, step) {
   ctx.font = '11px Courier New';
   ctx.fillStyle = '#555';
   ctx.fillText('Legend:', legendX, legendY);
-  drawLegendDot(ctx, legendX + 70, legendY, '#00ccff', 'default');
-  drawLegendDot(ctx, legendX + 145, legendY, '#ff6600', 'traversing');
-  drawLegendDot(ctx, legendX + 240, legendY, '#00ff88', 'root');
-  drawLegendDot(ctx, legendX + 305, legendY, '#ffcc00', 'active');
+  drawLegendDot(ctx, legendX + 70, legendY, '#00ccff', 'node');
+  drawLegendDot(ctx, legendX + 145, legendY, '#ff6600', 'finding');
+  drawLegendDot(ctx, legendX + 225, legendY, '#00ff88', 'root');
+  drawLegendDot(ctx, legendX + 295, legendY, '#ffcc00', 'linking');
+  drawLegendDot(ctx, legendX + 380, legendY, '#ff66ff', 'attached');
 }
 
 function drawLegendDot(ctx, x, y, color, label) {
@@ -791,10 +884,13 @@ function drawNode(ctx, x, y, text, state, r, isRoot) {
   switch (state) {
     case 'find': strokeColor = '#ff6600'; fillColor = '#1a0a00'; break;
     case 'root': strokeColor = '#00ff88'; fillColor = '#0a1a12'; break;
+    case 'defaultRoot': strokeColor = '#00ff88'; fillColor = '#0a1a12'; break;
     case 'active': strokeColor = '#ffcc00'; fillColor = '#1a1a00'; break;
+    case 'attached': strokeColor = '#ff66ff'; fillColor = '#1a0030'; break;
     default: strokeColor = '#00ccff'; fillColor = '#0d0d20';
   }
 
+  ctx.shadowBlur = 0;
   ctx.beginPath();
   ctx.arc(x, y, 22, 0, Math.PI * 2);
   ctx.fillStyle = fillColor;
@@ -802,7 +898,7 @@ function drawNode(ctx, x, y, text, state, r, isRoot) {
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = 2;
   if (state === 'find') ctx.shadowBlur = 12;
-  else if (state === 'root') ctx.shadowBlur = 14;
+  else if (state === 'root' || state === 'defaultRoot') ctx.shadowBlur = 14;
   else ctx.shadowBlur = 0;
   ctx.shadowColor = strokeColor + '44';
   ctx.stroke();
@@ -859,12 +955,12 @@ function finishAnimation() {
   animating = false;
   document.getElementById('phaseDisplay').textContent = '✓ Complete!';
   document.getElementById('computingDisplay').textContent = 'All unions performed';
+  document.getElementById('rootDisplay').textContent = '0';
   document.getElementById('resultSection').style.display = 'block';
   document.getElementById('finalRank').textContent = rank[0];
-  document.getElementById('logDisplay').textContent = `log₂(8) = 3, rank = ${rank[0]}`;
   document.getElementById('resultDisplay').innerHTML = `
-    <p style="color:#ccc;margin:6px 0;">Parent array: [${parent.join(', ')}]</p>
-    <p style="color:#ccc;margin:6px 0;">Rank array: [${rank.join(', ')}]</p>
+    <p style="color:#ccc;margin:6px 0;">Final parent array: <span style="color:#00ff88;">[${parent.join(', ')}]</span></p>
+    <p style="color:#ccc;margin:6px 0;">Final rank array: <span style="color:#00ff88;">[${rank.join(', ')}]</span></p>
     <p style="color:#00ff88;margin:10px 0;font-weight:bold;">All 8 elements in one set under root 0</p>
   `;
   document.getElementById('sidebarPhase').textContent =
@@ -880,14 +976,17 @@ function resetAnimation() {
   document.getElementById('resultSection').style.display = 'none';
   document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
   document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('rootDisplay').textContent = '—';
   document.getElementById('stepNum').textContent = '0';
   document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
   document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+  updatePhaseIndicators('');
   clearHighlights();
   buildSteps();
   initTables();
   document.getElementById('totalSteps').textContent = steps.length;
-  drawForest(parent, rank, { type: 'idle', highlight: {} });
+  drawForest(parent, rank, { type: 'idle' });
+  updateOpList({ opIdx: -1 });
 }
 
 document.getElementById('speedSlider').addEventListener('input', function() {
@@ -910,6 +1009,7 @@ initTables();
 document.getElementById('totalSteps').textContent = steps.length;
 document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
 drawForest(parent, rank, { type: 'idle' });
+updateOpList({ opIdx: -1 });
 </script>
 </body>
 </html>
