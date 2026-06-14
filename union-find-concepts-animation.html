@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Union-Find: Three Key Concepts Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px; min-width: 420px; max-height: calc(100vh - 100px);
+  overflow-y: auto; position: sticky; top: 10px; background: #0d0d20;
+  border: 1px solid #2a2a44; border-radius: 12px; padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128;
+  border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .error-line { color: #ff4444; font-weight: bold; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 12px 15px; margin: 12px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.info-panel .scene-label { color: #00ccff; font-weight: bold; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 15px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e;
+  color: #e0e0e0; border-radius: 8px; cursor: pointer;
+  font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; margin: 6px 0; font-size: 0.85em; line-height: 1.6; }
+.canvas-wrapper { text-align: center; }
+canvas { display: block; margin: 0 auto; border-radius: 10px; background: #0d0d1a; border: 1px solid #333; }
+.legend {
+  display: flex; justify-content: center; gap: 20px;
+  font-size: 0.75em; color: #888; margin: 6px 0 4px;
+}
+.legend span { display: flex; align-items: center; gap: 4px; }
+.scene-header {
+  text-align: center; font-size: 0.95em; color: #ffcc00;
+  margin: 8px 0 4px; padding: 6px; background: #1a1a2e; border-radius: 8px;
+  border: 1px solid #444;
+}
+.scene-header .snum { color: #00ccff; }
+.stack-display {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 12px; margin: 10px 0; text-align: center;
+}
+.stack-display .stack-title {
+  color: #ff6600; font-size: 0.85em; font-weight: bold; margin-bottom: 8px;
+}
+.stack-frames { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; }
+.stack-frame {
+  background: #1a1a2e; border: 1px solid #ff660088; border-left: 3px solid #ff6600;
+  padding: 5px 16px; border-radius: 6px; font-size: 0.78em; color: #ffcc00;
+  display: inline-block; animation: stackIn 0.3s ease;
+}
+@keyframes stackIn {
+  0% { transform: translateY(-10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.stack-frame.base { border-left-color: #00ff88; border-color: #00ff8888; color: #00ff88; }
+.stack-frame .sf-call { color: #ffcc00; }
+.stack-frame .sf-return { color: #00ff88; }
+.stack-arrow { color: #555; font-size: 0.7em; margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<h1>Disjoint Set Union (Union-Find)</h1>
+<p class="subtitle">Data Structures — Three Key Concepts</p>
+
+<div class="layout">
+<div class="main-panel">
+
+  <div class="scene-header" id="sceneHeader">
+    Scene <span class="snum" id="sceneNum">1</span>:
+    <span id="sceneTitle">Union without FIND-SET</span>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas id="forestCanvas" width="700" height="340"></canvas>
+    <div class="legend">
+      <span><span style="color:#00ccff;font-weight:bold;">◉</span> Root</span>
+      <span><span style="color:#aaa;font-weight:bold;">◉</span> Node</span>
+      <span><span style="color:#ff6600;font-weight:bold;">◉</span> Active/Current</span>
+      <span><span style="color:#ffff00;font-weight:bold;">◉</span> Computing</span>
+      <span><span style="color:#ff4444;font-weight:bold;">◉</span> Error/Problem</span>
+    </div>
+  </div>
+
+  <div id="stackDisplay" class="stack-display" style="display:none;">
+    <div class="stack-title">▼ Call Stack</div>
+    <div class="stack-frames" id="stackContainer"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+    <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+    <button class="btn" onclick="stepForward()">⏭ Step</button>
+    <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+    <div class="speed-control">
+      <label>Speed:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span id="speedLabel">5x</span>
+    </div>
+  </div>
+
+  <div class="info-panel" id="infoPanel">
+    <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <span class="label">Action:</span> <span class="value" id="computingDisplay">—</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <span class="label">Sets:</span> <span class="value" id="setsDisplay">—</span>
+  </div>
+
+  <div class="step-counter">
+    Step <span class="count"><span id="stepNum">0</span> / <span id="totalSteps">0</span></span>
+  </div>
+
+  <div id="resultSection" class="result-section" style="display:none;">
+    <h2>✓ All Three Concepts Covered</h2>
+    <div id="resultDisplay"></div>
+  </div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>📖 Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea">
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>The <b>Disjoint Set Union (Union-Find)</b> data structure tracks a partition of elements into disjoint sets.</p>
+      <p>We explore <span class="dim">three key concepts</span> through step-by-step animation:</p>
+      <p style="margin-left:8px;">• <b>1.</b> UNION without FIND-SET — always call <span class="dim">UNION(FIND-SET(x), FIND-SET(y))</span></p>
+      <p style="margin-left:8px;">• <b>2.</b> Rank after Path Compression — rank is an <span class="dim">upper bound on height</span></p>
+      <p style="margin-left:8px;">• <b>3.</b> Recursive FIND-SET — <span class="dim">stack overflow</span> risk for deep trees</p>
+      <p class="note">Press Play or Step to begin Scene 1.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const sceneConfigs = {
+  1: {
+    nodes: [
+      { id: 1, x: 200, y: 70, label: '1' },
+      { id: 2, x: 130, y: 175, label: '2' },
+      { id: 3, x: 270, y: 175, label: '3' },
+      { id: 4, x: 530, y: 70, label: '4' },
+      { id: 5, x: 530, y: 175, label: '5' },
+    ],
+    setColors: ['#00ccff', '#ff9944']
+  },
+  2: {
+    nodes: [
+      { id: 1, x: 350, y: 40, label: 'a' },
+      { id: 2, x: 220, y: 145, label: 'b' },
+      { id: 3, x: 480, y: 145, label: 'c' },
+      { id: 4, x: 140, y: 250, label: 'd' },
+      { id: 5, x: 300, y: 250, label: 'e' },
+    ],
+    setColors: ['#00ccff']
+  },
+  3: {
+    nodes: [
+      { id: 1, x: 350, y: 30, label: 'a' },
+      { id: 2, x: 350, y: 100, label: 'b' },
+      { id: 3, x: 350, y: 170, label: 'c' },
+      { id: 4, x: 350, y: 240, label: 'd' },
+      { id: 5, x: 350, y: 310, label: 'e' },
+    ],
+    setColors: ['#00ccff']
+  }
+};
+
+const sceneTitles = {
+  1: 'Union without FIND-SET',
+  2: 'Rank after Path Compression',
+  3: 'Recursive FIND-SET'
+};
+
+let currentScene = 1;
+let nodes = [];
+let parents = {};
+let ranks = {};
+let highlights = {};
+let setBoxes = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let stackFrames = [];
+
+function getNodePos(id) {
+  return nodes.find(n => n.id === id);
+}
+
+function getNodeLabel(id) {
+  let n = nodes.find(n => n.id === id);
+  return n ? n.label : String(id);
+}
+
+function setScene(num) {
+  currentScene = num;
+  let cfg = sceneConfigs[num];
+  nodes = JSON.parse(JSON.stringify(cfg.nodes));
+  document.getElementById('sceneNum').textContent = num;
+  document.getElementById('sceneTitle').textContent = sceneTitles[num];
+  if (num === 3) {
+    document.getElementById('stackDisplay').style.display = 'block';
+  } else {
+    document.getElementById('stackDisplay').style.display = 'none';
+  }
+  parents = {};
+  ranks = {};
+  highlights = {};
+  setBoxes = [];
+  stackFrames = [];
+}
+
+function buildExplanationHTML(title, bodyParts, formula, extra) {
+  let h = '<div class="explain-section active">';
+  h += '<h3>' + title + '</h3>';
+  if (bodyParts) {
+    for (let p of bodyParts) h += '<p>' + p + '</p>';
+  }
+  if (formula) h += '<span class="formula-line">' + formula + '</span>';
+  if (extra) h += extra;
+  h += '</div>';
+  return h;
+}
+
+// ========== CANVAS DRAWING ==========
+
+function drawForest() {
+  const canvas = document.getElementById('forestCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  let rootIds = {};
+  for (let id in parents) {
+    let pid = parseInt(id);
+    if (parents[pid] === -1 || parents[pid] === pid) rootIds[pid] = true;
+  }
+  for (let id in parents) {
+    let pid = parseInt(id);
+    if (parents[pid] !== -1 && parents[pid] !== pid && !rootIds[parents[pid]]) {
+      rootIds[pid] = true;
+    }
+  }
+
+  let childToParent = [];
+  for (let id in parents) {
+    let pid = parseInt(id);
+    if (parents[pid] !== -1 && parents[pid] !== pid) {
+      childToParent.push({ child: pid, parent: parents[pid] });
+    }
+  }
+
+  for (let cp of childToParent) {
+    let ch = getNodePos(cp.child);
+    let pa = getNodePos(cp.parent);
+    if (ch && pa) {
+      let dx = pa.x - ch.x;
+      let dy = pa.y - ch.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0) {
+        let nx = dx / dist;
+        let ny = dy / dist;
+        let r = 17;
+        let sx = ch.x + nx * r;
+        let sy = ch.y + ny * r;
+        let ex = pa.x - nx * r;
+        let ey = pa.y - ny * r;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        let edgeColor = '#555';
+        if (highlights[cp.child] === 'error' || highlights[cp.parent] === 'error') {
+          edgeColor = '#ff4444';
+          ctx.lineWidth = 2.5;
+        } else if (highlights[cp.child] === 'match' || highlights[cp.parent] === 'match') {
+          edgeColor = '#00ff88';
+          ctx.lineWidth = 2;
+        } else if (highlights[cp.child] === 'computing' || highlights[cp.parent] === 'computing' ||
+                   highlights[cp.child] === 'current' || highlights[cp.parent] === 'current') {
+          edgeColor = '#ff660088';
+          ctx.lineWidth = 2;
+        } else {
+          ctx.lineWidth = 1.5;
+        }
+        ctx.strokeStyle = edgeColor;
+        ctx.stroke();
+
+        let angle = Math.atan2(ey - sy, ex - sx);
+        let headLen = 8;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - headLen * Math.cos(angle - 0.35), ey - headLen * Math.sin(angle - 0.35));
+        ctx.lineTo(ex - headLen * Math.cos(angle + 0.35), ey - headLen * Math.sin(angle + 0.35));
+        ctx.closePath();
+        ctx.fillStyle = edgeColor;
+        ctx.fill();
+      }
+    }
+  }
+
+  for (let node of nodes) {
+    let id = node.id;
+    let p = node;
+    let hl = highlights[id] || 'none';
+    let isRoot = (parents[id] === -1 || parents[id] === id);
+    let color;
+    if (hl === 'current') color = '#ff6600';
+    else if (hl === 'computing') color = '#ffff00';
+    else if (hl === 'error') color = '#ff4444';
+    else if (hl === 'match') color = '#00ff88';
+    else if (isRoot) color = '#00ccff';
+    else color = '#aaa';
+
+    ctx.save();
+    if (hl === 'current') {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 18;
+    } else if (hl === 'computing') {
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 12;
+    } else if (hl === 'error') {
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 18;
+    } else if (hl === 'match') {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 14;
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 17, 0, Math.PI * 2);
+    ctx.fillStyle = hl === 'error' ? '#1a0000' : '#111';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isRoot ? 3 : 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    if (isRoot) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 21, 0, Math.PI * 2);
+      ctx.strokeStyle = color + '55';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.label, p.x, p.y - 1);
+
+    if (ranks[id] !== undefined) {
+      ctx.fillStyle = hl === 'current' ? '#ffcc00' : '#777';
+      ctx.font = '10px Courier New';
+      ctx.textBaseline = 'top';
+      ctx.fillText('r=' + ranks[id], p.x, p.y + 17 + 4);
+    }
+  }
+
+  if (setBoxes.length > 0) {
+    for (let sb of setBoxes) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (let nid of sb.nodes) {
+        let p = getNodePos(nid);
+        if (p) {
+          minX = Math.min(minX, p.x - 28);
+          maxX = Math.max(maxX, p.x + 28);
+          minY = Math.min(minY, p.y - 28);
+          maxY = Math.max(maxY, p.y + 28);
+        }
+      }
+      if (minX !== Infinity) {
+        ctx.save();
+        ctx.strokeStyle = sb.color + '44';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
+        ctx.setLineDash([]);
+        ctx.fillStyle = sb.color + '15';
+        ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+        ctx.fillStyle = sb.color;
+        ctx.font = '11px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(sb.label, (minX + maxX) / 2, minY + 4);
+        ctx.restore();
+      }
+    }
+  }
+}
+
+function renderStack() {
+  let container = document.getElementById('stackContainer');
+  if (stackFrames.length === 0) {
+    container.innerHTML = '<div style="color:#555;font-size:0.78em;padding:4px;">(stack empty)</div>';
+    return;
+  }
+  let html = '';
+  for (let i = stackFrames.length - 1; i >= 0; i--) {
+    let f = stackFrames[i];
+    let cls = f.base ? 'stack-frame base' : 'stack-frame';
+    let txt = f.base
+      ? '<span class="sf-return">✓ ' + f.text + '</span>'
+      : '<span class="sf-call">' + f.text + '</span>';
+    html += '<div class="' + cls + '">' + txt + '</div>';
+  }
+  container.innerHTML = html;
+}
+
+// ========== STEP DEFINITIONS ==========
+
+function buildSteps() {
+  steps = [];
+
+  // ===== SCENE 1: UNION without FIND-SET =====
+
+  // Step 0: Initial two sets
+  setScene(1);
+  parents = {1: -1, 2: 1, 3: 1, 4: -1, 5: 4};
+  ranks = {1: 1, 2: 0, 3: 0, 4: 1, 5: 0};
+  setBoxes = [
+    { nodes: [1,2,3], color: '#00ccff', label: 'Set A {1,2,3}' },
+    { nodes: [4,5], color: '#ff9944', label: 'Set B {4,5}' }
+  ];
+  steps.push({
+    scene: 1,
+    type: 'init',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Scene 1: Two disjoint sets',
+    computingText: 'Initial state',
+    setsText: '{1,2,3} and {4,5}',
+    explanation: buildExplanationHTML(
+      'Scene 1: Union without FIND-SET',
+      [
+        'We have <b>two disjoint sets</b>:',
+        '• Set <span class="dim">A</span> = {1, 2, 3} with root <span class="dim">1</span> (rank 1)',
+        '• Set <span class="dim">B</span> = {4, 5} with root <span class="dim">4</span> (rank 1)',
+        'Each <b>root</b> has a dashed circle. <b>Parent pointers</b> (arrows) point upward to the root.',
+        'We want to <b>union</b> the set containing <span class="dim">2</span> with the set containing <span class="dim">5</span>.'
+      ],
+      'UNION(FIND-SET(x), FIND-SET(y))',
+      '<p class="note">First, we must FIND-SET on both nodes to get their roots.</p>'
+    )
+  });
+
+  // Step 1: Highlight 2 and 5
+  steps.push({
+    scene: 1,
+    type: 'highlight',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {2: 'current', 5: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Identify target nodes',
+    computingText: 'Nodes 2 and 5',
+    setsText: '{1,2,3} and {4,5}',
+    explanation: buildExplanationHTML(
+      'Step 1: Identify the Nodes',
+      [
+        'We want to unify the sets containing <span class="dim">2</span> and <span class="dim">5</span>.',
+        '<b>Correct approach:</b> Call <span class="dim">FIND-SET(2)</span> and <span class="dim">FIND-SET(5)</span> first.'
+      ],
+      'FIND-SET(x): trace parent pointers to the root',
+      '<p class="note">FIND-SET returns the <b>representative</b> (root) of the set containing x.</p>'
+    )
+  });
+
+  // Step 2: FIND-SET(2) → 1
+  highlights = {2: 'computing', 1: 'current'};
+  steps.push({
+    scene: 1,
+    type: 'find',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: JSON.parse(JSON.stringify(highlights)),
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'FIND-SET(2)',
+    computingText: '2 → 1 (root)',
+    setsText: 'FIND-SET(2) = 1',
+    explanation: buildExplanationHTML(
+      'Step 2: FIND-SET(2)',
+      [
+        'Trace parent pointers:',
+        '• Start at node <span class="dim">2</span>',
+        '• parent[2] = <span class="dim">1</span>',
+        '• 1 has no parent (it is a <b>root</b>)',
+        'Return <span class="result-line">FIND-SET(2) = 1</span>'
+      ],
+      'FIND-SET(2): 2 → 1  →  return 1',
+      '<p class="note">The root of node 2 is <span class="dim">1</span>.</p>'
+    )
+  });
+
+  // Step 3: FIND-SET(5) → 4
+  highlights = {5: 'computing', 4: 'current', 1: undefined};
+  steps.push({
+    scene: 1,
+    type: 'find',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {5: 'computing', 4: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'FIND-SET(5)',
+    computingText: '5 → 4 (root)',
+    setsText: 'FIND-SET(5) = 4',
+    explanation: buildExplanationHTML(
+      'Step 3: FIND-SET(5)',
+      [
+        'Trace parent pointers:',
+        '• Start at node <span class="dim">5</span>',
+        '• parent[5] = <span class="dim">4</span>',
+        '• 4 has no parent (it is a <b>root</b>)',
+        'Return <span class="result-line">FIND-SET(5) = 4</span>'
+      ],
+      'FIND-SET(5): 5 → 4  →  return 4',
+      '<p class="note">The root of node 5 is <span class="dim">4</span>.</p>'
+    )
+  });
+
+  // Step 4: UNION(1, 4) — correct
+  parents = {1: -1, 2: 1, 3: 1, 4: 1, 5: 4};
+  ranks = {1: 2, 2: 0, 3: 0, 4: 1, 5: 0};
+  setBoxes = [
+    { nodes: [1,2,3,4,5], color: '#00ff88', label: 'Unified Set {1,2,3,4,5}' }
+  ];
+  steps.push({
+    scene: 1,
+    type: 'union',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {4: 'computing', 1: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'UNION(1, 4)',
+    computingText: 'parent[4] = 1, rank[1] = 2',
+    setsText: 'All 5 elements unified!',
+    explanation: buildExplanationHTML(
+      'Step 4: UNION(1, 4) — Correct!',
+      [
+        'Now that we have the roots <span class="dim">1</span> and <span class="dim">4</span>, we call UNION:',
+        '• Compare ranks: rank[1] = 1, rank[4] = 1',
+        '• Equal ranks → attach <span class="dim">4</span> under <span class="dim">1</span> and increment rank',
+        '• <b>Set</b> parent[4] = <span class="dim">1</span>, rank[1] = <span class="dim">2</span>',
+        'All <span class="result-line">5 elements are now in one set!</span>'
+      ],
+      'UNION(1, 4): parent[4] = 1, rank[1]++  →  rank[1] = 2',
+      '<p class="note">✓ Correct: The sets are properly unified through their roots.</p>'
+    )
+  });
+
+  // Step 5: Verify
+  steps.push({
+    scene: 1,
+    type: 'verify',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {2: 'match', 5: 'match'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✓ Unification verified',
+    computingText: 'FIND-SET(2)=1, FIND-SET(5)=1',
+    setsText: 'Same root: 1 ✓',
+    explanation: buildExplanationHTML(
+      'Step 5: Verify Correct Unification',
+      [
+        'Verify:',
+        '• FIND-SET(2) = <span class="result-line">1</span>',
+        '• FIND-SET(5) = <span class="result-line">1</span>',
+        'Both return the same root! Nodes <span class="dim">2</span> and <span class="dim">5</span> are in the same set.',
+        '',
+        '<b>This is the correct way.</b> Always get the roots first via FIND-SET, then UNION the roots.'
+      ],
+      'UNION(FIND-SET(2), FIND-SET(5)) = UNION(1, 4) → success!',
+      '<p class="note" style="color:#00ff88;">✓ Sets A and B are now unified correctly.</p>'
+    )
+  });
+
+  // Step 6: Now show incorrect
+  parents = {1: -1, 2: 1, 3: 1, 4: -1, 5: 4};
+  ranks = {1: 1, 2: 0, 3: 0, 4: 1, 5: 0};
+  setBoxes = [
+    { nodes: [1,2,3], color: '#00ccff', label: 'Set A {1,2,3}' },
+    { nodes: [4,5], color: '#ff9944', label: 'Set B {4,5}' }
+  ];
+  steps.push({
+    scene: 1,
+    type: 'transition',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Now see the WRONG way',
+    computingText: 'What if we skip FIND-SET?',
+    setsText: 'Back to initial state',
+    explanation: buildExplanationHTML(
+      'Step 6: The WRONG Way',
+      [
+        'Now let us see what happens if we call <span class="dim">UNION(2, 5)</span> <b>without</b> calling FIND-SET first.',
+        '',
+        'We reset to the original two sets. Instead of UNION(FIND-SET(2), FIND-SET(5)) = UNION(1, 4),',
+        'we call <span class="error-line">UNION(2, 5)</span> directly on the raw nodes.',
+        '',
+        'What could go wrong? Let us step through...'
+      ],
+      'INCORRECT: UNION(2, 5)   /* 2 and 5 are NOT roots! */',
+      '<p class="note" style="color:#ff4444;">⚠ Never call UNION directly on non-root nodes.</p>'
+    )
+  });
+
+  // Step 7: INCORRECT — UNION(2, 5) directly
+  parents = {1: -1, 2: 1, 3: 1, 4: -1, 5: 2};
+  ranks = {1: 1, 2: 0, 3: 0, 4: 1, 5: 0};
+  setBoxes = [
+    { nodes: [1,2,3,5], color: '#00ccff', label: 'Set {1,2,3,5} (wrong)' },
+    { nodes: [4], color: '#ff444488', label: 'Orphaned: {4}' }
+  ];
+  steps.push({
+    scene: 1,
+    type: 'error',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {5: 'error', 4: 'error', 2: 'computing'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✗ INCORRECT UNION!',
+    computingText: 'parent[5] = 2 (without FIND-SET!)',
+    setsText: '{1,2,3,5} and {4} — broken!',
+    explanation: buildExplanationHTML(
+      'Step 7: UNION(2, 5) — WRONG!',
+      [
+        'We called <span class="error-line">UNION(2, 5)</span> directly on the raw nodes:',
+        '• UNION sees: parent[5] = 2 (assuming rank[2] ≥ rank[5])',
+        '',
+        'LOOK at what happened:',
+        '• Node <span class="dim">5</span> now has parent <span class="error-line">2</span>, so 5 joins the set {1, 2, 3}',
+        '• But node <span class="error-line">4</span> (the original root of set B) is <b>left behind</b>!',
+        '• 4 still thinks it is a root with no connection to 5!'
+      ],
+      'UNION(2,5): parent[5] = 2  →  {4,5} is SPLIT!',
+      '<p class="note" style="color:#ff4444;">✗ The set {4,5} has been broken apart. 4 is an orphaned root!</p>'
+    )
+  });
+
+  // Step 8: Problem revealed
+  steps.push({
+    scene: 1,
+    type: 'conclusion',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {4: 'error'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✗ The problem is clear',
+    computingText: 'Set B was split — 4 is orphaned',
+    setsText: '{1,2,3,5} ∪ {4} ≠ unified!',
+    explanation: buildExplanationHTML(
+      'Step 8: The Problem Revealed',
+      [
+        '<span class="error-line">The sets were NOT properly unified!</span>',
+        '',
+        'We wanted to unify <span class="dim">{1,2,3}</span> and <span class="dim">{4,5}</span> into a single set.',
+        'Instead, we got:',
+        '• Set <span class="dim">{1, 2, 3, 5}</span> — 5 moved here, but...',
+        '• Node <span class="error-line">4</span> is still a separate root! Its set {4,5} was broken.',
+        '',
+        'Result: <b>three</b> sets instead of <b>one</b> — completely incorrect!'
+      ],
+      'UNION(x, y) assumes x and y are ROOTS. UNION(2, 5) treats 2 as root, but 2 is NOT a root.',
+      '<p class="result-line">Always use: UNION(FIND-SET(x), FIND-SET(y))</p>'
+    )
+  });
+
+  // Step 9: Lesson
+  steps.push({
+    scene: 1,
+    type: 'lesson',
+    parents: {1: -1, 2: 1, 3: 1, 4: -1, 5: 4},
+    ranks: {1: 1, 2: 0, 3: 0, 4: 1, 5: 0},
+    highlights: {},
+    setBoxes: [
+      { nodes: [1,2,3], color: '#00ccff', label: 'Set A' },
+      { nodes: [4,5], color: '#ff9944', label: 'Set B' }
+    ],
+    stackFrames: [],
+    phaseText: '✓ Lesson learned',
+    computingText: 'UNION(FIND-SET(x), FIND-SET(y))',
+    setsText: 'Two separate sets (for review)',
+    explanation: buildExplanationHTML(
+      '✓ Lesson 1: Always Call FIND-SET First',
+      [
+        '<span class="result-line">Key Rule:</span>',
+        '<b>Never call UNION on raw nodes.</b> Always call:',
+        '<span class="formula-line" style="color:#ffcc00;">UNION(FIND-SET(x), FIND-SET(y))</span>',
+        '',
+        'This ensures you are always <b>linking roots</b>, not arbitrary nodes.',
+        'Linking non-roots produces <span class="error-line">incorrect results</span> — sets get split, data gets corrupted.',
+        '',
+        'Next up: <span class="dim">Rank after Path Compression</span>'
+      ],
+      '',
+      '<p class="note">Press Step to continue to Scene 2.</p>'
+    )
+  });
+
+  // ===== SCENE 2: Rank after Path Compression =====
+
+  // Step 10: Show tree with ranks
+  setScene(2);
+  parents = {1: -1, 2: 1, 3: 1, 4: 2, 5: 2};
+  ranks = {1: 2, 2: 1, 3: 0, 4: 0, 5: 0};
+  setBoxes = [{ nodes: [1,2,3,4,5], color: '#00ccff', label: 'Single set — tree with ranks' }];
+  steps.push({
+    scene: 2,
+    type: 'init',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Scene 2: Rank after Path Compression',
+    computingText: 'Tree with rank annotations',
+    setsText: '5 nodes in one set',
+    explanation: buildExplanationHTML(
+      'Scene 2: Rank after Path Compression',
+      [
+        'We have a tree with <b>5 nodes</b>. The rank of each node is shown as <span class="dim">r=N</span>.',
+        '',
+        '<b>Current tree structure:</b>',
+        '• Root <span class="dim">a</span> has rank 2',
+        '• <span class="dim">b</span> (child of a) has rank 1',
+        '• <span class="dim">c</span> (child of a) has rank 0',
+        '• <span class="dim">d</span> (child of b) has rank 0',
+        '• <span class="dim">e</span> (child of b) has rank 0',
+        '',
+        'The actual tree <b>height</b> is 3 (a → b → d). The <b>rank</b> of a is 2.',
+        'Now let us call <span class="dim">FIND-SET(d)</span>.'
+      ],
+      'rank[x] = upper bound on height of subtree rooted at x',
+      '<p class="note">Rank tracks the <b>original</b> height before path compression.</p>'
+    )
+  });
+
+  // Step 11: FIND-SET(d) — follow path
+  steps.push({
+    scene: 2,
+    type: 'find_path',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {4: 'computing', 2: 'computing', 1: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'FIND-SET(d)',
+    computingText: 'd → b → a',
+    setsText: 'Path traced to root a',
+    explanation: buildExplanationHTML(
+      'Step 11: FIND-SET(d)',
+      [
+        'Calling <span class="dim">FIND-SET(d)</span>:',
+        '• Start at <span class="dim">d</span> — parent[d] = b',
+        '• Go to <span class="dim">b</span> — parent[b] = a',
+        '• Go to <span class="dim">a</span> — a is the <b>root</b>! Return <span class="result-line">a</span>',
+        '',
+        'During the upward traversal, we record the path: <b>d → b → a</b>.',
+        'Now we apply <span class="dim">path compression</span> on the way back.'
+      ],
+      'Path: d → b → a   |   FIND-SET(d) = a',
+      '<p class="note">Path compression will flatten this tree.</p>'
+    )
+  });
+
+  // Step 12: Path compression applied
+  parents = {1: -1, 2: 1, 3: 1, 4: 1, 5: 2};
+  ranks = {1: 2, 2: 1, 3: 0, 4: 0, 5: 0};
+  steps.push({
+    scene: 2,
+    type: 'compress',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {4: 'match', 2: 'match', 1: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Path compression applied!',
+    computingText: 'parent[d] = a, parent[b] = a',
+    setsText: 'Tree flattened!',
+    explanation: buildExplanationHTML(
+      'Step 12: Path Compression Applied!',
+      [
+        'Path compression rewires <b>every node on the path</b> to point directly to the root:',
+        '',
+        '• <span class="split-info">parent[d] = a</span> (d now points directly to root a)',
+        '• <span class="split-info">parent[b] = a</span> (b now points directly to root a)',
+        '',
+        'The tree is now much <b>flatter</b>. Future FIND-SET calls on d, b, or e will be faster!',
+        '',
+        'But notice: <span class="dim">rank[a]</span> is still <span class="dim">2</span> — <b>unchanged</b>.'
+      ],
+      'parent[d] = a; parent[b] = a   (rank[a] still = 2)',
+      '<p class="note">rank[a] was NOT updated — it remains an upper bound.</p>'
+    )
+  });
+
+  // Step 13: Rank vs height comparison
+  steps.push({
+    scene: 2,
+    type: 'explain',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {1: 'current', 4: 'match'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Rank is an upper bound',
+    computingText: 'rank[a]=2, actual height=2',
+    setsText: 'rank ≥ height always',
+    explanation: buildExplanationHTML(
+      'Step 13: Rank vs Actual Height',
+      [
+        'Compare <b>rank</b> and <b>actual height</b> after path compression:',
+        '',
+        '• <span class="dim">rank[a]</span> = <span class="result-line">2</span> (unchanged from before compression)',
+        '• Actual height of <span class="dim">a</span>\'s tree = <span class="result-line">2</span> (a → b → e)',
+        '• Actual height of <span class="dim">d</span> = <span class="result-line">1</span> (d → a)',
+        '',
+        'The rank still satisfies: <span class="formula-line">rank[x] ≥ height[x]</span>',
+        '',
+        'For node <span class="dim">d</span>: rank = 0 but height = 1. The rank is an <b>upper bound</b> from before compression.'
+      ],
+      'rank[a] = 2 ≥ height[a] = 2  ✓  |  rank[d] = 0 but height[d] = 1',
+      '<p class="note">The rank is a <b>conservative estimate</b> — it never decreases.</p>'
+    )
+  });
+
+  // Step 14: Key insight
+  steps.push({
+    scene: 2,
+    type: 'lesson',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {1: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✓ Key insight',
+    computingText: 'Rank is NOT updated after path compression',
+    setsText: 'rank = historical upper bound',
+    explanation: buildExplanationHTML(
+      '✓ Lesson 2: Rank is NOT Updated After Path Compression',
+      [
+        '<span class="result-line">Key Rule:</span>',
+        '• The <span class="dim">rank</span> of a node is an <b>upper bound</b> on its <b>height</b>.',
+        '• Path compression <b>does not update</b> ranks — they stay the same forever.',
+        '• After compression, the actual height may be <b>much less</b> than the rank. That is OK.',
+        '',
+        'Why? Because rank is used only for <b>union decisions</b> (which root becomes the parent).',
+        'Keeping ranks unchanged is safe and avoids extra work.',
+        '',
+        'Next up: <span class="dim">Recursive FIND-SET and Stack Overflow</span>'
+      ],
+      'rank[x] is an upper bound on height[x]; path compression reduces height but rank stays',
+      '<p class="note">Press Step to continue to Scene 3.</p>'
+    )
+  });
+
+  // ===== SCENE 3: Recursive FIND-SET =====
+
+  // Step 15: Show deep chain
+  setScene(3);
+  parents = {1: -1, 2: 1, 3: 2, 4: 3, 5: 4};
+  ranks = {1: 4, 2: 3, 3: 2, 4: 1, 5: 0};
+  setBoxes = [{ nodes: [1,2,3,4,5], color: '#00ccff', label: 'Deep tree (chain)' }];
+  steps.push({
+    scene: 3,
+    type: 'init',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: 'Scene 3: Recursive FIND-SET',
+    computingText: 'Deep chain of 5 nodes',
+    setsText: 'height = 5 (worst case)',
+    explanation: buildExplanationHTML(
+      'Scene 3: Recursive FIND-SET and Stack Overflow',
+      [
+        'We have a <b>deep chain</b> of 5 nodes: a → b → c → d → e.',
+        'Each node\'s parent is the node above it (except the root).',
+        '',
+        'Consider the <b>recursive</b> implementation of FIND-SET:',
+        '<span class="formula-line" style="font-size:0.85em;">function FIND-SET(x) { if (parent[x] != x) return FIND-SET(parent[x]); return x; }</span>',
+        '',
+        'What happens when we call <span class="dim">FIND-SET(e)</span> recursively?',
+        'Each recursive call adds a <b>stack frame</b>. Watch the stack grow!'
+      ],
+      'Recursive depth = tree height   |   For n=10^5, depth=10^5 → stack overflow!',
+      '<p class="note">Watch the stack display below the canvas.</p>'
+    )
+  });
+
+  // Step 16: Stack grows — FIND-SET(e)
+  stackFrames = [
+    { text: 'FIND-SET(e): parent[e]=d → recurse', depth: 1, base: false }
+  ];
+  steps.push({
+    scene: 3,
+    type: 'stack_push',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {5: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: JSON.parse(JSON.stringify(stackFrames)),
+    phaseText: 'Recursive call: FIND-SET(e)',
+    computingText: 'PUSH: FIND-SET(e)',
+    setsText: 'stack depth = 1',
+    explanation: buildExplanationHTML(
+      'Step 16: Call FIND-SET(e)',
+      [
+        '<b>PUSH</b> frame: <span class="dim">FIND-SET(e)</span>',
+        '• e.parent = d (not a root), so we <b>recurse</b>',
+        '• Call: <span class="dim">FIND-SET(d)</span>',
+        '',
+        'The call stack now has 1 frame. Each frame consumes memory on the <b>call stack</b>.'
+      ],
+      'if (parent[e] != e) return FIND-SET(parent[e]);  /* recurse on d */',
+      '<p class="note">Each recursive call = one stack frame.</p>'
+    )
+  });
+
+  // Step 17: Stack grows further
+  stackFrames = [
+    { text: 'FIND-SET(e): waiting...', depth: 1, base: false },
+    { text: 'FIND-SET(d): parent[d]=c → recurse', depth: 2, base: false },
+    { text: 'FIND-SET(c): parent[c]=b → recurse', depth: 3, base: false },
+    { text: 'FIND-SET(b): parent[b]=a → recurse', depth: 4, base: false }
+  ];
+  steps.push({
+    scene: 3,
+    type: 'stack_push',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {5: 'computing', 4: 'computing', 3: 'computing', 2: 'computing', 1: 'current'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: JSON.parse(JSON.stringify(stackFrames)),
+    phaseText: 'Recursion continues...',
+    computingText: 'Stack depth = 4 (and growing)',
+    setsText: 'depth = tree height - 1',
+    explanation: buildExplanationHTML(
+      'Step 17: Recursion Unfolds',
+      [
+        'The recursion keeps going deeper:',
+        '• FIND-SET(e) → calls FIND-SET(d)',
+        '• FIND-SET(d) → calls FIND-SET(c)',
+        '• FIND-SET(c) → calls FIND-SET(b)',
+        '• FIND-SET(b) → calls FIND-SET(a)',
+        '',
+        'Stack depth is now <span class="dim">4</span> (one frame per node).',
+        'Each frame stores: return address, parameters, local variables.',
+        'For a tree of <b>n = 10^6</b> nodes, this would be <span class="error-line">1 million stack frames</span>!'
+      ],
+      'Stack depth = 4   |   For n=10^6: depth = 10^6 frames!',
+      '<p class="note" style="color:#ff4444;">⚠ Each frame consumes ~32-48 bytes. 10^6 frames = ~40 MB stack — overflow!</p>'
+    )
+  });
+
+  // Step 18: Base case reached
+  stackFrames = [
+    { text: 'FIND-SET(e): waiting...', depth: 1, base: false },
+    { text: 'FIND-SET(d): waiting...', depth: 2, base: false },
+    { text: 'FIND-SET(c): waiting...', depth: 3, base: false },
+    { text: 'FIND-SET(b): waiting...', depth: 4, base: false },
+    { text: '✓ FIND-SET(a): root! return a', depth: 5, base: true }
+  ];
+  steps.push({
+    scene: 3,
+    type: 'stack_base',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {1: 'match'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: JSON.parse(JSON.stringify(stackFrames)),
+    phaseText: 'Base case reached!',
+    computingText: 'FIND-SET(a) = a (root)',
+    setsText: 'max depth = 5',
+    explanation: buildExplanationHTML(
+      'Step 18: Base Case Reached',
+      [
+        'Finally: <span class="dim">FIND-SET(a)</span> — a is the root!',
+        '• parent[a] = -1 → <b>base case</b> reached',
+        '• Return <span class="result-line">a</span>',
+        '',
+        'Now the stack <b>unwinds</b> as each call returns.',
+        'During unwinding, path compression can update parent pointers.'
+      ],
+      'FIND-SET(a): if (parent[a] == -1) return a;  →  return a',
+      '<p class="note">The base case returns the root. Now each caller gets the result.</p>'
+    )
+  });
+
+  // Step 19: Stack unwinding
+  parents = {1: -1, 2: 1, 3: 1, 4: 1, 5: 1};
+  stackFrames = [
+    { text: '✓ FIND-SET(e) = a', depth: 1, base: true },
+    { text: '✓ FIND-SET(d) = a', depth: 2, base: true },
+    { text: '✓ FIND-SET(c) = a', depth: 3, base: true },
+    { text: '✓ FIND-SET(b) = a', depth: 4, base: true },
+    { text: '✓ FIND-SET(a) = a', depth: 5, base: true }
+  ];
+  steps.push({
+    scene: 3,
+    type: 'stack_pop',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {5: 'match', 4: 'match', 3: 'match', 2: 'match', 1: 'match'},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: JSON.parse(JSON.stringify(stackFrames)),
+    phaseText: 'Unwinding complete!',
+    computingText: 'All calls return a with path compression',
+    setsText: 'All parent pointers → a',
+    explanation: buildExplanationHTML(
+      'Step 19: Stack Unwinding + Path Compression',
+      [
+        'As the stack unwinds, each call returns <span class="result-line">a</span>.',
+        'Path compression updates parent pointers:',
+        '• parent[b] = <span class="dim">a</span>',
+        '• parent[c] = <span class="dim">a</span>',
+        '• parent[d] = <span class="dim">a</span>',
+        '• parent[e] = <span class="dim">a</span>',
+        '',
+        'The tree is now completely flat! All nodes point directly to root a.',
+        'But this required <b>5 stack frames</b> — one for each level of depth.'
+      ],
+      'After unwinding: parent[b..e] = a   |   Tree height = 1',
+      '<p class="note">The recursive approach works, but the stack depth equals the original tree height.</p>'
+    )
+  });
+
+  // Step 20: Stack overflow warning
+  steps.push({
+    scene: 3,
+    type: 'warning',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '⚠ Stack overflow risk',
+    computingText: 'Deep tree → deep recursion → overflow!',
+    setsText: 'Iterative version avoids this',
+    explanation: buildExplanationHTML(
+      'Step 20: ⚠ The Stack Overflow Problem',
+      [
+        'For a tree of <span class="dim">n</span> nodes in a chain (worst case before path compression flattens it):',
+        '',
+        '• <span class="dim">Recursive depth = n</span>',
+        '• <span class="dim">n = 10^6</span> → stack needs space for <span class="error-line">1 million frames</span>',
+        '• Typical stack limit: ~1 MB (~8,000-30,000 frames depending on frame size)',
+        '',
+        '<span class="error-line">The recursive implementation WILL overflow the stack</span> for moderately deep trees.',
+        '',
+        '<b>Solution:</b> Use an <span class="dim">iterative</span> (loop-based) implementation instead.'
+      ],
+      'Recursive depth = tree height  |  Stack overflow when depth > ~10^4',
+      '<p class="note" style="color:#ff4444;">⚠ The recursive FIND-SET is elegant but dangerous for deep trees.</p>'
+    )
+  });
+
+  // Step 21: Iterative solution
+  steps.push({
+    scene: 3,
+    type: 'solution',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✓ Iterative FIND-SET',
+    computingText: 'Two-pass or one-pass loop',
+    setsText: 'No recursion → no overflow',
+    explanation: buildExplanationHTML(
+      '✓ Lesson 3: Iterative FIND-SET Avoids Stack Overflow',
+      [
+        '<span class="result-line">Solution: Use an iterative (loop-based) FIND-SET</span>',
+        '',
+        '<b>Two-pass (with path compression):</b>',
+        '<span class="formula-line" style="font-size:0.82em;">function FIND-SET(x) {</span>',
+        '<span class="formula-line" style="font-size:0.82em;">  let root = x;</span>',
+        '<span class="formula-line" style="font-size:0.82em;">  while (parent[root] != -1) root = parent[root];  /* pass 1: find */</span>',
+        '<span class="formula-line" style="font-size:0.82em;">  while (x != root) { /* pass 2: compress */</span>',
+        '<span class="formula-line" style="font-size:0.82em;">    let next = parent[x]; parent[x] = root; x = next;</span>',
+        '<span class="formula-line" style="font-size:0.82em;">  }</span>',
+        '<span class="formula-line" style="font-size:0.82em;">  return root;</span>',
+        '<span class="formula-line" style="font-size:0.82em;">}</span>',
+        '',
+        '<b>One-pass (no compression):</b> just a while loop tracing parent pointers.',
+        'No recursion, no stack frames, <b>no overflow</b>.'
+      ],
+      'Iterative FIND-SET uses O(1) stack space regardless of tree depth',
+      '<p class="note">The iterative two-pass version also applies path compression — best of both worlds!</p>'
+    )
+  });
+
+  // Step 22: Complete
+  steps.push({
+    scene: 3,
+    type: 'complete',
+    parents: JSON.parse(JSON.stringify(parents)),
+    ranks: JSON.parse(JSON.stringify(ranks)),
+    highlights: {},
+    setBoxes: JSON.parse(JSON.stringify(setBoxes)),
+    stackFrames: [],
+    phaseText: '✓ All three concepts covered!',
+    computingText: 'Summary',
+    setsText: 'Union-Find complete',
+    explanation: buildExplanationHTML(
+      '✅ Summary: Three Key Union-Find Concepts',
+      [
+        '<span class="result-line">1. UNION without FIND-SET</span>',
+        'Always call <span class="dim">UNION(FIND-SET(x), FIND-SET(y))</span>.',
+        'Calling UNION on raw nodes produces <span class="error-line">incorrect results</span> — sets get split.',
+        '',
+        '<span class="result-line">2. Rank after Path Compression</span>',
+        'The rank is an <b>upper bound</b> on tree height.',
+        'Path compression <b>does not update</b> ranks — they remain as historical bounds.',
+        'rank[x] ≥ height[x] always holds.',
+        '',
+        '<span class="result-line">3. Recursive FIND-SET</span>',
+        'Recursive FIND-SET can <span class="error-line">overflow the stack</span> for deep trees.',
+        'Use <span class="dim">iterative two-pass</span> or one-pass variants to avoid overflow.',
+        '',
+        'These three principles ensure correct and efficient Union-Find operations.'
+      ],
+      'Union-Find with Union by Rank + Path Compression: O(α(n)) per operation',
+      '<p class="note">α(n) is the inverse Ackermann function — grows so slowly it is effectively constant.</p>'
+    )
+  });
+}
+
+// ========== CONTROLS ==========
+
+function precomputeAll() {
+  return {};
+}
+
+function applyStep(step) {
+  if (step.scene !== currentScene) {
+    setScene(step.scene);
+  }
+  parents = JSON.parse(JSON.stringify(step.parents));
+  ranks = JSON.parse(JSON.stringify(step.ranks));
+  highlights = JSON.parse(JSON.stringify(step.highlights || {}));
+  setBoxes = JSON.parse(JSON.stringify(step.setBoxes || []));
+  stackFrames = JSON.parse(JSON.stringify(step.stackFrames || []));
+
+  drawForest();
+  renderStack();
+
+  document.getElementById('phaseDisplay').textContent = step.phaseText || '—';
+  document.getElementById('computingDisplay').textContent = step.computingText || '—';
+  document.getElementById('setsDisplay').textContent = step.setsText || '—';
+  document.getElementById('stepNum').textContent = currentStep + 1;
+
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Scene ' + step.scene;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  if (animTimer) clearInterval(animTimer);
+  animTimer = setInterval(() => {
+    if (!animating) { clearInterval(animTimer); return; }
+    if (currentStep >= steps.length) {
+      clearInterval(animTimer);
+      finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+}
+
+function stepForward() {
+  pauseAnimation();
+  if (currentStep < steps.length) processStep();
+}
+
+function clearHighlights() {}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('setsDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML =
+    '<div class="explain-section active">' +
+    '<h3>Problem Setup</h3>' +
+    '<p>The <b>Disjoint Set Union (Union-Find)</b> data structure tracks a partition of elements into disjoint sets.</p>' +
+    '<p>We explore <span class="dim">three key concepts</span> through step-by-step animation:</p>' +
+    '<p style="margin-left:8px;">• <b>1.</b> UNION without FIND-SET — always call <span class="dim">UNION(FIND-SET(x), FIND-SET(y))</span></p>' +
+    '<p style="margin-left:8px;">• <b>2.</b> Rank after Path Compression — rank is an <span class="dim">upper bound on height</span></p>' +
+    '<p style="margin-left:8px;">• <b>3.</b> Recursive FIND-SET — <span class="dim">stack overflow</span> risk for deep trees</p>' +
+    '<p class="note">Press Play or Step to begin Scene 1.</p>' +
+    '</div>';
+  buildSteps();
+  if (steps.length > 0) {
+    applyStep(steps[0]);
+    currentStep = 0;
+  }
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  document.getElementById('phaseDisplay').textContent = '✓ All Concepts Complete!';
+  document.getElementById('computingDisplay').textContent = 'Union-Find mastered';
+  document.getElementById('setsDisplay').textContent = 'Three key principles';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultDisplay').innerHTML =
+    '<p><span style="color:#00ff88;">●</span> <b>1.</b> Always call UNION(FIND-SET(x), FIND-SET(y))</p>' +
+    '<p><span style="color:#00ccff;">●</span> <b>2.</b> Rank is an upper bound on height; path compression does not update it</p>' +
+    '<p><span style="color:#ffcc00;">●</span> <b>3.</b> Use iterative FIND-SET to avoid stack overflow on deep trees</p>' +
+    '<p style="color:#888;font-size:0.8em;margin-top:10px;">' +
+    'Union by Rank + Path Compression: O(α(n)) per operation | α(n) = inverse Ackermann</p>';
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('explainArea').innerHTML =
+    '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+    '<h3>✅ All Three Concepts Covered</h3>' +
+    '<p><span class="result-line">1. UNION without FIND-SET:</span> Always call UNION(FIND-SET(x), FIND-SET(y)).</p>' +
+    '<p><span class="result-line">2. Rank after Path Compression:</span> Rank is an upper bound on height; NOT updated after compression.</p>' +
+    '<p><span class="result-line">3. Recursive FIND-SET:</span> Can overflow the stack for deep trees; use iterative variants.</p>' +
+    '<p class="note">Press Reset to replay the animation.</p>' +
+    '</div>';
+  document.getElementById('sidebar').scrollTop = 0;
+  drawForest();
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    if (animTimer) clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating) { clearInterval(animTimer); return; }
+      if (currentStep >= steps.length) {
+        clearInterval(animTimer);
+        finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) {
+  applyStep(steps[0]);
+  currentStep = 0;
+}
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+
+</body>
+</html>
