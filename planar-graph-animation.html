@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planar Graphs & Euler's Formula Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.info-panel .fail { color: #ff4444; }
+.info-panel .info-row { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.info-panel .info-cell { text-align: center; padding: 4px 10px; background: #0a0a18; border-radius: 6px; min-width: 80px; }
+.info-panel .info-cell .num { font-size: 1.3em; color: #ffcc00; font-weight: bold; }
+.info-panel .info-cell .lbl { color: #888; font-size: 0.8em; }
+.info-panel .verdict { text-align: center; font-size: 1.1em; margin-top: 6px; padding: 6px; border-radius: 6px; }
+.info-panel .verdict.planar { color: #00ff88; background: #002a1a; border: 1px solid #00ff88; }
+.info-panel .verdict.nonplanar { color: #ff4444; background: #2a0000; border: 1px solid #ff4444; }
+.graphs-row {
+  display: flex; gap: 10px; margin: 12px 0;
+}
+.graph-card {
+  flex: 1; background: #0d0d1a; border: 2px solid #333; border-radius: 10px;
+  padding: 8px; text-align: center; min-width: 0; transition: all 0.4s;
+}
+.graph-card h3 { color: #00ccff; font-size: 0.78em; margin-bottom: 4px; }
+.graph-card .graph-sub { color: #666; font-size: 0.72em; margin-bottom: 3px; }
+.graph-card svg { display: block; margin: 0 auto; max-width: 100%; }
+.graph-card.highlight { border-color: #ff6600; box-shadow: 0 0 18px #ff660044; }
+.graph-card.planar-done { border-color: #00ff88; box-shadow: 0 0 18px #00ff8844; }
+.graph-card.nonplanar-done { border-color: #ff4444; box-shadow: 0 0 18px #ff444444; }
+.graph-card.dimmed { opacity: 0.35; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control {
+  display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em;
+}
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.face-legend {
+  display: flex; justify-content: center; gap: 12px; margin: 8px 0; flex-wrap: wrap;
+}
+.face-legend .face-item {
+  display: flex; align-items: center; gap: 5px; font-size: 0.75em; color: #ccc;
+}
+.face-legend .face-swatch {
+  width: 16px; height: 16px; border-radius: 3px; border: 1px solid #555;
+}
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.graph-edge { stroke: #555; stroke-width: 2; fill: none; transition: all 0.4s; }
+.graph-edge.active { stroke: #ff6600; stroke-width: 3; }
+.graph-edge.crossing { stroke: #ff3333; stroke-width: 3; stroke-dasharray: 6,3; }
+.graph-edge.crossing-glow { stroke: #ff3333; stroke-width: 5; stroke-dasharray: none; opacity: 0.3; }
+.graph-edge.planar-highlight { stroke: #00ff88; stroke-width: 3; }
+.graph-edge.dimmed { stroke: #333; }
+.graph-node-circle { fill: #0d0d1a; stroke: #555; stroke-width: 2; transition: all 0.4s; }
+.graph-node-circle.active { stroke: #ff6600; stroke-width: 3; }
+.graph-node-circle.crossing-node { stroke: #ff3333; stroke-width: 3; }
+.graph-node-circle.planar-node { stroke: #00ff88; stroke-width: 3; }
+.graph-node-circle.highlight-node { stroke: #ffcc00; stroke-width: 3; }
+.graph-node-text { fill: #aaa; font-size: 13px; font-family: 'Courier New', monospace; font-weight: bold; dominant-baseline: central; text-anchor: middle; transition: all 0.4s; }
+.graph-node-text.active { fill: #ff6600; }
+.graph-node-text.crossing-text { fill: #ff3333; }
+.graph-node-text.planar-text { fill: #00ff88; }
+.graph-node-text.highlight-text { fill: #ffcc00; }
+.graph-face-polygon { stroke: none; }
+.graph-face-label { fill: #888; font-size: 11px; font-family: 'Courier New', monospace; dominant-baseline: central; text-anchor: middle; }
+.graph-crossing-x { fill: none; stroke: #ff3333; stroke-width: 2; }
+@media (max-width: 800px) {
+  .graphs-row { flex-direction: column; }
+  .info-panel .info-row { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<h1>PLANAR GRAPHS &amp; EULER'S FORMULA</h1>
+<p class="subtitle">Graph Theory — V − E + F = 2 &amp; Kuratowski's Theorem</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graphs-row" id="graphsRow">
+      <div class="graph-card" id="cardA">
+        <h3>Graph A: K₄</h3>
+        <div class="graph-sub">4 vertices · 6 edges · Planar</div>
+        <svg id="svgA" width="230" height="240" viewBox="0 0 230 240"></svg>
+      </div>
+      <div class="graph-card" id="cardB">
+        <h3>Graph B: K₅</h3>
+        <div class="graph-sub">5 vertices · 10 edges · Non-Planar</div>
+        <svg id="svgB" width="230" height="240" viewBox="0 0 230 240"></svg>
+      </div>
+      <div class="graph-card" id="cardC">
+        <h3>Graph C: K₃,₃</h3>
+        <div class="graph-sub">6 vertices · 9 edges · Non-Planar</div>
+        <svg id="svgC" width="230" height="240" viewBox="0 0 230 240"></svg>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <div id="infoContent">
+        <div class="info-row">
+          <div class="info-cell"><div class="lbl">Graph</div><div class="num" style="font-size:1em;color:#00ccff;">—</div></div>
+          <div class="info-cell"><div class="lbl">V</div><div class="num">—</div></div>
+          <div class="info-cell"><div class="lbl">E</div><div class="num">—</div></div>
+          <div class="info-cell"><div class="lbl">F</div><div class="num">—</div></div>
+          <div class="info-cell"><div class="lbl">V−E+F</div><div class="num">—</div></div>
+          <div class="info-cell"><div class="lbl">3V−6</div><div class="num">—</div></div>
+          <div class="info-cell"><div class="lbl">E ≤ 3V−6</div><div class="num" style="font-size:0.9em;">—</div></div>
+        </div>
+        <div class="verdict" id="verdictDisplay" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div id="faceLegend" class="face-legend" style="display:none;"></div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Planar Graph Analysis Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Planar Graph Theory</h3>
+        <p>A <b>planar graph</b> can be drawn on a plane without any edges crossing.</p>
+        <p><span class="dim">Euler's Formula:</span> For any connected planar graph: <b>V − E + F = 2</b></p>
+        <p><span class="dim">Edge Bound:</span> For V ≥ 3: <b>E ≤ 3V − 6</b></p>
+        <p><span class="dim">Kuratowski's Theorem:</span> A graph is planar iff it contains no subdivision of K<sub>5</sub> or K<sub>3,3</sub>.</p>
+        <p>Three graphs to analyze:</p>
+        <p style="margin-left:8px;">• <span class="dim">K₄</span> (4 vertices, 6 edges) — <span style="color:#00ff88;">expected planar</span></p>
+        <p style="margin-left:8px;">• <span class="dim">K₅</span> (5 vertices, 10 edges) — <span style="color:#ff4444;">expected non-planar</span></p>
+        <p style="margin-left:8px;">• <span class="dim">K₃,₃</span> (6 vertices, 9 edges) — <span style="color:#ff4444;">expected non-planar</span></p>
+        <p class="note">Press ▶ Play or ⏭ Step to begin the analysis.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== GRAPH DATA =====
+const graphA = {
+  label: 'K₄',
+  V: 4, E: 6, F: 4,
+  edges: [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],
+  pos: [{x:115,y:30},{x:30,y:200},{x:200,y:200},{x:115,y:110}],
+  faces: [
+    {verts:[0,1,2], color:'#0a0a1a', label:'F₀ (outer)'},
+    {verts:[0,1,3], color:'#0a1a12', label:'F₁'},
+    {verts:[1,2,3], color:'#1a1020', label:'F₂'},
+    {verts:[0,2,3], color:'#1a0a00', label:'F₃'},
+  ]
+};
+const graphB = {
+  label: 'K₅',
+  V: 5, E: 10, F: null,
+  edges: [[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]],
+  pos: [{x:115,y:18},{x:215,y:78},{x:190,y:215},{x:40,y:215},{x:15,y:78}],
+  crossingPairs: [[0,2],[1,3]],
+};
+const graphC = {
+  label: 'K₃,₃',
+  V: 6, E: 9, F: null,
+  edges: [[0,3],[0,4],[0,5],[1,3],[1,4],[1,5],[2,3],[2,4],[2,5]],
+  pos: [{x:35,y:25},{x:35,y:120},{x:35,y:218},{x:195,y:45},{x:195,y:120},{x:195,y:218}],
+  crossingPairs: [[0,4],[1,3]],
+};
+const allGraphs = [graphA, graphB, graphC];
+const graphIds = ['A','B','C'];
+
+// ===== SVG HELPERS =====
+function clearSvg(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+function svgLine(svg, x1, y1, x2, y2, cls) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','line');
+  el.setAttribute('x1',x1); el.setAttribute('y1',y1);
+  el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+  el.classList.add(cls); svg.appendChild(el); return el;
+}
+
+function svgPolygon(svg, pts, cls) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  el.setAttribute('points',pts); el.classList.add(cls); svg.appendChild(el); return el;
+}
+
+function svgCircle(svg, cx, cy, r, cls) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  el.setAttribute('cx',cx); el.setAttribute('cy',cy);
+  el.setAttribute('r',r); el.classList.add(cls); svg.appendChild(el); return el;
+}
+
+function svgText(svg, x, y, txt, cls) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg','text');
+  el.setAttribute('x',x); el.setAttribute('y',y);
+  el.classList.add(cls); el.textContent = txt; svg.appendChild(el); return el;
+}
+
+function roundTo(x) { return Math.round(x*100)/100; }
+
+// ===== EDGE GEOMETRY HELPERS =====
+function computeEdgeEndpoints(p1, p2, r) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len === 0) return {sx:p1.x, sy:p1.y, ex:p2.x, ey:p2.y};
+  return {
+    sx: p1.x + (dx/len)*r, sy: p1.y + (dy/len)*r,
+    ex: p2.x - (dx/len)*r, ey: p2.y - (dy/len)*r
+  };
+}
+
+function drawGraphEdges(svg, graph, opts) {
+  const r = opts.nodeRadius || 18;
+  const eCls = opts.edgeClass || 'graph-edge';
+  const crossingIdxs = opts.crossingEdgeIndices || [];
+  const activeEdgeIdx = opts.activeEdge;
+  const dimmed = opts.dimmed || false;
+
+  graph.edges.forEach(([u,v], idx) => {
+    const p1 = graph.pos[u], p2 = graph.pos[v];
+    const ee = computeEdgeEndpoints(p1, p2, r);
+    let cls = eCls;
+    if (dimmed) cls += ' dimmed';
+    else if (crossingIdxs.includes(idx)) cls += ' crossing';
+    else if (activeEdgeIdx === idx) cls += ' active';
+
+    const line = svgLine(svg, ee.sx, ee.sy, ee.ex, ee.ey, cls);
+
+    if (crossingIdxs.includes(idx)) {
+      if (opts.crossingGlow !== false) {
+        const glow = svgLine(svg, ee.sx, ee.sy, ee.ex, ee.ey, 'graph-edge crossing-glow');
+      }
+    }
+  });
+}
+
+function drawGraphNodes(svg, graph, opts) {
+  const r = opts.nodeRadius || 18;
+  const activeNodes = opts.activeNodes || [];
+  const crossingNodes = opts.crossingNodes || [];
+  const highlightNodes = opts.highlightNodes || [];
+  const planarNodes = opts.planarNodes || [];
+  const dimmed = opts.dimmed || false;
+
+  graph.pos.forEach((p, idx) => {
+    let cls = 'graph-node-circle';
+    if (dimmed) { /* no extra class */ }
+    else if (crossingNodes.includes(idx)) cls += ' crossing-node';
+    else if (activeNodes.includes(idx)) cls += ' active';
+    else if (highlightNodes.includes(idx)) cls += ' highlight-node';
+    else if (planarNodes.includes(idx)) cls += ' planar-node';
+
+    svgCircle(svg, p.x, p.y, r, cls);
+
+    let tcls = 'graph-node-text';
+    if (dimmed) { /* no extra */ }
+    else if (crossingNodes.includes(idx)) tcls += ' crossing-text';
+    else if (activeNodes.includes(idx)) tcls += ' active';
+    else if (highlightNodes.includes(idx)) tcls += ' highlight-text';
+    else if (planarNodes.includes(idx)) tcls += ' planar-text';
+
+    svgText(svg, p.x, p.y+1, ''+idx, tcls);
+  });
+}
+
+function drawGraphFacePolygons(svg, graph, opts) {
+  if (!graph.faces) return;
+  const showFaces = opts.showFaces || false;
+  if (!showFaces) return;
+
+  graph.faces.forEach(f => {
+    const pts = f.verts.map(vi => graph.pos[vi]).map(p => `${p.x},${p.y}`).join(' ');
+    const poly = svgPolygon(svg, pts, 'graph-face-polygon');
+    poly.style.fill = f.color;
+    poly.style.fillOpacity = '0.35';
+    poly.style.stroke = 'none';
+  });
+}
+
+function drawGraphFaceLabels(svg, graph, opts) {
+  if (!graph.faces || !opts.showFaces) return;
+  graph.faces.forEach((f, fi) => {
+    const cx = f.verts.reduce((s,vi) => s + graph.pos[vi].x, 0) / f.verts.length;
+    const cy = f.verts.reduce((s,vi) => s + graph.pos[vi].y, 0) / f.verts.length;
+    svgText(svg, cx, cy, `F${fi}`, 'graph-face-label');
+  });
+}
+
+function drawCrossingX(svg, graph, crossingEdges) {
+  if (!crossingEdges || crossingEdges.length < 2) return;
+  const [e1, e2] = crossingEdges;
+  const [u1,v1] = graph.edges[e1];
+  const [u2,v2] = graph.edges[e2];
+  const p1 = graph.pos[u1], p2 = graph.pos[v1];
+  const q1 = graph.pos[u2], q2 = graph.pos[v2];
+
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+  const d2x = q2.x - q1.x, d2y = q2.y - q1.y;
+  const denom = d1x * d2y - d1y * d2x;
+  if (Math.abs(denom) < 0.001) return;
+  const t = ((q1.x - p1.x) * d2y - (q1.y - p1.y) * d2x) / denom;
+  const ix = p1.x + t * d1x;
+  const iy = p1.y + t * d1y;
+
+  const sz = 7;
+  svgLine(svg, ix-sz, iy-sz, ix+sz, iy+sz, 'graph-crossing-x');
+  svgLine(svg, ix+sz, iy-sz, ix-sz, iy+sz, 'graph-crossing-x');
+}
+
+// ===== DRAW MAIN =====
+function drawGraph(svgId, graph, opts) {
+  const svg = document.getElementById(svgId);
+  clearSvg(svg);
+  if (!opts.visible) return;
+
+  drawGraphFacePolygons(svg, graph, opts);
+  drawGraphFaceLabels(svg, graph, opts);
+  drawGraphEdges(svg, graph, opts);
+  drawGraphNodes(svg, graph, opts);
+  drawCrossingX(svg, graph, opts.crossingEdges);
+}
+
+// ===== STEP DATA =====
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function buildStep(state, phase, explanation) {
+  return { state: JSON.parse(JSON.stringify(state)), phase, explanation };
+}
+
+function buildAllSteps() {
+  steps = [];
+
+  // Step 0: Introduction
+  steps.push(buildStep(
+    { focus: null, info: { graph: '—', V:'—', E:'—', F:'—', vef:'—', bound:'—', check:'—' }, verdict: null,
+      svgA: { visible:true, dimmed:false, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:false, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'', B:'', C:'' } },
+    'Planar Graph Theory',
+    `<div class="explain-section active">
+      <h3>What is a Planar Graph?</h3>
+      <p>A <b>planar graph</b> is a graph that can be drawn on a plane with <span class="dim">no edges crossing</span>.</p>
+      <p>Planar graphs are fundamental in graph theory with applications in <b>circuit board design</b>, <b>map coloring</b>, and <b>road networks</b>.</p>
+      <h3 style="margin-top:10px;">Key Theorems</h3>
+      <p><span class="dim">Euler's Formula:</span> For any connected planar graph: <b>V − E + F = 2</b></p>
+      <p><span class="dim">Edge Bound:</span> For V ≥ 3, no multiple edges: <b>E ≤ 3V − 6</b></p>
+      <p><span class="dim">Kuratowski's Theorem:</span> A graph is non-planar iff it contains a subdivision of <b>K₅</b> or <b>K₃,₃</b>.</p>
+      <p>Let's analyze three graphs using these tools.</p>
+      <p class="note">Press ▶ Play or ⏭ Step to begin with Graph A (K₄).</p>
+    </div>`
+  ));
+
+  // Step 1: Graph A - Show planar embedding
+  steps.push(buildStep(
+    { focus: 'A', info: { graph:'K₄', V:'4', E:'6', F:'?', vef:'?', bound:'6', check:'?' }, verdict: null,
+      svgA: { visible:true, dimmed:false, showFaces:false, activeNodes:[0,1,2,3], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'highlight', B:'dimmed', C:'dimmed' } },
+    'Graph A: K₄ — Planar Embedding',
+    `<div class="explain-section active">
+      <h3>Graph A: K₄ (Complete Graph on 4 Vertices)</h3>
+      <p><span class="dim">K₄</span> has <b>4 vertices</b> and <b>6 edges</b> (every pair of vertices is connected).</p>
+      <p>Despite being a complete graph, K₄ <span class="result-line">is planar</span> — it can be drawn with no crossing edges!</p>
+      <p>The drawing shows a triangle (vertices 0,1,2) with vertex 3 in the center connected to all three corners.</p>
+      <span class="formula-line">K₄: V = 4, E = 6 (max possible edges for planarity)</span>
+      <p><span class="dim">Faces:</span> Let's count them in the next step. A face is a region bounded by edges.</p>
+      <p class="note">K₄ is a triangulation — every face (including the outer one) is a triangle.</p>
+    </div>`
+  ));
+
+  // Step 2: Graph A - Show faces colored
+  steps.push(buildStep(
+    { focus: 'A', info: { graph:'K₄', V:'4', E:'6', F:'4', vef:'2', bound:'6', check:'6 ≤ 6 ✓' }, verdict: null,
+      svgA: { visible:true, dimmed:false, showFaces:true, activeNodes:[0,1,2,3], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'highlight', B:'dimmed', C:'dimmed' } },
+    'Graph A: Face Coloring',
+    `<div class="explain-section active">
+      <h3>Counting Faces in K₄</h3>
+      <p>K₄ divides the plane into <span class="result-line">4 faces (F = 4)</span>:</p>
+      <p style="margin-left:8px;margin-top:6px;">
+        <span style="color:#0a0a1a;">■</span> <span class="dim">F₀:</span> Outer face (triangle 0-1-2)
+      </p>
+      <p style="margin-left:8px;">
+        <span style="color:#0a1a12;">■</span> <span class="dim">F₁:</span> Inner triangle 0-1-3
+      </p>
+      <p style="margin-left:8px;">
+        <span style="color:#1a1020;">■</span> <span class="dim">F₂:</span> Inner triangle 1-2-3
+      </p>
+      <p style="margin-left:8px;">
+        <span style="color:#1a0a00;">■</span> <span class="dim">F₃:</span> Inner triangle 0-2-3
+      </p>
+      <p>Each face is bounded by exactly <span class="dim">3 edges</span> — a <b>triangulation</b>.</p>
+      <p class="note">The outer face is the unbounded region outside the graph.</p>
+    </div>`
+  ));
+
+  // Step 3: Graph A - Euler's formula
+  steps.push(buildStep(
+    { focus: 'A', info: { graph:'K₄', V:'4', E:'6', F:'4', vef:'2 ✓', bound:'6', check:'6 ≤ 6 ✓' }, verdict: { text:'✓ K₄ is PLANAR', cls:'planar' },
+      svgA: { visible:true, dimmed:false, showFaces:true, activeNodes:[0,1,2,3], crossingNodes:[], planarNodes:[0,1,2,3], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'planar-done', B:'dimmed', C:'dimmed' } },
+    'Graph A: Euler\'s Formula Check',
+    `<div class="explain-section active">
+      <h3>Euler's Formula: V − E + F = 2</h3>
+      <p>For any connected planar graph: <span class="dim">V − E + F = 2</span>.</p>
+      <p>For K₄:</p>
+      <span class="formula-line">V − E + F = 4 − 6 + 4 = 2 ✓</span>
+      <p>Euler's formula <span class="result-line">holds</span> — confirming K₄ has a valid planar embedding.</p>
+      <h3 style="margin-top:10px;">Proof Sketch</h3>
+      <p>Start with a spanning tree (V vertices, V−1 edges, 1 face). Formula holds: V − (V−1) + 1 = 2.</p>
+      <p>Each added edge splits a face: ΔE = +1, ΔF = +1, so V − E + F remains 2.</p>
+      <p class="note">This induction proves Euler's formula for all connected planar graphs.</p>
+    </div>`
+  ));
+
+  // Step 4: Graph A - Edge bound
+  steps.push(buildStep(
+    { focus: 'A', info: { graph:'K₄', V:'4', E:'6', F:'4', vef:'2 ✓', bound:'6', check:'6 ≤ 6 ✓' }, verdict: { text:'✓ K₄ is PLANAR', cls:'planar' },
+      svgA: { visible:true, dimmed:false, showFaces:true, activeNodes:[0,1,2,3], crossingNodes:[], planarNodes:[0,1,2,3], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'planar-done', B:'dimmed', C:'dimmed' } },
+    'Graph A: Edge Bound Check',
+    `<div class="explain-section active">
+      <h3>Edge Bound: E ≤ 3V − 6</h3>
+      <p>For any planar graph with V ≥ 3 and no multiple edges:</p>
+      <span class="formula-line">E ≤ 3V − 6</span>
+      <p>For K₄:</p>
+      <span class="formula-line">3V − 6 = 3·4 − 6 = 6</span>
+      <span class="formula-line">E = 6 ≤ 6 ✓</span>
+      <p>Equality holds! K₄ is a <span class="dim">maximal planar graph</span> — adding any edge would violate planarity.</p>
+      <p>In a maximal planar graph (triangulation), every face is a triangle and <span class="result-line">E = 3V − 6</span>.</p>
+      <p class="note">Verdict: ✓ K₄ is planar. Moving to Graph B.</p>
+    </div>`
+  ));
+
+  // Step 5: Graph B - Show K5
+  steps.push(buildStep(
+    { focus: 'B', info: { graph:'K₅', V:'5', E:'10', F:'—', vef:'—', bound:'9', check:'10 ≤ 9 ✗' }, verdict: null,
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:false, showFaces:false, activeNodes:[0,1,2,3,4], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'dimmed', B:'highlight', C:'dimmed' } },
+    'Graph B: K₅ — Complete Graph on 5 Vertices',
+    `<div class="explain-section active">
+      <h3>Graph B: K₅</h3>
+      <p><span class="dim">K₅</span> has <b>5 vertices</b> and <b>10 edges</b> (all possible connections).</p>
+      <p>In this drawing, many edges <span class="split-info">cross</span> each other — K₅ is <span style="color:#ff4444;">non-planar</span>.</p>
+      <p>Let's verify using the edge bound inequality:</p>
+      <span class="formula-line">3V − 6 = 3·5 − 6 = 9</span>
+      <span class="formula-line">E = 10 > 9 ✗ — violates the bound!</span>
+      <p>Since <span class="dim">E > 3V − 6</span>, K₅ <span style="color:#ff4444;">cannot be planar</span>.</p>
+      <p class="note">The inequality proves non-planarity without needing to find all crossings!</p>
+    </div>`
+  ));
+
+  // Step 6: Graph B - Show crossing highlight
+  steps.push(buildStep(
+    { focus: 'B', info: { graph:'K₅', V:'5', E:'10', F:'—', vef:'—', bound:'9', check:'10 ≤ 9 ✗' }, verdict: null,
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+               crossingNodes:[0,1,2,3], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,5] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'dimmed', B:'highlight', C:'dimmed' } },
+    'Graph B: Crossing Edges Highlighted',
+    `<div class="explain-section active">
+      <h3>Edge Crossings in K₅</h3>
+      <p>In any planar drawing of K₅, edges <span style="color:#ff3333;">must cross</span>.</p>
+      <p>Highlighted crossing pair: <span class="dim">edge (0,2)</span> crosses <span class="dim">edge (1,3)</span> — shown in <span style="color:#ff3333;">red</span>.</p>
+      <p>In fact, K₅ drawn as a convex pentagon has <b>5 edge crossings</b>.</p>
+      <h3 style="margin-top:10px;">Why K₅ is Non-Planar</h3>
+      <p>K₅ has <span class="dim">10 edges</span>, but <span class="dim">3V − 6 = 9</span>. The inequality <span class="result-line">E ≤ 3V − 6</span> fails.</p>
+      <p>This inequality follows from Euler's formula: each face has ≥ 3 edges, and each edge borders ≤ 2 faces.</p>
+      <p class="note">No matter how you draw K₅, at least one edge crossing is unavoidable.</p>
+    </div>`
+  ));
+
+  // Step 7: Graph B - Kuratowski
+  steps.push(buildStep(
+    { focus: 'B', info: { graph:'K₅', V:'5', E:'10', F:'—', vef:'—', bound:'9', check:'10 ≤ 9 ✗' }, verdict: { text:'✗ K₅ is NON-PLANAR', cls:'nonplanar' },
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+               crossingNodes:[0,1,2,3], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,5] },
+      svgC: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'dimmed', B:'nonplanar-done', C:'dimmed' } },
+    'Graph B: Kuratowski\'s Theorem',
+    `<div class="explain-section active">
+      <h3>Kuratowski's Theorem</h3>
+      <p style="font-style:italic;color:#ccc;">"A finite graph is planar if and only if it does not contain a subdivision of K₅ or K₃,₃."</p>
+      <p>— <span class="dim">Kazimierz Kuratowski</span> (1930)</p>
+      <h3 style="margin-top:10px;">Why K₅ is a Forbidden Subgraph</h3>
+      <p>K₅ is <span class="dim">one of the two minimal non-planar graphs</span>. It contains:</p>
+      <p style="margin-left:8px;">• 5 vertices, 10 edges (maximum for 5 vertices)</p>
+      <p style="margin-left:8px;">• Every vertex has degree 4</p>
+      <p style="margin-left:8px;">• Any planar subgraph has at most 9 edges (missing at least 1 edge)</p>
+      <p>If a graph contains a <span class="dim">subdivision</span> of K₅ (edges replaced by paths), it is also non-planar.</p>
+      <span class="formula-line">K₅: E = 10 > 9 = 3V − 6 ⇒ Non-Planar</span>
+      <p class="note">Verdict: ✗ K₅ is non-planar. Moving to Graph C.</p>
+    </div>`
+  ));
+
+  // Step 8: Graph C - Show K3,3
+  steps.push(buildStep(
+    { focus: 'C', info: { graph:'K₃,₃', V:'6', E:'9', F:'—', vef:'—', bound:'12', check:'9 ≤ 12 ✓' }, verdict: null,
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[0,1,2,3,4,5], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      cardHighlights: { A:'dimmed', B:'dimmed', C:'highlight' } },
+    'Graph C: K₃,₃ — Complete Bipartite Graph',
+    `<div class="explain-section active">
+      <h3>Graph C: K₃,₃</h3>
+      <p><span class="dim">K₃,₃</span> is the <b>complete bipartite graph</b> with partitions of size 3.</p>
+      <p>Vertices are split into two sets: <span class="dim">{0, 1, 2}</span> and <span class="dim">{3, 4, 5}</span>.</p>
+      <p>Edges connect every vertex in one set to every vertex in the other: <span class="result-line">3 × 3 = 9 edges</span>.</p>
+      <p>Check the edge bound inequality:</p>
+      <span class="formula-line">3V − 6 = 3·6 − 6 = 12</span>
+      <span class="formula-line">E = 9 ≤ 12 ✓ — inequality does NOT disprove planarity!</span>
+      <p>Unlike K₅, the inequality doesn't catch K₃,₃. We need <span class="dim">Kuratowski's theorem</span>.</p>
+      <p class="note">K₃,₃ is non-planar despite passing the edge-bound test!</p>
+    </div>`
+  ));
+
+  // Step 9: Graph C - Show crossing highlight
+  steps.push(buildStep(
+    { focus: 'C', info: { graph:'K₃,₃', V:'6', E:'9', F:'—', vef:'—', bound:'12', check:'9 ≤ 12 ✓' }, verdict: null,
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+              crossingNodes:[0,1,3,4], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,3] },
+      cardHighlights: { A:'dimmed', B:'dimmed', C:'highlight' } },
+    'Graph C: Crossings Highlighted',
+    `<div class="explain-section active">
+      <h3>Edge Crossings in K₃,₃</h3>
+      <p>In this drawing, edge <span class="dim">(0,4)</span> crosses edge <span class="dim">(1,3)</span> — shown in <span style="color:#ff3333;">red</span>.</p>
+      <p>In fact, <span class="dim">any</span> planar drawing of K₃,₃ must have at least one crossing.</p>
+      <p>K₃,₃ has a special property: it is <span class="dim">triangle-free</span> (bipartite graphs have no odd cycles).</p>
+      <p>Since it has no triangles, each face in a hypothetical planar embedding must have at least <b>4 edges</b>.</p>
+      <p>This gives a stronger inequality: <span class="formula-line">E ≤ 2V − 4 (for bipartite planar graphs)</span></p>
+      <span class="formula-line">2V − 4 = 2·6 − 4 = 8; E = 9 > 8 ✗</span>
+      <p class="note">The bipartite edge bound proves K₃,₃ is non-planar!</p>
+    </div>`
+  ));
+
+  // Step 10: Graph C - Kuratowski
+  steps.push(buildStep(
+    { focus: 'C', info: { graph:'K₃,₃', V:'6', E:'9', F:'—', vef:'—', bound:'12', check:'9 ≤ 12 ✓' }, verdict: { text:'✗ K₃,₃ is NON-PLANAR', cls:'nonplanar' },
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+              crossingNodes:[0,1,3,4], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,3] },
+      cardHighlights: { A:'dimmed', B:'dimmed', C:'nonplanar-done' } },
+    'Graph C: Kuratowski\'s Theorem',
+    `<div class="explain-section active">
+      <h3>Why K₃,₃ is Non-Planar (Kuratowski)</h3>
+      <p>K₃,₃ is the <span class="dim">second minimal non-planar graph</span>.</p>
+      <p><span style="color:#ff6600;">Kuratowski's theorem</span> states a graph is planar iff it contains no subdivision of K₅ or K₃,₃.</p>
+      <p>K₃,₃ itself is already a <span class="result-line">minimal forbidden subdivision</span>.</p>
+      <h3 style="margin-top:10px;">Why Both K₅ and K₃,₃?</h3>
+      <p><span class="dim">K₅</span> violates the edge bound E ≤ 3V − 6 (too many edges for its vertices).</p>
+      <p><span class="dim">K₃,₃</span> passes that bound, but violates E ≤ 2V − 4 for bipartite graphs.</p>
+      <p>Together, K₅ and K₃,₃ characterize <b>all</b> non-planar graphs: any non-planar graph contains at least one of them as a subdivision.</p>
+      <p class="note">Verdict: ✗ K₃,₃ is non-planar.</p>
+    </div>`
+  ));
+
+  // Step 11: Graph C - Verdict
+  steps.push(buildStep(
+    { focus: 'C', info: { graph:'K₃,₃', V:'6', E:'9', F:'—', vef:'—', bound:'12', check:'9 ≤ 12 ✓' }, verdict: { text:'✗ K₃,₃ is NON-PLANAR', cls:'nonplanar' },
+      svgA: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:true, showFaces:false, activeNodes:[], crossingNodes:[], planarNodes:[], activeEdge:-1, crossingEdges:[] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+              crossingNodes:[0,1,2,3,4,5], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,3] },
+      cardHighlights: { A:'dimmed', B:'dimmed', C:'nonplanar-done' } },
+    'Graph C: Non-Planar Verdict',
+    `<div class="explain-section active" style="border-left-color:#ff4444;">
+      <h3>✗ Verdict: K₃,₃ is Non-Planar</h3>
+      <p>K₃,₃ fails both approachs:</p>
+      <p style="margin-left:8px;">• <span class="dim">Edge bound E ≤ 2V − 4:</span> 9 > 8 ✗ (bipartite planar bound)</p>
+      <p style="margin-left:8px;">• <span class="dim">Kuratowski's theorem:</span> K₃,₃ is itself a forbidden subdivision</p>
+      <span class="formula-line">K₃,₃: The "utility graph" — 3 houses, 3 utilities, no crossing-free connections</span>
+      <p>The classic <b>utilities problem</b> (3 houses each needing water, gas, electricity) is impossible without crossing pipes — this is exactly K₃,₃!</p>
+      <p class="note">K₃,₃ is non-planar even though it has only 9 edges (fewer than K₅'s 10).</p>
+    </div>`
+  ));
+
+  // Step 12: Summary
+  steps.push(buildStep(
+    { focus: null, info: { graph:'Summary', V:'—', E:'—', F:'—', vef:'—', bound:'—', check:'—' }, verdict: null,
+      svgA: { visible:true, dimmed:false, showFaces:true, activeNodes:[], crossingNodes:[], planarNodes:[0,1,2,3], activeEdge:-1, crossingEdges:[] },
+      svgB: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+               crossingNodes:[0,1,2,3], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,5] },
+      svgC: { visible:true, dimmed:false, showFaces:false, activeNodes:[],
+               crossingNodes:[0,1,3,4], planarNodes:[], activeEdge:-1,
+               crossingEdges:[1,3] },
+      cardHighlights: { A:'planar-done', B:'nonplanar-done', C:'nonplanar-done' } },
+    'Summary',
+    `<div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ Planar Graph Analysis Complete</h3>
+
+      <h3 style="margin-top:10px;">Results</h3>
+      <p><span class="dim">K₄:</span> <span style="color:#00ff88;">Planar ✓</span> — V−E+F=2, E=3V−6 (maximal planar)</p>
+      <p><span class="dim">K₅:</span> <span style="color:#ff4444;">Non-Planar ✗</span> — E=10 > 3V−6=9, contains K₅ subdivision</p>
+      <p><span class="dim">K₃,₃:</span> <span style="color:#ff4444;">Non-Planar ✗</span> — E=9 > 2V−4=8, contains K₃,₃ subdivision</p>
+
+      <h3 style="margin-top:10px;">Key Takeaways</h3>
+      <p><span class="dim">Euler's Formula</span> V − E + F = 2 is the foundation of planar graph theory.</p>
+      <p><span class="dim">Edge Bound</span> E ≤ 3V − 6 follows from Euler's formula (each face ≥ 3 edges).</p>
+      <p><span class="dim">Kuratowski's Theorem</span>: K₅ and K₃,₃ are the only minimal non-planar graphs.</p>
+      <p><span class="dim">Applications:</span> Circuit board design (no crossing traces), map coloring (4-color theorem), road network planning.</p>
+
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Planarity testing:</span> O(V) — linear time algorithms exist (Hopcroft-Tarjan, 1974)</p>
+      <p><span class="dim">Kuratowski subgraph finding:</span> O(V + E)</p>
+      <p class="note">Despite being a deep structural property, planarity can be checked very efficiently!</p>
+    </div>`
+  ));
+}
+
+// ===== APPLY STEP =====
+function applyStep(step) {
+  const s = step.state;
+
+  // Draw SVGs
+  for (let i = 0; i < 3; i++) {
+    const gid = graphIds[i];
+    const graph = allGraphs[i];
+    const opts = s['svg' + gid];
+    const crossingEdgeIndices = [];
+    if (opts.crossingEdges && opts.crossingEdges.length >= 2) {
+      // Convert crossing edge pair indices to actual edge indices in the graph
+      const [ci, cj] = opts.crossingEdges;
+      crossingEdgeIndices.push(ci, cj);
+    }
+    drawGraph('svg' + gid, graph, {
+      visible: opts.visible,
+      dimmed: opts.dimmed,
+      showFaces: opts.showFaces || false,
+      activeNodes: opts.activeNodes || [],
+      crossingNodes: opts.crossingNodes || [],
+      planarNodes: opts.planarNodes || [],
+      highlightNodes: opts.highlightNodes || [],
+      nodeRadius: 18,
+      activeEdge: opts.activeEdge !== undefined ? opts.activeEdge : -1,
+      crossingEdgeIndices: crossingEdgeIndices,
+      crossingEdges: opts.crossingEdges || [],
+      crossingGlow: true,
+      edgeClass: 'graph-edge',
+    });
+  }
+
+  // Update card states
+  for (const g of ['A','B','C']) {
+    const card = document.getElementById('card' + g);
+    card.className = 'graph-card';
+    const h = s.cardHighlights[g] || '';
+    if (h) card.classList.add(h);
+  }
+
+  // Update info panel
+  const inf = s.info;
+  const ve = inf.vef || '—';
+  const check = inf.check || '—';
+  document.getElementById('infoContent').innerHTML = `
+    <div class="info-row">
+      <div class="info-cell"><div class="lbl">Graph</div><div class="num" style="font-size:1em;color:#00ccff;">${inf.graph}</div></div>
+      <div class="info-cell"><div class="lbl">V</div><div class="num">${inf.V}</div></div>
+      <div class="info-cell"><div class="lbl">E</div><div class="num">${inf.E}</div></div>
+      <div class="info-cell"><div class="lbl">F</div><div class="num">${inf.F}</div></div>
+      <div class="info-cell"><div class="lbl">V−E+F</div><div class="num" style="${ve.includes('✓')?'color:#00ff88': ve === '2'?'color:#00ff88':''}">${ve}</div></div>
+      <div class="info-cell"><div class="lbl">3V−6</div><div class="num">${inf.bound}</div></div>
+      <div class="info-cell"><div class="lbl">E ≤ 3V−6</div><div class="num" style="font-size:0.85em;${check.includes('✗')?'color:#ff4444':check.includes('✓')?'color:#00ff88':''}">${check}</div></div>
+    </div>
+  `;
+
+  // Verdict
+  const vd = document.getElementById('verdictDisplay');
+  if (s.verdict) {
+    vd.style.display = 'block';
+    vd.className = 'verdict ' + s.verdict.cls;
+    vd.textContent = s.verdict.text;
+  } else {
+    vd.style.display = 'none';
+  }
+
+  // Face legend for graph A
+  const fl = document.getElementById('faceLegend');
+  if (s.svgA.showFaces && s.focus === 'A') {
+    fl.style.display = 'flex';
+    fl.innerHTML = graphA.faces.map((f, i) =>
+      `<div class="face-item"><span class="face-swatch" style="background:${f.color};opacity:0.6;"></span> F${i}: ${f.label}</div>`
+    ).join('');
+  } else {
+    fl.style.display = 'none';
+  }
+
+  // Phase / sidebar
+  const stepIdx = steps.indexOf(step);
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${stepIdx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation || '';
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ===== ANIMATION FUNCTIONS =====
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+function stepForward() { pauseAnimation(); processStep(); }
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultContent').innerHTML = `
+    <p style="font-size:1.05em;margin-bottom:10px;">
+      <span class="dim">K₄:</span> <span style="color:#00ff88;">Planar</span> &nbsp;|&nbsp;
+      <span class="dim">K₅:</span> <span style="color:#ff4444;">Non-Planar</span> &nbsp;|&nbsp;
+      <span class="dim">K₃,₃:</span> <span style="color:#ff4444;">Non-Planar</span>
+    </p>
+    <p style="margin-top:8px;color:#888;">
+      Euler's Formula V−E+F=2 holds for all connected planar graphs. The edge bound E≤3V−6 and Kuratowski's theorem provide complete planarity characterization.
+    </p>
+  `;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  if (steps.length > 0) {
+    document.getElementById('explainArea').innerHTML = steps[steps.length-1].explanation || '';
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Planar Graphs — press Play or Step to begin.';
+  buildAllSteps();
+  if (steps.length > 0) {
+    applyStep(steps[0]);
+  }
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ===== SPEED SLIDER =====
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// ===== INIT =====
+buildAllSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

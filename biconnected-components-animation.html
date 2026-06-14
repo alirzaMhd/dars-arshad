@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biconnected Components Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .hl-green { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.legend {
+  display: flex; justify-content: center; gap: 16px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.legend-tree { background: #00ff8844; border-color: #00ff88; }
+.legend-back { background: #ff660044; border-color: #ff6600; }
+.legend-bridge { background: #ff66ff44; border-color: #ff66ff; }
+.legend-bc-edge { background: #00ccff44; border-color: #00ccff; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 18px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 8px; text-align: center; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td { width: 72px; height: 36px; text-align: center; border: 1px solid #333; font-size: 0.76em; transition: all 0.3s; }
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.white-state { background: #0d0d1a; color: #555; }
+td.gray-state { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; font-weight: bold; }
+td.black-state { background: #0a1a12 !important; color: #00ff88 !important; }
+td.ap-true { color: #ff0044 !important; font-weight: bold; }
+.stack-display {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 12px 15px; margin: 15px 0; min-height: 38px; display: flex;
+  align-items: center; gap: 0; overflow-x: auto; white-space: nowrap;
+}
+.stack-edge {
+  display: inline-flex; align-items: center; padding: 4px 8px;
+  border: 1.5px solid #555; border-radius: 5px; font-size: 0.8em;
+  transition: all 0.3s; flex-shrink: 0;
+}
+.stack-edge.stack-tree { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+.stack-edge.stack-back { border-color: #ff6600; color: #ff6600; background: #1a0a00; }
+.stack-sep { color: #444; margin: 0 2px; font-size: 0.7em; }
+.stack-empty { color: #555; font-style: italic; font-size: 0.8em; }
+.stack-label { color: #888; font-size: 0.8em; margin-right: 10px; flex-shrink: 0; }
+.bc-container {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0;
+  padding: 10px; background: #0d0d1a; border: 1px solid #333; border-radius: 10px; min-height: 40px;
+}
+.bc-card {
+  border: 2px solid; border-radius: 8px; padding: 6px 12px;
+  font-size: 0.78em; background: #0d0d1a; transition: all 0.3s;
+}
+.bc-card .bc-title { font-weight: bold; margin-bottom: 3px; }
+.bc-card .bc-edges { color: #ccc; font-size: 0.9em; }
+.bc-card.bc-new {
+  box-shadow: 0 0 16px #ffcc0066;
+  transform: scale(1.04);
+}
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.1em; color: #00ff88; font-weight: bold; margin: 12px 0; line-height: 1.8; }
+.ap-item { color: #ff0044; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>BICONNECTED COMPONENTS</h1>
+<p class="subtitle">Graph Algorithms &mdash; Maximal Edge Sets Where Every Two Edges Share a Common Simple Cycle</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="680" height="420"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-tree"></span> Tree Edge</span>
+      <span class="legend-item"><span class="legend-swatch legend-back"></span> Back Edge</span>
+      <span class="legend-item"><span class="legend-swatch legend-bridge"></span> Bridge</span>
+      <span class="legend-item"><span class="legend-swatch legend-bc-edge"></span> BC Edge</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9205; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Stack Size:</span> <span class="value" id="stackSizeDisplay">0</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">DFS Discovery &amp; Low-Link Values</div>
+      <div class="table-wrapper">
+        <table id="dfTable">
+          <thead>
+            <tr>
+              <th>Vertex</th>
+              <th>State</th>
+              <th>Parent</th>
+              <th>d</th>
+              <th>low</th>
+              <th>AP?</th>
+            </tr>
+          </thead>
+          <tbody id="dfBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Edge Stack <span style="color:#888;font-size:0.8em;">(bottom &larr; top)</span></div>
+      <div id="stackDisplay" class="stack-display">
+        <span class="stack-empty">Stack empty</span>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Biconnected Components Found</div>
+      <div id="bcDisplay" class="bc-container">
+        <span style="color:#555;font-size:0.8em;">None yet.</span>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; Algorithm Complete</h2>
+      <div class="big-result" id="finalBCResult">&mdash;</div>
+      <div id="finalResultDetail"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Biconnected Components</h3>
+        <p>A <b>biconnected component</b> is a maximal set of edges where any two edges lie on a common <b>simple cycle</b>. Equivalently: a maximal 2-vertex-connected subgraph where no single vertex removal disconnects the remaining edges.</p>
+        <p>Edges that don't belong to any cycle (<b>bridges</b>) form their own single-edge biconnected component.</p>
+        <h3 style="margin-top:10px;">Graph</h3>
+        <p>7 vertices {<span class="dim">0,1,2,3,4,5,6</span>} with 8 undirected edges.</p>
+        <p>Edges: <span class="dim">0-1, 1-2, 2-0, 1-3, 3-4, 4-5, 5-3, 5-6</span></p>
+        <p>Expected: <span class="dim">4</span> biconnected components (2 triangles, 2 bridges).</p>
+        <p>Articulation points (separate components): <span style="color:#ff0044;font-weight:bold;">1, 3, 5</span></p>
+        <h3 style="margin-top:10px;">Key Algorithm</h3>
+        <p>DFS with <b>low-link values</b> and an <b>edge stack</b>. When <span class="result-line">low[child] &ge; d[current]</span>, pop edges from the stack to form a biconnected component.</p>
+        <span class="formula-line">low[v] = min( d[v], d[w] for back edge (v,w), low[w] for each child w )</span>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4, 5, 6];
+const adjList = {
+  0: [1, 2],
+  1: [0, 2, 3],
+  2: [0, 1],
+  3: [1, 4, 5],
+  4: [3, 5],
+  5: [3, 4, 6],
+  6: [5]
+};
+const edgeList = [
+  {u:0,v:1}, {u:1,v:2}, {u:2,v:0},
+  {u:1,v:3},
+  {u:3,v:4}, {u:4,v:5}, {u:5,v:3},
+  {u:5,v:6}
+];
+const nodePositions = {
+  0: { x: 170, y: 70 },
+  1: { x: 310, y: 180 },
+  2: { x: 100, y: 340 },
+  3: { x: 430, y: 180 },
+  4: { x: 380, y: 340 },
+  5: { x: 510, y: 310 },
+  6: { x: 580, y: 120 }
+};
+const nodeRadius = 22;
+const nonBridgeColors = ['#00ff88', '#ff6600', '#00ccff', '#ffcc00', '#ff9944'];
+const bridgeColor = '#ff66ff';
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function edgeKey(u, v) {
+  return Math.min(u, v) + '-' + Math.max(u, v);
+}
+
+function formatEdge(u, v) {
+  return Math.min(u, v) + '-' + Math.max(u, v);
+}
+
+function getEdgeBCIndex(bcList, u, v) {
+  let k = edgeKey(u, v);
+  for (let i = 0; i < bcList.length; i++) {
+    for (let e of bcList[i].edges) {
+      if (edgeKey(e.u, e.v) === k) return i;
+    }
+  }
+  return -1;
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return '<div class="explain-section active">\
+<h3>Initial State</h3>\
+<p>All 7 vertices are <span style="color:#555;">white</span> (undiscovered). DFS starts from vertex <span class="dim">0</span>.</p>\
+<h3 style="margin-top:10px;">Biconnected Component Definition</h3>\
+<p>A maximal set of edges where any two edges lie on a common simple cycle. Also called a <b>2-connected component</b>.</p>\
+<p>A single-edge <b>bridge</b> (whose removal disconnects the graph) forms its own biconnected component.</p>\
+<h3 style="margin-top:10px;">Algorithm</h3>\
+<p>1. Run DFS, maintain <span class="dim">d[v]</span> (discovery time) and <span class="dim">low[v]</span>.</p>\
+<p>2. Push each tree edge and back edge onto the <b>edge stack</b>.</p>\
+<p>3. On backtracking from child v to parent u: if <span class="result-line">low[v] &ge; d[u]</span>, pop edges from stack until (u,v). These form a biconnected component.</p>\
+<p>4. <span class="dim">Articulation points</span> separate biconnected components.</p>\
+<p class="note">Press Play or Step to begin.</p>\
+</div>';
+}
+
+function buildDiscoverExplanation(v, dTime) {
+  return '<div class="explain-section active">\
+<h3>&#128269; Discover Vertex ' + v + '</h3>\
+<p>Entering vertex <span class="dim">' + v + '</span> at time <span class="result-line">d = ' + dTime + '</span>.</p>\
+<p>Initialize <span class="dim">low[' + v + '] = d[' + v + '] = ' + dTime + '</span>.</p>\
+<p>Color: <span style="color:#555;">white</span> &rarr; <span style="color:#ff6600;">gray</span> (on recursion stack).</p>\
+<p>We will explore each neighbor and later propagate low-link values upward.</p>\
+</div>';
+}
+
+function buildTreeEdgeExplanation(u, v, v_d) {
+  return '<div class="explain-section active">\
+<h3>&#127794; Tree Edge ' + u + '&minus;' + v + '</h3>\
+<p>Edge (<span class="dim">' + u + '</span>, <span class="dim">' + v + '</span>) is a <span class="result-line">tree edge</span>.</p>\
+<p><span class="dim">' + v + '</span> is <span style="color:#555;">white</span> &rarr; becomes child of <span class="dim">' + u + '</span>.</p>\
+<p>Pushing (' + u + ',' + v + ') onto the stack. low[' + v + '] = d[' + v + '] = <span class="result-line">' + v_d + '</span>.</p>\
+<p>DFS will recursively explore <span class="dim">' + v + '</span>&#39;s entire subtree before returning.</p>\
+</div>';
+}
+
+function buildBackEdgeExplanation(u, v, dV, oldLow, newLow) {
+  let improved = newLow < oldLow;
+  return '<div class="explain-section active">\
+<h3>&#8635; Back Edge ' + u + '&minus;' + v + '</h3>\
+<p>Neighbor <span class="dim">' + v + '</span> is <span style="color:#ff6600;font-weight:bold;">gray</span> (ancestor on recursion stack) &rarr; <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>\
+<p>Pushing (' + u + ',' + v + ') onto the stack. Updating low[' + u + ']:</p>\
+<span class="formula-line">low[' + u + '] = min(low[' + u + '], d[' + v + ']) = min(' + oldLow + ', ' + dV + ') = ' + newLow + '</span>\
+' + (improved ? '<p><span class="result-line">low[' + u + '] improved from ' + oldLow + ' to ' + newLow + '</span> via back edge to ancestor ' + v + '.</p>' : '<p class="note">No improvement &mdash; d[' + v + '] = ' + dV + ' is not lower than current low[' + u + '] = ' + oldLow + '.</p>') + '\
+</div>';
+}
+
+function buildAfterChildExplanation(u, v, oldLow, newLow, lowV) {
+  let improved = newLow < oldLow;
+  let html = '<div class="explain-section active">\
+<h3>&#8617; Back from Child ' + v + '</h3>\
+<p>Returned from child <span class="dim">' + v + '</span> back to parent <span class="dim">' + u + '</span>.</p>\
+<p>Child low: <span class="dim">low[' + v + '] = ' + lowV + '</span>. Current parent low: <span class="dim">low[' + u + '] = ' + oldLow + '</span>.</p>\
+<span class="formula-line">low[' + u + '] = min(low[' + u + '], low[' + v + ']) = min(' + oldLow + ', ' + lowV + ') = ' + newLow + '</span>\
+' + (improved ? '<p><span class="result-line">low[' + u + '] improved from ' + oldLow + ' to ' + newLow + '</span> via child ' + v + '.</p>' : '<p class="note">No change &mdash; low[' + u + '] stays ' + oldLow + '.</p>') + '\
+</div>';
+  return html;
+}
+
+function buildPopComponentExplanation(u, v, popped, bcList, bcIdx, isBridge, lowV, dU) {
+  let bc = bcList[bcIdx];
+  let color = bc.color;
+  let edgeStrs = popped.map(function(e) { return formatEdge(e.u, e.v); }).join(', ');
+  let conditionNote = isBridge
+    ? '<p>Condition: <span class="result-line">low[' + v + '] = ' + lowV + ' > d[' + u + '] = ' + dU + '</span> &mdash; child\'s subtree has <b>no back edge</b> reaching above ' + u + '.</p>'
+    : '<p>Condition: <span class="result-line">low[' + v + '] = ' + lowV + ' &ge; d[' + u + '] = ' + dU + '</span> &mdash; vertex <span class="dim">' + u + '</span> is an <b>articulation point</b> separating this component.</p>';
+  let typeNote = isBridge
+    ? '<p>This is a <span style="color:#ff66ff;font-weight:bold;">bridge</span> &mdash; a single-edge biconnected component. Removing it disconnects the graph.</p>'
+    : '<p>This is a <span style="color:' + color + ';font-weight:bold;">cycle-based component</span> with ' + popped.length + ' edges &mdash; any two edges share a common simple cycle.</p>';
+  return '<div class="explain-section active" style="border-left-color:' + color + ';">\
+<h3>&#9888; Biconnected Component Found! (' + (isBridge ? 'Bridge' : 'BC' + (bcIdx + 1)) + ')</h3>\
+<p>Popped ' + popped.length + ' edge' + (popped.length > 1 ? 's' : '') + ' from the stack: <span class="result-line">{' + edgeStrs + '}</span></p>\
+' + conditionNote + '\
+' + typeNote + '\
+<p><span style="color:' + color + ';font-weight:bold;">Component ' + (bcIdx + 1) + '</span> highlighted on the graph.</p>\
+</div>';
+}
+
+function buildFinishExplanation(v, fTime, lowV) {
+  return '<div class="explain-section active">\
+<h3>&#10003; Finish Vertex ' + v + '</h3>\
+<p>Vertex <span class="dim">' + v + '</span> finished at time <span class="result-line">f = ' + fTime + '</span>.</p>\
+<p>Final <span class="dim">low[' + v + '] = ' + lowV + '</span>.</p>\
+<p>Color: <span style="color:#ff6600;">gray</span> &rarr; <span style="color:#00ff88;">black</span>.</p>\
+<p>All descendants have been explored. DFS backtracks to its parent.</p>\
+</div>';
+}
+
+function buildCompleteExplanation() {
+  return '<div class="explain-section active" style="border-left-color:#00ff88;">\
+<h3>&#10004; Algorithm Complete!</h3>\
+<p>All 7 vertices explored via DFS starting from vertex <span class="dim">0</span>.</p>\
+<p>Found <span class="result-line">4 biconnected components</span> from 8 undirected edges.</p>\
+<h3 style="margin-top:10px;">Biconnected Components</h3>\
+<p>&#9679; <span style="color:#00ff88;font-weight:bold;">BC1</span> — Triangle {0-1, 1-2, 2-0} (3 edges, 2-connected)</p>\
+<p>&#9679; <span style="color:#ff66ff;font-weight:bold;">BC2</span> — Bridge {1-3} (1 edge)</p>\
+<p>&#9679; <span style="color:#ff6600;font-weight:bold;">BC3</span> — Triangle {3-4, 4-5, 5-3} (3 edges, 2-connected)</p>\
+<p>&#9679; <span style="color:#ff66ff;font-weight:bold;">BC4</span> — Bridge {5-6} (1 edge)</p>\
+<h3 style="margin-top:10px;">Articulation Points (separate components)</h3>\
+<p><span style="color:#ff0044;font-weight:bold;">1, 3, 5</span> &mdash; removing any of these disconnects the graph between different biconnected components.</p>\
+<h3 style="margin-top:10px;">How the Algorithm Works</h3>\
+<p><span class="dim">low[child] &ge; d[parent]</span> means the child\'s subtree has no back edge reaching above the parent. The parent is an <b>articulation point</b> that separates the child\'s subtree (plus edges in between) as a distinct biconnected component.</p>\
+<h3 style="margin-top:10px;">Complexity</h3>\
+<p><span class="dim">Time:</span> O(V + E) &mdash; single DFS pass</p>\
+<p><span class="dim">Space:</span> O(V + E) for recursion stack and edge stack</p>\
+</div>';
+}
+
+// --- Canvas drawing ---
+
+function drawEdge(ctx, x1, y1, x2, y2, colorVal, lineWidth, dash) {
+  let dx = x2 - x1, dy = y2 - y1;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist, ny = dy / dist;
+  let sX = x1 + nx * (nodeRadius + 2);
+  let sY = y1 + ny * (nodeRadius + 2);
+  let eX = x2 - nx * (nodeRadius + 2);
+  let eY = y2 - ny * (nodeRadius + 2);
+  ctx.beginPath();
+  ctx.moveTo(sX, sY);
+  ctx.lineTo(eX, eY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  if (dash) ctx.setLineDash(dash);
+  else ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let col = step.color || {};
+  let d = step.d || {};
+  let bcList = step.bcList || [];
+  let classifiedEdges = step.classifiedEdges || {};
+  let curEdge = step.currentEdge;
+  let poppedEdges = step.poppedEdges || [];
+  let isArticulation = step.isArticulation || {};
+
+  // Build edge color map
+  let edgeColorMap = {};
+  for (let e of edgeList) {
+    let k = edgeKey(e.u, e.v);
+    // Check if edge is in a BC
+    let bcIdx = getEdgeBCIndex(bcList, e.u, e.v);
+    if (bcIdx >= 0) {
+      edgeColorMap[k] = { color: bcList[bcIdx].color, lw: 3.2, dash: null, glow: bcList[bcIdx].color };
+    } else if (classifiedEdges[k] === 'tree') {
+      edgeColorMap[k] = { color: '#00ff88', lw: 2.5, dash: null, glow: '#00ff8844' };
+    } else if (classifiedEdges[k] === 'back') {
+      edgeColorMap[k] = { color: '#ff6600', lw: 2.2, dash: [6, 4], glow: '#ff660044' };
+    } else {
+      edgeColorMap[k] = { color: '#444', lw: 1.5, dash: null, glow: null };
+    }
+  }
+
+  // Current edge highlight overrides
+  if (curEdge) {
+    let k = edgeKey(curEdge.u, curEdge.v);
+    let type = step.type;
+    if (type === 'tree_edge') {
+      edgeColorMap[k] = { color: '#00ff88', lw: 4, dash: null, glow: '#00ff88' };
+    } else if (type === 'back_edge') {
+      edgeColorMap[k] = { color: '#ff6600', lw: 4, dash: [6, 4], glow: '#ff6600' };
+    } else if (type === 'pop_component') {
+      let bcIdx2 = getEdgeBCIndex(bcList, curEdge.u, curEdge.v);
+      if (bcIdx2 >= 0) {
+        edgeColorMap[k] = { color: bcList[bcIdx2].color, lw: 4.5, dash: null, glow: bcList[bcIdx2].color + 'cc' };
+      }
+    }
+  }
+
+  // Popped edges highlight in yellow
+  for (let pe of poppedEdges) {
+    let k = edgeKey(pe.u, pe.v);
+    let bcIdx2 = getEdgeBCIndex(bcList, pe.u, pe.v);
+    let bcCol = bcIdx2 >= 0 ? bcList[bcIdx2].color : '#ffcc00';
+    edgeColorMap[k] = { color: bcCol, lw: 4.5, dash: null, glow: bcCol + 'cc' };
+  }
+
+  // Draw edges
+  for (let e of edgeList) {
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+    let k = edgeKey(e.u, e.v);
+    let info = edgeColorMap[k];
+    if (info.glow) {
+      ctx.shadowColor = info.glow;
+      ctx.shadowBlur = info.glow === '#00ff88' ? 8 : 14;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+    drawEdge(ctx, p1.x, p1.y, p2.x, p2.y, info.color, info.lw, info.dash);
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw vertices
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let c = col[v] || 'white';
+    let isCurrent = (v === step.currentVertex);
+    let isAP = isArticulation[v];
+
+    let fillColor, strokeColor, textColor;
+    if (c === 'gray') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    } else if (c === 'black') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (isAP) {
+      strokeColor = '#ff0044';
+      textColor = '#ff0044';
+    }
+    if (isCurrent && c === 'gray') {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    }
+
+    let r = nodeRadius;
+    if (isAP) r = nodeRadius + 4;
+
+    ctx.shadowBlur = 0;
+    if (isCurrent) {
+      ctx.shadowColor = strokeColor;
+      ctx.shadowBlur = 20;
+    } else if (isAP) {
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 10;
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isCurrent ? 3.5 : (isAP ? 3 : 2);
+    ctx.stroke();
+
+    if (isAP) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ff004466';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    if (isCurrent) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeColor + '44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    let dv = d[v] || 0;
+    if (dv > 0) {
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      let lowV = step.low ? step.low[v] || 0 : 0;
+      let label = '' + dv;
+      if (lowV > 0) label += ' (' + lowV + ')';
+      ctx.fillStyle = isAP ? '#ff0044' : strokeColor;
+      ctx.fillText(label, pos.x, pos.y + r + 3);
+    }
+  }
+
+  if (step.type === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('All vertices white - undiscovered. Press Play.', 10, 14);
+  }
+}
+
+// --- Table rendering ---
+
+function renderTable(step) {
+  let tbody = document.getElementById('dfBody');
+  let html = '';
+  let isAP = step.isArticulation || {};
+  for (let v of vertices) {
+    let c = step.color ? step.color[v] || 'white' : 'white';
+    let dv = step.d ? step.d[v] || 0 : 0;
+    let lowV = step.low ? step.low[v] || 0 : 0;
+    let p = step.parent ? step.parent[v] : null;
+    let stateClass = 'white-state';
+    let stateLabel = 'White';
+    if (c === 'gray') { stateClass = 'gray-state'; stateLabel = 'Gray'; }
+    else if (c === 'black') { stateClass = 'black-state'; stateLabel = 'Black'; }
+    let dStr = dv > 0 ? dv : '&mdash;';
+    let lowStr = lowV > 0 ? lowV : '&mdash;';
+    let pStr = (p !== null && p !== undefined) ? p : '&mdash;';
+    let apLabel = isAP[v] ? '<span class="ap-true">Yes</span>' : '&mdash;';
+    html += '<tr><td>' + v + '</td><td class="' + stateClass + '">' + stateLabel + '</td><td>' + pStr + '</td><td>' + dStr + '</td><td>' + lowStr + '</td><td>' + apLabel + '</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+// --- Stack display ---
+
+function renderStack(step) {
+  let container = document.getElementById('stackDisplay');
+  let stack = step.edgeStack || [];
+  let classifiedEdges = step.classifiedEdges || {};
+  if (stack.length === 0) {
+    container.innerHTML = '<span class="stack-empty">Stack empty</span>';
+    return;
+  }
+  let html = '<span class="stack-label">Stack:</span>';
+  for (let i = 0; i < stack.length; i++) {
+    let e = stack[i];
+    let k = edgeKey(e.u, e.v);
+    let type = classifiedEdges[k] || 'tree';
+    let cls = type === 'tree' ? 'stack-tree' : 'stack-back';
+    let label = '(' + e.u + ',' + e.v + ')';
+    if (i > 0) html += '<span class="stack-sep">|</span>';
+    html += '<span class="stack-edge ' + cls + '">' + label + '</span>';
+  }
+  container.innerHTML = html;
+}
+
+// --- BC list display ---
+
+function renderBCList(step) {
+  let container = document.getElementById('bcDisplay');
+  let bcList = step.bcList || [];
+  let highlightIdx = step.bcIndex !== undefined ? step.bcIndex : -1;
+  if (bcList.length === 0) {
+    container.innerHTML = '<span style="color:#555;font-size:0.8em;">None yet.</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < bcList.length; i++) {
+    let bc = bcList[i];
+    let color = bc.color;
+    let title = bc.isBridge ? 'Bridge' : 'BC' + (i + 1);
+    let isNew = (i === highlightIdx);
+    let edgeStrs = bc.edges.map(function(e) { return formatEdge(e.u, e.v); }).join(', ');
+    html += '<div class="bc-card' + (isNew ? ' bc-new' : '') + '" style="border-color:' + color + ';">';
+    html += '<div class="bc-title" style="color:' + color + ';">' + title + '</div>';
+    html += '<div class="bc-edges">{' + edgeStrs + '}</div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function buildBCListHTML(bcList) {
+  if (!bcList || bcList.length === 0) return '<span style="color:#555;font-size:0.8em;">None.</span>';
+  let html = '';
+  for (let i = 0; i < bcList.length; i++) {
+    let bc = bcList[i];
+    let color = bc.color;
+    let title = bc.isBridge ? 'Bridge' : 'BC' + (i + 1);
+    let edgeStrs = bc.edges.map(function(e) { return formatEdge(e.u, e.v); }).join(', ');
+    html += '<span style="color:' + color + ';font-weight:bold;">' + title + '</span>: {' + edgeStrs + '}';
+    if (i < bcList.length - 1) html += '<br>';
+  }
+  return html;
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '&mdash;';
+  let vtx = (step.currentVertex !== null && step.currentVertex !== undefined) ? step.currentVertex : '&mdash;';
+  document.getElementById('vertexDisplay').textContent = vtx;
+  if (step.currentEdge) {
+    document.getElementById('edgeDisplay').textContent = '(' + step.currentEdge.u + ', ' + step.currentEdge.v + ')';
+  } else {
+    document.getElementById('edgeDisplay').textContent = '&mdash;';
+  }
+  document.getElementById('stackSizeDisplay').textContent = (step.edgeStack || []).length;
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let d = {}, low = {}, f = {}, parent = {}, color = {}, children = {};
+  let time = 0;
+  let edgeStack = [];
+  let bcList = [];
+  let classifiedEdges = {};
+  let isArticulation = {};
+  let nonBridgeIdx = 0;
+
+  for (let v of vertices) {
+    d[v] = 0; low[v] = 0; f[v] = 0;
+    parent[v] = null; color[v] = 'white'; children[v] = 0;
+  }
+
+  function snap(extra) {
+    let obj = {
+      type: '',
+      d: Object.assign({}, d),
+      low: Object.assign({}, low),
+      f: Object.assign({}, f),
+      parent: Object.assign({}, parent),
+      color: Object.assign({}, color),
+      children: Object.assign({}, children),
+      edgeStack: edgeStack.slice(),
+      bcList: bcList.map(function(bc) { return { edges: bc.edges.slice(), isBridge: bc.isBridge, color: bc.color }; }),
+      classifiedEdges: Object.assign({}, classifiedEdges),
+      isArticulation: Object.assign({}, isArticulation),
+      currentVertex: null,
+      currentEdge: null,
+      poppedEdges: null,
+      bcIndex: -1,
+      lowUpdateFrom: undefined,
+      lowUpdateTo: undefined,
+      phase: ''
+    };
+    if (extra) {
+      for (let k in extra) obj[k] = extra[k];
+    }
+    return obj;
+  }
+
+  steps.push(snap({
+    type: 'init', phase: 'Initial state &mdash; all vertices white'
+  }));
+
+  function dfs(u) {
+    // discover
+    time++;
+    d[u] = time;
+    low[u] = time;
+    color[u] = 'gray';
+
+    steps.push(snap({
+      type: 'discover', currentVertex: u,
+      phase: 'Discovered vertex ' + u + ' at time ' + d[u]
+    }));
+
+    for (let vi = 0; vi < adjList[u].length; vi++) {
+      let v = adjList[u][vi];
+      if (v === parent[u]) continue;
+
+      if (color[v] === 'white') {
+        // tree edge
+        parent[v] = u;
+        children[u]++;
+        edgeStack.push({u: u, v: v});
+        classifiedEdges[edgeKey(u, v)] = 'tree';
+        time++;
+        d[v] = time;
+        low[v] = time;
+        color[v] = 'gray';
+
+        steps.push(snap({
+          type: 'tree_edge', currentVertex: v, currentEdge: {u: u, v: v},
+          phase: 'Tree edge ' + u + '&minus;' + v + ' &mdash; discovered ' + v + ' at time ' + d[v]
+        }));
+
+        dfs(v);
+
+        // after child
+        let oldLow = low[u];
+        low[u] = Math.min(low[u], low[v]);
+
+        steps.push(snap({
+          type: 'after_child', currentVertex: u, currentEdge: {u: u, v: v},
+          lowUpdateFrom: oldLow, lowUpdateTo: low[u],
+          phase: 'Back at ' + u + ' from child ' + v + '. low[' + u + '] = min(' + oldLow + ', low[' + v + ']=' + low[v] + ') = ' + low[u]
+        }));
+
+        // Check condition: low[child] >= d[parent]
+        if (low[v] >= d[u]) {
+          // Mark articulation point (non-root)
+          if (parent[u] !== null) {
+            isArticulation[u] = true;
+          }
+
+          // Pop edges from stack until (u,v)
+          let popped = [];
+          while (edgeStack.length > 0) {
+            let e = edgeStack.pop();
+            popped.push(e);
+            if ((e.u === u && e.v === v) || (e.u === v && e.v === u)) break;
+          }
+
+          let isBridge = popped.length === 1;
+          let color2 = isBridge ? bridgeColor : nonBridgeColors[nonBridgeIdx % nonBridgeColors.length];
+          if (!isBridge) nonBridgeIdx++;
+
+          bcList.push({ edges: popped.slice(), isBridge: isBridge, color: color2 });
+
+          steps.push(snap({
+            type: 'pop_component', currentVertex: u, currentEdge: {u: u, v: v},
+            poppedEdges: popped.slice(), bcIndex: bcList.length - 1,
+            phase: (isBridge ? 'Bridge' : 'BC' + bcList.length) + ' found! Popped ' + popped.length + ' edge' + (popped.length > 1 ? 's' : '') + ' from stack.'
+          }));
+        }
+
+      } else if (color[v] === 'gray' && d[v] < d[u]) {
+        // back edge to ancestor
+        edgeStack.push({u: u, v: v});
+        classifiedEdges[edgeKey(u, v)] = 'back';
+        let oldLow = low[u];
+        low[u] = Math.min(low[u], d[v]);
+
+        steps.push(snap({
+          type: 'back_edge', currentVertex: u, currentEdge: {u: u, v: v},
+          lowUpdateFrom: oldLow, lowUpdateTo: low[u],
+          phase: 'Back edge ' + u + '&minus;' + v + ' (ancestor). low[' + u + '] = min(' + oldLow + ', d[' + v + ']=' + d[v] + ') = ' + low[u]
+        }));
+      }
+      // else: black descendant, skip
+    }
+
+    // finish
+    time++;
+    f[u] = time;
+    color[u] = 'black';
+
+    // Check root articulation point
+    if (parent[u] === null && children[u] >= 2) {
+      isArticulation[u] = true;
+    }
+
+    steps.push(snap({
+      type: 'finish', currentVertex: u,
+      phase: 'Finished vertex ' + u + ' at time ' + f[u] + ', low=' + low[u]
+    }));
+  }
+
+  for (let v of vertices) {
+    if (color[v] === 'white') dfs(v);
+  }
+
+  steps.push(snap({
+    type: 'complete', currentVertex: null, currentEdge: null, poppedEdges: null,
+    phase: '&#10004; Complete!'
+  }));
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+  updateInfo(step);
+  drawGraph(step);
+  renderTable(step);
+  renderStack(step);
+  renderBCList(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation();
+      break;
+    case 'discover':
+      explanation = buildDiscoverExplanation(step.currentVertex, step.d[step.currentVertex]);
+      break;
+    case 'tree_edge':
+      explanation = buildTreeEdgeExplanation(step.currentEdge.u, step.currentEdge.v, step.d[step.currentEdge.v]);
+      break;
+    case 'back_edge': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      explanation = buildBackEdgeExplanation(u, v, step.d[v], step.lowUpdateFrom, step.lowUpdateTo);
+      break;
+    }
+    case 'after_child': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.lowUpdateTo, step.low[v]);
+      break;
+    }
+    case 'pop_component': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      let bcIdx = step.bcIndex;
+      let bc = step.bcList[bcIdx];
+      explanation = buildPopComponentExplanation(u, v, step.poppedEdges, step.bcList, bcIdx, bc.isBridge, step.low[v], step.d[u]);
+      break;
+    }
+    case 'finish':
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex]);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation();
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + (idx + 1) + ' / ' + steps.length + ' &mdash; ' + step.phase;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(function() {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '&#10004; Complete!';
+  document.getElementById('vertexDisplay').textContent = '&mdash;';
+  document.getElementById('edgeDisplay').textContent = '&mdash;';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let lastStep = steps[steps.length - 1];
+  let bcList = lastStep.bcList || [];
+  let apList = [];
+  for (let v of vertices) { if (lastStep.isArticulation && lastStep.isArticulation[v]) apList.push(v); }
+
+  document.getElementById('finalBCResult').innerHTML =
+    '<span class="dim">Found</span> ' + bcList.length + ' <span class="dim">biconnected components</span>';
+
+  let detailHtml = '';
+  for (let i = 0; i < bcList.length; i++) {
+    let bc = bcList[i];
+    let color = bc.color;
+    let title = bc.isBridge ? 'Bridge' : 'BC' + (i + 1);
+    let edgeStrs = bc.edges.map(function(e) { return formatEdge(e.u, e.v); }).join(', ');
+    detailHtml += '<span class="bc-final-item" style="border-color:' + color + ';color:' + color + ';">' + title + ': {' + edgeStrs + '}</span> ';
+  }
+  detailHtml += '<br><br><span class="dim">Articulation Points:</span> <span class="ap-item">' + (apList.length > 0 ? apList.join(', ') : 'None') + '</span>';
+
+  document.getElementById('finalResultDetail').innerHTML = detailHtml;
+
+  document.getElementById('sidebarPhase').textContent =
+    'Step ' + steps.length + ' / ' + steps.length + ' &mdash; &#10004; Complete';
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready &mdash; Press Play';
+  document.getElementById('vertexDisplay').textContent = '&mdash;';
+  document.getElementById('edgeDisplay').textContent = '&mdash;';
+  document.getElementById('stackSizeDisplay').textContent = '0';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle &mdash; press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(function() {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+
+</body>
+</html>

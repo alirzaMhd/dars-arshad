@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kosaraju's SCC Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.canvas-wrapper {
+  background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; text-align: center;
+}
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.legend {
+  display: flex; justify-content: center; gap: 16px; margin: 8px 0;
+  font-size: 0.78em; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.l-tree { background: #00ff8844; border-color: #00ff88; }
+.l-back { background: #ff660044; border-color: #ff6600; }
+.l-forward { background: #00ccff44; border-color: #00ccff; }
+.l-cross { background: #ff66ff44; border-color: #ff66ff; }
+.l-white { background: #0d0d1a; border-color: #888; }
+.l-gray { background: #1a0a00; border-color: #ff6600; }
+.l-black { background: #0a1a12; border-color: #00ff88; }
+.l-scc1 { background: #00ff8822; border-color: #00ff88; }
+.l-scc2 { background: #00ccff22; border-color: #00ccff; }
+.l-scc3 { background: #ff660022; border-color: #ff6600; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 20px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 10px; text-align: center; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td { width: 72px; height: 38px; text-align: center; border: 1px solid #333; font-size: 0.78em; transition: all 0.3s; }
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.w-state { background: #0d0d1a; color: #555; }
+td.g-state { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; font-weight: bold; }
+td.b-state { background: #0a1a12 !important; color: #00ff88 !important; }
+td.s1 { background: #002a1a !important; color: #00ff88 !important; border-color: #00ff88 !important; font-weight: bold; }
+td.s2 { background: #001a2a !important; color: #00ccff !important; border-color: #00ccff !important; font-weight: bold; }
+td.s3 { background: #2a1a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; font-weight: bold; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.sets-container {
+  display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px; background: #0d0d1a; border: 1px solid #333; border-radius: 10px; min-height: 50px;
+}
+.set-box { border: 2px solid; border-radius: 8px; padding: 8px 14px; background: #0d0d1a; font-size: 0.85em; transition: all 0.4s; }
+.set-box .set-member { font-weight: bold; }
+.set-box .set-label { color: #aaa; }
+.set-box .set-comma { color: #555; }
+.finish-order-display {
+  text-align: center; font-size: 1em; padding: 12px;
+  background: #0d0d1a; border: 1px solid #333; border-radius: 10px; min-height: 40px; line-height: 2;
+}
+.fo-item { display: inline-block; padding: 4px 12px; margin: 3px; border-radius: 5px; font-weight: bold; border: 2px solid; transition: all 0.3s; }
+.fo-w { color: #555; border-color: #444; background: #0d0d1a; }
+.fo-g { color: #ff6600; border-color: #ff6600; background: #1a0a00; }
+.fo-b { color: #00ff88; border-color: #00ff88; background: #0a1a12; }
+.fo-s1 { color: #00ff88; border-color: #00ff88; background: #002a1a; }
+.fo-s2 { color: #00ccff; border-color: #00ccff; background: #001a2a; }
+.fo-s3 { color: #ff6600; border-color: #ff6600; background: #2a1a00; }
+.cg-svg { display: block; margin: 0 auto; max-width: 100%; }
+.cg-node circle { stroke-width: 3; fill: #0d0d1a; }
+.cg-node text { font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; text-anchor: middle; dominant-baseline: central; }
+.cg-edge { stroke-width: 2.5; fill: none; }
+.cg-arrow { stroke-width: 0; }
+</style>
+</head>
+<body>
+<h1>STRONGLY CONNECTED COMPONENTS</h1>
+<p class="subtitle">Graph Algorithms — Kosaraju's Algorithm (Two-Pass SCC)</p>
+<div class="layout">
+  <div class="main-panel">
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="600" height="430"></canvas>
+    </div>
+    <div class="legend" id="legendArea">
+      <span class="legend-item"><span class="legend-swatch l-white"></span> White</span>
+      <span class="legend-item"><span class="legend-swatch l-gray"></span> Gray</span>
+      <span class="legend-item"><span class="legend-swatch l-black"></span> Black</span>
+      <span class="legend-item"><span class="legend-swatch l-tree"></span> Tree</span>
+      <span class="legend-item"><span class="legend-swatch l-back"></span> Back</span>
+      <span class="legend-item"><span class="legend-swatch l-forward"></span> Forward</span>
+      <span class="legend-item"><span class="legend-swatch l-cross"></span> Cross</span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+    <div class="info-panel">
+      <span class="label">Pass:</span> <span class="value" id="passDisplay">&#8212;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready &#8212; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">&#8212;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">&#8212;</span>
+    </div>
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+    <div class="table-section">
+      <div class="table-title">Vertex Information</div>
+      <div class="table-wrapper">
+        <table><thead><tr><th>Vertex</th><th>Component</th><th>d</th><th>f</th></tr></thead>
+        <tbody id="tableBody"></tbody></table>
+      </div>
+    </div>
+    <div id="finishOrderArea" class="table-section" style="display:none;">
+      <div class="table-title">Finish Time Order (for Pass 2)</div>
+      <div id="finishOrderDisplay" class="finish-order-display"></div>
+    </div>
+    <div id="compGraphArea" class="table-section" style="display:none;">
+      <div class="table-title">Component Graph &#8212; Always a DAG</div>
+      <div style="background:#0d0d1a;border:1px solid #333;border-radius:10px;padding:10px;text-align:center;">
+        <svg id="compGraphSvg" class="cg-svg" width="500" height="160" viewBox="0 0 500 160"></svg>
+      </div>
+    </div>
+    <div id="sccSetsArea" class="table-section" style="display:none;">
+      <div class="table-title">Strongly Connected Components</div>
+      <div id="sccSetsDisplay" class="sets-container"></div>
+    </div>
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; Kosaraju's Algorithm Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &#8212; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Strongly Connected Components</h3>
+        <p>A <b>strongly connected component (SCC)</b> of a directed graph G = (V, E) is a <b>maximal</b> set of vertices C &#8838; V such that for every pair of vertices u, v &#8712; C, u is reachable from v <b>and</b> v is reachable from u.</p>
+        <p>The graph has <span class="dim">|V| = 8</span> vertices and <span class="dim">|E| = 12</span> directed edges.</p>
+        <h3 style="margin-top:10px;">Kosaraju's Algorithm (Two-Pass)</h3>
+        <p><span class="dim">Pass 1:</span> Run DFS on G, recording finish times f[u].</p>
+        <p><span class="dim">Pass 2:</span> Compute G<sup>T</sup> (transpose). Run DFS on G<sup>T</sup> in <b>decreasing</b> order of finish times. Each DFS tree in Pass 2 = 1 SCC.</p>
+        <h3 style="margin-top:10px;">Key Insight</h3>
+        <p>The <b>component graph</b> G<sup>SCC</sup> (contracting each SCC to one node) is always a <span class="result-line">DAG</span> &#8212; if there were a cycle, the SCCs would merge into one.</p>
+        <h3 style="margin-top:10px;">Graph Edges</h3>
+        <p><span class="dim">0&#8594;1, 1&#8594;2, 2&#8594;0, 2&#8594;3, 3&#8594;4, 4&#8594;3, 4&#8594;5, 5&#8594;6, 6&#8594;7, 7&#8594;5, 1&#8594;4, 2&#8594;5</span></p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const vertices = [0,1,2,3,4,5,6,7];
+const adjList = {0:[1],1:[2,4],2:[0,3,5],3:[4],4:[3,5],5:[6],6:[7],7:[5]};
+const edgeList = [{u:0,v:1},{u:1,v:2},{u:2,v:0},{u:2,v:3},{u:3,v:4},{u:4,v:3},{u:4,v:5},{u:5,v:6},{u:6,v:7},{u:7,v:5},{u:1,v:4},{u:2,v:5}];
+const nodePositions = {
+  0:{x:300,y:55},1:{x:160,y:175},2:{x:440,y:175},
+  3:{x:255,y:295},4:{x:395,y:295},
+  5:{x:485,y:225},6:{x:435,y:365},7:{x:555,y:365}
+};
+const nodeRadius = 22;
+const sccColors = ['#555','#00ff88','#00ccff','#ff6600'];
+
+let steps = [], currentStep = 0, animating = false, animTimer = null;
+
+const adjListT = {};
+for (let v of vertices) adjListT[v] = [];
+for (let e of edgeList) adjListT[e.v].push(e.u);
+
+function precomputePass1() {
+  let c={}, d={}, f={}, t=0;
+  for (let v of vertices) { c[v]='white'; d[v]=0; f[v]=0; }
+  function visit(u){t++;d[u]=t;c[u]='gray';for(let v of adjList[u]){if(c[v]==='white')visit(v);}t++;f[u]=t;c[u]='black';}
+  for (let v of vertices) if (c[v]==='white') visit(v);
+  return {d,f};
+}
+const precomputed = precomputePass1();
+
+function getFinishOrder(fMap) {
+  return vertices.slice().sort((a,b)=>fMap[b]-fMap[a]);
+}
+
+function buildInitExplain(){return'<div class="explain-section active"><h3>Problem Setup</h3><p>We have <span class="dim">8</span> vertices and <span class="dim">12</span> directed edges. The graph has <b>3 SCCs</b>:</p><p style="margin-left:8px;">&#8226; <span class="result-line">SCC1:</span> {<span class="dim">0, 1, 2</span>} &#8212; triangle</p><p style="margin-left:8px;">&#8226; <span style="color:#00ccff;font-weight:bold;">SCC2:</span> {<span class="dim">3, 4</span>} &#8212; mutual edge</p><p style="margin-left:8px;">&#8226; <span style="color:#ff6600;font-weight:bold;">SCC3:</span> {<span class="dim">5, 6, 7</span>} &#8212; directed cycle</p><p>Cross edges: <span class="dim">1&#8594;4, 2&#8594;3, 2&#8594;5, 4&#8594;5</span> connect different SCCs.</p><h3 style="margin-top:10px;">Kosaraju\'s Two-Pass Insight</h3><p>If you run DFS on G and then on G<sup>T</sup> in reverse finish order, each DFS tree in Pass 2 forms one SCC. This works because the vertex with the latest finish time in Pass 1 belongs to a <b>source SCC</b> in G<sup>T</sup>.</p><p class="note">Press Play or Step to begin.</p></div>';}
+function buildP1D(v,dT){return'<div class="explain-section active"><h3>&#9654; Pass 1: Discover Vertex '+v+'</h3><p>Vertex <span class="dim">'+v+'</span> discovered at time <span class="result-line">d = '+dT+'</span>.</p><p>Color: <span style="color:#555;">white</span> &#8594; <span style="color:#ff6600;">gray</span></p><p>DFS will now explore <span class="dim">'+v+'</span>\'s outgoing edges depth-first.</p><p class="note">Gray vertices form the active recursion stack.</p></div>';}
+function buildP1T(u,v,vD){return'<div class="explain-section active"><h3>&#9654; Pass 1: Tree Edge '+u+'&#8594;'+v+'</h3><p>Edge (<span class="dim">'+u+'</span>, <span class="dim">'+v+'</span>) is a <span class="result-line">tree edge</span>.</p><p><span class="dim">'+v+'</span> is <span style="color:#555;">white</span> &#8594; becomes child of <span class="dim">'+u+'</span> in the DFS forest.</p><p>Discovered at time <span class="result-line">d = '+vD+'</span>. Color: white &#8594; gray.</p><p>DFS recursively explores <span class="dim">'+v+'</span>\'s adjacency before backtracking.</p><p class="note">Tree edges form the depth-first forest structure.</p></div>';}
+function buildP1B(u,v){return'<div class="explain-section active"><h3>&#9654; Pass 1: Back Edge '+u+'&#8594;'+v+'</h3><p>Edge (<span class="dim">'+u+'</span>, <span class="dim">'+v+'</span>) is a <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p><p><span class="dim">'+v+'</span> is <span style="color:#ff6600;">gray</span> &#8594; ancestor of <span class="dim">'+u+'</span> on the stack.</p><p>This reveals a <b>cycle</b> in the graph.</p><p class="note">Back edges are exactly the edges that create directed cycles.</p></div>';}
+function buildP1C(u,v,cls){let lb=cls==='forward'?'Forward':'Cross',cl=cls==='forward'?'#00ccff':'#ff66ff';return'<div class="explain-section active"><h3>&#9654; Pass 1: '+lb+' Edge '+u+'&#8594;'+v+'</h3><p>Edge (<span class="dim">'+u+'</span>, <span class="dim">'+v+'</span>) is a <span style="color:'+cl+';font-weight:bold;">'+lb.toLowerCase()+' edge</span>.</p>'+(cls==='forward'?'<p><span class="dim">'+v+'</span> is <span style="color:#00ff88;">black</span> and is a <b>descendant</b> of <span class="dim">'+u+'</span> in the DFS tree (d['+u+'] &lt; d['+v+']).</p>':'<p><span class="dim">'+v+'</span> is <span style="color:#00ff88;">black</span> but is <b>not</b> a descendant of <span class="dim">'+u+'</span> (d['+u+'] &gt; d['+v+'] or different trees).</p>')+'<p class="note">Forward edges go down the tree; cross edges connect unrelated branches.</p></div>';}
+function buildP1F(v,fT){return'<div class="explain-section active"><h3>&#10003; Pass 1: Finish Vertex '+v+'</h3><p>Vertex <span class="dim">'+v+'</span> finished at time <span class="result-line">f = '+fT+'</span>.</p><p>Color: <span style="color:#ff6600;">gray</span> &#8594; <span style="color:#00ff88;">black</span></p><p>All descendants of <span class="dim">'+v+'</span> fully explored. Backtracking to parent.</p><p class="note">Finish times determine the order for Pass 2.</p></div>';}
+function buildP1Done(fo){return'<div class="explain-section active"><h3>&#10004; Pass 1 Complete!</h3><p>All vertices explored. Finish time order (decreasing f):</p><p class="result-line">'+fo.join(' &#8594; ')+'</p><p><span class="dim">Pass 2</span> will run DFS on G<sup>T</sup> in this order.</p><p class="note">Each DFS tree in Pass 2 forms one SCC.</p></div>';}
+function buildP2Init(fo){return'<div class="explain-section active"><h3>&#9654; Pass 2: DFS on G<sup>T</sup></h3><p>We now run DFS on the <b>transposed graph</b> G<sup>T</sup>.</p><p>Order: <span class="result-line">'+fo.join(' &#8594; ')+'</span> (decreasing finish time from Pass 1)</p><p>Each DFS tree discovered = one <b>strongly connected component</b>.</p><p>The canvas now shows G<sup>T</sup> edges (reversed from G).</p><p class="note">New DFS coloring applies on G<sup>T</sup>; vertices already in SCCs are colored accordingly.</p></div>';}
+function buildP2D(v,sn){return'<div class="explain-section active"><h3>&#9654; Pass 2: Discover Vertex '+v+' on G<sup>T</sup></h3><p>Starting a new DFS tree from <span class="dim">'+v+'</span> on G<sup>T</sup>.</p><p>This begins <span class="result-line" style="color:'+sccColors[sn]+';">SCC'+sn+'</span> exploration!</p><p>All vertices reachable from <span class="dim">'+v+'</span> on G<sup>T</sup> (following reversed edges) that haven\'t been assigned yet will belong to this SCC.</p><p class="note">Reachability on G<sup>T</sup> = being reachable <b>from</b> the source in G.</p></div>';}
+function buildP2T(u,v,sn){return'<div class="explain-section active"><h3>&#9654; Pass 2: Tree Edge '+u+'&#8594;'+v+' on G<sup>T</sup></h3><p>Edge (<span class="dim">'+u+'</span> &#8594; <span class="dim">'+v+'</span>) in G<sup>T</sup> is a <span class="result-line">tree edge</span>.</p><p><span class="dim">'+v+'</span> is undiscovered on G<sup>T</sup> &#8594; becomes part of <span class="split-info">SCC'+sn+'</span>.</p><p>This vertex is reachable from the SCC root via reversed edges, confirming mutual reachability within the original SCC.</p></div>';}
+function buildP2B(u,v){return'<div class="explain-section active"><h3>&#9654; Pass 2: Back Edge '+u+'&#8594;'+v+' on G<sup>T</sup></h3><p>Edge (<span class="dim">'+u+'</span> &#8594; <span class="dim">'+v+'</span>) in G<sup>T</sup> is a <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p><p><span class="dim">'+v+'</span> is <span style="color:#ff6600;">gray</span> (on G<sup>T</sup> stack) &#8594; confirms the cycle structure within this SCC.</p><p class="note">This edge completes a directed cycle, reinforcing that these vertices are strongly connected.</p></div>';}
+function buildP2C(u,v,os){return'<div class="explain-section active"><h3>&#9654; Pass 2: Cross Edge '+u+'&#8594;'+v+' on G<sup>T</sup></h3><p>Edge (<span class="dim">'+u+'</span> &#8594; <span class="dim">'+v+'</span>) in G<sup>T</sup> is a <span style="color:#00ccff;font-weight:bold;">cross edge</span>.</p><p><span class="dim">'+v+'</span> already belongs to <span class="split-info" style="color:'+sccColors[os]+';">SCC'+os+'</span>.</p><p>This edge connects different SCCs and becomes an edge in the <b>component graph</b>.</p><p class="note">Cross edges between SCCs define the DAG structure of G<sup>SCC</sup>.</p></div>';}
+function buildP2Fin(v,sn,ms){return'<div class="explain-section active"><h3>&#10003; Pass 2: Finish '+v+' &#8212; SCC'+sn+'</h3><p>Vertex <span class="dim">'+v+'</span> finished on G<sup>T</sup>.</p><p>Assigned to <span class="result-line" style="color:'+sccColors[sn]+';">SCC'+sn+'</span>: {<span class="dim">'+ms+'</span>}</p><p>All vertices in this SCC are mutually reachable &#8212; every pair can reach each other via directed paths.</p></div>';}
+function buildCG(){return'<div class="explain-section active"><h3>Component Graph G<sup>SCC</sup></h3><p>Contracting each SCC to a single node gives the <b>component graph</b>.</p><p>Edges between components:</p><p style="margin-left:8px;">&#8226; <span class="result-line">SCC1 &#8594; SCC2</span> (via edges 1&#8594;4, 2&#8594;3)</p><p style="margin-left:8px;">&#8226; <span class="result-line">SCC1 &#8594; SCC3</span> (via edge 2&#8594;5)</p><p style="margin-left:8px;">&#8226; <span style="color:#00ccff;">SCC2 &#8594; SCC3</span> (via edge 4&#8594;5)</p><h3 style="margin-top:10px;">Why is G<sup>SCC</sup> always a DAG?</h3><p><b>Proof by contradiction:</b> If G<sup>SCC</sup> had a cycle C<sub>1</sub> &#8594; C<sub>2</sub> &#8594; ... &#8594; C<sub>k</sub> &#8594; C<sub>1</sub>, then every vertex in these components would be mutually reachable. That means they should be one SCC. Contradiction.</p><p class="result-line">Therefore, the component graph of any directed graph is always a DAG.</p><h3 style="margin-top:10px;">Applications</h3><p style="margin-left:8px;">&#8226; <span class="dim">Web page ranking</span> &#8212; find link communities</p><p style="margin-left:8px;">&#8226; <span class="dim">Social networks</span> &#8212; identify tightly-knit groups</p><p style="margin-left:8px;">&#8226; <span class="dim">Program analysis</span> &#8212; detect loops in control flow graphs</p></div>';}
+function buildComplete(){return'<div class="explain-section active" style="border-left-color:#00ff88;"><h3>&#10004; Kosaraju\'s Algorithm Complete!</h3><p>Found <span class="result-line">3</span> strongly connected components:</p><p style="margin-left:8px;">&#8226; <span class="result-line">SCC1:</span> {<span class="dim">0, 1, 2</span>}</p><p style="margin-left:8px;">&#8226; <span style="color:#00ccff;font-weight:bold;">SCC2:</span> {<span class="dim">3, 4</span>}</p><p style="margin-left:8px;">&#8226; <span style="color:#ff6600;font-weight:bold;">SCC3:</span> {<span class="dim">5, 6, 7</span>}</p><h3 style="margin-top:10px;">Component Graph (DAG)</h3><p>SCC1 <span class="dim">&#8594;</span> SCC2 <span class="dim">&#8594;</span> SCC3, and SCC1 <span class="dim">&#8594;</span> SCC3 directly.</p><p>No cycles among components &#8212; the component graph is always a <span class="result-line">DAG</span>.</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(V + E) &#8212; two DFS passes, each O(V+E)</p><p><span class="dim">Space:</span> O(V) for recursion stack, timestamps, and SCC assignments</p></div>';}
+
+function buildSteps() {
+  steps = [];
+  let c={}, d={}, f={}, t=0, de=[];
+  for (let v of vertices){c[v]='white';d[v]=0;f[v]=0;}
+  steps.push({type:'init',c:{...c},d:{...d},f:{...f},de:[],cv:null,ce:null,ec:null,tr:false,si:{},pa:1,ph:'Initial state'});
+  function v1(u){
+    if(d[u]===0){t++;d[u]=t;c[u]='gray';steps.push({type:'p1d',c:{...c},d:{...d},f:{...f},de:[...de],cv:u,ce:null,ec:null,tr:false,si:{},pa:1,ph:'Discovered '+u+' at d='+t});}
+    for(let v of(adjList[u]||[])){
+      if(c[v]==='white'){t++;d[v]=t;c[v]='gray';de.push({u,v,cl:'tree'});steps.push({type:'p1t',c:{...c},d:{...d},f:{...f},de:[...de],cv:u,ce:{u,v},ec:'tree',tr:false,si:{},pa:1,ph:'Tree '+u+'\u2192'+v+', d='+t});v1(v);}
+      else if(c[v]==='gray'){de.push({u,v,cl:'back'});steps.push({type:'p1b',c:{...c},d:{...d},f:{...f},de:[...de],cv:u,ce:{u,v},ec:'back',tr:false,si:{},pa:1,ph:'Back '+u+'\u2192'+v});}
+      else{let iw=precomputed.d[u]<precomputed.d[v],cl=iw?'forward':'cross';de.push({u,v,cl});steps.push({type:'p1c',c:{...c},d:{...d},f:{...f},de:[...de],cv:u,ce:{u,v},ec:cl,tr:false,si:{},pa:1,ph:iw?'Forward '+u+'\u2192'+v:'Cross '+u+'\u2192'+v});}
+    }
+    t++;f[u]=t;c[u]='black';steps.push({type:'p1f',c:{...c},d:{...d},f:{...f},de:[...de],cv:u,ce:null,ec:null,tr:false,si:{},pa:1,ph:'Finished '+u+' at f='+t});
+  }
+  for(let v of vertices) if(c[v]==='white') v1(v);
+  let fo=getFinishOrder(f);
+  steps.push({type:'p1done',c:{...c},d:{...d},f:{...f},de:[...de],cv:null,ce:null,ec:null,tr:false,si:{},pa:1,fo:fo,ph:'Pass 1 complete'});
+
+  let pc={},pd={},pf={},si={},pt=0,pde=[],cs=0,sm={};
+  for(let v of vertices){pc[v]='white';pd[v]=0;pf[v]=0;si[v]=0;}
+  steps.push({type:'p2init',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[],cv:null,ce:null,ec:null,tr:true,pa:2,fo:fo,cs:0,ph:'Pass 2: DFS on G^T'});
+  function v2(u){
+    if(pd[u]===0){pt++;pd[u]=pt;pc[u]='gray';steps.push({type:'p2d',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:u,ce:null,ec:null,tr:true,pa:2,fo:fo,cs:cs,ph:'Discovered '+u+' on G^T - SCC'+cs});}
+    for(let v of(adjListT[u]||[])){
+      if(pc[v]==='white'){pt++;pd[v]=pt;pc[v]='gray';pde.push({u,v,cl:'tree'});steps.push({type:'p2t',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:u,ce:{u,v},ec:'tree',tr:true,pa:2,fo:fo,cs:cs,ph:'Tree '+u+'\u2192'+v+' on G^T'});v2(v);}
+      else if(pc[v]==='gray'){pde.push({u,v,cl:'back'});steps.push({type:'p2b',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:u,ce:{u,v},ec:'back',tr:true,pa:2,fo:fo,cs:cs,ph:'Back '+u+'\u2192'+v+' on G^T'});}
+      else{let os=si[v]||0;pde.push({u,v,cl:'cross',os:os});steps.push({type:'p2c',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:u,ce:{u,v},ec:'cross',os:os,tr:true,pa:2,fo:fo,cs:cs,ph:'Cross '+u+'\u2192'+v+' on G^T'});}
+    }
+    pt++;pf[u]=pt;si[u]=cs;if(!sm[cs])sm[cs]=[];sm[cs].push(u);pc[u]='scc'+cs;
+    steps.push({type:'p2fin',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:u,ce:null,ec:null,tr:true,pa:2,fo:fo,cs:cs,sm:{...sm},ph:'Finished '+u+' on G^T \u2192 SCC'+cs});
+  }
+  for(let v of fo){if(pc[v]==='white'){cs++;sm[cs]=[];v2(v);steps.push({type:'p2scc',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:null,ce:null,ec:null,tr:true,pa:2,fo:fo,cs:cs,sm:{...sm},ph:'SCC'+cs+' complete: {'+sm[cs].slice().sort((a,b)=>a-b).join(', ')+'}'});}
+  }
+  steps.push({type:'cg',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:null,ce:null,ec:null,tr:false,pa:2,fo:fo,cs:cs,sm:{...sm},ph:'Component graph - always a DAG'});
+  steps.push({type:'done',c:{...c},d:{...d},f:{...f},pc:{...pc},pd:{...pd},pf:{...pf},si:{...si},pde:[...pde],cv:null,ce:null,ec:null,tr:false,pa:2,fo:fo,cs:cs,sm:{...sm},ph:'\u2713 Complete!'});
+}
+
+function drawArrow(ctx, fx, fy, tx, ty, cl, lw) {
+  let dx=tx-fx, dy=ty-fy, dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<1) return;
+  let nx=dx/dist, ny=dy/dist;
+  let sx=fx+nx*(nodeRadius+3), sy=fy+ny*(nodeRadius+3);
+  let ex=tx-nx*(nodeRadius+3), ey=ty-ny*(nodeRadius+3);
+  ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+  ctx.strokeStyle=cl; ctx.lineWidth=lw; ctx.stroke();
+  let al=11, aw=5.5, ax=ex-nx*al, ay=ey-ny*al;
+  ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ax-ny*aw*0.5, ay+nx*aw*0.5);
+  ctx.lineTo(ax+ny*aw*0.5, ay-nx*aw*0.5);
+  ctx.closePath(); ctx.fillStyle=cl; ctx.fill();
+}
+
+function drawGraph(st) {
+  let cv=document.getElementById('graphCanvas'), ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  let tr=st.tr, c=st.c||{}, d=st.d||{}, f=st.f||{}, pc=st.pc||{}, si=st.si||{};
+  let ce=st.ce, ec=st.ec, pde=st.pde||[], de=st.de||[];
+  let ecM={};
+  if(!tr){for(let e of de){let k=e.u+'-'+e.v;if(e.cl==='tree')ecM[k]='#00ff88';else if(e.cl==='back')ecM[k]='#ff6600';else if(e.cl==='forward')ecM[k]='#00ccff';else if(e.cl==='cross')ecM[k]='#ff66ff';}}
+  else{for(let e of pde){let k=e.u+'-'+e.v;if(e.cl==='tree')ecM[k]='#00ff88';else if(e.cl==='back')ecM[k]='#ff6600';else if(e.cl==='cross')ecM[k]='#00ccff';}}
+  if(ce&&ec){let k=ce.u+'-'+ce.v;if(ec==='tree')ecM[k]='#00ff88';else if(ec==='back')ecM[k]='#ff6600';else if(ec==='forward')ecM[k]='#00ccff';else if(ec==='cross')ecM[k]='#ff66ff';}
+  for(let e of edgeList){
+    let u=tr?e.v:e.u, v=tr?e.u:e.v, k=u+'-'+v;
+    let p1=nodePositions[u], p2=nodePositions[v];
+    if(!p1||!p2) continue;
+    let ia=ce&&ce.u===u&&ce.v===v;
+    let fc=ecM[k]||'#555', lw=ia?4:(ecM[k]?2.8:1.5);
+    if(ia){ctx.shadowColor=fc;ctx.shadowBlur=18;}
+    else if(ecM[k]){ctx.shadowColor=fc;ctx.shadowBlur=6;}
+    else ctx.shadowBlur=0;
+    drawArrow(ctx,p1.x,p1.y,p2.x,p2.y,fc,lw);
+    ctx.shadowBlur=0;
+    if(ecM[k]&&ia&&ec){
+      let lb='';if(ec==='tree')lb='T';else if(ec==='back')lb='B';else if(ec==='forward')lb='F';else if(ec==='cross')lb='C';
+      if(lb){let mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;let dx=p2.x-p1.x,dy=p2.y-p1.y;let dd=Math.sqrt(dx*dx+dy*dy);let off=8;if(dd>1){let px=-dy/dd*off,py=dx/dd*off;ctx.font='bold 13px Courier New';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle=fc;ctx.fillText(lb,mx+px,my+py);}}
+    }
+  }
+  for(let v of vertices){
+    let pos=nodePositions[v], ic=(v===st.cv);
+    let fl,sl,tl;
+    if(st.pa===1||st.type==='init'||st.type==='p1done'){
+      let col=c[v]||'white';
+      if(col==='gray'){fl='#1a0a00';sl='#ff6600';tl='#ff6600';}
+      else if(col==='black'){fl='#0a1a12';sl='#00ff88';tl='#00ff88';}
+      else{fl='#0d0d1a';sl='#555';tl='#888';}
+      if(ic&&(st.type==='p1d'||st.type==='p1t')){sl='#ff6600';tl='#ff6600';}
+    } else {
+      let pcol=pc[v]||'white';
+      if(pcol==='gray'){fl='#1a0a00';sl='#ff6600';tl='#ff6600';}
+      else if(pcol==='scc1'){fl='#002a1a';sl='#00ff88';tl='#00ff88';}
+      else if(pcol==='scc2'){fl='#001a2a';sl='#00ccff';tl='#00ccff';}
+      else if(pcol==='scc3'){fl='#2a1a00';sl='#ff6600';tl='#ff6600';}
+      else if(si[v]>0){let sc=sccColors[si[v]];fl='#0d0d1a';sl=sc;tl=sc;}
+      else{fl='#0d0d1a';sl='#555';tl='#888';}
+    }
+    ctx.beginPath();ctx.arc(pos.x,pos.y,nodeRadius,0,Math.PI*2);
+    ctx.fillStyle=fl;ctx.fill();
+    ctx.strokeStyle=sl;ctx.lineWidth=ic?3.5:2;ctx.stroke();
+    if(ic){ctx.beginPath();ctx.arc(pos.x,pos.y,nodeRadius+5,0,Math.PI*2);ctx.strokeStyle=sl+'44';ctx.lineWidth=2;ctx.stroke();}
+    ctx.fillStyle=tl;ctx.font='bold 17px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(v.toString(),pos.x,pos.y);
+    let dv=d[v]||0,fv=f[v]||0;
+    if(dv>0||fv>0){ctx.font='9.5px Courier New';ctx.textAlign='center';ctx.textBaseline='top';let ts='';if(dv>0)ts+=dv;if(fv>0)ts+='/'+fv;ctx.fillStyle=tl;ctx.fillText(ts,pos.x,pos.y+nodeRadius+3);}
+  }
+  if(st.type==='init'){ctx.fillStyle='#666';ctx.font='11px Courier New';ctx.textAlign='left';ctx.fillText('All vertices white - undiscovered. Press Play.',10,14);}
+}
+
+function renderTable(st) {
+  let tb=document.getElementById('tableBody');
+  let c=st.c||{}, d=st.d||{}, f=st.f||{}, si=st.si||{}, pc=st.pc||{};
+  let html='';
+  for(let v of vertices){
+    let scl='w-state', sl='\u2014';
+    if(st.pa===1||st.type==='init'){
+      let col=c[v]||'white';
+      if(col==='gray'){scl='g-state';sl='Gray';}
+      else if(col==='black'){scl='b-state';sl='Black';}
+      else sl='White';
+    } else {
+      let sid=si[v]||0;
+      if(sid===1){scl='s1';sl='SCC1';}
+      else if(sid===2){scl='s2';sl='SCC2';}
+      else if(sid===3){scl='s3';sl='SCC3';}
+      else {
+        let pcol=pc[v]||'white';
+        if(pcol==='gray'){scl='g-state';sl='Gray';}
+        else sl='\u2014';
+      }
+    }
+    let ds=d[v]||0, fs=f[v]||0;
+    let ds2=ds>0?ds:'\u2014', fs2=fs>0?fs:'\u2014';
+    html+='<tr><td>'+v+'</td><td class="'+scl+'">'+sl+'</td><td>'+ds2+'</td><td>'+fs2+'</td></tr>';
+  }
+  tb.innerHTML=html;
+}
+
+function updateLegend(st) {
+  let la=document.getElementById('legendArea');
+  if(st.pa===2&&st.type!=='init'&&st.type!=='p1done'){
+    la.innerHTML='<span class="legend-item"><span class="legend-swatch l-scc1"></span> SCC1: {0,1,2}</span><span class="legend-item"><span class="legend-swatch l-scc2"></span> SCC2: {3,4}</span><span class="legend-item"><span class="legend-swatch l-scc3"></span> SCC3: {5,6,7}</span><span class="legend-item"><span class="legend-swatch l-gray"></span> Gray</span><span class="legend-item"><span class="legend-swatch l-tree"></span> Tree</span><span class="legend-item"><span class="legend-swatch l-back"></span> Back</span><span class="legend-item"><span class="legend-swatch l-cross"></span> Cross</span>';
+  } else {
+    la.innerHTML='<span class="legend-item"><span class="legend-swatch l-white"></span> White</span><span class="legend-item"><span class="legend-swatch l-gray"></span> Gray</span><span class="legend-item"><span class="legend-swatch l-black"></span> Black</span><span class="legend-item"><span class="legend-swatch l-tree"></span> Tree</span><span class="legend-item"><span class="legend-swatch l-back"></span> Back</span><span class="legend-item"><span class="legend-swatch l-forward"></span> Forward</span><span class="legend-item"><span class="legend-swatch l-cross"></span> Cross</span>';
+  }
+}
+
+function renderFinishOrder(st) {
+  let fd=document.getElementById('finishOrderDisplay');
+  let fo=st.fo;
+  if(!fo||fo.length===0){fd.innerHTML='<span style="color:#555;">No finish order yet.</span>';return;}
+  let html='';
+  let c=st.c||{}, si=st.si||{}, pc=st.pc||{};
+  for(let v of fo){
+    let cls='fo-w';
+    if(st.pa===2){
+      let sid=si[v]||0;
+      if(sid===1)cls='fo-s1';
+      else if(sid===2)cls='fo-s2';
+      else if(sid===3)cls='fo-s3';
+      else if(pc[v]==='gray')cls='fo-g';
+      else if(c[v]==='black')cls='fo-b';
+    } else {
+      if(c[v]==='gray')cls='fo-g';
+      else if(c[v]==='black')cls='fo-b';
+    }
+    html+='<span class="fo-item '+cls+'">'+v+'</span>';
+  }
+  fd.innerHTML=html;
+}
+
+function renderSets(st) {
+  let sm=st.sm||{};
+  let container=document.getElementById('sccSetsDisplay');
+  if(Object.keys(sm).length===0){container.innerHTML='<span style="color:#555;">No SCCs identified yet.</span>';return;}
+  let html='';
+  for(let s=1;s<=3;s++){
+    let mems=sm[s];
+    if(!mems||mems.length===0) continue;
+    let col=sccColors[s];
+    let sorted=mems.slice().sort((a,b)=>a-b);
+    html+='<div class="set-box" style="border-color:'+col+';">';
+    html+='<span class="set-label" style="color:'+col+';">SCC'+s+': {</span> ';
+    for(let vi=0;vi<sorted.length;vi++){
+      html+='<span class="set-member" style="color:'+col+'">'+sorted[vi]+'</span>';
+      if(vi<sorted.length-1) html+='<span class="set-comma">, </span>';
+    }
+    html+=' <span class="set-label" style="color:'+col+';">}</span>';
+    html+='</div>';
+  }
+  container.innerHTML=html;
+}
+
+function drawCompGraph() {
+  let svg=document.getElementById('compGraphSvg');
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  let defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  defs.innerHTML='<marker id="cgArrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#888"/></marker>';
+  svg.appendChild(defs);
+  let nodes=[{id:1,x:100,y:80,label:'SCC1\n{0,1,2}',color:'#00ff88'},{id:2,x:250,y:130,label:'SCC2\n{3,4}',color:'#00ccff'},{id:3,x:400,y:80,label:'SCC3\n{5,6,7}',color:'#ff6600'}];
+  let edges=[[1,2],[1,3],[2,3]];
+  for(let [fr,to] of edges){
+    let n1=nodes.find(n=>n.id===fr), n2=nodes.find(n=>n.id===to);
+    if(!n1||!n2) continue;
+    let r=30;let dx=n2.x-n1.x,dy=n2.y-n1.y;let d=Math.sqrt(dx*dx+dy*dy);if(d<1)continue;
+    let nx=dx/d,ny=dy/d;
+    let sx=n1.x+nx*r, sy=n1.y+ny*r, ex=n2.x-nx*r, ey=n2.y-ny*r;
+    let el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',sx);el.setAttribute('y1',sy);el.setAttribute('x2',ex);el.setAttribute('y2',ey);
+    el.setAttribute('stroke','#888');el.setAttribute('stroke-width','2.5');el.setAttribute('marker-end','url(#cgArrow)');
+    svg.appendChild(el);
+  }
+  for(let n of nodes){
+    let g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','cg-node');
+    let c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r','30');
+    c.setAttribute('stroke',n.color);c.setAttribute('fill','#0d0d1a');
+    g.appendChild(c);
+    let lines=n.label.split('\n');
+    lines.forEach((l,i)=>{
+      let t=document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',n.x);t.setAttribute('y',n.y-5+i*14);
+      t.setAttribute('fill',n.color);t.setAttribute('font-size',i===0?'13px':'11px');
+      t.setAttribute('font-weight','bold');t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
+      t.textContent=l;
+      g.appendChild(t);
+    });
+    svg.appendChild(g);
+  }
+  let dagLabel=document.createElementNS('http://www.w3.org/2000/svg','text');
+  dagLabel.setAttribute('x','250');dagLabel.setAttribute('y','40');
+  dagLabel.setAttribute('fill','#00ff88');dagLabel.setAttribute('font-size','14px');
+  dagLabel.setAttribute('font-weight','bold');dagLabel.setAttribute('text-anchor','middle');
+  dagLabel.setAttribute('font-family','Courier New, monospace');
+  dagLabel.textContent='G\u1d38\u1d04\u1d04 = DAG (no cycles)';
+  svg.appendChild(dagLabel);
+}
+
+function applyStep(st) {
+  let idx=steps.indexOf(st);
+  let passText='';
+  if(st.pa===1){passText='Pass 1';if(st.type==='p1done')passText='Pass 1 \u2713';}
+  else if(st.pa===2){passText='Pass 2';if(st.type==='done'||st.type==='cg')passText='\u2713 Done';}
+  document.getElementById('passDisplay').textContent=passText||'\u2014';
+  document.getElementById('phaseDisplay').textContent=st.ph||'\u2014';
+  document.getElementById('vertexDisplay').textContent=(st.cv!==null&&st.cv!==undefined)?st.cv:'\u2014';
+  document.getElementById('edgeDisplay').textContent=st.ce?'('+st.ce.u+', '+st.ce.v+')':'\u2014';
+  drawGraph(st);
+  renderTable(st);
+  updateLegend(st);
+  if(st.fo){document.getElementById('finishOrderArea').style.display='block';renderFinishOrder(st);}
+  else document.getElementById('finishOrderArea').style.display='none';
+  if(st.type==='cg'||st.type==='done'){
+    document.getElementById('compGraphArea').style.display='block';
+    document.getElementById('sccSetsArea').style.display='block';
+    drawCompGraph();renderSets(st);
+  } else {
+    document.getElementById('compGraphArea').style.display='none';
+    if(st.pa===2&&st.sm&&Object.keys(st.sm).length>0){document.getElementById('sccSetsArea').style.display='block';renderSets(st);}
+    else document.getElementById('sccSetsArea').style.display='none';
+  }
+  let exp='';
+  switch(st.type){
+    case'init':exp=buildInitExplain();break;
+    case'p1d':exp=buildP1D(st.cv,st.d[st.cv]);break;
+    case'p1t':exp=buildP1T(st.ce.u,st.ce.v,st.d[st.ce.v]);break;
+    case'p1b':exp=buildP1B(st.ce.u,st.ce.v);break;
+    case'p1c':exp=buildP1C(st.ce.u,st.ce.v,st.ec);break;
+    case'p1f':exp=buildP1F(st.cv,st.f[st.cv]);break;
+    case'p1done':exp=buildP1Done(st.fo);break;
+    case'p2init':exp=buildP2Init(st.fo);break;
+    case'p2d':exp=buildP2D(st.cv,st.cs);break;
+    case'p2t':exp=buildP2T(st.ce.u,st.ce.v,st.cs);break;
+    case'p2b':exp=buildP2B(st.ce.u,st.ce.v);break;
+    case'p2c':{let os=st.os||0;exp=buildP2C(st.ce.u,st.ce.v,os);break;}
+    case'p2fin':{let ms=[];if(st.sm&&st.sm[st.cs])ms=st.sm[st.cs].slice().sort((a,b)=>a-b);exp=buildP2Fin(st.cv,st.cs,ms.join(', '));break;}
+    case'p2scc':exp='<div class="explain-section active"><h3>&#10004; SCC'+st.cs+' Complete!</h3><p>'+st.ph+'</p><p>All vertices in this SCC are mutually reachable.</p></div>';break;
+    case'cg':exp=buildCG();break;
+    case'done':exp=buildComplete();break;
+    default:exp='<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML=exp;
+  document.getElementById('sidebarPhase').textContent='Step '+(idx+1)+' / '+steps.length+' \u2014 '+st.ph;
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function processStep() {
+  if(currentStep>=steps.length){finishAnimation();return;}
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+function startAnimation() {
+  if(currentStep>=steps.length) return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){clearInterval(animTimer);if(currentStep>=steps.length)finishAnimation();return;}
+    processStep();
+  },getSpeed());
+}
+function getSpeed(){return 1200-parseInt(document.getElementById('speedSlider').value)*100;}
+function pauseAnimation(){animating=false;clearInterval(animTimer);}
+function stepForward(){pauseAnimation();processStep();}
+function finishAnimation(){
+  animating=false;
+  document.getElementById('passDisplay').textContent='\u2713 Done';
+  document.getElementById('phaseDisplay').textContent='\u2713 Complete!';
+  document.getElementById('vertexDisplay').textContent='\u2014';
+  document.getElementById('edgeDisplay').textContent='\u2014';
+  document.getElementById('resultSection').style.display='block';
+  let last=steps[steps.length-1];
+  let sm=last.sm||{};
+  let html='<div class="big-result">3 SCCs Found</div><p>';
+  for(let s=1;s<=3;s++){
+    let mems=sm[s];if(!mems)continue;
+    let col=sccColors[s];
+    html+='<span style="color:'+col+';font-weight:bold;">SCC'+s+': {'+mems.slice().sort((a,b)=>a-b).join(', ')+'}</span><br>';
+  }
+  html+='</p><p style="margin-top:8px;"><span class="dim">Component graph:</span> SCC1 &#8594; SCC2 &#8594; SCC3 (always a DAG)</p>';
+  document.getElementById('resultContent').innerHTML=html;
+  document.getElementById('sidebarPhase').textContent='Step '+steps.length+' / '+steps.length+' \u2014 &#10004; Complete';
+  document.getElementById('explainArea').innerHTML=buildComplete();
+  document.getElementById('sidebar').scrollTop=0;
+}
+function resetAnimation(){
+  pauseAnimation();currentStep=0;
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('compGraphArea').style.display='none';
+  document.getElementById('sccSetsArea').style.display='none';
+  document.getElementById('finishOrderArea').style.display='none';
+  document.getElementById('passDisplay').textContent='\u2014';
+  document.getElementById('phaseDisplay').textContent='Ready \u2014 Press Play';
+  document.getElementById('vertexDisplay').textContent='\u2014';
+  document.getElementById('edgeDisplay').textContent='\u2014';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle \u2014 press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=buildInitExplain();
+  buildSteps();
+  if(steps.length>0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent=steps.length;
+  document.getElementById('sidebar').scrollTop=0;
+}
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if(animating){clearInterval(animTimer);animTimer=setInterval(()=>{if(!animating||currentStep>=steps.length){clearInterval(animTimer);if(currentStep>=steps.length)finishAnimation();return;}processStep();},getSpeed());}
+});
+buildSteps();
+if(steps.length>0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent=steps.length;
+</script>
+</body>
+</html>

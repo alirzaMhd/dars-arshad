@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diameter of a Tree Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 8px 0 4px;
+  font-size: 0.75em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 12px; height: 12px; border-radius: 50%; border: 1px solid #555;
+}
+.legend-swatch.white-swatch { background: #0d0d1a; border-color: #555; }
+.legend-swatch.gray-swatch { background: #1a0a00; border-color: #ffcc00; }
+.legend-swatch.black-swatch { background: #0a1a12; border-color: #00ff88; }
+.legend-swatch.magenta-swatch { background: #1a0020; border-color: #ff66ff; }
+.legend-swatch.gold-swatch { background: #1a1a00; border-color: #ffcc00; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.queue-display {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.queue-label {
+  color: #00ccff;
+  font-weight: bold;
+  font-size: 0.9em;
+  min-width: 55px;
+}
+.queue-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.82em;
+  border: 2px solid #555;
+  background: #0d0d1a;
+  color: #888;
+  transition: all 0.4s;
+}
+.queue-item.gray { border-color: #ffcc00; color: #ffcc00; background: #1a1a00; }
+.queue-item.dequeue { border-color: #ff6600; color: #ff6600; background: #1a0a00; box-shadow: 0 0 10px #ff660044; transform: scale(1.1); }
+.queue-arrow { color: #555; font-size: 1em; }
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 0.9em;
+  color: #00ccff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; }
+.dist-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 550px;
+}
+.dist-table th, .dist-table td {
+  padding: 7px 10px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.8em;
+  transition: all 0.3s;
+}
+.dist-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.dist-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.dist-table td.white-cell { color: #888; }
+.dist-table td.gray-cell { color: #ffcc00; background: #1a1a00; font-weight: bold; }
+.dist-table td.black-cell { color: #00ff88; background: #0a1a12; font-weight: bold; }
+.dist-table td.current-vertex {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+}
+.dist-table td.farthest1-cell {
+  color: #ff66ff !important;
+  background: #1a0020 !important;
+  border-color: #ff66ff !important;
+  font-weight: bold;
+}
+.dist-table td.farthest2-cell {
+  color: #ffcc00 !important;
+  background: #1a1a00 !important;
+  border-color: #ffcc00 !important;
+  font-weight: bold;
+}
+.dist-table td.diameter-cell {
+  color: #00ff88 !important;
+  background: #0a1a12 !important;
+  border-color: #00ff88 !important;
+  font-weight: bold;
+  box-shadow: 0 0 8px #00ff8844;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.5em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+</style>
+</head>
+<body>
+
+<h1>DIAMETER OF A TREE</h1>
+<p class="subtitle">Graph Algorithms — Two-BFS (Double Pass) — O(V+E)</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="treeCanvas" width="700" height="420"></canvas>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch white-swatch"></span> Unvisited</span>
+        <span class="legend-item"><span class="legend-swatch gray-swatch"></span> In Queue</span>
+        <span class="legend-item"><span class="legend-swatch black-swatch"></span> Visited</span>
+        <span class="legend-item"><span class="legend-swatch magenta-swatch"></span> Farthest (BFS#1)</span>
+        <span class="legend-item"><span class="legend-swatch gold-swatch"></span> Diameter Endpoint</span>
+        <span class="legend-item"><span class="legend-swatch diameter-swatch"></span> Diameter Path</span>
+      </div>
+    </div>
+
+    <div class="queue-display" id="queueDisplay">
+      <span class="queue-label">Queue:</span>
+      <span id="queueItems" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;color:#555;">∅</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">BFS:</span> <span class="value" id="bfsDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current:</span> <span class="value" id="currentDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Farthest:</span> <span class="value" id="farthestDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Vertex Distances &amp; Parents</div>
+      <div class="table-wrapper">
+        <table class="dist-table" id="distTable">
+          <thead><tr><th>Vertex</th><th>Color</th><th>Distance</th><th>Parent</th></tr></thead>
+          <tbody id="distTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Diameter Found!</h2>
+      <div class="big-result" id="diameterResult">—</div>
+      <p id="resultPath"></p>
+      <div id="resultDetail" style="margin-top:10px;"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Tree Diameter</h3>
+        <p>The <b>diameter</b> of a tree is the <span style="color:#ffcc00;">longest shortest-path distance</span> between any two vertices.</p>
+        <p><span class="dim">Tree:</span> 10 vertices {0..9}, 9 undirected edges</p>
+        <p>Edges: <span class="dim">0-1, 1-2, 2-3, 3-4, 2-5, 5-6, 6-7, 6-8, 8-9</span></p>
+        <h3 style="margin-top:10px;">Two-BFS Algorithm</h3>
+        <p>1. Pick any vertex <b>s</b>, run BFS → farthest vertex <span class="dim">a</span></p>
+        <p>2. Run BFS from <span class="dim">a</span> → farthest vertex <span class="dim">b</span></p>
+        <p>3. Distance between <span class="dim">a</span> and <span class="dim">b</span> = <span class="result-line">diameter</span></p>
+        <h3 style="margin-top:10px;">Why It Works</h3>
+        <p>The farthest vertex from any node is always an <b>endpoint of some diameter</b>. Two BFS passes suffice.</p>
+        <span class="formula-line">Complexity: O(V+E) — two BFS traversals</span>
+        <p class="note">Press <b>▶ Play</b> or <b>⏭ Step</b> to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 10;
+const VLABELS = ['0','1','2','3','4','5','6','7','8','9'];
+const edges = [[0,1],[1,2],[2,3],[3,4],[2,5],[5,6],[6,7],[6,8],[8,9]];
+const RADIUS = 20;
+
+const nodePos = {
+  0: {x: 150, y: 200},
+  1: {x: 150, y: 120},
+  2: {x: 350, y: 50},
+  3: {x: 350, y: 120},
+  4: {x: 350, y: 200},
+  5: {x: 550, y: 120},
+  6: {x: 550, y: 200},
+  7: {x: 470, y: 280},
+  8: {x: 630, y: 280},
+  9: {x: 630, y: 360}
+};
+
+const START_NODE = 0;
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function getNeighbors(v) {
+  let result = [];
+  for (let e of edges) {
+    if (e[0] === v) result.push(e[1]);
+    if (e[1] === v) result.push(e[0]);
+  }
+  return result.sort((a,b) => a-b);
+}
+
+function findFarthest(dist) {
+  let maxD = -1, far = -1;
+  for (let v = 0; v < V; v++) {
+    if (dist[v] > maxD) { maxD = dist[v]; far = v; }
+  }
+  return far;
+}
+
+function reconstructPath(a, b, parent) {
+  let path = [];
+  let curr = b;
+  while (curr !== a && curr !== -1) {
+    path.push(curr);
+    curr = parent[curr];
+  }
+  path.push(a);
+  return path.reverse();
+}
+
+function simulateBfs(startNode, bfsPass, farthest1Val) {
+  let subSteps = [];
+  let color = Array(V).fill('white');
+  let dist = Array(V).fill(-1);
+  let parent = Array(V).fill(-1);
+  let queue = [];
+
+  color[startNode] = 'gray';
+  dist[startNode] = 0;
+  parent[startNode] = -1;
+  queue.push(startNode);
+
+  subSteps.push({
+    type: 'bfs_start', bfsPass,
+    color: [...color], dist: [...dist], parent: [...parent],
+    queue: [...queue], current: startNode,
+    farthest1: farthest1Val, farthest2: -1, diameterPath: [], diameter: 0,
+    edgeU: -1, edgeV: -1,
+    action: 'BFS #' + bfsPass + ': Start from vertex ' + startNode
+  });
+
+  while (queue.length > 0) {
+    let u = queue.shift();
+
+    subSteps.push({
+      type: 'dequeue', bfsPass,
+      color: [...color], dist: [...dist], parent: [...parent],
+      queue: [...queue], current: u,
+      farthest1: farthest1Val, farthest2: -1, diameterPath: [], diameter: 0,
+      edgeU: -1, edgeV: -1,
+      action: 'BFS #' + bfsPass + ': Dequeue vertex ' + u
+    });
+
+    let neighbors = getNeighbors(u);
+    for (let v of neighbors) {
+      if (color[v] === 'white') {
+        color[v] = 'gray';
+        dist[v] = dist[u] + 1;
+        parent[v] = u;
+        queue.push(v);
+        subSteps.push({
+          type: 'discover', bfsPass,
+          color: [...color], dist: [...dist], parent: [...parent],
+          queue: [...queue], current: u,
+          farthest1: farthest1Val, farthest2: -1, diameterPath: [], diameter: 0,
+          edgeU: u, edgeV: v,
+          action: 'BFS #' + bfsPass + ': Discover vertex ' + v + ' from ' + u
+        });
+      }
+    }
+
+    color[u] = 'black';
+    subSteps.push({
+      type: 'finish', bfsPass,
+      color: [...color], dist: [...dist], parent: [...parent],
+      queue: [...queue], current: -1,
+      farthest1: farthest1Val, farthest2: -1, diameterPath: [], diameter: 0,
+      edgeU: -1, edgeV: -1,
+      action: 'BFS #' + bfsPass + ': Vertex ' + u + ' finished'
+    });
+  }
+
+  return { steps: subSteps, color, dist, parent };
+}
+
+function buildSteps() {
+  steps = [];
+
+  steps.push({
+    type: 'init', bfsPass: 0,
+    color: Array(V).fill('white'), dist: Array(V).fill(-1),
+    parent: Array(V).fill(-1), queue: [], current: -1,
+    farthest1: -1, farthest2: -1, diameterPath: [], diameter: 0,
+    edgeU: -1, edgeV: -1,
+    action: 'Initial state'
+  });
+
+  let bfs1Result = simulateBfs(START_NODE, 1, -1);
+  for (let s of bfs1Result.steps) steps.push(s);
+
+  let a = findFarthest(bfs1Result.dist);
+
+  steps.push({
+    type: 'bfs1_done', bfsPass: 1,
+    color: [...bfs1Result.color], dist: [...bfs1Result.dist],
+    parent: [...bfs1Result.parent], queue: [], current: -1,
+    farthest1: a, farthest2: -1, diameterPath: [], diameter: 0,
+    edgeU: -1, edgeV: -1,
+    action: 'BFS #1 complete \u2014 farthest vertex is ' + a
+  });
+
+  let bfs2Result = simulateBfs(a, 2, a);
+  for (let s of bfs2Result.steps) steps.push(s);
+
+  let b = findFarthest(bfs2Result.dist);
+  let diameter = bfs2Result.dist[b];
+  let path = reconstructPath(a, b, bfs2Result.parent);
+
+  steps.push({
+    type: 'bfs2_done', bfsPass: 2,
+    color: [...bfs2Result.color], dist: [...bfs2Result.dist],
+    parent: [...bfs2Result.parent], queue: [], current: -1,
+    farthest1: a, farthest2: b, diameterPath: path, diameter: diameter,
+    edgeU: -1, edgeV: -1,
+    action: 'Diameter = ' + diameter + ' (path: ' + path.join('\u2192') + ')'
+  });
+}
+
+function getEdgeColor(step, ei) {
+  let u = edges[ei][0], v = edges[ei][1];
+
+  if (step.type === 'bfs2_done' && step.diameterPath && step.diameterPath.length > 0) {
+    for (let pi = 0; pi < step.diameterPath.length - 1; pi++) {
+      let a = step.diameterPath[pi], pb = step.diameterPath[pi+1];
+      if ((a === u && pb === v) || (a === v && pb === u)) return '#00ff88';
+    }
+  }
+
+  if (step.current !== -1 && (step.type === 'dequeue' || step.type === 'discover')) {
+    if (u === step.current || v === step.current) return '#ff6600';
+  }
+
+  if (step.type === 'discover' && step.edgeU !== -1 && step.edgeV !== -1) {
+    if ((u === step.edgeU && v === step.edgeV) || (u === step.edgeV && v === step.edgeU)) return '#00ff88';
+  }
+
+  return '#444';
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  if (step.type === 'init') {
+    ctx.fillText('All vertices unvisited. Press Play or Step.', 10, 8);
+  } else if (step.type === 'bfs1_done') {
+    ctx.fillText('BFS #1 complete. Farthest vertex a = ' + step.farthest1, 10, 8);
+  } else if (step.type === 'bfs2_done') {
+    ctx.fillText('Diameter found!', 10, 8);
+  } else {
+    ctx.fillText('BFS #' + step.bfsPass + ' \u2014 ' + step.action, 10, 8);
+  }
+
+  for (let ei = 0; ei < edges.length; ei++) {
+    let u = edges[ei][0], v = edges[ei][1];
+    let p1 = nodePos[u], p2 = nodePos[v];
+    let color = getEdgeColor(step, ei);
+    let lw = 1.8, glow = false;
+
+    if (color === '#00ff88') { lw = 3; glow = true; }
+    else if (color === '#ff6600') { lw = 3; glow = true; }
+
+    let dx = p2.x - p1.x, dy = p2.y - p1.y;
+    let len = Math.sqrt(dx*dx + dy*dy);
+    let nx = dx/len, ny = dy/len;
+    let sx = p1.x + nx * RADIUS;
+    let sy = p1.y + ny * RADIUS;
+    let ex = p2.x - nx * RADIUS;
+    let ey = p2.y - ny * RADIUS;
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    if (glow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  for (let v = 0; v < V; v++) {
+    let pos = nodePos[v];
+    let col = step.color[v] || 'white';
+    let isCurrent = (v === step.current);
+    let fillColor, strokeColor, textColor, useGlow = false, glowColor = '';
+
+    let isOnDiameter = step.type === 'bfs2_done' && step.diameterPath && step.diameterPath.includes(v);
+
+    if (v === step.farthest2 && step.type === 'bfs2_done') {
+      fillColor = '#1a1a00';
+      strokeColor = '#ffcc00';
+      textColor = '#ffcc00';
+      useGlow = true; glowColor = '#ffcc00';
+    } else if (v === step.farthest1 && step.type === 'bfs2_done') {
+      fillColor = '#1a0020';
+      strokeColor = '#ff66ff';
+      textColor = '#ff66ff';
+      useGlow = true; glowColor = '#ff66ff';
+    } else if (isOnDiameter) {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      useGlow = true; glowColor = '#00ff88';
+    } else if (v === step.farthest1 && step.type === 'bfs1_done') {
+      fillColor = '#1a0020';
+      strokeColor = '#ff66ff';
+      textColor = '#ff66ff';
+      useGlow = true; glowColor = '#ff66ff';
+    } else if (col === 'gray') {
+      fillColor = '#1a0a00';
+      strokeColor = isCurrent ? '#ff6600' : '#ffcc00';
+      textColor = isCurrent ? '#ff6600' : '#ffcc00';
+      if (isCurrent) { useGlow = true; glowColor = '#ff6600'; }
+    } else if (col === 'black') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (step.bfsPass > 0 && step.farthest1 >= 0 && v === step.farthest1 && step.type !== 'bfs1_done' && step.type !== 'bfs2_done') {
+      fillColor = '#1a0020';
+      strokeColor = '#ff66ff';
+      textColor = '#ff66ff';
+      useGlow = true; glowColor = '#ff66ff66';
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isCurrent ? 3.5 : (useGlow ? 3 : 2);
+    if (useGlow) {
+      ctx.shadowColor = glowColor || strokeColor;
+      ctx.shadowBlur = 15;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 15px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    if (step.dist[v] !== -1 && step.dist[v] !== undefined) {
+      ctx.fillStyle = '#888';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('d=' + step.dist[v], pos.x, pos.y + RADIUS + 3);
+    }
+
+    if (v === step.farthest1 && (step.type === 'bfs1_done' || step.type === 'bfs2_done')) {
+      ctx.fillStyle = '#ff66ff';
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('\u2190 a', pos.x, pos.y - RADIUS - 4);
+    }
+    if (v === step.farthest2 && step.type === 'bfs2_done') {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('\u2190 b', pos.x, pos.y - RADIUS - 4);
+    }
+  }
+
+  if (step.type === 'bfs2_done' && step.diameter > 0) {
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Diameter = ' + step.diameter + '  |  Path: ' + step.diameterPath.join(' \u2192 '), W/2, H - 6);
+  }
+}
+
+function renderDistTable(step) {
+  const tbody = document.getElementById('distTableBody');
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    const col = step.color[i] || 'white';
+    const d = step.dist[i] === -1 ? '\u221e' : step.dist[i];
+    const p = step.parent[i] === -1 ? 'NIL' : step.parent[i];
+    let colDisplay = col.charAt(0).toUpperCase() + col.slice(1);
+    let rowClass = col + '-cell';
+    if (i === step.current) rowClass = 'current-vertex';
+    else if (i === step.farthest2 && step.type === 'bfs2_done') rowClass = 'farthest2-cell';
+    else if (i === step.farthest1 && step.type === 'bfs1_done') rowClass = 'farthest1-cell';
+    else if (step.diameterPath && step.diameterPath.includes(i) && step.type === 'bfs2_done') rowClass = 'diameter-cell';
+    html += '<tr><td class="' + rowClass + '">' + i + '</td>';
+    html += '<td class="' + rowClass + '" style="color:' + (col === 'white' ? '#888' : col === 'gray' ? '#ffcc00' : '#00ff88') + '">' + colDisplay + '</td>';
+    html += '<td class="' + rowClass + '">' + d + '</td>';
+    html += '<td class="' + rowClass + '">' + p + '</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function renderQueue(queue) {
+  const container = document.getElementById('queueItems');
+  if (!queue || queue.length === 0) {
+    container.innerHTML = '<span style="color:#555;">\u2205</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < queue.length; i++) {
+    const v = queue[i];
+    html += '<span class="queue-item gray">' + v + '</span>';
+    if (i < queue.length - 1) html += '<span class="queue-arrow">\u2192</span>';
+  }
+  container.innerHTML = html;
+}
+
+function updateInfo(step) {
+  let phase = '';
+  if (step.type === 'init') phase = 'Ready \u2014 Press Play';
+  else if (step.type === 'bfs1_done') phase = '\u2713 BFS #1 Complete';
+  else if (step.type === 'bfs2_done') phase = '\u2713 Diameter Found!';
+  else if (step.bfsPass === 1) phase = 'BFS #1 from 0';
+  else if (step.bfsPass === 2) phase = 'BFS #2 from ' + step.farthest1;
+  document.getElementById('phaseDisplay').textContent = phase;
+
+  document.getElementById('bfsDisplay').textContent = step.bfsPass > 0 ? String(step.bfsPass) : '\u2014';
+  document.getElementById('currentDisplay').textContent = step.current >= 0 ? String(step.current) : '\u2014';
+
+  let fStr = '\u2014';
+  if (step.farthest1 >= 0 && step.type !== 'bfs1_done' && step.type !== 'bfs2_done') {
+    fStr = 'a=' + step.farthest1;
+  } else if (step.type === 'bfs1_done') {
+    fStr = 'a=' + step.farthest1;
+  } else if (step.type === 'bfs2_done') {
+    fStr = 'a=' + step.farthest1 + ', b=' + step.farthest2;
+  }
+  document.getElementById('farthestDisplay').textContent = fStr;
+}
+
+function initDistTable() {
+  const tbody = document.getElementById('distTableBody');
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    html += '<tr><td class="white-cell">' + i + '</td><td class="white-cell" style="color:#888;">White</td><td class="white-cell">\u221e</td><td class="white-cell">NIL</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function applyStep(step) {
+  const stepIdx = steps.indexOf(step);
+  document.getElementById('stepNum').textContent = stepIdx + 1;
+  drawGraph(step);
+  renderDistTable(step);
+  renderQueue(step.queue);
+  updateInfo(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init': explanation = buildInitExplanation(); break;
+    case 'bfs_start': explanation = buildBfsStartExplanation(step); break;
+    case 'dequeue': explanation = buildDequeueExplanation(step); break;
+    case 'discover': explanation = buildDiscoverExplanation(step); break;
+    case 'finish': explanation = buildFinishExplanation(step); break;
+    case 'bfs1_done': explanation = buildBfs1DoneExplanation(step); break;
+    case 'bfs2_done': explanation = buildBfs2DoneExplanation(step); break;
+    default: explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent = 'Step ' + (stepIdx + 1) + ' / ' + steps.length + ' \u2014 ' + step.action;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return '<div class="explain-section active">'
+    + '<h3>Problem Setup</h3>'
+    + '<p>We have a <b>tree</b> with <span class="dim">10</span> vertices and <span class="dim">9</span> undirected edges.</p>'
+    + '<p>The <b>diameter</b> is the <span style="color:#ffcc00;">longest shortest-path distance</span> between any two vertices.</p>'
+    + '<h3 style="margin-top:10px;">Two-BFS Algorithm</h3>'
+    + '<p>1. Pick any vertex, run BFS &rarr; farthest vertex <span class="dim">a</span></p>'
+    + '<p>2. Run BFS from <span class="dim">a</span> &rarr; farthest vertex <span class="dim">b</span></p>'
+    + '<p>3. Distance <span class="dim">dist(a,b)</span> = <span class="result-line">diameter</span></p>'
+    + '<span class="formula-line">BFS #1 from 0 &rarr; find a &nbsp;|&nbsp; BFS #2 from a &rarr; find b</span>'
+    + '<p class="note">The farthest vertex from any node is always an endpoint of some diameter.</p>'
+    + '<p class="note">Press <b>&#9654; Play</b> or <b>&#9199; Step</b> to start BFS #1.</p>'
+    + '</div>';
+}
+
+function buildBfsStartExplanation(step) {
+  let pass = step.bfsPass;
+  let src = step.current;
+  let extra = pass === 1
+    ? 'The BFS wave will expand level by level. Nodes closest to the source are discovered first.'
+    : 'Starting BFS from the farthest node found in BFS #1. The node farthest from ' + src + ' will be the other endpoint of the diameter.';
+  return '<div class="explain-section active">'
+    + '<h3>&#128640; BFS #' + pass + ': Start from Vertex ' + src + '</h3>'
+    + '<p>Source vertex <span class="dim">' + src + '</span> is discovered. Color: <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span>.</p>'
+    + '<p style="margin-left:8px;">&bull; Distance: <span class="dim">d[' + src + '] = 0</span></p>'
+    + '<p style="margin-left:8px;">&bull; Parent: <span class="dim">\u03c0[' + src + '] = NIL</span> (root)</p>'
+    + '<span class="formula-line">Enqueue ' + src + ' &rarr; Queue: [' + src + ']</span>'
+    + '<p>' + extra + '</p>'
+    + '</div>';
+}
+
+function buildDequeueExplanation(step) {
+  let u = step.current;
+  let neigh = getNeighbors(u);
+  let neighStr = neigh.length > 0 ? neigh.join(', ') : 'none';
+  return '<div class="explain-section active">'
+    + '<h3>&#9199; Dequeue Vertex ' + u + '</h3>'
+    + '<p>Dequeue <span class="dim">' + u + '</span> from the front. Exploring its neighbors: <span class="dim">[' + neighStr + ']</span></p>'
+    + '<p style="margin-left:8px;">&bull; Current distance: <span class="dim">d[' + u + '] = ' + step.dist[u] + '</span></p>'
+    + '<span class="formula-line">For each white neighbor v: set d[v]=d[' + u + ']+1, \u03c0[v]=' + u + ', enqueue v</span>'
+    + '<p>If a neighbor is already <span style="color:#00ff88;">BLACK</span> (visited), it is skipped &mdash; BFS visits each vertex only once.</p>'
+    + '<p class="note">After processing all neighbors, ' + u + ' becomes <span style="color:#00ff88;">BLACK</span>.</p>'
+    + '</div>';
+}
+
+function buildDiscoverExplanation(step) {
+  let u = step.edgeU, v = step.edgeV;
+  let dv = step.dist[v];
+  return '<div class="explain-section active">'
+    + '<h3>&#9654; Discover Vertex ' + v + '</h3>'
+    + '<p>White neighbor <span class="dim">' + v + '</span> discovered from <span class="dim">' + u + '</span>.</p>'
+    + '<p style="margin-left:8px;">&bull; Color: <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span></p>'
+    + '<p style="margin-left:8px;">&bull; Distance: <span class="dim">d[' + v + '] = d[' + u + '] + 1 = ' + dv + '</span></p>'
+    + '<p style="margin-left:8px;">&bull; Parent: <span class="dim">\u03c0[' + v + '] = ' + u + '</span></p>'
+    + '<span class="formula-line">BFS tree edge: ' + u + ' &rarr; ' + v + ' &nbsp;(shortest path: source&rarr;\u22ef&rarr;' + u + '&rarr;' + v + ')</span>'
+    + '<p>Enqueue <span class="dim">' + v + '</span> for later exploration.</p>'
+    + '<p class="note">d[' + v + '] = ' + dv + ' means the shortest path from source has ' + dv + ' edge(s).</p>'
+    + '</div>';
+}
+
+function buildFinishExplanation(step) {
+  let bfsPass = step.bfsPass;
+  let u = -1;
+  let prevStep = steps[steps.indexOf(step) - 1];
+  if (prevStep && (prevStep.type === 'discover' || prevStep.type === 'dequeue')) {
+    if (prevStep.type === 'discover') u = prevStep.edgeU;
+    else u = prevStep.current;
+  }
+  return '<div class="explain-section active">'
+    + '<h3>&#10003; Vertex ' + (u >= 0 ? u : '') + ' Finished</h3>'
+    + '<p>Vertex <span class="dim">' + (u >= 0 ? u : '') + '</span> is now <span style="color:#00ff88;">BLACK</span>.</p>'
+    + '<p style="margin-left:8px;">&bull; Color: <span style="color:#ffcc00;">GRAY</span> &rarr; <span style="color:#00ff88;">BLACK</span></p>'
+    + '<span class="formula-line">BLACK = fully processed &mdash; will not be visited again</span>'
+    + '<p>All neighbors have been examined. The BFS wave continues with the next vertex in the queue.</p>'
+    + '</div>';
+}
+
+function buildBfs1DoneExplanation(step) {
+  let a = step.farthest1;
+  let d = step.dist[a];
+  let maxD = 0;
+  for (let i = 0; i < V; i++) { if (step.dist[i] > maxD) maxD = step.dist[i]; }
+  let farthestNodes = [];
+  for (let i = 0; i < V; i++) { if (step.dist[i] === maxD) farthestNodes.push(i); }
+  return '<div class="explain-section active" style="border-left-color:#ff66ff;">'
+    + '<h3>&#10003; BFS #1 Complete!</h3>'
+    + '<p>All vertices reachable from source <span class="dim">0</span> have been explored.</p>'
+    + '<p style="margin-left:8px;">&bull; Farthest vertex <span class="dim">a</span> = <span class="split-info" style="color:#ff66ff;">' + a + '</span></p>'
+    + '<p style="margin-left:8px;">&bull; Distance: <span class="result-line">dist(0, ' + a + ') = ' + d + '</span></p>'
+    + '<p style="margin-left:8px;">&bull; Farthest nodes: [' + farthestNodes.join(', ') + '] at distance ' + maxD + '</p>'
+    + '<span class="formula-line">BFS #2: Starting from vertex ' + a + ' to find the other endpoint</span>'
+    + '<p class="note">Vertex ' + a + ' is guaranteed to be an endpoint of some diameter.</p>'
+    + '</div>';
+}
+
+function buildBfs2DoneExplanation(step) {
+  let a = step.farthest1, b = step.farthest2;
+  let d = step.diameter;
+  let path = step.diameterPath.join(' \u2192 ');
+  return '<div class="explain-section active" style="border-left-color:#00ff88;">'
+    + '<h3>&#10003; Diameter Found!</h3>'
+    + '<p>Two-BFS algorithm complete.</p>'
+    + '<p style="margin-left:8px;">&bull; BFS #1 from <span class="dim">0</span> &rarr; farthest vertex <span style="color:#ff66ff;">a = ' + a + '</span></p>'
+    + '<p style="margin-left:8px;">&bull; BFS #2 from <span style="color:#ff66ff;">' + a + '</span> &rarr; farthest vertex <span style="color:#ffcc00;">b = ' + b + '</span></p>'
+    + '<p style="margin-left:8px;">&bull; <span class="result-line">Diameter = distance(' + a + ', ' + b + ') = ' + d + '</span></p>'
+    + '<span class="formula-line">Diameter path: ' + path + '</span>'
+    + '<h3 style="margin-top:10px;">Proof Sketch (Why Two BFS Works)</h3>'
+    + '<p>Let <span class="dim">s</span> be any vertex, <span class="dim">a</span> farthest from <span class="dim">s</span>, and <span class="dim">(u,v)</span> a true diameter.</p>'
+    + '<p>If the path from <span class="dim">a</span> to <span class="dim">v</span> does not intersect the path from <span class="dim">a</span> to <span class="dim">s</span>, then dist(a,v) &ge; dist(s,v) + 1 > dist(s,v), contradicting that (u,v) is the diameter.</p>'
+    + '<p>By similar reasoning, <span class="dim">a</span> is an endpoint of some diameter, and BFS from <span class="dim">a</span> finds the other endpoint.</p>'
+    + '<h3 style="margin-top:10px;">Applications</h3>'
+    + '<p>&bull; <span class="dim">Network Design:</span> Minimize maximum latency between any two nodes</p>'
+    + '<p>&bull; <span class="dim">Facility Location:</span> Place resources to minimize worst-case distance</p>'
+    + '<p>&bull; <span class="dim">Tree Structure Analysis:</span> Understand the "span" or "width" of a tree</p>'
+    + '<h3 style="margin-top:10px;">Complexity</h3>'
+    + '<p><span class="dim">Time:</span> O(V + E) &mdash; each vertex and edge processed twice</p>'
+    + '<p><span class="dim">Space:</span> O(V) &mdash; queue, color, distance, and parent arrays</p>'
+    + '</div>';
+}
+
+function buildFinishedExplanation() {
+  return buildBfs2DoneExplanation(steps[steps.length - 1]);
+}
+
+// --- Animation core ---
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(function() {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('phaseDisplay').textContent = '\u2713 Diameter Found!';
+  document.getElementById('currentDisplay').textContent = '\u2014';
+  document.getElementById('farthestDisplay').textContent = 'a=' + lastStep.farthest1 + ', b=' + lastStep.farthest2;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('diameterResult').textContent = 'Diameter = ' + lastStep.diameter;
+  document.getElementById('resultPath').innerHTML = '<span class="dim">Path:</span> ' + lastStep.diameterPath.join(' \u2192 ');
+  document.getElementById('resultDetail').innerHTML = '<p><span class="dim">BFS #1:</span> from 0 &rarr; farthest a = ' + lastStep.farthest1 + '</p>'
+    + '<p><span class="dim">BFS #2:</span> from ' + lastStep.farthest1 + ' &rarr; farthest b = ' + lastStep.farthest2 + '</p>'
+    + '<p><span class="result-line">Diameter = ' + lastStep.diameter + ' edges</span></p>';
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' \u2014 \u2705 Complete';
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready \u2014 Press Play';
+  document.getElementById('bfsDisplay').textContent = '\u2014';
+  document.getElementById('currentDisplay').textContent = '\u2014';
+  document.getElementById('farthestDisplay').textContent = '\u2014';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle \u2014 press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  initDistTable();
+  renderQueue([]);
+  if (steps.length > 0) {
+    drawGraph(steps[0]);
+    renderDistTable(steps[0]);
+  }
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(function() {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initDistTable();
+if (steps.length > 0) {
+  drawGraph(steps[0]);
+  renderDistTable(steps[0]);
+}
+renderQueue([]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

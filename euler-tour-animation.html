@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Euler Tour Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.legend {
+  display: flex; justify-content: center; gap: 16px; margin: 8px 0;
+  font-size: 0.78em; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.legend-unused { background: #555; }
+.legend-used { background: #00ff88; }
+.legend-current { background: #ff6600; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control {
+  display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em;
+}
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 16px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td {
+  width: 72px; height: 34px; text-align: center;
+  border: 1px solid #333; font-size: 0.78em; transition: all 0.3s;
+}
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.current-row { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; }
+.tour-section {
+  margin: 10px 0; padding: 12px; background: #111;
+  border: 1px solid #333; border-radius: 10px;
+}
+.tour-label { font-size: 0.85em; margin-bottom: 6px; color: #888; }
+.tour-chain {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 2px; min-height: 36px;
+}
+.tour-node {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 2px solid #444; border-radius: 6px;
+  background: #0d0d1a; color: #aaa; font-size: 0.85em; font-weight: bold;
+  transition: all 0.3s;
+}
+.tour-node.stack-top {
+  border-color: #ff6600; color: #ff6600; background: #1a0a00;
+  box-shadow: 0 0 10px #ff660044;
+}
+.tour-node.euler-end {
+  border-color: #00ff88; color: #00ff88; background: #0a1a12;
+}
+.tour-arrow { color: #555; font-size: 0.9em; margin: 0 1px; }
+.empty-tour { color: #555; font-style: italic; font-size: 0.85em; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result {
+  font-size: 1.3em; color: #00ff88; font-weight: bold; margin: 12px 0;
+  word-break: break-all; line-height: 1.8;
+}
+</style>
+</head>
+<body>
+
+<h1>EULER TOUR</h1>
+<p class="subtitle">Graph Algorithms — Hierholzer's Algorithm for Eulerian Cycles</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="650" height="400"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-unused"></span> Unused</span>
+      <span class="legend-item"><span class="legend-swatch legend-used"></span> Used</span>
+      <span class="legend-item"><span class="legend-swatch legend-current"></span> Current</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Used:</span> <span class="value" id="usedDisplay">0 / 8</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="tour-section">
+      <div class="tour-label" style="color:#ffcc00;">Stack (exploration path):</div>
+      <div id="stackDisplay" class="tour-chain"><span class="empty-tour">∅</span></div>
+    </div>
+
+    <div class="tour-section">
+      <div class="tour-label" style="color:#00ccff;">Circuit (finalized vertices):</div>
+      <div id="circuitDisplay" class="tour-chain"><span class="empty-tour">∅</span></div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Vertex Degree Table</div>
+      <div class="table-wrapper">
+        <table id="degreeTable">
+          <thead><tr><th>Vertex</th><th>In</th><th>Out</th><th>Balance</th></tr></thead>
+          <tbody id="degreeBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Euler Tour Complete</h2>
+      <div class="big-result" id="finalTour">—</div>
+      <p id="resultExtra"></p>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Euler Tour (Eulerian Cycle)</h3>
+        <p>An <b>Euler tour</b> (also called an <span class="dim">Eulerian cycle</span>) is a cycle in a directed graph that <b>traverses each edge exactly once</b> and returns to the starting vertex.</p>
+        <h3 style="margin-top:10px;">Existence Conditions</h3>
+        <p>A directed graph has an Euler tour <b>iff</b>:</p>
+        <p style="margin-left:8px;">1. The graph is <span class="dim">strongly connected</span></p>
+        <p style="margin-left:8px;">2. Every vertex has <span class="dim">in-degree = out-degree</span></p>
+        <h3 style="margin-top:10px;">Graph</h3>
+        <p><span class="dim">|V| = 5</span>, <span class="dim">|E| = 8</span></p>
+        <p>Edges: <span class="dim">0→1, 1→2, 2→0, 2→3, 3→4, 4→2, 1→4, 4→1</span></p>
+        <p>All vertices have <span class="result-line">balanced</span> in/out degrees.</p>
+        <h3 style="margin-top:10px;">Hierholzer's Algorithm</h3>
+        <p>1. Start from any vertex. Follow unused edges, pushing vertices onto a <span class="dim">stack</span>.</p>
+        <p>2. When a vertex has <b>no unused outgoing edges</b>, pop it to the <span class="dim">circuit</span>.</p>
+        <p>3. Repeat until the stack is empty. The circuit, reversed, is the Euler tour.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4];
+const edges = [
+  { id: 0, u: 0, v: 1 },
+  { id: 1, u: 1, v: 2 },
+  { id: 2, u: 2, v: 0 },
+  { id: 3, u: 2, v: 3 },
+  { id: 4, u: 3, v: 4 },
+  { id: 5, u: 4, v: 2 },
+  { id: 6, u: 1, v: 4 },
+  { id: 7, u: 4, v: 1 }
+];
+const adjList = { 0: [1], 1: [2, 4], 2: [0, 3], 3: [4], 4: [2, 1] };
+const nodePositions = {
+  0: { x: 325, y: 35 },
+  1: { x: 100, y: 200 },
+  2: { x: 180, y: 350 },
+  3: { x: 325, y: 350 },
+  4: { x: 470, y: 200 }
+};
+const nodeRadius = 24;
+
+const inDeg = { 0: 1, 1: 2, 2: 2, 3: 1, 4: 2 };
+const outDeg = { 0: 1, 1: 2, 2: 2, 3: 1, 4: 2 };
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// Edge offset for bidirectional edges (1←→4)
+function getEdgeOffset(u, v) {
+  if ((u === 1 && v === 4) || (u === 4 && v === 1)) {
+    let p1 = nodePositions[1];
+    let p2 = nodePositions[4];
+    let dx = p2.x - p1.x, dy = p2.y - p1.y;
+    let d = Math.sqrt(dx * dx + dy * dy);
+    if (d < 1) return { x: 0, y: 0 };
+    let px = -dy / d * 10, py = dx / d * 10;
+    if (u === 1 && v === 4) return { x: px, y: py };
+    return { x: -px, y: -py };
+  }
+  return { x: 0, y: 0 };
+}
+
+// --- Step building (Hierholzer's Algorithm) ---
+
+function buildSteps() {
+  steps = [];
+  let edgeIdMap = {};
+  for (let e of edges) edgeIdMap[e.u + ',' + e.v] = e.id;
+
+  let used = new Set();
+  let stack = [0];
+  let circuit = [];
+
+  // Initial step
+  steps.push({
+    type: 'init',
+    usedEdges: new Set(),
+    currentVertex: 0,
+    currentEdge: null,
+    stack: [0],
+    circuit: [],
+    phase: 'Initial state — start at vertex 0'
+  });
+
+  while (stack.length > 0) {
+    let v = stack[stack.length - 1];
+    let found = false;
+    for (let next of adjList[v]) {
+      let eid = edgeIdMap[v + ',' + next];
+      if (!used.has(eid)) {
+        used.add(eid);
+        stack.push(next);
+        steps.push({
+          type: 'traverse',
+          usedEdges: new Set(used),
+          currentVertex: next,
+          currentEdge: { u: v, v: next, id: eid },
+          stack: [...stack],
+          circuit: [...circuit],
+          phase: `Traverse ${v}→${next} (e${eid})`
+        });
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      let popped = stack.pop();
+      circuit.push(popped);
+      steps.push({
+        type: 'backtrack',
+        usedEdges: new Set(used),
+        poppedVertex: popped,
+        currentVertex: stack.length > 0 ? stack[stack.length - 1] : null,
+        currentEdge: null,
+        stack: [...stack],
+        circuit: [...circuit],
+        phase: `Backtrack — vertex ${popped} is dead-end, popped to circuit`
+      });
+    }
+  }
+
+  let eulerTour = [...circuit].reverse();
+  steps.push({
+    type: 'complete',
+    usedEdges: new Set(used),
+    currentVertex: null,
+    currentEdge: null,
+    stack: [],
+    circuit: [...circuit],
+    eulerTour: eulerTour,
+    phase: '✓ Euler tour found!'
+  });
+}
+
+// --- Canvas drawing ---
+
+function drawArrow(ctx, x1, y1, x2, y2, color, lineWidth, glow) {
+  let dx = x2 - x1, dy = y2 - y1;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist, ny = dy / dist;
+
+  let startX = x1 + nx * (nodeRadius + 3);
+  let startY = y1 + ny * (nodeRadius + 3);
+  let endX = x2 - nx * (nodeRadius + 3);
+  let endY = y2 - ny * (nodeRadius + 3);
+
+  if (glow) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+  }
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  let arrLen = 11, arrW = 6;
+  let ax = endX - nx * arrLen;
+  let ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawEdgeLabel(ctx, u, v, label, color, offset) {
+  let p1 = nodePositions[u];
+  let p2 = nodePositions[v];
+  let mx = (p1.x + p2.x) / 2 + (offset ? offset.x : 0);
+  let my = (p1.y + p2.y) / 2 + (offset ? offset.y : 0);
+  let dx = p2.x - p1.x, dy = p2.y - p1.y;
+  let d = Math.sqrt(dx * dx + dy * dy);
+  if (d > 1) {
+    let px = -dy / d * 12, py = dx / d * 12;
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.fillText(label, mx + px, my + py);
+  }
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  let usedSet = step.usedEdges || new Set();
+  let curEdge = step.currentEdge;
+  let curVertex = step.currentVertex;
+  let edgeGlows = {};
+
+  if (curEdge) {
+    edgeGlows[curEdge.id] = true;
+  }
+
+  for (let e of edges) {
+    let isUsed = usedSet.has(e.id);
+    let isCurrent = curEdge && curEdge.id === e.id;
+    let colorVal = isCurrent ? '#ff6600' : (isUsed ? '#00ff88' : '#555');
+    let lineWidth = isCurrent ? 3.5 : (isUsed ? 2.5 : 1.5);
+    let offset = getEdgeOffset(e.u, e.v);
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+
+    let x1 = p1.x + offset.x, y1 = p1.y + offset.y;
+    let x2 = p2.x + offset.x, y2 = p2.y + offset.y;
+
+    drawArrow(ctx, x1, y1, x2, y2, colorVal, lineWidth, isCurrent);
+
+    let label = 'e' + e.id;
+    let labelColor = isCurrent ? '#ff6600' : (isUsed ? '#00ff88' : '#555');
+    drawEdgeLabel(ctx, e.u, e.v, label, labelColor, offset);
+  }
+
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let isCurrent = (v === curVertex);
+    let hasUnused = false;
+    if (isCurrent) {
+      for (let nxt of adjList[v]) {
+        let eid = edges.find(e => e.u === v && e.v === nxt).id;
+        if (!usedSet.has(eid)) { hasUnused = true; break; }
+      }
+    }
+    let foundEdgeOn = false;
+    if (curEdge) {
+      foundEdgeOn = (v === curEdge.u || v === curEdge.v);
+    }
+
+    let fillColor = '#0d0d1a';
+    let strokeColor = '#555';
+    let textColor = '#888';
+    let lw = 2;
+
+    if (isCurrent && step.type === 'traverse') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      lw = 3.5;
+    } else if (isCurrent && step.type === 'backtrack') {
+      fillColor = '#1a0030';
+      strokeColor = '#ff66ff';
+      textColor = '#ff66ff';
+      lw = 3;
+    } else if (foundEdgeOn && !isCurrent) {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      lw = 2.5;
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+
+    if (isCurrent) {
+      ctx.shadowColor = step.type === 'traverse' ? '#ff6600' : '#ff66ff';
+      ctx.shadowBlur = 18;
+    }
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    if (hasUnused) {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('✦', pos.x, pos.y + nodeRadius + 2);
+    }
+  }
+
+  let statusText = step.type === 'init' ? 'Starting at vertex 0. All edges unused (gray).' :
+    step.type === 'complete' ? '✓ Euler tour found!' :
+    (step.currentEdge ? `Traversing edge e${curEdge.id}: ${curEdge.u}→${curEdge.v}` : `Backtracking`);
+  ctx.fillStyle = '#666';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(statusText, 10, 14);
+}
+
+// --- DOM rendering ---
+
+function renderTourChain(containerId, arr, highlightLast, eulerMode) {
+  const el = document.getElementById(containerId);
+  if (!arr || arr.length === 0) {
+    el.innerHTML = '<span class="empty-tour">∅</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < arr.length; i++) {
+    if (i > 0) html += '<span class="tour-arrow">→</span>';
+    let cls = 'tour-node';
+    if (eulerMode) cls += ' euler-end';
+    else if (highlightLast && i === arr.length - 1) cls += ' stack-top';
+    html += `<span class="${cls}">${arr[i]}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderDegreeTable(stepVert) {
+  let tbody = document.getElementById('degreeBody');
+  let html = '';
+  for (let v of vertices) {
+    let rowClass = (v === stepVert) ? ' class="current-row"' : '';
+    html += `<tr${rowClass}><td>${v}</td><td>${inDeg[v]}</td><td>${outDeg[v]}</td><td>0 ✓</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('vertexDisplay').textContent =
+    (step.currentVertex !== null && step.currentVertex !== undefined) ? step.currentVertex : '—';
+  let edgeStr = step.currentEdge ? `e${step.currentEdge.id} (${step.currentEdge.u}→${step.currentEdge.v})` : '—';
+  document.getElementById('edgeDisplay').textContent = edgeStr;
+  document.getElementById('usedDisplay').textContent =
+    (step.usedEdges ? step.usedEdges.size : 0) + ' / 8';
+}
+
+function renderTourState(step) {
+  renderTourChain('stackDisplay', step.stack, true, false);
+  renderTourChain('circuitDisplay', step.circuit, false, false);
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>A directed graph with <span class="dim">5 vertices</span> and <span class="dim">8 directed edges</span>.</p>
+<p>Every vertex has <span class="result-line">balanced</span> in-degree = out-degree, and the graph is <b>strongly connected</b>, so an Euler tour exists.</p>
+<h3 style="margin-top:10px;">Algorithm: Hierholzer's</h3>
+<p>1. Push <span class="dim">start vertex 0</span> onto an empty <span class="split-info">stack</span>.</p>
+<p>2. While the stack is not empty:</p>
+<p style="margin-left:16px;">• <span class="dim">Peek</span> at the top vertex v.</p>
+<p style="margin-left:16px;">• If v has an <span style="color:#ff6600;">unused</span> outgoing edge v→w, mark it used, push w.</p>
+<p style="margin-left:16px;">• Otherwise <span class="dim">pop</span> v from stack to the <span class="split-info">circuit</span>.</p>
+<p>3. Reverse the circuit to obtain the Euler tour.</p>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildTraverseExplanation(u, v, eid, usedCount) {
+  return `<div class="explain-section active">
+<h3>🔍 Traverse ${u}→${v} (e${eid})</h3>
+<p>Following unused edge <span class="dim">e${eid}: ${u}→${v}</span>.</p>
+<p><span class="dim">${u}</span> is the current top of stack. We take edge <span class="split-info">e${eid}</span> to <span class="dim">${v}</span>.</p>
+<p>Edge <span class="result-line">e${eid}</span> is now <span style="color:#00ff88;">used</span> (green).</p>
+<p>Push <span class="dim">${v}</span> onto the stack: <span class="result-line">used ${usedCount}/8 edges</span>.</p>
+<p class="note">If a vertex has unused outgoing edges (marked with ✦), we'll explore them later.</p>
+</div>`;
+}
+
+function buildBacktrackExplanation(poppedV, backtrackTo, usedCount, circuitArr) {
+  let circuitStr = circuitArr && circuitArr.length > 0 ? circuitArr.join(', ') : '';
+  return `<div class="explain-section active">
+<h3>⏎ Backtrack from ${poppedV}</h3>
+<p>Vertex <span class="dim">${poppedV}</span> has <b>no remaining unused outgoing edges</b>.</p>
+<p>We <span class="split-info">pop</span> it from the stack and append it to the circuit.</p>
+<p>Circuit: <span class="result-line">[${circuitStr}]</span></p>
+<p>We backtrack to <span class="dim">${backtrackTo !== null ? backtrackTo : '(empty)'}</span> on the stack.</p>
+<p>The circuit is being built in <b>reverse order</b> of traversal — at the end we reverse it to get the Euler tour.</p>
+<p class="note">Used ${usedCount}/8 edges so far.</p>
+</div>`;
+}
+
+function buildCompleteExplanation(eulerTour) {
+  let tourStr = eulerTour.join(' → ');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>All <span class="dim">8 edges</span> traversed exactly once. The circuit (built in reverse) has been reversed to produce the Euler tour.</p>
+<h3 style="margin-top:10px;">Euler Tour</h3>
+<span class="formula-line">${tourStr}</span>
+<p>This cycle visits every edge exactly once and returns to the start.</p>
+<h3 style="margin-top:10px;">Verification</h3>
+<p>• 0→1 ✓, 1→2 ✓, 2→3 ✓, 3→4 ✓, 4→1 ✓, 1→4 ✓, 4→2 ✓, 2→0 ✓</p>
+<p>• All <span class="result-line">8 edges</span> used, back at vertex <span class="dim">0</span>.</p>
+<h3 style="margin-top:10px;">Applications</h3>
+<p>• <span class="dim">Chinese Postman Problem</span> (route optimization)</p>
+<p>• <span class="dim">DNA fragment assembly</span> (de Bruijn graphs)</p>
+<p>• <span class="dim">Network analysis</span> (tracing circuits)</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) — each edge traversed once</p>
+<p><span class="dim">Space:</span> O(V + E) for stack and adjacency lists</p>
+</div>`;
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+  updateInfo(step);
+  drawGraph(step);
+  renderTourState(step);
+  renderDegreeTable(step.currentVertex);
+  document.getElementById('resultSection').style.display = 'none';
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init': explanation = buildInitExplanation(); break;
+    case 'traverse':
+      explanation = buildTraverseExplanation(step.currentEdge.u, step.currentEdge.v, step.currentEdge.id, step.usedEdges.size);
+      break;
+    case 'backtrack':
+      explanation = buildBacktrackExplanation(
+        step.poppedVertex,
+        step.currentVertex,
+        step.usedEdges.size,
+        step.circuit
+      );
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation(step.eulerTour);
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('phaseDisplay').textContent = '✓ Euler tour found!';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('usedDisplay').textContent = '8 / 8';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let tourStr = lastStep.eulerTour.join(' → ');
+  document.getElementById('finalTour').textContent = tourStr;
+  document.getElementById('resultExtra').innerHTML = `
+    <p>All <span class="result-line">8 edges</span> traversed exactly once. Returns to vertex <span class="dim">0</span>.</p>
+  `;
+
+  renderTourChain('circuitDisplay', lastStep.eulerTour, false, true);
+  document.getElementById('stackDisplay').innerHTML = '<span class="empty-tour">✓ Complete</span>';
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation(lastStep.eulerTour);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('usedDisplay').textContent = '0 / 8';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

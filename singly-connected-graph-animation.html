@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Singly Connected Directed Graphs Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graphs-container {
+  display: flex; gap: 12px;
+}
+.graph-box {
+  flex: 1; background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; text-align: center; min-width: 0;
+}
+.graph-box h3 { color: #00ccff; font-size: 0.85em; margin-bottom: 6px; }
+.graph-box canvas { display: block; margin: 0 auto; max-width: 100%; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control {
+  display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em;
+}
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 15px 0; }
+.table-title {
+  font-size: 1em; color: #00ccff; margin-bottom: 10px; text-align: center;
+}
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td {
+  text-align: center; border: 1px solid #333;
+  font-size: 0.78em; transition: all 0.3s; padding: 6px 12px;
+}
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+tr.highlight-row td { background: #1a0a00 !important; border-color: #ff6600 !important; }
+tr.violation-row td { background: #1a0000 !important; border-color: #ff4444 !important; }
+td.violation-cell { color: #ff4444 !important; font-weight: bold; }
+td.unique-cell { color: #00ff88 !important; }
+.path-display-area {
+  margin: 15px 0; padding: 15px; background: #111; border: 1px solid #333;
+  border-radius: 10px; text-align: center;
+}
+.path-display-area .path-label { color: #888; font-size: 0.8em; margin-bottom: 8px; }
+.path-sequence {
+  display: flex; align-items: center; justify-content: center; gap: 4px; margin: 6px 0; flex-wrap: wrap;
+}
+.path-box {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 2px solid; border-radius: 50%;
+  font-size: 0.85em; font-weight: bold; background: #0d0d1a;
+}
+.path-arrow { color: #555; font-size: 1em; margin: 0 2px; }
+.path-meta { color: #888; font-size: 0.8em; margin-top: 4px; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.violation-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78em; margin: 2px; }
+.violation-tag.vtag-multiple { background: #1a0000; color: #ff4444; border: 1px solid #ff4444; }
+.violation-tag.vtag-unique { background: #001a0a; color: #00ff88; border: 1px solid #00ff88; }
+.graph-status {
+  display: flex; justify-content: center; gap: 30px; margin: 10px 0; flex-wrap: wrap;
+}
+.graph-status .gcard {
+  padding: 12px 20px; border: 2px solid #333; border-radius: 10px; background: #0d0d1a;
+}
+.graph-status .gcard h4 { color: #00ccff; font-size: 0.85em; margin-bottom: 6px; }
+.graph-status .gcard .result-text { font-size: 1em; font-weight: bold; }
+.graph-status .gcard .tag {
+  display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; margin-top: 6px;
+}
+.graph-status .gcard .tag-green { background: #002a1a; color: #00ff88; border: 1px solid #00ff88; }
+.graph-status .gcard .tag-red { background: #2a0000; color: #ff4444; border: 1px solid #ff4444; }
+.legend-row {
+  display: flex; justify-content: center; gap: 12px; font-size: 0.75em; color: #888; margin: 6px 0; flex-wrap: wrap;
+}
+.legend-row .litem { display: flex; align-items: center; gap: 4px; }
+.legend-row .lswatch { width: 12px; height: 12px; border-radius: 3px; }
+@media (max-width: 700px) {
+  .graphs-container { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<h1>SINGLY CONNECTED DIRECTED GRAPHS</h1>
+<p class="subtitle">Graph Theory — At Most One Simple Path Between Any Two Vertices</p>
+
+<div class="layout">
+<div class="main-panel">
+
+<div class="graphs-container">
+  <div class="graph-box">
+    <h3>Graph A: Singly Connected ✓</h3>
+    <canvas id="canvasA" width="330" height="380"></canvas>
+  </div>
+  <div class="graph-box">
+    <h3>Graph B: NOT Singly Connected ✗</h3>
+    <canvas id="canvasB" width="330" height="380"></canvas>
+  </div>
+</div>
+
+<div class="legend-row">
+  <span class="litem"><span class="lswatch" style="background:#ff6600;"></span> Source</span>
+  <span class="litem"><span class="lswatch" style="background:#ffcc00;"></span> Current vertex</span>
+  <span class="litem"><span class="lswatch" style="background:#00ccff;"></span> Path #1</span>
+  <span class="litem"><span class="lswatch" style="background:#ff66ff;"></span> Path #2 (violation)</span>
+  <span class="litem"><span class="lswatch" style="background:#00ff88;"></span> Processed</span>
+</div>
+
+<div class="controls">
+  <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+  <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+  <button class="btn" onclick="stepForward()">⏭ Step</button>
+  <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+  <div class="speed-control">
+    <label>Speed:</label>
+    <input type="range" id="speedSlider" min="1" max="10" value="5">
+    <span id="speedLabel">5x</span>
+  </div>
+</div>
+
+<div class="info-panel">
+  <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <span class="label">Graph:</span> <span class="value" id="graphDisplay">—</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <span class="label">Source:</span> <span class="value" id="sourceDisplay">—</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <span class="label">Dest:</span> <span class="value" id="destDisplay">—</span>
+  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <span class="label">Path #:</span> <span class="value" id="countDisplay">—</span>
+</div>
+
+<div class="step-counter">
+  Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+</div>
+
+<div class="table-section">
+  <div class="table-title">Path Enumeration Table</div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Graph</th><th>Source</th><th>Dest</th><th>Count</th><th>Status</th></tr></thead>
+      <tbody id="pathTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="pathDisplayArea" class="path-display-area" style="display:none;">
+  <div class="path-label" id="pathLabel">Current Path</div>
+  <div id="pathSequenceContainer"></div>
+  <div class="path-meta" id="pathMeta"></div>
+</div>
+
+<div id="resultSection" class="result-section" style="display:none;">
+  <h2>✅ Analysis Complete</h2>
+  <div id="resultContent"></div>
+</div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>📖 Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea">
+    <div class="explain-section active">
+      <h3>Singly Connected Directed Graphs</h3>
+      <p>A directed graph is <b>singly connected</b> if for every pair of vertices <span class="dim">(u, v)</span>, there is <b>at most one</b> simple path from u to v.</p>
+      <h3 style="margin-top:10px;">Two Graphs to Compare</h3>
+      <p><span class="result-line">Graph A:</span> 5 vertices {<span class="dim">0,1,2,3,4</span>}, 4 edges — tree-like DAG</p>
+      <p><span style="color:#ff4444;font-weight:bold;">Graph B:</span> 4 vertices {<span class="dim">0,1,2,3</span>}, 4 edges — diamond pattern</p>
+      <h3 style="margin-top:10px;">Algorithm</h3>
+      <p>For each source vertex <span class="dim">u</span>, run DFS to enumerate all simple paths to every other vertex <span class="dim">v</span>. If any pair has <b>≥2 paths</b>, the graph is <b>not singly connected</b>.</p>
+      <p><span class="dim">Time:</span> O(V·E) using DFS from each vertex, counting paths</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ===== GRAPH DATA =====
+
+const graphAVertices = [0, 1, 2, 3, 4];
+const graphAEdges = [{u:0,v:1}, {u:1,v:2}, {u:2,v:3}, {u:2,v:4}];
+
+const graphBVertices = [0, 1, 2, 3];
+const graphBEdges = [{u:0,v:1}, {u:0,v:2}, {u:1,v:3}, {u:2,v:3}];
+
+const graphAPos = {
+  0: {x: 165, y: 50},
+  1: {x: 165, y: 145},
+  2: {x: 165, y: 240},
+  3: {x: 70, y: 335},
+  4: {x: 260, y: 335}
+};
+
+const graphBPos = {
+  0: {x: 165, y: 50},
+  1: {x: 70, y: 200},
+  2: {x: 260, y: 200},
+  3: {x: 165, y: 335}
+};
+
+const nodeRadius = 22;
+
+// ===== GLOBAL STATE =====
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let globalPathData = {};
+let globalViolations = [];
+let globalGraphDone = {A: false, B: false};
+let graphASteps = [];
+let graphBSteps = [];
+
+// ===== PATH ENUMERATION =====
+
+function enumerateAllPaths(vertices, edges) {
+  const adj = {};
+  for (const v of vertices) adj[v] = [];
+  for (const {u, v} of edges) adj[u].push(v);
+
+  const pathData = {};
+  const stepList = [];
+
+  for (const src of vertices) {
+    const visited = new Set([src]);
+    const path = [src];
+
+    (function dfs(curr) {
+      for (const next of (adj[curr] || [])) {
+        if (!visited.has(next)) {
+          visited.add(next);
+          path.push(next);
+
+          const key = src + '->' + next;
+          if (!pathData[key]) {
+            pathData[key] = { count: 0, paths: [] };
+          }
+          pathData[key].count++;
+          const isFirst = pathData[key].count === 1;
+          pathData[key].paths.push([...path]);
+
+          stepList.push({
+            type: isFirst ? 'path_found' : 'violation',
+            src, dest: next, path: [...path],
+            isFirst, count: pathData[key].count,
+            allPathsToDest: [...pathData[key].paths.map(p => [...p])],
+            pathData: JSON.parse(JSON.stringify(pathData)),
+            phase: isFirst
+              ? `Path: ${path.join('→')} (unique)`
+              : `VIOLATION: ${path.join('→')} is path #${pathData[key].count}!`
+          });
+
+          dfs(next);
+
+          path.pop();
+          visited.delete(next);
+        }
+      }
+    })(src);
+  }
+
+  return { steps: stepList, pathData: pathData };
+}
+
+// ===== BUILD STEPS =====
+
+function buildSteps() {
+  steps = [];
+  globalPathData = {};
+  globalViolations = [];
+  globalGraphDone = {A: false, B: false};
+
+  const resultA = enumerateAllPaths(graphAVertices, graphAEdges);
+  const resultB = enumerateAllPaths(graphBVertices, graphBEdges);
+  graphASteps = resultA.steps;
+  graphBSteps = resultB.steps;
+
+  // Step 1: Init
+  steps.push({
+    type: 'init',
+    phase: 'Introduction',
+    activeGraph: null, src: null, dest: null, path: null,
+    isFirst: null, count: null, allPathsToDest: null,
+    pathData: {}, violations: [], graphAEnded: false, graphBEnded: false,
+    graphDone: {A: false, B: false}
+  });
+
+  // Graph A steps
+  for (const s of graphASteps) {
+    steps.push({
+      type: s.type,
+      phase: s.phase,
+      activeGraph: 'A',
+      src: s.src, dest: s.dest, path: s.path,
+      isFirst: s.isFirst, count: s.count,
+      allPathsToDest: s.allPathsToDest,
+      pathData: JSON.parse(JSON.stringify(s.pathData)),
+      violations: [...globalViolations],
+      graphAEnded: false, graphBEnded: false,
+      graphDone: {A: false, B: false}
+    });
+  }
+
+  // Graph A done
+  steps.push({
+    type: 'graph_done',
+    phase: 'Graph A: Singly Connected ✓',
+    activeGraph: 'A',
+    src: null, dest: null, path: null,
+    isFirst: null, count: null, allPathsToDest: null,
+    pathData: JSON.parse(JSON.stringify(resultA.pathData)),
+    violations: [...globalViolations],
+    graphAEnded: true, graphBEnded: false,
+    graphDone: {A: true, B: false},
+    isSinglyConnected: true
+  });
+
+  // Graph B steps
+  for (const s of graphBSteps) {
+    globalViolations = [];
+    if (!s.isFirst && !globalViolations.includes(s.src + '->' + s.dest)) {
+      globalViolations.push(s.src + '->' + s.dest);
+    }
+    steps.push({
+      type: s.type,
+      phase: s.phase,
+      activeGraph: 'B',
+      src: s.src, dest: s.dest, path: s.path,
+      isFirst: s.isFirst, count: s.count,
+      allPathsToDest: s.allPathsToDest,
+      pathData: JSON.parse(JSON.stringify(s.pathData)),
+      violations: [...globalViolations],
+      graphAEnded: true, graphBEnded: false,
+      graphDone: {A: true, B: false}
+    });
+  }
+
+  // Add violations from B
+  const bViolations = [];
+  for (const key in resultB.pathData) {
+    if (resultB.pathData[key].count > 1) {
+      bViolations.push(key);
+    }
+  }
+
+  // Complete
+  steps.push({
+    type: 'complete',
+    phase: '✓ Analysis Complete',
+    activeGraph: null, src: null, dest: null, path: null,
+    isFirst: null, count: null, allPathsToDest: null,
+    pathData: JSON.parse(JSON.stringify(resultB.pathData)),
+    violations: bViolations,
+    graphAEnded: true, graphBEnded: true,
+    graphDone: {A: true, B: true},
+    graphAData: resultA.pathData,
+    graphBData: resultB.pathData
+  });
+}
+
+// ===== CANVAS DRAWING =====
+
+function drawArrow(ctx, fromX, fromY, toX, toY, colorVal, lineWidth) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const startX = fromX + nx * (nodeRadius + 2);
+  const startY = fromY + ny * (nodeRadius + 2);
+  const endX = toX - nx * (nodeRadius + 2);
+  const endY = toY - ny * (nodeRadius + 2);
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+
+  const arrLen = 10;
+  const arrW = 5;
+  const ax = endX - nx * arrLen;
+  const ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+}
+
+function drawGraph(ctx, vertices, edges, pos, W, H, highlights) {
+  ctx.clearRect(0, 0, W, H);
+
+  const {
+    activeGraph: active,         // 'A' or 'B' being processed
+    myLabel: myLabel,            // 'A' or 'B' for this canvas
+    source,                      // current source vertex
+    path,                        // current path array
+    isFirst,                     // is this the first path to dest
+    allPathsToDest,              // all paths to current dest
+    dimAll,                      // dim this entire graph
+    violations,                  // list of violating pairs
+    pathData,                    // all path data
+    processedPairs               // set of "src->dest" keys that have been processed
+  } = highlights || {};
+
+  const dim = dimAll === true;
+  const activeGraph = myLabel === active;
+
+  // Edge colors from processed paths
+  const edgeColors = {};
+  const edgeWidths = {};
+
+  // Color edges based on path data
+  if (pathData) {
+    for (const key in pathData) {
+      const [s, d] = key.split('->').map(Number);
+      const data = pathData[key];
+      if (data.count > 0) {
+        for (const p of data.paths) {
+          // Color each edge in this path
+          const color = data.count === 1 ? '#00ccff' : '#ff66ff';
+          for (let i = 0; i < p.length - 1; i++) {
+            const ek = p[i] + '-' + p[i+1];
+            edgeColors[ek] = edgeColors[ek] || color;
+            edgeWidths[ek] = Math.max(edgeWidths[ek] || 1.5, 2.5);
+          }
+        }
+      }
+    }
+  }
+
+  // Highlight current path edges
+  if (path && activeGraph) {
+    const pathColor = (isFirst === false) ? '#ff66ff' : '#ff6600';
+    const pw = 4;
+    for (let i = 0; i < path.length - 1; i++) {
+      const ek = path[i] + '-' + path[i+1];
+      edgeColors[ek] = pathColor;
+      edgeWidths[ek] = pw;
+    }
+  }
+
+  // Draw edges
+  for (const {u, v} of edges) {
+    const p1 = pos[u];
+    const p2 = pos[v];
+    if (!p1 || !p2) continue;
+    const ek = u + '-' + v;
+    let color;
+    let lw;
+    if (dim) {
+      color = '#222';
+      lw = 1;
+    } else if (edgeColors[ek]) {
+      color = edgeColors[ek];
+      lw = edgeWidths[ek] || 2.5;
+    } else {
+      color = '#555';
+      lw = 1.5;
+    }
+
+    // Glow for active path
+    const isActivePath = path && path.includes(u) && path.includes(v) &&
+      Math.abs(path.indexOf(u) - path.indexOf(v)) === 1;
+    if (isActivePath && activeGraph) {
+      ctx.shadowColor = edgeColors[ek] || '#ff6600';
+      ctx.shadowBlur = 15;
+    } else if (edgeColors[ek]) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 5;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, color, lw);
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw vertices
+  const allProcessedKeys = new Set();
+  if (pathData) {
+    for (const key in pathData) {
+      if (pathData[key].count > 0) allProcessedKeys.add(key);
+    }
+  }
+
+  for (const v of vertices) {
+    const p = pos[v];
+    let fillColor, strokeColor, textColor, lw, glow;
+
+    if (dim) {
+      fillColor = '#080810';
+      strokeColor = '#222';
+      textColor = '#444';
+      lw = 1.5;
+      glow = 0;
+    } else if (activeGraph && v === source) {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      lw = 3.5;
+      glow = 12;
+    } else if (activeGraph && path && path.includes(v)) {
+      const idx = path.indexOf(v);
+      if (idx === 0) {
+        fillColor = '#1a0a00';
+        strokeColor = '#ff6600';
+        textColor = '#ff6600';
+        lw = 3;
+        glow = 10;
+      } else if (idx === path.length - 1) {
+        fillColor = '#1a0a00';
+        strokeColor = isFirst === false ? '#ff66ff' : '#ffcc00';
+        textColor = isFirst === false ? '#ff66ff' : '#ffcc00';
+        lw = 3;
+        glow = 10;
+      } else {
+        fillColor = '#1a1a00';
+        strokeColor = '#ffcc00';
+        textColor = '#ffcc00';
+        lw = 2.5;
+        glow = 6;
+      }
+    } else if (!dim) {
+      // Check if this vertex appears as source in any processed pair
+      let isProcessedSource = false;
+      for (const key of allProcessedKeys) {
+        if (key.startsWith(v + '->')) { isProcessedSource = true; break; }
+      }
+      if (isProcessedSource) {
+        fillColor = '#0a1a12';
+        strokeColor = '#00ff88';
+        textColor = '#00ff88';
+        lw = 2;
+        glow = 4;
+      } else {
+        fillColor = '#0d0d1a';
+        strokeColor = '#555';
+        textColor = '#888';
+        lw = 2;
+        glow = 0;
+      }
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+      lw = 2;
+      glow = 0;
+    }
+
+    if (glow > 0) {
+      ctx.shadowColor = strokeColor;
+      ctx.shadowBlur = glow;
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(v), p.x, p.y);
+  }
+
+  // Status text
+  if (dim) {
+    ctx.fillStyle = '#444';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('— awaiting turn —', W/2, 12);
+  } else if (!active && !dim) {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('Graph ' + myLabel, 8, 14);
+  }
+}
+
+function drawAllGraphs(highlights) {
+  const cA = document.getElementById('canvasA');
+  const ctxA = cA.getContext('2d');
+  const cB = document.getElementById('canvasB');
+  const ctxB = cB.getContext('2d');
+
+  let hA = { ...highlights, myLabel: 'A', dimAll: false };
+  let hB = { ...highlights, myLabel: 'B', dimAll: false };
+
+  const active = highlights.activeGraph;
+  if (active === 'A') { hB.dimAll = true; hA.dimAll = false; }
+  else if (active === 'B') { hA.dimAll = true; hB.dimAll = false; }
+  else if (!active) {
+    if (highlights.graphAEnded) { hA.dimAll = false; } else { hA.dimAll = false; }
+    if (highlights.graphBEnded) { hB.dimAll = false; } else { hB.dimAll = false; }
+  }
+
+  drawGraph(ctxA, graphAVertices, graphAEdges, graphAPos,
+    cA.width, cA.height, hA);
+  drawGraph(ctxB, graphBVertices, graphBEdges, graphBPos,
+    cB.width, cB.height, hB);
+}
+
+// ===== TABLE RENDERING =====
+
+function renderPathTable(pathData, activeGraph, currentKey, isViolation) {
+  const tbody = document.getElementById('pathTableBody');
+  const keys = Object.keys(pathData).sort();
+  if (keys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#555;padding:15px;">No paths enumerated yet. Press Play or Step.</td></tr>';
+    return;
+  }
+  let html = '';
+  for (const key of keys) {
+    const [s, d] = key.split('->');
+    const data = pathData[key];
+    const isCurrent = key === currentKey;
+    const hasViolation = data.count > 1;
+    const rowClass = isCurrent
+      ? (hasViolation ? 'violation-row' : 'highlight-row')
+      : '';
+    html += `<tr class="${rowClass}">`;
+    html += `<td>${activeGraph || '—'}</td>`;
+    html += `<td>${s}</td>`;
+    html += `<td>${d}</td>`;
+    html += `<td class="${hasViolation ? 'violation-cell' : 'unique-cell'}">${data.count}</td>`;
+    html += `<td>${hasViolation
+      ? '<span style="color:#ff4444;font-weight:bold;">✗ ' + data.count + ' paths</span>'
+      : '<span style="color:#00ff88;">✓ Unique</span>'}</td>`;
+    html += `</tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+// ===== PATH DISPLAY =====
+
+function updatePathDisplay(path, isFirst, allPathsToDest, count) {
+  const area = document.getElementById('pathDisplayArea');
+  const label = document.getElementById('pathLabel');
+  const container = document.getElementById('pathSequenceContainer');
+  const meta = document.getElementById('pathMeta');
+
+  if (!path) {
+    area.style.display = 'none';
+    return;
+  }
+
+  area.style.display = 'block';
+
+  if (isFirst === false) {
+    label.innerHTML = '⚠️ <span style="color:#ff66ff;font-weight:bold;">Multiple paths detected!</span>';
+    // Show all paths
+    let allHtml = '';
+    for (let pi = 0; pi < allPathsToDest.length; pi++) {
+      const p = allPathsToDest[pi];
+      const pColor = pi === 0 ? '#00ccff' : (pi === allPathsToDest.length - 1 ? '#ff66ff' : '#ffcc00');
+      allHtml += '<div class="path-sequence" style="justify-content:center;">';
+      allHtml += `<span style="color:#888;font-size:0.8em;margin-right:4px;">Path #${pi+1}:</span>`;
+      for (let i = 0; i < p.length; i++) {
+        const clr = (pi === 0 && i === 0) ? '#ff6600' : ((pi === 0) ? '#00ccff' : (pi === allPathsToDest.length - 1 ? '#ff66ff' : '#ffcc00'));
+        allHtml += `<span class="path-box" style="border-color:${clr};color:${clr};">${p[i]}</span>`;
+        if (i < p.length - 1) allHtml += `<span class="path-arrow" style="color:${clr};">→</span>`;
+      }
+      allHtml += '</div>';
+    }
+    container.innerHTML = allHtml;
+    meta.innerHTML = `<span style="color:#ff4444;">✗ ${count} distinct paths from ${path[0]} to ${path[path.length-1]}</span> — violates singly-connected property`;
+  } else {
+    label.innerHTML = '<span style="color:#00ccff;">Path found</span>';
+    let html = '<div class="path-sequence">';
+    const pColor = '#00ccff';
+    for (let i = 0; i < path.length; i++) {
+      const clr = i === 0 ? '#ff6600' : pColor;
+      html += `<span class="path-box" style="border-color:${clr};color:${clr};">${path[i]}</span>`;
+      if (i < path.length - 1) html += `<span class="path-arrow" style="color:${clr};">→</span>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    meta.innerHTML = `<span style="color:#00ff88;">✓ Path #${count} — unique simple path from ${path[0]} to ${path[path.length-1]}</span>`;
+  }
+}
+
+// ===== EXPLANATION BUILDERS =====
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Singly Connected Directed Graphs</h3>
+<p>A directed graph <span class="dim">G = (V, E)</span> is <b>singly connected</b> if for every pair of vertices <span class="dim">(u, v)</span>, there is <b>at most one simple path</b> from u to v.</p>
+<h3 style="margin-top:10px;">Two Test Graphs</h3>
+<p><span class="result-line">Graph A:</span> V={0,1,2,3,4}, E={0→1, 1→2, 2→3, 2→4}</p>
+<p style="margin-left:8px;">• Tree-like DAG — every node has a single path from the root</p>
+<p><span style="color:#ff4444;font-weight:bold;">Graph B:</span> V={0,1,2,3}, E={0→1, 0→2, 1→3, 2→3}</p>
+<p style="margin-left:8px;">• Diamond pattern — two paths from 0 to 3: 0→1→3 and 0→2→3</p>
+<h3 style="margin-top:10px;">Testing Algorithm</h3>
+<p>For each source vertex u, run <b>DFS</b> to enumerate all simple paths from u. If any destination v is reached ≥2 times via different paths, the graph is <b>not singly connected</b>.</p>
+<p><span class="dim">Complexity:</span> O(V·E) time, O(V) space per DFS</p>
+<p class="note">Press Play or Step to begin. We'll process Graph A first, then Graph B.</p>
+</div>`;
+}
+
+function buildPathFoundExplanation(src, dest, path, isFirst, count, graph) {
+  const pathStr = path.join(' → ');
+  const graphColor = graph === 'A' ? '#00ff88' : '#ff4444';
+  return `<div class="explain-section active">
+<h3>🔍 ${isFirst ? 'Discovering Path' : '⚠️ Multiple Paths!'}</h3>
+<p>Source <span class="dim">${src}</span>, Destination <span class="dim">${dest}</span></p>
+<p>DFS from source <span class="result-line">${src}</span> reached vertex <span class="dim">${dest}</span> via:</p>
+<span class="formula-line">${pathStr}</span>
+${isFirst
+  ? `<p>This is the <span class="result-line">first path</span> from ${src} to ${dest}. Marked as <span style="color:#00ff88;">unique ✓</span>.</p>
+     <p class="note">Graph ${graph}: path #1 to destination ${dest} — no violation yet.</p>`
+  : `<p>This is the <span style="color:#ff4444;font-weight:bold;">${count === 2 ? 'second' : count + 'th'} path</span> from ${src} to ${dest}!</p>
+     <p><span style="color:#ff4444;font-weight:bold;">VIOLATION:</span> Found ${count} distinct simple paths from ${src} to ${dest}.</p>
+     <p class="note">Graph <span style="color:#ff4444;font-weight:bold;">B</span> is NOT singly connected due to this diamond pattern.</p>`}
+</div>`;
+}
+
+function buildGraphDoneExplanation(graph, isSinglyConnected, pathData) {
+  if (graph === 'A') {
+    return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Graph A Complete — Singly Connected</h3>
+<p>All 9 path pairs checked. Every pair has <b>exactly one</b> simple path.</p>
+<p style="margin-left:8px;margin-top:6px;">
+<span class="result-line">✓ 0→1</span>, <span class="result-line">✓ 0→2</span>, <span class="result-line">✓ 0→3</span>, <span class="result-line">✓ 0→4</span><br>
+<span class="result-line">✓ 1→2</span>, <span class="result-line">✓ 1→3</span>, <span class="result-line">✓ 1→4</span><br>
+<span class="result-line">✓ 2→3</span>, <span class="result-line">✓ 2→4</span>
+</p>
+<p>Graph A is a <b>tree-like DAG</b> — no diamond patterns, no multiple paths.</p>
+<p class="note">Now proceeding to Graph B...</p>
+</div>`;
+  } else {
+    return `<div class="explain-section active" style="border-left-color:#ff4444;">
+<h3>⚠️ Graph B Complete — NOT Singly Connected</h3>
+<p>Found <span style="color:#ff4444;font-weight:bold;">multiple paths</span> between some pairs:</p>
+<p style="margin-left:8px;margin-top:6px;">
+<span style="color:#ff4444;font-weight:bold;">✗ 0→3: 2 paths</span><br>
+<span class="result-line">✓ 0→1</span>, <span class="result-line">✓ 0→2</span><br>
+<span class="result-line">✓ 1→3</span>, <span class="result-line">✓ 2→3</span>
+</p>
+<p>The <b>diamond pattern</b> (0→1, 0→2, 1→3, 2→3) creates two distinct simple paths from 0 to 3.</p>
+<p class="note">Even though Graph B is a DAG (no cycles), it is NOT singly connected due to multiple paths.</p>
+</div>`;
+  }
+}
+
+function buildCompleteExplanation(aData, bData, bViolations) {
+  let aTotal = 0; for (const k in aData) aTotal += aData[k].count;
+  let bTotal = 0; for (const k in bData) bTotal += bData[k].count;
+  let vList = bViolations.length > 0 ? bViolations.join(', ') : 'none';
+
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Analysis Complete!</h3>
+<p><span class="result-line">Graph A:</span> ${aTotal} paths, 0 violations → <span style="color:#00ff88;font-weight:bold;">Singly Connected ✓</span></p>
+<p><span style="color:#ff4444;font-weight:bold;">Graph B:</span> ${bTotal} paths, ${bViolations.length} violation(s): <span style="color:#ff4444;">${vList}</span> → <span style="color:#ff4444;font-weight:bold;">NOT Singly Connected ✗</span></p>
+<h3 style="margin-top:10px;">Key Takeaways</h3>
+<p>• A <b>singly connected</b> graph has at most one simple path between any two vertices.</p>
+<p>• This is <b>different</b> from regular connectivity, which only requires <b>existence</b> of a path.</p>
+<p>• <b>Cycles</b> always create multiple paths (go around the cycle different ways).</p>
+<p>• But even <b>DAGs</b> can be non-singly-connected if they have <b>diamond patterns</b>.</p>
+<p>• The test takes <span class="dim">O(V·E)</span> time: run DFS from each vertex, counting paths to each other vertex.</p>
+<p class="note">Click on any row in the path table to highlight the paths on the graph.</p>
+</div>`;
+}
+
+// ===== ANIMATION CORE =====
+
+function applyStep(step) {
+  let stepIdx = steps.indexOf(step);
+  if (stepIdx < 0) stepIdx = currentStep - 1;
+  if (stepIdx < 0) stepIdx = 0;
+
+  // Update info panel
+  document.getElementById('phaseDisplay').textContent = step.phase || '—';
+  document.getElementById('graphDisplay').textContent = step.activeGraph || '—';
+  document.getElementById('sourceDisplay').textContent = (step.src !== null && step.src !== undefined) ? step.src : '—';
+  document.getElementById('destDisplay').textContent = (step.dest !== null && step.dest !== undefined) ? step.dest : '—';
+  document.getElementById('countDisplay').textContent = (step.count !== null && step.count !== undefined) ? '#' + step.count : '—';
+
+  // Draw graphs
+  const highlights = {
+    activeGraph: step.activeGraph,
+    source: step.src,
+    path: step.path,
+    isFirst: step.isFirst,
+    allPathsToDest: step.allPathsToDest,
+    pathData: step.pathData,
+    graphAEnded: step.graphAEnded || false,
+    graphBEnded: step.graphBEnded || false,
+    graphDone: step.graphDone || {A: false, B: false}
+  };
+  drawAllGraphs(highlights);
+
+  // Update path table
+  const currentKey = (step.src !== null && step.dest !== null) ? step.src + '->' + step.dest : null;
+  renderPathTable(step.pathData || {}, step.activeGraph, currentKey, step.type === 'violation');
+
+  // Update path display
+  if (step.type === 'path_found' || step.type === 'violation') {
+    updatePathDisplay(step.path, step.isFirst, step.allPathsToDest, step.count);
+  } else {
+    updatePathDisplay(null, null, null, null);
+  }
+
+  // Update sidebar
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation();
+      break;
+    case 'path_found':
+    case 'violation':
+      explanation = buildPathFoundExplanation(step.src, step.dest, step.path, step.isFirst, step.count, step.activeGraph);
+      break;
+    case 'graph_done':
+      explanation = buildGraphDoneExplanation(step.activeGraph, step.isSinglyConnected, step.pathData);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation(step.graphAData, step.graphBData, step.violations);
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${stepIdx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(null); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation(null);
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation(step) {
+  animating = false;
+  if (!step) step = steps[steps.length - 1];
+  if (!step || step.type !== 'complete') return;
+
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('graphDisplay').textContent = 'A & B';
+  document.getElementById('sourceDisplay').textContent = '—';
+  document.getElementById('destDisplay').textContent = '—';
+  document.getElementById('countDisplay').textContent = '—';
+
+  document.getElementById('resultSection').style.display = 'block';
+
+  const aTotal = Object.keys(step.graphAData || {}).length;
+  const bTotal = Object.keys(step.graphBData || {}).length;
+  const bViolations = step.violations || [];
+  const vStr = bViolations.length > 0 ? bViolations.join(', ') : 'none';
+
+  document.getElementById('resultContent').innerHTML = `
+    <div class="graph-status">
+      <div class="gcard" style="border-color:#00ff88;">
+        <h4>Graph A</h4>
+        <div class="result-text" style="color:#00ff88;">Singly Connected ✓</div>
+        <div class="tag tag-green">${aTotal} pairs, 0 violations</div>
+      </div>
+      <div class="gcard" style="border-color:#ff4444;">
+        <h4>Graph B</h4>
+        <div class="result-text" style="color:#ff4444;">NOT Singly Connected ✗</div>
+        <div class="tag tag-red">${bTotal} pairs, ${bViolations.length} violation(s)</div>
+      </div>
+    </div>
+    <p style="margin-top:12px;color:#888;">
+      A graph is singly connected iff every pair of vertices has at most one simple path between them.
+      ${bViolations.length > 0
+        ? '<br>Violating pair(s): <span style="color:#ff4444;font-weight:bold;">' + vStr + '</span>'
+        : ''}
+    </p>
+    <p style="margin-top:6px;color:#888;font-size:0.82em;">
+      Testing complexity: <span class="dim">O(V·E)</span> via DFS from each vertex
+    </p>
+  `;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('graphDisplay').textContent = '—';
+  document.getElementById('sourceDisplay').textContent = '—';
+  document.getElementById('destDisplay').textContent = '—';
+  document.getElementById('countDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  updatePathDisplay(null, null, null, null);
+
+  buildSteps();
+  if (steps.length > 0) {
+    applyStep(steps[0]);
+  }
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ===== SPEED SLIDER =====
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation(null);
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// ===== TABLE CLICK INTERACTION =====
+
+document.getElementById('pathTableBody').addEventListener('click', function(e) {
+  // Only interactive after animation complete
+  const lastStep = steps[steps.length - 1];
+  if (!lastStep || lastStep.type !== 'complete') return;
+
+  const row = e.target.closest('tr');
+  if (!row) return;
+  const cells = row.querySelectorAll('td');
+  if (cells.length < 5) return;
+  const graphLabel = cells[0].textContent.trim();
+  const src = parseInt(cells[1].textContent);
+  const dest = parseInt(cells[2].textContent);
+  if (isNaN(src) || isNaN(dest)) return;
+
+  const vertices = graphLabel === 'A' ? graphAVertices : graphBVertices;
+  const edges = graphLabel === 'A' ? graphAEdges : graphBEdges;
+  const positions = graphLabel === 'A' ? graphAPos : graphBPos;
+
+  // Find all paths from src to dest
+  const adj = {};
+  for (const v of vertices) adj[v] = [];
+  for (const {u, v} of edges) adj[u].push(v);
+
+  const allPaths = [];
+  const visited = new Set([src]);
+
+  (function dfs(curr, path) {
+    if (curr === dest && path.length > 1) {
+      allPaths.push([...path]);
+      // Don't stop — there might be more
+    }
+    for (const next of (adj[curr] || [])) {
+      if (!visited.has(next)) {
+        visited.add(next);
+        path.push(next);
+        dfs(next, path);
+        path.pop();
+        visited.delete(next);
+      }
+    }
+  })(src, [src]);
+
+  // Highlight on canvas
+  const canvas = graphLabel === 'A' ? document.getElementById('canvasA') : document.getElementById('canvasB');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Re-draw base graph
+  drawGraph(ctx, vertices, edges, positions, W, H, {
+    dimAll: false,
+    myLabel: graphLabel,
+    activeGraph: null,
+    source: null, path: null,
+    isFirst: null, allPathsToDest: null,
+    pathData: null
+  });
+
+  // Draw paths
+  const pathColors = ['#00ccff', '#ff66ff', '#ffcc00', '#00ff88'];
+  for (let pi = 0; pi < allPaths.length; pi++) {
+    const p = allPaths[pi];
+    const color = pathColors[pi % pathColors.length];
+    // Draw edges
+    for (let i = 0; i < p.length - 1; i++) {
+      const p1 = positions[p[i]];
+      const p2 = positions[p[i+1]];
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 12;
+      drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, color, 3.5);
+      ctx.shadowBlur = 0;
+    }
+    // Draw intermediate vertices
+    for (let i = 1; i < p.length - 1; i++) {
+      const pos = positions[p[i]];
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a00';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 16px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(p[i]), pos.x, pos.y);
+    }
+    // Highlight source and dest
+    const srcPos = positions[src];
+    ctx.beginPath();
+    ctx.arc(srcPos.x, srcPos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a0a00';
+    ctx.fill();
+    ctx.strokeStyle = '#ff6600';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = '#ff6600';
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(src), srcPos.x, srcPos.y);
+
+    const dstPos = positions[dest];
+    ctx.beginPath();
+    ctx.arc(dstPos.x, dstPos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a0000';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(dest), dstPos.x, dstPos.y);
+  }
+
+  // Update sidebar
+  let pathList = allPaths.map((p, i) => `<span style="color:${pathColors[i % pathColors.length]};">Path ${i+1}: ${p.join(' → ')}</span>`).join('<br>');
+  const isViolation = allPaths.length > 1;
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active" style="border-left-color:${isViolation ? '#ff4444' : '#00ff88'};">
+      <h3>${isViolation ? '⚠️ Multiple Paths' : '✓ Single Path'} from ${src} to ${dest}</h3>
+      <p>Graph ${graphLabel}: <span class="dim">${src} → ${dest}</span></p>
+      <p><span style="color:#ffcc00;">${allPaths.length} simple path(s) found:</span></p>
+      <p style="margin-left:8px;margin-top:4px;">${pathList}</p>
+      <p style="margin-top:6px;">${isViolation
+        ? '<span style="color:#ff4444;font-weight:bold;">✗ Not singly connected — multiple distinct paths exist.</span>'
+        : '<span style="color:#00ff88;font-weight:bold;">✓ Singly connected — exactly one path.</span>'}</p>
+    </div>`;
+  document.getElementById('sidebarPhase').textContent = '📌 Interactive — pair (' + src + '→' + dest + ')';
+  document.getElementById('sidebar').scrollTop = 0;
+});
+
+// ===== INIT =====
+
+buildSteps();
+if (steps.length > 0) {
+  applyStep(steps[0]);
+}
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Articulation Points &amp; Bridges Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .hl-green { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.legend {
+  display: flex; justify-content: center; gap: 16px; margin: 8px 0; font-size: 0.78em; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.legend-tree { background: #00ff8844; border-color: #00ff88; }
+.legend-back { background: #ff660044; border-color: #ff6600; }
+.legend-bridge { background: #ff006644; border-color: #ff0066; }
+.legend-ap { background: #ff004444; border-color: #ff0044; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 20px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 10px; text-align: center; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td { width: 76px; height: 38px; text-align: center; border: 1px solid #333; font-size: 0.76em; transition: all 0.3s; }
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.white-state { background: #0d0d1a; color: #555; }
+td.gray-state { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; font-weight: bold; }
+td.black-state { background: #0a1a12 !important; color: #00ff88 !important; }
+td.ap-true { color: #ff0044 !important; font-weight: bold; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.1em; color: #00ff88; font-weight: bold; margin: 12px 0; line-height: 1.8; }
+.result-list { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin: 10px 0; }
+.result-card { background: #0d0d1a; border: 2px solid #333; border-radius: 10px; padding: 12px 18px; min-width: 120px; }
+.result-card h4 { color: #00ccff; font-size: 0.9em; margin-bottom: 8px; }
+.result-card .num { font-size: 1.6em; font-weight: bold; }
+.result-card.ap-card { border-color: #ff0044; }
+.result-card.ap-card .num { color: #ff0044; }
+.result-card.bridge-card { border-color: #ff0066; }
+.result-card.bridge-card .num { color: #ff0066; }
+.ap-item { color: #ff0044; font-weight: bold; }
+.bridge-item { color: #ff0066; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>ARTICULATION POINTS &amp; BRIDGES</h1>
+<p class="subtitle">Graph Algorithms — Finding Critical Nodes and Edges with DFS Low-Link Values</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="680" height="420"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-tree"></span> Tree Edge</span>
+      <span class="legend-item"><span class="legend-swatch legend-back"></span> Back Edge</span>
+      <span class="legend-item"><span class="legend-swatch legend-bridge"></span> Bridge</span>
+      <span class="legend-item"><span class="legend-swatch legend-ap"></span> Articulation Point</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9205; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">low Update:</span> <span class="value" id="lowDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">DFS Discovery &amp; Low-Link Values</div>
+      <div class="table-wrapper">
+        <table id="dfTable">
+          <thead>
+            <tr>
+              <th>Vertex</th>
+              <th>State</th>
+              <th>Parent</th>
+              <th>d</th>
+              <th>low</th>
+              <th>Ch.</th>
+              <th>AP?</th>
+            </tr>
+          </thead>
+          <tbody id="dfBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Discoveries</div>
+      <div id="discoveryDisplay" style="background:#111; border:1px solid #333; border-radius:10px; padding:15px; font-size:0.82em; line-height:1.8; text-align:center; min-height:30px; color:#888;">
+        Waiting for DFS to begin...
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; Algorithm Complete</h2>
+      <div class="result-list">
+        <div class="result-card ap-card">
+          <h4>Articulation Points</h4>
+          <div class="num" id="finalAPCount">0</div>
+          <div id="finalAPList" style="color:#ff0044; font-size:0.85em; margin-top:4px;"></div>
+        </div>
+        <div class="result-card bridge-card">
+          <h4>Bridges</h4>
+          <div class="num" id="finalBridgeCount">0</div>
+          <div id="finalBridgeList" style="color:#ff0066; font-size:0.85em; margin-top:4px;"></div>
+        </div>
+      </div>
+      <div id="finalResultDetail" class="big-result"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Articulation Points &amp; Bridges</h3>
+        <p>An <b>articulation point</b> (or cut vertex) is a vertex whose removal disconnects the graph. A <b>bridge</b> (or cut edge) is an edge whose removal disconnects the graph.</p>
+        <h3 style="margin-top:10px;">Graph</h3>
+        <p>8 vertices {<span class="dim">0,1,2,3,4,5,6,7</span>} with 9 undirected edges.</p>
+        <p>Edges: <span class="dim">0-1, 1-2, 1-3, 2-3, 1-4, 4-5, 5-6, 5-7, 6-7</span></p>
+        <p>Three regions connected by bridges: left cycle {<span class="dim">0,1,2,3</span>}, middle node <span class="dim">4</span>, right cycle {<span class="dim">5,6,7</span>}.</p>
+        <h3 style="margin-top:10px;">Key Formulas</h3>
+        <span class="formula-line">low[v] = min( d[v], d[w] for each back edge (v,w), low[w] for each child w )</span>
+        <p>Non-root <span class="dim">v</span> is articulation point if <span class="dim">&exist; child w</span> with <span class="result-line">low[w] &ge; d[v]</span></p>
+        <p>Root is articulation point if it has <span class="result-line">&ge; 2 children</span></p>
+        <p>Edge <span class="dim">(u,v)</span> is a bridge if <span class="result-line">low[v] &gt; d[u]</span></p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4, 5, 6, 7];
+const adjList = {
+  0: [1],
+  1: [0, 2, 3, 4],
+  2: [1, 3],
+  3: [1, 2],
+  4: [1, 5],
+  5: [4, 6, 7],
+  6: [5, 7],
+  7: [5, 6]
+};
+const edgeList = [
+  {u:0,v:1}, {u:1,v:2}, {u:1,v:3}, {u:2,v:3},
+  {u:1,v:4}, {u:4,v:5},
+  {u:5,v:6}, {u:5,v:7}, {u:6,v:7}
+];
+const nodePositions = {
+  0: { x: 160, y: 75 },
+  1: { x: 200, y: 210 },
+  2: { x: 100, y: 350 },
+  3: { x: 300, y: 350 },
+  4: { x: 360, y: 210 },
+  5: { x: 490, y: 210 },
+  6: { x: 560, y: 90 },
+  7: { x: 560, y: 350 }
+};
+const nodeRadius = 22;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initial State</h3>
+<p>All 8 vertices are <span style="color:#555;">white</span> (undiscovered). DFS starts from vertex <span class="dim">0</span>.</p>
+<h3 style="margin-top:10px;">Low-Link Concept</h3>
+<p><span class="dim">low[v]</span> = the earliest discovered vertex reachable from v via tree edges and <b>at most one back edge</b>.</p>
+<p>Initially, <span class="dim">low[v] = d[v]</span> (discovery time).</p>
+<p>low[v] <span style="color:#ff6600;">decreases</span> when we find a back edge to an ancestor or propagate a child's lower low.</p>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildDiscoverExplanation(v, dTime) {
+  return `<div class="explain-section active">
+<h3>&#128269; Discover Vertex ${v}</h3>
+<p>Entering vertex <span class="dim">${v}</span> at time <span class="result-line">d = ${dTime}</span>.</p>
+<p>Initialize <span class="dim">low[${v}] = d[${v}] = ${dTime}</span>.</p>
+<p>Color: <span style="color:#555;">white</span> &rarr; <span style="color:#ff6600;">gray</span> (on recursion stack).</p>
+<p>We will explore each neighbor and then compute the final low value.</p>
+</div>`;
+}
+
+function buildTreeEdgeExplanation(u, v, v_d) {
+  return `<div class="explain-section active">
+<h3>&#127794; Tree Edge ${u}&minus;${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span class="result-line">tree edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#555;">white</span> (undiscovered) &rarr; becomes child of <span class="dim">${u}</span>.</p>
+<p>Discovered at time <span class="result-line">d[${v}] = ${v_d}</span>. low[${v}] = ${v_d}.</p>
+<p>DFS will recursively explore <span class="dim">${v}</span>'s subtree.</p>
+</div>`;
+}
+
+function buildBackEdgeExplanation(u, v, d_v, oldLow, newLow, isAncestor) {
+  let ancestorNote = isAncestor
+    ? '<span style="color:#ff6600;font-weight:bold;">ancestor</span> on the recursion stack'
+    : '<span style="color:#00ff88;">descendant</span> (already finished)';
+  let improvedNote = newLow < oldLow
+    ? `<p><span class="result-line">low[${u}] improved from ${oldLow} to ${newLow}</span> via back edge to ${isAncestor ? 'ancestor' : 'descendant'} ${v}.</p>`
+    : `<p class="note">No improvement &mdash; d[${v}] = ${d_v} is not lower than low[${u}] = ${oldLow}.</p>`;
+  return `<div class="explain-section active">
+<h3>&#8635; Back Edge ${u}&minus;${v}</h3>
+<p>Neighbor <span class="dim">${v}</span> is ${ancestorNote} &rarr; <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>
+<p><span class="dim">low[${u}]</span> update via this back edge:</p>
+<span class="formula-line">low[${u}] = min(low[${u}], d[${v}]) = min(${oldLow}, ${d_v}) = ${newLow}</span>
+${improvedNote}
+</div>`;
+}
+
+function buildAfterChildExplanation(u, v, oldLow, newLow) {
+  if (newLow < oldLow) {
+    return `<div class="explain-section active">
+<h3>&#8593; Propagate low from Child ${v}</h3>
+<p>Returned from child <span class="dim">${v}</span> back to <span class="dim">${u}</span>.</p>
+<p>Child <span class="dim">${v}</span> has <span class="dim">low[${v}] = ${newLow}</span>:</p>
+<span class="formula-line">low[${u}] = min(low[${u}], low[${v}]) = min(${oldLow}, ${newLow}) = ${newLow}</span>
+<p><span class="result-line">low[${u}] improved from ${oldLow} to ${newLow}</span> via child ${v}.</p>
+</div>`;
+  }
+  return `<div class="explain-section active">
+<h3>&#8617; Back from Child ${v}</h3>
+<p>Returned from child <span class="dim">${v}</span> back to <span class="dim">${u}</span>.</p>
+<p>Child low: <span class="dim">low[${v}] = ${newLow}</span>. Current <span class="dim">low[${u}] = ${oldLow}</span>.</p>
+<span class="formula-line">low[${u}] = min(${oldLow}, ${newLow}) = ${oldLow}</span>
+<p>No improvement &mdash; <span class="dim">low[${u}]</span> stays <span class="result-line">${oldLow}</span>.</p>
+</div>`;
+}
+
+function buildMarkAPExplanation(v, child, lowChild, dV) {
+  return `<div class="explain-section active" style="border-left-color:#ff0044;">
+<h3>&#9888; Articulation Point: ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> is an <span style="color:#ff0044;font-weight:bold;">articulation point!</span></p>
+<p>Child <span class="dim">${child}</span> has <span class="dim">low[${child}] = ${lowChild}</span>.</p>
+<span class="formula-line">low[${child}] = ${lowChild} &ge; d[${v}] = ${dV}</span>
+<p>Removing <span style="color:#ff0044;font-weight:bold;">${v}</span> disconnects the graph &mdash; <span class="dim">${child}</span>'s subtree becomes separated.</p>
+${v === 1 ? '<p class="note">Connects the left cycle to vertex 4 and the rest of the graph.</p>' : ''}
+${v === 4 ? '<p class="note">Sits on the bridge between the left cycle and right cycle.</p>' : ''}
+${v === 5 ? '<p class="note">Connects vertices 6,7 to the rest via the bridge to 4.</p>' : ''}
+</div>`;
+}
+
+function buildRootAPExplanation(v, childCount) {
+  return `<div class="explain-section active" style="border-left-color:#ff0044;">
+<h3>&#9888; Root Articulation Point: ${v}</h3>
+<p>Root <span class="dim">${v}</span> has <span class="result-line">${childCount} children</span> in the DFS tree.</p>
+<p>A root is an articulation point if it has <span style="color:#ff0044;font-weight:bold;">&ge; 2 children</span>.</p>
+<p>Removing root <span class="dim">${v}</span> would disconnect its children's subtrees from each other.</p>
+</div>`;
+}
+
+function buildMarkBridgeExplanation(u, v, lowV, dU) {
+  return `<div class="explain-section active" style="border-left-color:#ff0066;">
+<h3>&#127794; Bridge: ${u}&minus;${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#ff0066;font-weight:bold;">bridge!</span></p>
+<span class="formula-line">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span>
+<p>Removing this edge disconnects the graph &mdash; <span class="dim">${v}</span>'s entire subtree has no back edge reaching above <span class="dim">${u}</span>.</p>
+</div>`;
+}
+
+function buildFinishExplanation(v, fTime, lowV) {
+  return `<div class="explain-section active">
+<h3>&#10003; Finish Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> finished at time <span class="result-line">f = ${fTime}</span>.</p>
+<p>Final <span class="dim">low[${v}] = ${lowV}</span>. Color: <span style="color:#ff6600;">gray</span> &rarr; <span style="color:#00ff88;">black</span>.</p>
+<p>All descendants of <span class="dim">${v}</span> have been fully explored. DFS backtracks to its parent.</p>
+</div>`;
+}
+
+function buildCompleteExplanation(apList, bridgeList) {
+  let apStr = apList.length > 0
+    ? apList.map(v => `<span class="ap-item">${v}</span>`).join(', ')
+    : '<span style="color:#888;">None</span>';
+  let brStr = bridgeList.length > 0
+    ? bridgeList.map(e => `<span class="bridge-item">${e.u}&minus;${e.v}</span>`).join(', ')
+    : '<span style="color:#888;">None</span>';
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>&#10004; Algorithm Complete!</h3>
+<p>All 8 vertices explored via DFS starting from vertex <span class="dim">0</span>.</p>
+<h3 style="margin-top:10px;">Articulation Points</h3>
+<p>${apStr}</p>
+<p>These vertices, if removed, would disconnect the graph into multiple components.</p>
+<h3 style="margin-top:10px;">Bridges</h3>
+<p>${brStr}</p>
+<p>These edges, if removed, would disconnect the graph.</p>
+<h3 style="margin-top:10px;">Low-Link Insight</h3>
+<p>A vertex <span class="dim">v</span> is an articulation point if some child <span class="dim">w</span> has <span class="dim">low[w] &ge; d[v]</span> &mdash; meaning <span class="dim">w</span>'s subtree has no back edge reaching above <span class="dim">v</span>.</p>
+<p>An edge <span class="dim">(u,v)</span> is a bridge if <span class="dim">low[v] &gt; d[u]</span> &mdash; meaning <span class="dim">v</span>'s subtree cannot reach <span class="dim">u</span> or above via any alternate path.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) &mdash; single DFS pass</p>
+<p><span class="dim">Space:</span> O(V) for recursion stack and arrays</p>
+</div>`;
+}
+
+function buildDiscoverySequence(step) {
+  let parts = [];
+  let d = step.d || {};
+  let low = step.low || {};
+  let f = step.f || {};
+  for (let v of vertices) {
+    if (d[v] > 0) {
+      let label = `${v}: d=${d[v]}`;
+      if (low[v] > 0) label += ` low=${low[v]}`;
+      if (f[v] > 0) label += ` f=${f[v]}`;
+      let c = (step.color || {})[v] || 'white';
+      let col = c === 'gray' ? '#ff6600' : (c === 'black' ? '#00ff88' : '#888');
+      parts.push(`<span style="color:${col};font-weight:bold;">${label}</span>`);
+    }
+  }
+  if (parts.length === 0) return '<span style="color:#555;">Waiting for DFS to begin...</span>';
+  return parts.join(' &nbsp;&nbsp; ');
+}
+
+// --- Canvas drawing ---
+
+function drawEdge(ctx, x1, y1, x2, y2, colorVal, lineWidth, dash) {
+  let dx = x2 - x1, dy = y2 - y1;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist, ny = dy / dist;
+  let sX = x1 + nx * (nodeRadius + 2);
+  let sY = y1 + ny * (nodeRadius + 2);
+  let eX = x2 - nx * (nodeRadius + 2);
+  let eY = y2 - ny * (nodeRadius + 2);
+  ctx.beginPath();
+  ctx.moveTo(sX, sY);
+  ctx.lineTo(eX, eY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  if (dash) ctx.setLineDash(dash);
+  else ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let col = step.color || {};
+  let curEdge = step.currentEdge;
+  let d = step.d || {};
+  let low = step.low || {};
+  let isAP = step.isArticulation || {};
+  let bridges = step.bridgesList || [];
+  let markedAP = {};
+  for (let v of vertices) { if (isAP[v]) markedAP[v] = true; }
+  let bridgeSet = {};
+  for (let e of bridges) { let k = e.u + '-' + e.v; let r = e.v + '-' + e.u; bridgeSet[k] = true; bridgeSet[r] = true; }
+  let discoveredEdges = step.discoveredEdges || [];
+
+  let edgeType = {};
+  for (let de of discoveredEdges) {
+    let k1 = de.u + '-' + de.v, k2 = de.v + '-' + de.u;
+    edgeType[k1] = de.cls; edgeType[k2] = de.cls;
+  }
+  if (curEdge) {
+    let k1 = curEdge.u + '-' + curEdge.v, k2 = curEdge.v + '-' + curEdge.u;
+    if (step.type === 'tree_edge' || step.type === 'after_child' || step.type === 'update_low' || step.type === 'mark_ap') {
+      edgeType[k1] = 'tree'; edgeType[k2] = 'tree';
+    } else if (step.type === 'back_edge') {
+      edgeType[k1] = 'back'; edgeType[k2] = 'back';
+    } else if (step.type === 'mark_bridge') {
+      edgeType[k1] = 'bridge'; edgeType[k2] = 'bridge';
+    }
+  }
+  for (let e of bridges) {
+    let k1 = e.u + '-' + e.v, k2 = e.v + '-' + e.u;
+    edgeType[k1] = 'bridge'; edgeType[k2] = 'bridge';
+  }
+
+  for (let edge of edgeList) {
+    let p1 = nodePositions[edge.u];
+    let p2 = nodePositions[edge.v];
+    let k = edge.u + '-' + edge.v;
+    let et = edgeType[k];
+    let isBridge = bridgeSet[k] || false;
+    let isCur = curEdge && ((curEdge.u === edge.u && curEdge.v === edge.v) || (curEdge.u === edge.v && curEdge.v === edge.u));
+
+    let colorVal = '#444';
+    let lw = 1.5;
+    let dash = null;
+
+    if (et === 'tree') {
+      colorVal = '#00ff88';
+      lw = 2.8;
+    } else if (et === 'back') {
+      colorVal = '#ff6600';
+      lw = 2.5;
+      dash = [6, 4];
+    } else if (et === 'bridge') {
+      colorVal = '#ff0066';
+      lw = 3.5;
+    }
+
+    if (isCur && (step.type === 'mark_bridge' || isBridge)) {
+      colorVal = '#ff0066';
+      lw = 4;
+      ctx.shadowColor = '#ff0066';
+      ctx.shadowBlur = 20;
+    } else if (isCur && step.type === 'tree_edge') {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 14;
+    } else if (isCur && step.type === 'back_edge') {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 14;
+    } else if (isCur) {
+      ctx.shadowColor = colorVal;
+      ctx.shadowBlur = 10;
+    } else if (et === 'bridge') {
+      ctx.shadowColor = '#ff0066';
+      ctx.shadowBlur = 8;
+    } else if (et === 'tree') {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 4;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    drawEdge(ctx, p1.x, p1.y, p2.x, p2.y, colorVal, lw, dash);
+    ctx.shadowBlur = 0;
+  }
+
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let c = col[v] || 'white';
+    let isCurrent = (v === step.currentVertex);
+    let isAPVertex = markedAP[v];
+
+    let fillColor, strokeColor, textColor;
+    if (c === 'gray') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    } else if (c === 'black') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (isAPVertex) {
+      strokeColor = '#ff0044';
+      textColor = '#ff0044';
+    }
+
+    if (isCurrent && c === 'gray') {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    }
+
+    let r = nodeRadius;
+    if (isAPVertex) r = nodeRadius + 6;
+
+    ctx.shadowBlur = 0;
+    if (isCurrent) {
+      ctx.shadowColor = strokeColor;
+      ctx.shadowBlur = 20;
+    } else if (isAPVertex) {
+      ctx.shadowColor = '#ff0044';
+      ctx.shadowBlur = 12;
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isCurrent ? 3.5 : (isAPVertex ? 3 : 2);
+    ctx.stroke();
+
+    if (isAPVertex) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ff004466';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 9, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ff004444';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    if (isCurrent) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeColor + '44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    let dv = d[v] || 0;
+    let lowV = low[v] || 0;
+    if (dv > 0) {
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      let label = `${dv}`;
+      if (lowV > 0) label += ` (${lowV})`;
+      ctx.fillStyle = isAPVertex ? '#ff0044' : strokeColor;
+      ctx.fillText(label, pos.x, pos.y + r + 4);
+    }
+  }
+
+    if (step.type === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('All vertices white - undiscovered. Press Play.', 10, 14);
+  }
+}
+
+// --- Table rendering ---
+
+function renderTable(step) {
+  let tbody = document.getElementById('dfBody');
+  let html = '';
+  let isAP = step.isArticulation || {};
+  for (let v of vertices) {
+    let c = step.color ? step.color[v] || 'white' : 'white';
+    let dv = step.d ? step.d[v] || 0 : 0;
+    let lowV = step.low ? step.low[v] || 0 : 0;
+    let p = step.parent ? step.parent[v] : null;
+    let ch = step.children ? step.children[v] || 0 : 0;
+    let stateClass = 'white-state';
+    let stateLabel = 'White';
+    if (c === 'gray') { stateClass = 'gray-state'; stateLabel = 'Gray'; }
+    else if (c === 'black') { stateClass = 'black-state'; stateLabel = 'Black'; }
+    let dStr = dv > 0 ? dv : '&mdash;';
+    let lowStr = lowV > 0 ? lowV : '&mdash;';
+    let pStr = (p !== null && p !== undefined) ? p : '&mdash;';
+    let apLabel = isAP[v] ? '<span class="ap-true">Yes</span>' : '&mdash;';
+    html += `<tr><td>${v}</td><td class="${stateClass}">${stateLabel}</td><td>${pStr}</td><td>${dStr}</td><td>${lowStr}</td><td>${ch}</td><td>${apLabel}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function renderDiscovery(step) {
+  document.getElementById('discoveryDisplay').innerHTML = buildDiscoverySequence(step);
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '&mdash;';
+  let vtx = (step.currentVertex !== null && step.currentVertex !== undefined) ? step.currentVertex : '&mdash;';
+  document.getElementById('vertexDisplay').textContent = vtx;
+  if (step.currentEdge) {
+    document.getElementById('edgeDisplay').textContent = `(${step.currentEdge.u}, ${step.currentEdge.v})`;
+  } else {
+    document.getElementById('edgeDisplay').textContent = '&mdash;';
+  }
+  if (step.lowUpdateFrom !== undefined && step.lowUpdateTo !== undefined) {
+    document.getElementById('lowDisplay').textContent = `${step.lowUpdateFrom} → ${step.lowUpdateTo}`;
+  } else {
+    document.getElementById('lowDisplay').textContent = '&mdash;';
+  }
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let st = {
+    d: {}, low: {}, f: {}, parent: {}, color: {},
+    children: {}, time: 0
+  };
+  let isArticulation = {};
+  let bridgesList = [];
+  let discoveredEdges = [];
+
+  for (let v of vertices) {
+    st.d[v] = 0; st.low[v] = 0; st.f[v] = 0;
+    st.parent[v] = null; st.color[v] = 'white';
+    st.children[v] = 0;
+  }
+
+  function snap(extra) {
+    let obj = {
+      d: {...st.d}, low: {...st.low}, f: {...st.f},
+      parent: {...st.parent}, color: {...st.color},
+      children: {...st.children},
+      isArticulation: {...isArticulation},
+      bridgesList: [...bridgesList],
+      discoveredEdges: [...discoveredEdges],
+      lowUpdateFrom: undefined, lowUpdateTo: undefined
+    };
+    if (extra) Object.assign(obj, extra);
+    return obj;
+  }
+
+  steps.push(Object.assign(snap(), {
+    type: 'init', currentVertex: null, currentEdge: null,
+    phase: 'Initial state — all vertices white'
+  }));
+
+  function dfs(u) {
+    st.time++;
+    st.d[u] = st.time;
+    st.low[u] = st.time;
+    st.color[u] = 'gray';
+
+    steps.push(Object.assign(snap({ lowUpdateFrom: st.time, lowUpdateTo: st.time }), {
+      type: 'discover', currentVertex: u, currentEdge: null,
+      phase: `Discovered vertex ${u} at time ${st.d[u]}`
+    }));
+
+    for (let v of adjList[u]) {
+      if (v === st.parent[u]) continue;
+
+      if (st.color[v] === 'white') {
+        st.parent[v] = u;
+        st.children[u]++;
+        st.time++;
+        st.d[v] = st.time;
+        st.low[v] = st.time;
+        st.color[v] = 'gray';
+        discoveredEdges.push({u, v, cls: 'tree'});
+
+        steps.push(Object.assign(snap({ lowUpdateFrom: st.time, lowUpdateTo: st.time }), {
+          type: 'tree_edge', currentVertex: v, currentEdge: {u, v},
+          phase: `Tree edge ${u}−${v}, discovered ${v} at time ${st.d[v]}`
+        }));
+
+        dfs(v);
+
+        let oldLow = st.low[u];
+        st.low[u] = Math.min(st.low[u], st.low[v]);
+
+        steps.push(Object.assign(snap({ lowUpdateFrom: oldLow, lowUpdateTo: st.low[u] }), {
+          type: 'after_child', currentVertex: u, currentEdge: {u, v},
+          phase: `Back at ${u} from child ${v}. low[${u}]: ${oldLow}${st.low[u] !== oldLow ? ' → ' + st.low[u] : ' (unchanged)'}`
+        }));
+
+        if (st.parent[u] !== null && st.low[v] >= st.d[u]) {
+          if (!isArticulation[u]) {
+            isArticulation[u] = true;
+            steps.push(Object.assign(snap(), {
+              type: 'mark_ap', currentVertex: u, currentEdge: {u, v},
+              phase: `Articulation point: ${u} (low[${v}]=${st.low[v]} ≥ d[${u}]=${st.d[u]})`
+            }));
+          }
+        }
+
+        if (st.low[v] > st.d[u]) {
+          if (!bridgesList.some(e => (e.u === u && e.v === v) || (e.u === v && e.v === u))) {
+            bridgesList.push({u, v});
+            steps.push(Object.assign(snap(), {
+              type: 'mark_bridge', currentVertex: u, currentEdge: {u, v},
+              phase: `Bridge: edge ${u}−${v} (low[${v}]=${st.low[v]} > d[${u}]=${st.d[u]})`
+            }));
+          }
+        }
+
+      } else {
+        // Back edge (v is already visited: gray = ancestor, black = descendant)
+        let oldLow = st.low[u];
+        st.low[u] = Math.min(st.low[u], st.d[v]);
+        discoveredEdges.push({u, v, cls: 'back'});
+
+        let colorLabel = st.color[v] === 'gray' ? '(ancestor, gray)' : '(descendant, black)';
+        steps.push(Object.assign(snap({ lowUpdateFrom: oldLow, lowUpdateTo: st.low[u] }), {
+          type: 'back_edge', currentVertex: u, currentEdge: {u, v},
+          phase: `Back edge ${u}−${v} ${colorLabel}: low[${u}] = min(${oldLow}, d[${v}]=${st.d[v]}) = ${st.low[u]}${st.low[u] < oldLow ? '' : ' (no change)'}`
+        }));
+      }
+    }
+
+    st.time++;
+    st.f[u] = st.time;
+    st.color[u] = 'black';
+
+    if (st.parent[u] === null && st.children[u] >= 2) {
+      if (!isArticulation[u]) {
+        isArticulation[u] = true;
+        steps.push(Object.assign(snap(), {
+          type: 'mark_ap', currentVertex: u, currentEdge: null,
+          phase: `Root articulation point: ${u} has ${st.children[u]} children`
+        }));
+      }
+    }
+
+    steps.push(Object.assign(snap(), {
+      type: 'finish', currentVertex: u, currentEdge: null,
+      phase: `Finished ${u} at time ${st.f[u]}, low=${st.low[u]}`
+    }));
+  }
+
+  for (let v of vertices) {
+    if (st.color[v] === 'white') dfs(v);
+  }
+
+  steps.push(Object.assign(snap(), {
+    type: 'complete', currentVertex: null, currentEdge: null,
+    phase: '✓ Complete!',
+    isArticulation: {...isArticulation},
+    bridgesList: [...bridgesList],
+    discoveredEdges: [...discoveredEdges]
+  }));
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+  updateInfo(step);
+  drawGraph(step);
+  renderTable(step);
+  renderDiscovery(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init': explanation = buildInitExplanation(); break;
+    case 'discover':
+      explanation = buildDiscoverExplanation(step.currentVertex, step.d[step.currentVertex]);
+      break;
+    case 'tree_edge':
+      explanation = buildTreeEdgeExplanation(step.currentEdge.u, step.currentEdge.v, step.d[step.currentEdge.v]);
+      break;
+    case 'back_edge': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      let isAncestor = step.color && step.color[v] === 'gray';
+      explanation = buildBackEdgeExplanation(u, v, step.d[v], step.lowUpdateFrom, step.lowUpdateTo, isAncestor);
+      break;
+    }
+    case 'after_child': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.lowUpdateTo);
+      break;
+    }
+    case 'mark_ap': {
+      let u = step.currentVertex;
+      if (step.parent && step.parent[u] === null) {
+        explanation = buildRootAPExplanation(u, step.children ? step.children[u] : 0);
+      } else if (step.currentEdge) {
+        let child = step.currentEdge.v;
+        if (step.parent && step.parent[child] !== u) child = step.currentEdge.u;
+        explanation = buildMarkAPExplanation(u, child, step.low[child], step.d[u]);
+      } else {
+        explanation = buildRootAPExplanation(u, step.children ? step.children[u] : 0);
+      }
+      break;
+    }
+    case 'mark_bridge': {
+      let u = step.currentEdge.u, v = step.currentEdge.v;
+      explanation = buildMarkBridgeExplanation(u, v, step.low[v], step.d[u]);
+      break;
+    }
+    case 'finish':
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex]);
+      break;
+    case 'complete': {
+      let apList = [], bridgeList = [];
+      for (let v of vertices) { if (step.isArticulation && step.isArticulation[v]) apList.push(v); }
+      if (step.bridgesList) bridgeList = step.bridgesList;
+      explanation = buildCompleteExplanation(apList, bridgeList);
+      break;
+    }
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('lowDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let lastStep = steps[steps.length - 1];
+  let apList = [], bridgeList = [];
+  for (let v of vertices) { if (lastStep.isArticulation && lastStep.isArticulation[v]) apList.push(v); }
+  if (lastStep.bridgesList) bridgeList = lastStep.bridgesList;
+
+  document.getElementById('finalAPCount').textContent = apList.length;
+  document.getElementById('finalAPList').textContent = apList.length > 0 ? '{' + apList.join(', ') + '}' : 'None';
+  document.getElementById('finalBridgeCount').textContent = bridgeList.length;
+  document.getElementById('finalBridgeList').textContent = bridgeList.length > 0
+    ? bridgeList.map(e => '(' + e.u + ', ' + e.v + ')').join(', ')
+    : 'None';
+
+  let apStr = apList.length > 0
+    ? apList.map(v => `<span class="ap-item">${v}</span>`).join(', ')
+    : '<span style="color:#888;">None</span>';
+  let brStr = bridgeList.length > 0
+    ? bridgeList.map(e => `<span class="bridge-item">${e.u}&minus;${e.v}</span>`).join(', ')
+    : '<span style="color:#888;">None</span>';
+  document.getElementById('finalResultDetail').innerHTML =
+    `<span class="dim">Articulation Points:</span> ${apStr}<br><span class="dim">Bridges:</span> ${brStr}`;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation(apList, bridgeList);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('lowDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

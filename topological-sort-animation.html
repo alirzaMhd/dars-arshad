@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topological Sort Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444;
+}
+.legend-tree { background: #00ff8844; border-color: #00ff88; }
+.legend-back { background: #ff660044; border-color: #ff6600; }
+.legend-white { background: #0d0d1a; border-color: #555; }
+.legend-gray { background: #1a0a00; border-color: #ff6600; }
+.legend-black { background: #0a1a12; border-color: #00ff88; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.white-state {
+  background: #0d0d1a;
+  color: #555;
+}
+td.gray-state {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  font-weight: bold;
+}
+td.black-state {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+}
+
+.topo-section { margin: 20px 0; }
+.topo-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.topo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 10px 0;
+  padding: 15px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.topo-box {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #333;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: bold;
+  transition: all 0.4s;
+  background: #0d0d1a;
+  color: #555;
+}
+.topo-box.filled {
+  background: #0a1a12;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.topo-box.adding {
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 20px #ff660066;
+  color: #ff6600 !important;
+  background: #1a0a00 !important;
+  transform: scale(1.1);
+}
+.topo-arrow {
+  color: #555;
+  font-size: 1.2em;
+  margin: 0 4px;
+  transition: all 0.4s;
+}
+.topo-arrow.active {
+  color: #00ff8866;
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.result-order {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.result-order .ro-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.result-order .ro-arrow {
+  color: #00ff8866;
+  font-size: 1.3em;
+  margin: 0 5px;
+}
+.verify-item {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 2px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.verify-pass { color: #00ff88; }
+.verify-fail { color: #ff6600; }
+</style>
+</head>
+<body>
+
+<h1>TOPOLOGICAL SORT</h1>
+<p class="subtitle">Graph Algorithms — DFS-based Topological Sort on a DAG</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="680" height="500"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-tree"></span> Tree Edge</span>
+      <span class="legend-item"><span class="legend-swatch legend-back"></span> Back Edge (Cycle)</span>
+      <span style="color:#333;">|</span>
+      <span class="legend-item"><span class="legend-swatch legend-white"></span> White</span>
+      <span class="legend-item"><span class="legend-swatch legend-gray"></span> Gray</span>
+      <span class="legend-item"><span class="legend-swatch legend-black"></span> Black</span>
+      <span style="color:#555;font-style:italic;">DAG — No cycles, edges flow one direction</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Time:</span> <span class="value" id="timeDisplay">0</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Discovery &amp; Finish Times</div>
+      <div class="table-wrapper">
+        <table id="dfTable">
+          <thead>
+            <tr><th>Vertex</th><th>State</th><th>d</th><th>f</th><th>Parent</th></tr>
+          </thead>
+          <tbody id="dfBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="topo-section">
+      <div class="topo-title">Topological Order <span style="color:#888;font-size:0.85em;">(fills from right as vertices finish)</span></div>
+      <div id="topoContainer" class="topo-container"></div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Topological Sort Complete!</h2>
+      <div class="big-result" id="finalTopoOrder">—</div>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>What is a DAG?</h3>
+        <p>A <b>Directed Acyclic Graph (DAG)</b> is a directed graph with <b>no cycles</b>.</p>
+        <p>In a DAG, edges flow in one direction — you can never return to a vertex by following edges.</p>
+        <h3 style="margin-top:10px;">Topological Sort</h3>
+        <p>A <b>topological ordering</b> of a DAG is a linear ordering of its vertices such that for every directed edge <span class="dim">u → v</span>, vertex <span class="dim">u</span> comes before <span class="dim">v</span> in the ordering.</p>
+        <h3 style="margin-top:10px;">DFS-based Algorithm</h3>
+        <p>Run DFS on the graph. When a vertex <b>finishes</b> (turns black), <b>prepend</b> it to the result. The final order is the reverse of finish times.</p>
+        <p style="margin-left:8px;">• If DFS finds a <span style="color:#ff6600;font-weight:bold;">back edge</span>, the graph has a cycle — topological sort is <b>impossible</b>.</p>
+        <h3 style="margin-top:10px;">This Graph</h3>
+        <p>7 vertices {<span class="dim">0,1,2,3,4,5,6</span>} with 8 edges forming a DAG.</p>
+        <p>Edges: <span class="dim">0→1, 0→2, 1→3, 2→3, 2→4, 3→5, 4→5, 5→6</span></p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4, 5, 6];
+const adjList = {
+  0: [1, 2],
+  1: [3],
+  2: [3, 4],
+  3: [5],
+  4: [5],
+  5: [6],
+  6: []
+};
+const edgeList = [
+  { u: 0, v: 1 }, { u: 0, v: 2 },
+  { u: 1, v: 3 },
+  { u: 2, v: 3 }, { u: 2, v: 4 },
+  { u: 3, v: 5 },
+  { u: 4, v: 5 },
+  { u: 5, v: 6 }
+];
+const nodePositions = {
+  0: { x: 340, y: 55 },
+  1: { x: 170, y: 160 },
+  2: { x: 510, y: 160 },
+  3: { x: 210, y: 270 },
+  4: { x: 470, y: 270 },
+  5: { x: 340, y: 380 },
+  6: { x: 340, y: 465 }
+};
+const nodeRadius = 22;
+const V = 7;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// --- Precomputations ---
+
+function precomputeDFS() {
+  let color = {}; let d = {}; let f = {}; let parent = {};
+  let time = 0;
+  for (let v of vertices) { color[v] = 'white'; d[v] = 0; f[v] = 0; parent[v] = null; }
+  function visit(u) {
+    time++; d[u] = time;
+    color[u] = 'gray';
+    for (let v of adjList[u]) {
+      if (color[v] === 'white') { parent[v] = u; visit(v); }
+    }
+    time++; f[u] = time;
+    color[u] = 'black';
+  }
+  for (let v of vertices) { if (color[v] === 'white') visit(v); }
+  return { d, f, parent, time };
+}
+
+const precomputed = precomputeDFS();
+
+function computeTopoOrder() {
+  let order = [];
+  let fSorted = vertices.slice().sort((a, b) => precomputed.f[b] - precomputed.f[a]);
+  return fSorted;
+}
+
+const finalTopo = computeTopoOrder();
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initial State — DAG Ready</h3>
+<p>All <span class="dim">7</span> vertices are <span style="color:#555;">white</span> (undiscovered).</p>
+<p>Graph is a <b>Directed Acyclic Graph</b> — no cycles exist, so a topological ordering is possible.</p>
+<h3 style="margin-top:10px;">How DFS produces a Topological Sort</h3>
+<p>• Run DFS from vertex <span class="dim">0</span> (source).</p>
+<p>• When a vertex <b>finishes</b> → <span style="color:#ff6600;">gray</span> to <span style="color:#00ff88;">black</span> → <span class="split-info">prepend it to the order</span>.</p>
+<p>• The final order (reverse of finish times) is a valid topological sort.</p>
+<p>• If we find a <span style="color:#ff6600;font-weight:bold;">back edge</span>, the graph has a cycle and topological sort is impossible.</p>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildDiscoverExplanation(v, dTime) {
+  return `<div class="explain-section active">
+<h3>🔍 Discover Source Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> is the <b>source</b> of the DFS traversal.</p>
+<p>Discovered at time <span class="result-line">d = ${dTime}</span>.</p>
+<p>Color: <span style="color:#555;">white</span> → <span style="color:#ff6600;">gray</span></p>
+<p>DFS will explore all reachable vertices from <span class="dim">${v}</span> before backtracking.</p>
+<p class="note">Gray vertices are on the active recursion stack.</p>
+</div>`;
+}
+
+function buildTreeEdgeExplanation(u, v, v_d) {
+  return `<div class="explain-section active">
+<h3>🌲 Tree Edge ${u} → ${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span class="result-line">tree edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#555;">white</span> (undiscovered) → becomes a <b>child</b> of <span class="dim">${u}</span> in the DFS tree.</p>
+<p>Discovered at time <span class="result-line">d = ${v_d}</span>. Color: <span style="color:#555;">white</span> → <span style="color:#ff6600;">gray</span>.</p>
+<p>DFS now recursively explores <span class="dim">${v}</span>'s neighbors before returning to <span class="dim">${u}</span>.</p>
+<p class="note">Tree edges form the DFS forest. Each discovers a new vertex.</p>
+</div>`;
+}
+
+function buildBackEdgeExplanation(u, v) {
+  return `<div class="explain-section active" style="border-left-color:#ff6600;">
+<h3>⛔ Back Edge ${u} → ${v} — CYCLE DETECTED!</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#ff6600;">gray</span> → an <b>ancestor</b> of <span class="dim">${u}</span> currently on the recursion stack.</p>
+<p>This means the graph has a <b>cycle</b>. Topological sort is <b>impossible</b> on a cyclic graph.</p>
+<p class="note">A directed graph has a cycle iff DFS produces a back edge. DAGs have no back edges.</p>
+</div>`;
+}
+
+function buildFinishExplanation(v, fTime, topoOrder) {
+  let orderStr = topoOrder.length > 0 ? topoOrder.join(' → ') : '(empty)';
+  return `<div class="explain-section active">
+<h3>✓ Finish Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> finished at time <span class="result-line">f = ${fTime}</span>.</p>
+<p>Color: <span style="color:#ff6600;">gray</span> → <span style="color:#00ff88;">black</span></p>
+<p>All descendants of <span class="dim">${v}</span> fully explored. <b>Prepended</b> to topological order.</p>
+<p>Current order: <span class="split-info">${orderStr}</span></p>
+<p class="note">Black vertices are never visited again. Finish times decrease from right to left.</p>
+</div>`;
+}
+
+function buildAddToOrderExplanation(v, topoOrder) {
+  let orderStr = topoOrder.join(' → ');
+  return `<div class="explain-section active">
+<h3>📋 Add Vertex ${v} to Topological Order</h3>
+<p>Vertex <span class="dim">${v}</span> has been <b>prepended</b> to the topological order.</p>
+<p style="margin-left:8px;">• <span class="dim">${v}</span> finished at time <span class="result-line">${precomputed.f[v]}</span></p>
+<p style="margin-left:8px;">• It is placed at the <span class="split-info">front</span> of the order (rightmost in display).</p>
+<p>Current order: <span class="formula-line">${orderStr}</span></p>
+<p class="note">The order builds from right to left. The first finished vertex ends up last in the order.</p>
+</div>`;
+}
+
+function buildCompleteExplanation() {
+  let orderStr = finalTopo.join(' → ');
+  let verifyHtml = '';
+  for (let e of edgeList) {
+    let uPos = finalTopo.indexOf(e.u);
+    let vPos = finalTopo.indexOf(e.v);
+    let pass = uPos < vPos;
+    verifyHtml += `<span class="verify-item ${pass ? 'verify-pass' : 'verify-fail'}">${e.u}→${e.v} ${pass ? '✓' : '✗'}</span>`;
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>All <span class="dim">7</span> vertices processed. No back edges found — graph is a DAG.</p>
+<h3 style="margin-top:10px;">Final Topological Order</h3>
+<span class="result-line" style="font-size:1.1em;">${orderStr}</span>
+<h3 style="margin-top:10px;">Verification</h3>
+<p>For every edge <span class="dim">u → v</span>, <span class="dim">u</span> appears before <span class="dim">v</span>:</p>
+<p>${verifyHtml}</p>
+<p class="result-line" style="margin-top:8px;">All edges satisfied. ✓</p>
+<h3 style="margin-top:10px;">Key Intuition</h3>
+<p>In DFS, finish times increase as we backtrack. Reversing finish times gives a valid topological order because a <b>descendant</b> always finishes before its <b>ancestor</b> — so the ancestor (which must come first in the order) has a later finish time.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) — one DFS traversal + O(1) prepend per vertex</p>
+<p><span class="dim">Space:</span> O(V) for recursion stack, colors, and timestamps</p>
+</div>`;
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let color = {}; let d = {}; let f = {}; let parent = {};
+  let time = 0;
+  let topoOrder = [];
+  let hasCycle = false;
+
+  for (let v of vertices) { color[v] = 'white'; d[v] = 0; f[v] = 0; parent[v] = null; }
+
+  steps.push({
+    type: 'init', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+    time: 0, currentVertex: null, currentEdge: null, edgeClass: null,
+    topoOrder: [],
+    phase: 'Initial state — all vertices white'
+  });
+
+  function visit(u) {
+    if (d[u] === 0) {
+      time++; d[u] = time;
+      color[u] = 'gray';
+      steps.push({
+        type: 'discover', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+        time: time, currentVertex: u, currentEdge: null, edgeClass: null,
+        topoOrder: [...topoOrder],
+        phase: `Discovered source vertex ${u} at time ${time}`
+      });
+    }
+
+    for (let v of adjList[u]) {
+      if (color[v] === 'white') {
+        time++; d[v] = time;
+        color[v] = 'gray'; parent[v] = u;
+        steps.push({
+          type: 'tree_edge', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+          time: time, currentVertex: u, currentEdge: { u, v }, edgeClass: 'tree',
+          topoOrder: [...topoOrder],
+          phase: `Tree edge ${u}→${v} — discovered ${v} at time ${time}`
+        });
+        visit(v);
+      } else if (color[v] === 'gray') {
+        hasCycle = true;
+        steps.push({
+          type: 'back_edge', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+          time: time, currentVertex: u, currentEdge: { u, v }, edgeClass: 'back',
+          topoOrder: [...topoOrder],
+          phase: `⛔ Back edge ${u}→${v} — CYCLE DETECTED!`
+        });
+      }
+    }
+
+    time++; f[u] = time;
+    color[u] = 'black';
+    topoOrder.unshift(u);
+    steps.push({
+      type: 'finish', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+      time: time, currentVertex: u, currentEdge: null, edgeClass: null,
+      topoOrder: [...topoOrder],
+      phase: `Finished vertex ${u} at time ${time}`
+    });
+    steps.push({
+      type: 'add_to_order', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+      time: time, currentVertex: u, currentEdge: null, edgeClass: null,
+      topoOrder: [...topoOrder],
+      phase: `Added vertex ${u} to topological order`
+    });
+  }
+
+  for (let v of vertices) { if (color[v] === 'white') visit(v); }
+
+  steps.push({
+    type: 'complete',
+    color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+    time: time, currentVertex: null, currentEdge: null, edgeClass: null,
+    topoOrder: [...topoOrder],
+    hasCycle: hasCycle,
+    phase: '✓ Complete!'
+  });
+}
+
+// --- Canvas drawing ---
+
+function drawArrow(ctx, fromX, fromY, toX, toY, colorVal, lineWidth) {
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist;
+  let ny = dy / dist;
+  let startX = fromX + nx * (nodeRadius + 2);
+  let startY = fromY + ny * (nodeRadius + 2);
+  let endX = toX - nx * (nodeRadius + 2);
+  let endY = toY - ny * (nodeRadius + 2);
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+
+  let arrLen = 12;
+  let arrW = 6;
+  let ax = endX - nx * arrLen;
+  let ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let col = step.color || {};
+  let curEdge = step.currentEdge;
+  let edgeClass = step.edgeClass;
+
+  let treeEdges = [];
+  for (let si = 0; si < steps.length && steps[si] !== step; si++) {
+    if (steps[si].type === 'tree_edge' && steps[si].currentEdge) {
+      let key = steps[si].currentEdge.u + '-' + steps[si].currentEdge.v;
+      if (!treeEdges.includes(key)) treeEdges.push(key);
+    }
+  }
+  if (edgeClass === 'tree' && curEdge) {
+    let key = curEdge.u + '-' + curEdge.v;
+    if (!treeEdges.includes(key)) treeEdges.push(key);
+  }
+
+  for (let e of edgeList) {
+    let key = e.u + '-' + e.v;
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+    let isActive = curEdge && curEdge.u === e.u && curEdge.v === e.v;
+    let isTree = treeEdges.includes(key);
+    let finalColor = '#444';
+    let lw = 1.5;
+
+    if (isActive && edgeClass === 'tree') {
+      finalColor = '#00ff88';
+      lw = 4;
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 18;
+    } else if (isActive && edgeClass === 'back') {
+      finalColor = '#ff6600';
+      lw = 4;
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 18;
+    } else if (isTree) {
+      finalColor = '#00ff88';
+      lw = 2.8;
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 6;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, finalColor, lw);
+    ctx.shadowBlur = 0;
+  }
+
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let c = col[v] || 'white';
+    let isCurrent = (v === step.currentVertex);
+
+    let fillColor, strokeColor, textColor;
+    if (c === 'gray') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    } else if (c === 'black') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (isCurrent && (step.type === 'discover' || step.type === 'tree_edge')) {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isCurrent ? 3.5 : 2;
+    ctx.stroke();
+
+    if (isCurrent) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeColor + '44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    let dv = step.d ? step.d[v] : 0;
+    let fv = step.f ? step.f[v] : 0;
+    if (dv > 0 || fv > 0) {
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      let ts = '';
+      if (dv > 0) ts += dv;
+      if (fv > 0) ts += '/' + fv;
+      ctx.fillStyle = strokeColor;
+      ctx.fillText(ts, pos.x, pos.y + nodeRadius + 3);
+    }
+  }
+
+  if (step.type === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('All vertices white — DAG ready. Press Play or Step.', 10, 14);
+  }
+}
+
+// --- Topo order display ---
+
+function initTopoDisplay() {
+  let container = document.getElementById('topoContainer');
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    if (i > 0) html += `<span class="topo-arrow" id="topoArrow${i}">→</span>`;
+    html += `<div class="topo-box" id="topoBox${i}" data-index="${i}">-</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function renderTopoOrder(step) {
+  let order = step.topoOrder || [];
+  let filledCount = order.length;
+  let justAddedIndex = V - filledCount;
+
+  for (let i = 0; i < V; i++) {
+    let box = document.getElementById('topoBox' + i);
+    let arrow = document.getElementById('topoArrow' + i);
+    if (!box) continue;
+
+    if (i >= justAddedIndex) {
+      let orderPos = i - justAddedIndex;
+      let val = order[orderPos];
+      let isNewlyAdded = (step.type === 'add_to_order' || step.type === 'finish') && i === justAddedIndex;
+
+      box.textContent = val;
+      if (isNewlyAdded && step.type === 'add_to_order') {
+        box.className = 'topo-box adding';
+      } else {
+        box.className = 'topo-box filled';
+      }
+    } else {
+      box.textContent = '-';
+      box.className = 'topo-box';
+    }
+    if (arrow) {
+      arrow.className = i >= justAddedIndex ? 'topo-arrow active' : 'topo-arrow';
+    }
+  }
+}
+
+// --- Table rendering ---
+
+function renderTable(step) {
+  let tbody = document.getElementById('dfBody');
+  let html = '';
+  for (let v of vertices) {
+    let c = step.color ? step.color[v] || 'white' : 'white';
+    let dv = step.d ? step.d[v] : 0;
+    let fv = step.f ? step.f[v] : 0;
+    let p = step.parent ? step.parent[v] : null;
+    let stateClass = 'white-state';
+    let stateLabel = 'White';
+    if (c === 'gray') { stateClass = 'gray-state'; stateLabel = 'Gray'; }
+    else if (c === 'black') { stateClass = 'black-state'; stateLabel = 'Black'; }
+    let dStr = dv > 0 ? dv : '—';
+    let fStr = fv > 0 ? fv : '—';
+    let pStr = (p !== null && p !== undefined) ? p : '—';
+    html += `<tr><td>${v}</td><td class="${stateClass}">${stateLabel}</td><td>${dStr}</td><td>${fStr}</td><td>${pStr}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '—';
+  let vtx = (step.currentVertex !== null && step.currentVertex !== undefined) ? step.currentVertex : '—';
+  document.getElementById('vertexDisplay').textContent = vtx;
+  if (step.currentEdge) {
+    document.getElementById('edgeDisplay').textContent = `(${step.currentEdge.u}, ${step.currentEdge.v})`;
+  } else {
+    document.getElementById('edgeDisplay').textContent = '—';
+  }
+  document.getElementById('timeDisplay').textContent = step.time || 0;
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  updateInfo(step);
+  drawGraph(step);
+  renderTable(step);
+
+  if (step.type === 'add_to_order' || step.type === 'finish' || step.type === 'complete' || step.type === 'init') {
+    renderTopoOrder(step);
+  }
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation();
+      break;
+    case 'discover':
+      explanation = buildDiscoverExplanation(step.currentVertex, step.d[step.currentVertex]);
+      break;
+    case 'tree_edge':
+      explanation = buildTreeEdgeExplanation(step.currentEdge.u, step.currentEdge.v, step.d[step.currentEdge.v]);
+      break;
+    case 'back_edge':
+      explanation = buildBackEdgeExplanation(step.currentEdge.u, step.currentEdge.v);
+      break;
+    case 'finish':
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.topoOrder);
+      break;
+    case 'add_to_order':
+      explanation = buildAddToOrderExplanation(step.currentVertex, step.topoOrder);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation();
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  let idx = steps.indexOf(step);
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('timeDisplay').textContent = precomputed.time;
+  document.getElementById('resultSection').style.display = 'block';
+
+  let orderStr = finalTopo.join(' → ');
+  let orderHtml = '';
+  for (let i = 0; i < finalTopo.length; i++) {
+    if (i > 0) orderHtml += `<span class="ro-arrow">→</span>`;
+    orderHtml += `<span class="ro-box">${finalTopo[i]}</span>`;
+  }
+  document.getElementById('finalTopoOrder').innerHTML = orderHtml;
+
+  let verifyHtml = '';
+  let allPass = true;
+  for (let e of edgeList) {
+    let uPos = finalTopo.indexOf(e.u);
+    let vPos = finalTopo.indexOf(e.v);
+    let pass = uPos < vPos;
+    if (!pass) allPass = false;
+    verifyHtml += `<span class="verify-item ${pass ? 'verify-pass' : 'verify-fail'}">${e.u}→${e.v} ${pass ? '✓' : '✗'}</span> `;
+  }
+
+  document.getElementById('resultDisplay').innerHTML =
+    `<p style="margin-top:10px;"><b>Verification</b> — every edge u→v has u before v:</p>
+     <p>${verifyHtml}</p>
+     <p class="${allPass ? 'verify-pass' : 'verify-fail'}" style="margin-top:6px;font-weight:bold;">
+       ${allPass ? 'All edges satisfied. ✓ Valid topological order!' : 'ERROR: Edge constraint violated!'}
+     </p>
+     <p style="margin-top:12px;color:#888;font-size:0.85em;">
+       DFS finish order (reversed): ${vertices.slice().sort((a, b) => precomputed.f[b] - precomputed.f[a]).join(' → ')}
+     </p>`;
+
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('timeDisplay').textContent = '0';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+  initTopoDisplay();
+}
+
+function clearHighlights() {}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTopoDisplay();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
