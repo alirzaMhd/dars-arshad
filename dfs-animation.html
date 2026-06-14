@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Depth-First Search Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444;
+}
+.legend-tree { background: #00ff8844; border-color: #00ff88; }
+.legend-back { background: #ff660044; border-color: #ff6600; }
+.legend-forward { background: #00ccff44; border-color: #00ccff; }
+.legend-cross { background: #ff66ff44; border-color: #ff66ff; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.white-state {
+  background: #0d0d1a;
+  color: #555;
+}
+td.gray-state {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  font-weight: bold;
+}
+td.black-state {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+}
+
+.parenthesis-display {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.95em;
+  line-height: 1.8;
+  text-align: center;
+  min-height: 40px;
+}
+.parenthesis-display .paren-char {
+  font-weight: bold;
+  font-size: 1.1em;
+  transition: all 0.3s;
+}
+.parenthesis-display .paren-open { color: #00ff88; }
+.parenthesis-display .paren-close { color: #ff6600; }
+.parenthesis-display .paren-label { color: #00ccff; }
+
+.edge-summary {
+  margin: 12px 0;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.85em;
+}
+.edge-summary .dim { color: #888; }
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.2em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+  line-height: 1.8;
+}
+</style>
+</head>
+<body>
+
+<h1>DEPTH-FIRST SEARCH</h1>
+<p class="subtitle">Graph Algorithms — DFS Traversal with Edge Classification</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="680" height="400"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-tree"></span> Tree</span>
+      <span class="legend-item"><span class="legend-swatch legend-back"></span> Back</span>
+      <span class="legend-item"><span class="legend-swatch legend-forward"></span> Forward</span>
+      <span class="legend-item"><span class="legend-swatch legend-cross"></span> Cross</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Class:</span> <span class="value" id="classDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Discovery &amp; Finish Times</div>
+      <div class="table-wrapper">
+        <table id="dfTable">
+          <thead>
+            <tr><th>Vertex</th><th>State</th><th>d</th><th>f</th><th>Parent</th></tr>
+          </thead>
+          <tbody id="dfBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Parenthesis Structure</div>
+      <div id="parenDisplay" class="parenthesis-display">
+        <span style="color:#555;">Waiting for DFS to begin...</span>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ DFS Complete</h2>
+      <div class="big-result" id="finalParen">—</div>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Depth-First Search (DFS)</h3>
+        <p>DFS explores a directed graph by going as deep as possible before backtracking. Vertices are colored:</p>
+        <p style="margin-left:8px;">• <span style="color:#555;">White</span> — undiscovered</p>
+        <p style="margin-left:8px;">• <span style="color:#ff6600;">Gray</span> — in recursion stack (being explored)</p>
+        <p style="margin-left:8px;">• <span style="color:#00ff88;">Black</span> — finished</p>
+        <h3 style="margin-top:10px;">Graph</h3>
+        <p>6 vertices {<span class="dim">0,1,2,3,4,5</span>} with 8 directed edges.</p>
+        <p>Edges: <span class="dim">0→1, 0→3, 1→4, 4→3, 3→1, 2→4, 2→5, 5→5</span></p>
+        <h3 style="margin-top:10px;">Edge Types</h3>
+        <p>• <span class="result-line">Tree</span> — leads to new white vertex</p>
+        <p>• <span style="color:#ff6600;font-weight:bold;">Back</span> — to ancestor (gray vertex)</p>
+        <p>• <span style="color:#00ccff;font-weight:bold;">Forward</span> — to descendant (black, finished)</p>
+        <p>• <span style="color:#ff66ff;font-weight:bold;">Cross</span> — neither ancestor nor descendant</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4, 5];
+const adjList = {
+  0: [1, 3],
+  1: [4],
+  2: [4, 5],
+  3: [1],
+  4: [3],
+  5: [5]
+};
+const edgeList = [
+  { u: 0, v: 1 }, { u: 0, v: 3 },
+  { u: 1, v: 4 },
+  { u: 2, v: 4 }, { u: 2, v: 5 },
+  { u: 3, v: 1 },
+  { u: 4, v: 3 },
+  { u: 5, v: 5 }
+];
+const nodePositions = {
+  0: { x: 200, y: 65 },
+  1: { x: 95, y: 230 },
+  3: { x: 305, y: 230 },
+  4: { x: 200, y: 350 },
+  2: { x: 540, y: 65 },
+  5: { x: 540, y: 230 }
+};
+const nodeRadius = 24;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let precomputedTimes = null;
+
+// --- Precomputation ---
+
+function precomputeDFS() {
+  let color = {};
+  let d = {};
+  let f = {};
+  let parent = {};
+  let time = 0;
+  for (let v of vertices) { color[v] = 'white'; d[v] = 0; f[v] = 0; parent[v] = null; }
+  function visit(u) {
+    time++; d[u] = time;
+    color[u] = 'gray';
+    for (let v of adjList[u]) {
+      if (color[v] === 'white') { parent[v] = u; visit(v); }
+    }
+    time++; f[u] = time;
+    color[u] = 'black';
+  }
+  for (let v of vertices) { if (color[v] === 'white') visit(v); }
+  return { d, f, parent, time };
+}
+
+precomputedTimes = precomputeDFS();
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initial State</h3>
+<p>All 6 vertices are <span style="color:#555;">white</span> (undiscovered). DFS starts from vertex <span class="dim">0</span>, then vertex <span class="dim">2</span> (second source).</p>
+<h3 style="margin-top:10px;">Key Concepts</h3>
+<p>• <span class="dim">u.d</span> = discovery time (vertex turns gray)</p>
+<p>• <span class="dim">u.f</span> = finish time (vertex turns black)</p>
+<p>• <b>Parenthesis theorem:</b> intervals [u.d, u.f] are properly nested or disjoint</p>
+<p>• <b>White-path theorem:</b> v is a descendant of u iff at time u.d there is a white-only path from u to v</p>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildDiscoverExplanation(v, dTime) {
+  return `<div class="explain-section active">
+<h3>🔍 Discover Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> is the <b>source</b> of a new DFS tree.</p>
+<p>Discovered at time <span class="result-line">d = ${dTime}</span>.</p>
+<p>Color: <span style="color:#555;">white</span> → <span style="color:#ff6600;">gray</span></p>
+<p>Its adjacency list will now be explored depth-first.</p>
+<p class="note">Gray vertices are on the active recursion stack (the "frontier" of search).</p>
+</div>`;
+}
+
+function buildTreeEdgeExplanation(u, v, v_d) {
+  return `<div class="explain-section active">
+<h3>🌲 Tree Edge ${u}→${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is classified as a <span class="result-line">tree edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#555;">white</span> (undiscovered) → it becomes a <b>child</b> of <span class="dim">${u}</span> in the DFS tree.</p>
+<p>Discovered at time <span class="result-line">d = ${v_d}</span>. Color: <span style="color:#555;">white</span> → <span style="color:#ff6600;">gray</span>.</p>
+<p>DFS will now recursively explore <span class="dim">${v}</span>'s adjacency list before returning to <span class="dim">${u}</span>.</p>
+<p class="note">Tree edges form the depth-first forest — each connects a parent to its child.</p>
+</div>`;
+}
+
+function buildBackEdgeExplanation(u, v) {
+  return `<div class="explain-section active">
+<h3>⭯ Back Edge ${u}→${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#ff6600;">gray</span> → an <b>ancestor</b> of <span class="dim">${u}</span> currently on the recursion stack.</p>
+<p>This reveals a <b>cycle</b> in the graph. A directed graph has a cycle <b>iff</b> DFS produces a back edge.</p>
+<p class="note">Self-loops (like 5→5) are also classified as back edges.</p>
+</div>`;
+}
+
+function buildForwardEdgeExplanation(u, v) {
+  return `<div class="explain-section active">
+<h3>➡ Forward Edge ${u}→${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#00ccff;font-weight:bold;">forward edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#00ff88;">black</span> and is a <b>descendant</b> of <span class="dim">${u}</span> in the DFS tree.</p>
+<p>Since d[<span class="dim">${u}</span>]=${precomputedTimes.d[u]} &lt; d[<span class="dim">${v}</span>]=${precomputedTimes.d[v]} &lt; f[<span class="dim">${v}</span>]=${precomputedTimes.f[v]} &lt; f[<span class="dim">${u}</span>]=${precomputedTimes.f[u]}, <span class="dim">${v}</span> is a descendant of <span class="dim">${u}</span>.</p>
+<p class="note">Forward edges are non-tree edges that go "down" the DFS tree.</p>
+</div>`;
+}
+
+function buildCrossEdgeExplanation(u, v) {
+  return `<div class="explain-section active">
+<h3>↔ Cross Edge ${u}→${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#ff66ff;font-weight:bold;">cross edge</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#00ff88;">black</span> but is <b>not</b> a descendant of <span class="dim">${u}</span>.</p>
+<p>d[<span class="dim">${u}</span>]=${precomputedTimes.d[u]} &gt; d[<span class="dim">${v}</span>]=${precomputedTimes.d[v]} (or they are in different DFS trees).</p>
+<p>Cross edges connect unrelated branches — neither vertex is ancestor of the other.</p>
+<p class="note">Cross edges can also connect vertices in different DFS trees (different sources).</p>
+</div>`;
+}
+
+function buildFinishExplanation(v, fTime) {
+  return `<div class="explain-section active">
+<h3>✓ Finish Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> finished at time <span class="result-line">f = ${fTime}</span>.</p>
+<p>Color: <span style="color:#ff6600;">gray</span> → <span style="color:#00ff88;">black</span></p>
+<p>All descendants of <span class="dim">${v}</span> have been fully explored. DFS backtracks to <span class="dim">${v}</span>'s parent.</p>
+<p class="note">A black vertex is never visited again. Its interval ends here.</p>
+</div>`;
+}
+
+function buildCompleteExplanation() {
+  let pu = precomputedTimes;
+  let parenStr = buildParenString();
+  let treeList = edgeList.filter(e => pu.parent[e.v] === e.u && e.u !== e.v);
+  let treeStr = treeList.map(e => `<span class="result-line">${e.u}→${e.v}</span>`).join(', ');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ DFS Complete!</h3>
+<p>All 6 vertices explored. Two DFS trees: {<span class="dim">0,1,3,4</span>} and {<span class="dim">2,5</span>}.</p>
+<h3 style="margin-top:10px;">Edge Classification</h3>
+<p>🌲 <span class="result-line">Tree:</span> ${treeStr}</p>
+<p>⭯ <span style="color:#ff6600;font-weight:bold;">Back:</span> 3→1, 5→5 (cycles detected)</p>
+<p>➡ <span style="color:#00ccff;font-weight:bold;">Forward:</span> 0→3 (to descendant)</p>
+<p>↔ <span style="color:#ff66ff;font-weight:bold;">Cross:</span> 2→4 (across trees)</p>
+<h3 style="margin-top:10px;">Parenthesis Structure</h3>
+<p>${parenStr}</p>
+<p class="note">Proper nesting shows ancestor/descendant relationships.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) — each vertex and edge processed once</p>
+<p><span class="dim">Space:</span> O(V) for recursion stack and timestamps</p>
+</div>`;
+}
+
+// --- Parenthesis string ---
+
+function buildParenString() {
+  let pu = precomputedTimes;
+  let events = [];
+  for (let v of vertices) {
+    if (pu.d[v] > 0) {
+      events.push({ time: pu.d[v], type: 'open', vertex: v });
+      events.push({ time: pu.f[v], type: 'close', vertex: v });
+    }
+  }
+  events.sort((a, b) => a.time - b.time);
+  let parts = [];
+  for (let e of events) {
+    if (e.type === 'open') {
+      parts.push(`<span class="paren-char paren-open">(</span><span class="paren-char paren-label">${e.vertex}</span>`);
+    } else {
+      parts.push(`<span class="paren-char paren-close">)</span>`);
+    }
+  }
+  return parts.join(' ');
+}
+
+function buildParenStringSnapshot(dMap, fMap) {
+  let events = [];
+  for (let v of vertices) {
+    let dv = dMap[v];
+    if (dv && dv > 0) events.push({ time: dv, type: 'open', vertex: v });
+    let fv = fMap[v];
+    if (fv && fv > 0) events.push({ time: fv, type: 'close', vertex: v });
+  }
+  if (events.length === 0) return '<span style="color:#555;">No timestamps yet.</span>';
+  events.sort((a, b) => a.time - b.time);
+  let parts = [];
+  for (let e of events) {
+    if (e.type === 'open') {
+      parts.push(`<span class="paren-char paren-open">(</span><span class="paren-char paren-label">${e.vertex}</span>`);
+    } else {
+      parts.push(`<span class="paren-char paren-close">)</span>`);
+    }
+  }
+  return parts.join(' ');
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let color = {}; let d = {}; let f = {}; let parent = {};
+  let time = 0;
+  let discoveredEdges = [];
+
+  for (let v of vertices) { color[v] = 'white'; d[v] = 0; f[v] = 0; parent[v] = null; }
+
+  steps.push({
+    type: 'init', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+    time: 0, currentVertex: null, currentEdge: null, edgeClass: null,
+    phase: 'Initial state — all vertices white'
+  });
+
+  function visit(u) {
+    if (d[u] === 0) {
+      time++; d[u] = time;
+      color[u] = 'gray';
+      steps.push({
+        type: 'discover', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+        time: time, currentVertex: u, currentEdge: null, edgeClass: null,
+        phase: `Discovered vertex ${u} at time ${time}`
+      });
+    }
+
+    for (let v of adjList[u]) {
+      if (color[v] === 'white') {
+        time++; d[v] = time;
+        color[v] = 'gray'; parent[v] = u;
+        discoveredEdges.push({ u, v, cls: 'tree' });
+        steps.push({
+          type: 'tree_edge', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+          time: time, currentVertex: u, currentEdge: { u, v }, edgeClass: 'tree',
+          phase: `Tree edge ${u}→${v} — discovered ${v} at time ${time}`
+        });
+        visit(v);
+      } else if (color[v] === 'gray') {
+        discoveredEdges.push({ u, v, cls: 'back' });
+        steps.push({
+          type: 'back_edge', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+          time: time, currentVertex: u, currentEdge: { u, v }, edgeClass: 'back',
+          phase: `Back edge ${u}→${v} — ${v} is an ancestor (gray)`
+        });
+      } else {
+        let pu = precomputedTimes;
+        let isForward = (pu.d[u] < pu.d[v] && pu.d[v] < pu.f[v] && pu.f[v] < pu.f[u]);
+        let cls = isForward ? 'forward' : 'cross';
+        discoveredEdges.push({ u, v, cls });
+        steps.push({
+          type: isForward ? 'forward_edge' : 'cross_edge',
+          color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+          time: time, currentVertex: u, currentEdge: { u, v }, edgeClass: cls,
+          phase: `${cls === 'forward' ? 'Forward' : 'Cross'} edge ${u}→${v} — ${v} is black`
+        });
+      }
+    }
+
+    time++; f[u] = time;
+    color[u] = 'black';
+    steps.push({
+      type: 'finish', color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+      time: time, currentVertex: u, currentEdge: null, edgeClass: null,
+      phase: `Finished vertex ${u} at time ${time}`
+    });
+  }
+
+  for (let v of vertices) { if (color[v] === 'white') visit(v); }
+
+  steps.push({
+    type: 'complete',
+    color: { ...color }, d: { ...d }, f: { ...f }, parent: { ...parent },
+    time: time, currentVertex: null, currentEdge: null, edgeClass: null,
+    phase: '✓ Complete!',
+    discoveredEdges: discoveredEdges
+  });
+}
+
+// --- Canvas drawing ---
+
+function drawArrow(ctx, fromX, fromY, toX, toY, colorVal, lineWidth, isSelfLoop) {
+  if (isSelfLoop) {
+    let cx = toX + nodeRadius + 10;
+    let cy = toY - nodeRadius - 5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16, -Math.PI * 0.6, Math.PI * 0.6);
+    ctx.strokeStyle = colorVal;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+    let tipX = cx + 14;
+    let tipY = cy - 14;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - 8, tipY - 6);
+    ctx.lineTo(tipX - 4, tipY + 4);
+    ctx.closePath();
+    ctx.fillStyle = colorVal;
+    ctx.fill();
+    return;
+  }
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist;
+  let ny = dy / dist;
+  let startX = fromX + nx * (nodeRadius + 2);
+  let startY = fromY + ny * (nodeRadius + 2);
+  let endX = toX - nx * (nodeRadius + 2);
+  let endY = toY - ny * (nodeRadius + 2);
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+
+  let arrLen = 12;
+  let arrW = 6;
+  let ax = endX - nx * arrLen;
+  let ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+}
+
+function drawLabelOnEdge(ctx, x1, y1, x2, y2, label, colorVal) {
+  let mx = (x1 + x2) / 2;
+  let my = (y1 + y2) / 2;
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  let offset = 8;
+  let dx = x2 - x1, dy = y2 - y1;
+  let d = Math.sqrt(dx * dx + dy * dy);
+  if (d > 1) {
+    let px = -dy / d * offset;
+    let py = dx / d * offset;
+    ctx.fillStyle = colorVal;
+    ctx.fillText(label, mx + px, my + py);
+  }
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let col = step.color || {};
+  let curEdge = step.currentEdge;
+  let edgeClass = step.edgeClass;
+
+  let edgeColors = {};
+  if (step.discoveredEdges) {
+    for (let ce of step.discoveredEdges) {
+      let key = ce.u + '-' + ce.v;
+      if (ce.cls === 'tree') edgeColors[key] = '#00ff88';
+      else if (ce.cls === 'back') edgeColors[key] = '#ff6600';
+      else if (ce.cls === 'forward') edgeColors[key] = '#00ccff';
+      else if (ce.cls === 'cross') edgeColors[key] = '#ff66ff';
+    }
+  }
+
+  if (curEdge && edgeClass) {
+    let key = curEdge.u + '-' + curEdge.v;
+    if (edgeClass === 'tree') edgeColors[key] = '#00ff88';
+    else if (edgeClass === 'back') edgeColors[key] = '#ff6600';
+    else if (edgeClass === 'forward') edgeColors[key] = '#00ccff';
+    else if (edgeClass === 'cross') edgeColors[key] = '#ff66ff';
+  }
+
+  for (let e of edgeList) {
+    let key = e.u + '-' + e.v;
+    let isSelf = (e.u === e.v);
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+    let isActive = curEdge && curEdge.u === e.u && curEdge.v === e.v;
+    let finalColor = edgeColors[key] || '#444';
+    let lw = isActive ? 4 : (edgeColors[key] ? 2.8 : 1.5);
+
+    if (isActive) {
+      ctx.shadowColor = finalColor;
+      ctx.shadowBlur = 18;
+    } else if (edgeColors[key]) {
+      ctx.shadowColor = finalColor;
+      ctx.shadowBlur = 6;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, finalColor, lw, isSelf);
+    ctx.shadowBlur = 0;
+
+    if (edgeColors[key] && !isSelf) {
+      let label = '';
+      if (edgeClass && isActive) {
+        if (edgeClass === 'tree') label = 'T';
+        else if (edgeClass === 'back') label = 'B';
+        else if (edgeClass === 'forward') label = 'F';
+        else if (edgeClass === 'cross') label = 'C';
+      }
+      if (label) {
+        drawLabelOnEdge(ctx, p1.x, p1.y, p2.x, p2.y, label, finalColor);
+      }
+    }
+  }
+
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let c = col[v] || 'white';
+    let isCurrent = (v === step.currentVertex);
+
+    let fillColor, strokeColor, textColor;
+    if (c === 'gray') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    } else if (c === 'black') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (isCurrent && (step.type === 'discover' || step.type === 'tree_edge')) {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      if (c === 'gray') fillColor = '#1a0a00';
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isCurrent ? 3.5 : 2;
+    ctx.stroke();
+
+    if (isCurrent) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeColor + '44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    let dv = step.d ? step.d[v] : 0;
+    let fv = step.f ? step.f[v] : 0;
+    if (dv > 0 || fv > 0) {
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      let ts = '';
+      if (dv > 0) ts += dv;
+      if (fv > 0) ts += '/' + fv;
+      ctx.fillStyle = strokeColor;
+      ctx.fillText(ts, pos.x, pos.y + nodeRadius + 3);
+    }
+  }
+
+  if (step.type === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('All vertices white — undiscovered. Press Play.', 10, 14);
+  }
+}
+
+// --- Table rendering ---
+
+function renderTable(step) {
+  let tbody = document.getElementById('dfBody');
+  let html = '';
+  for (let v of vertices) {
+    let c = step.color ? step.color[v] || 'white' : 'white';
+    let dv = step.d ? step.d[v] : 0;
+    let fv = step.f ? step.f[v] : 0;
+    let p = step.parent ? step.parent[v] : null;
+    let stateClass = 'white-state';
+    let stateLabel = 'White';
+    if (c === 'gray') { stateClass = 'gray-state'; stateLabel = 'Gray'; }
+    else if (c === 'black') { stateClass = 'black-state'; stateLabel = 'Black'; }
+    let dStr = dv > 0 ? dv : '—';
+    let fStr = fv > 0 ? fv : '—';
+    let pStr = (p !== null && p !== undefined) ? p : '—';
+    html += `<tr><td>${v}</td><td class="${stateClass}">${stateLabel}</td><td>${dStr}</td><td>${fStr}</td><td>${pStr}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function renderParen(step) {
+  let div = document.getElementById('parenDisplay');
+  if (step.type === 'init') {
+    div.innerHTML = '<span style="color:#555;">No timestamps yet.</span>';
+    return;
+  }
+  let dMap = step.d || {};
+  let fMap = step.f || {};
+  div.innerHTML = buildParenStringSnapshot(dMap, fMap);
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '—';
+  let vtx = (step.currentVertex !== null && step.currentVertex !== undefined) ? step.currentVertex : '—';
+  document.getElementById('vertexDisplay').textContent = vtx;
+  if (step.currentEdge) {
+    document.getElementById('edgeDisplay').textContent = `(${step.currentEdge.u}, ${step.currentEdge.v})`;
+  } else {
+    document.getElementById('edgeDisplay').textContent = '—';
+  }
+  if (step.edgeClass) {
+    let cls = step.edgeClass;
+    document.getElementById('classDisplay').textContent = cls.charAt(0).toUpperCase() + cls.slice(1);
+  } else {
+    document.getElementById('classDisplay').textContent = '—';
+  }
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+  updateInfo(step);
+  drawGraph(step);
+  renderTable(step);
+  renderParen(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init': explanation = buildInitExplanation(); break;
+    case 'discover':
+      explanation = buildDiscoverExplanation(step.currentVertex, step.d[step.currentVertex]);
+      break;
+    case 'tree_edge':
+      explanation = buildTreeEdgeExplanation(step.currentEdge.u, step.currentEdge.v, step.d[step.currentEdge.v]);
+      break;
+    case 'back_edge':
+      explanation = buildBackEdgeExplanation(step.currentEdge.u, step.currentEdge.v);
+      break;
+    case 'forward_edge':
+      explanation = buildForwardEdgeExplanation(step.currentEdge.u, step.currentEdge.v);
+      break;
+    case 'cross_edge':
+      explanation = buildCrossEdgeExplanation(step.currentEdge.u, step.currentEdge.v);
+      break;
+    case 'finish':
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex]);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation();
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('classDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let pu = precomputedTimes;
+  let parenStr = buildParenString();
+  document.getElementById('finalParen').innerHTML = parenStr;
+
+  let treeList = edgeList.filter(e => pu.parent[e.v] === e.u && e.u !== e.v);
+  let treeStr = treeList.map(e => `${e.u}→${e.v}`).join(', ');
+  document.getElementById('resultDisplay').innerHTML =
+    `<p><span class="result-line">Tree edges:</span> ${treeStr}</p>
+     <p><span style="color:#ff6600;font-weight:bold;">Back edges:</span> 3→1, 5→5</p>
+     <p><span style="color:#00ccff;font-weight:bold;">Forward edge:</span> 0→3</p>
+     <p><span style="color:#ff66ff;font-weight:bold;">Cross edge:</span> 2→4</p>
+     <p style="margin-top:8px;"><span class="dim">Two DFS trees:</span> {0,1,3,4} and {2,5}</p>`;
+
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('classDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

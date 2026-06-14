@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Transpose G^T Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.graphs-container {
+  display: flex; gap: 12px; margin: 15px 0;
+}
+.graph-box {
+  flex: 1; background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; text-align: center; min-width: 0;
+}
+.graph-box h3 { color: #00ccff; font-size: 0.85em; margin-bottom: 6px; }
+.graph-box svg { display: block; margin: 0 auto; max-width: 100%; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control {
+  display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em;
+}
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.adj-container {
+  display: flex; gap: 12px; margin: 15px 0;
+}
+.adj-box {
+  flex: 1; background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; min-width: 0;
+}
+.adj-box h3 { color: #00ccff; font-size: 0.9em; margin-bottom: 10px; text-align: center; padding-bottom: 6px; border-bottom: 1px solid #333; }
+.adjlist-section { font-size: 0.82em; }
+.adjlist-row {
+  display: flex; align-items: center; padding: 4px 8px; margin: 3px 0;
+  background: #0d0d1a; border: 1px solid #333; border-radius: 5px; transition: all 0.3s;
+}
+.adjlist-row .vlabel { color: #ffcc00; font-weight: bold; min-width: 48px; }
+.adjlist-row .arrow { color: #555; margin: 0 4px; }
+.adjlist-row .neighbors { color: #aaa; display: flex; flex-wrap: wrap; gap: 2px; }
+.neighbor-item {
+  display: inline-block; padding: 1px 7px; margin: 1px; border-radius: 4px;
+  font-size: 0.95em; transition: all 0.4s; color: #888; border: 1px solid transparent;
+}
+.neighbor-item.current {
+  border-color: #ff6600 !important; color: #ff6600 !important;
+  background: #1a0a00 !important; box-shadow: 0 0 8px #ff660044;
+}
+.neighbor-item.added { color: #00ff88; background: #0a1a12; border-color: #00ff8855; }
+.neighbor-item.dimmed { color: #444; }
+.adjlist-row.highlight { border-color: #ff6600; background: #1a0a00; box-shadow: 0 0 10px #ff660033; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.edge-line { stroke: #555; stroke-width: 2; fill: none; transition: all 0.4s; }
+.edge-line.active-edge { stroke: #ff6600; stroke-width: 3; }
+.edge-line.new-edge { stroke: #00ff88; stroke-width: 3; }
+.edge-line.dim-edge { stroke: #333; }
+.edge-arrow { fill: #555; transition: all 0.4s; }
+.edge-arrow.active-arrow { fill: #ff6600; }
+.edge-arrow.new-arrow { fill: #00ff88; }
+.edge-arrow.dim-arrow { fill: #333; }
+.node-circle { fill: #0d0d1a; stroke: #555; stroke-width: 2; transition: all 0.4s; }
+.node-circle.active-node { stroke: #ff6600; stroke-width: 3; }
+.node-circle.inactive-node { stroke: #333; }
+.node-text { fill: #aaa; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; transition: all 0.4s; dominant-baseline: central; text-anchor: middle; }
+.node-text.active-text { fill: #ff6600; }
+.node-text.inactive-text { fill: #444; }
+.comparison-grid {
+  display: flex; justify-content: center; gap: 30px; margin: 15px 0; flex-wrap: wrap;
+}
+.comparison-card {
+  background: #0d0d1a; border: 2px solid #333; border-radius: 10px;
+  padding: 18px 25px; min-width: 200px; transition: all 0.4s; text-align: center;
+}
+.comparison-card h4 { color: #00ccff; font-size: 0.85em; margin-bottom: 8px; }
+.comparison-card .big-num { font-size: 1.8em; color: #ffcc00; font-weight: bold; }
+.comparison-card .formula { color: #888; font-size: 0.82em; margin-top: 6px; }
+.comparison-card .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; margin-top: 8px; }
+.tag-winner { background: #002a1a; color: #00ff88; border: 1px solid #00ff88; }
+@media (max-width: 700px) {
+  .graphs-container { flex-direction: column; }
+  .adj-container { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<h1>GRAPH TRANSPOSE G<sup>T</sup></h1>
+<p class="subtitle">Graph Algorithms — Reversing Edge Directions</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graphs-container">
+      <div class="graph-box">
+        <h3>Original Graph G</h3>
+        <svg id="graphG" width="230" height="300" viewBox="0 0 230 300"></svg>
+      </div>
+      <div class="graph-box">
+        <h3>Transpose G<sup>T</sup></h3>
+        <svg id="graphGT" width="230" height="300" viewBox="0 0 230 300"></svg>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">G<sup>T</sup> Edges:</span> <span class="value" id="countDisplay">0 / 6</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="adj-container">
+      <div class="adj-box">
+        <h3>Adjacency List of G</h3>
+        <div id="adjGDisplay" class="adjlist-section"></div>
+      </div>
+      <div class="adj-box">
+        <h3>Adjacency List of G<sup>T</sup></h3>
+        <div id="adjGTDisplay" class="adjlist-section"></div>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Graph Transpose Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Graph transpose — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Graph Transpose: G<sup>T</sup></h3>
+        <p>The <b>transpose</b> of a directed graph G = (V, E) is the graph G<sup>T</sup> = (V, E<sup>T</sup>) where every edge is <b>reversed</b>:</p>
+        <span class="formula-line">E<sup>T</sup> = {(v, u) : (u, v) ∈ E}</span>
+        <p>G has <span class="dim">|V| = 5</span> vertices and <span class="dim">|E| = 6</span> directed edges.</p>
+        <p style="margin-left:8px;margin-top:6px;">E = {(0→1), (0→3), (1→2), (1→3), (2→4), (3→4)}</p>
+        <p>As we process each edge, we add the <b>reverse</b> to G<sup>T</sup>.</p>
+        <p class="note">G<sup>T</sup> has the same vertices and number of edges as G. The adjacency lists are swapped: Adj<sub>G<sup>T</sup></sub>[v] = {u : (u, v) ∈ E}.</p>
+        <p class="note">Press <b>▶ Play</b> or <b>⏭ Step</b> to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 5;
+const VLABELS = ['0', '1', '2', '3', '4'];
+const edges = [[0,1], [0,3], [1,2], [1,3], [2,4], [3,4]];
+const nodePos = [
+  {x: 115, y: 35},
+  {x: 55, y: 125},
+  {x: 175, y: 125},
+  {x: 75, y: 240},
+  {x: 170, y: 240},
+];
+
+let adjG = [];
+let adjGT = [];
+let gtEdgesBuilt = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgGCreated = false;
+let svgGTCreated = false;
+
+function precomputeAll() {
+  adjG = Array.from({length: V}, () => []);
+  adjGT = Array.from({length: V}, () => []);
+  gtEdgesBuilt = [];
+  for (const [u, v] of edges) adjG[u].push(v);
+}
+
+function createSvgG() {
+  if (svgGCreated) return;
+  const svg = document.getElementById('graphG');
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 20;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = e;
+    svg.appendChild(line);
+    const angle = Math.atan2(dy, dx);
+    const as = 9;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    arrow.dataset.edge = e;
+    svg.appendChild(arrow);
+  }
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '20');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+  svgGCreated = true;
+}
+
+function setSvgGHighlights(activeEdge, activeNodes, dimAll) {
+  document.querySelectorAll('#graphG .edge-line').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    if (dimAll) { el.classList.add('dim-edge'); el.classList.remove('active-edge'); }
+    else { el.classList.toggle('active-edge', e === activeEdge); el.classList.remove('dim-edge'); }
+  });
+  document.querySelectorAll('#graphG .edge-arrow').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    if (dimAll) { el.classList.add('dim-arrow'); el.classList.remove('active-arrow'); }
+    else { el.classList.toggle('active-arrow', e === activeEdge); el.classList.remove('dim-arrow'); }
+  });
+  document.querySelectorAll('#graphG .node-circle').forEach(el => {
+    const n = parseInt(el.dataset.node);
+    el.classList.toggle('active-node', activeNodes && activeNodes.includes(n));
+    if (dimAll) el.classList.add('inactive-node');
+    else el.classList.remove('inactive-node');
+  });
+  document.querySelectorAll('#graphG .node-text').forEach(el => {
+    const n = VLABELS.indexOf(el.textContent);
+    el.classList.toggle('active-text', activeNodes && activeNodes.includes(n));
+    if (dimAll) el.classList.add('inactive-text');
+    else el.classList.remove('inactive-text');
+  });
+}
+
+function createOrUpdateSvgGT(edgesToShow, activeEdge, activeNodes) {
+  const svg = document.getElementById('graphGT');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  for (let e = 0; e < edgesToShow.length; e++) {
+    const [u, v] = edgesToShow[e];
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 20;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.classList.add('new-edge');
+    svg.appendChild(line);
+    const angle = Math.atan2(dy, dx);
+    const as = 9;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    arrow.classList.add('new-arrow');
+    svg.appendChild(arrow);
+  }
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '20');
+    circle.classList.add('node-circle');
+    if (activeNodes && activeNodes.includes(v)) circle.classList.add('active-node');
+    svg.appendChild(circle);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    if (activeNodes && activeNodes.includes(v)) text.classList.add('active-text');
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+  svgGTCreated = true;
+}
+
+function buildAdjListHTML(adjData, highlightRow, currentKey, addedKeys) {
+  if (!addedKeys) addedKeys = [];
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    let rowClass = 'adjlist-row';
+    if (highlightRow === i) rowClass += ' highlight';
+    html += `<div class="${rowClass}"><span class="vlabel">Adj[${i}]:</span><span class="arrow">→</span><span class="neighbors">`;
+    const list = adjData[i];
+    if (list.length === 0) {
+      html += `<span style="color:#555;font-style:italic;">∅</span>`;
+    } else {
+      for (let k = 0; k < list.length; k++) {
+        const val = list[k];
+        let cls = 'neighbor-item';
+        const key = i + ',' + val;
+        if (currentKey === key) cls += ' current';
+        else if (addedKeys.includes(key)) cls += ' added';
+        html += `<span class="${cls}">${val}</span>`;
+        if (k < list.length - 1) html += `<span style="color:#555;">,</span>`;
+      }
+    }
+    html += `</span></div>`;
+  }
+  return html;
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Transpose of a Directed Graph</h3>
+    <p>Given <b>G = (V, E)</b>, its <b>transpose</b> G<sup>T</sup> has the same vertices but every edge is <b>reversed</b>:</p>
+    <span class="formula-line">E<sup>T</sup> = {(v, u) : (u, v) ∈ E}</span>
+    <p>For this demo: <span class="dim">|V| = 5</span>, <span class="dim">|E| = 6</span>, edges:</p>
+    <p style="margin-left:8px;">(0→1), (0→3), (1→2), (1→3), (2→4), (3→4)</p>
+    <h3 style="margin-top:10px;">Properties</h3>
+    <p>• (G<sup>T</sup>)<sup>T</sup> = G — transposing twice returns the original.</p>
+    <p>• G<sup>T</sup> is used in algorithms like <b>Kosaraju's SCC</b> (finding strongly connected components).</p>
+    <p class="note">Each edge (u, v) in G becomes (v, u) in G<sup>T</sup>. Press Play or Step to see them reversed.</p>
+  </div>`;
+}
+
+function buildEdgeExplanation(e, u, v, gtCount) {
+  return `<div class="explain-section active">
+    <h3>Step: Reversing Edge e${e}: (${u} → ${v})</h3>
+    <p>Processing edge <span class="dim">(${u} → ${v})</span> from G:</p>
+    <p style="margin-left:8px;margin-top:8px;">
+      <span style="color:#00ccff;">❶</span> The edge <span class="dim">(${u} → ${v})</span> is <span class="split-info">highlighted in orange</span> in G.
+    </p>
+    <p style="margin-left:8px;">
+      <span style="color:#00ccff;">❷</span> We add the <b>reversed</b> edge <span class="dim">(${v} → ${u})</span> to G<sup>T</sup>.
+    </p>
+    <span class="formula-line">E<sup>T</sup> ← E<sup>T</sup> ∪ {(${v}, ${u})}</span>
+    <p>G<sup>T</sup> now has <span class="split-info">${gtCount} / ${edges.length}</span> edges.</p>
+    <p style="margin-top:6px;"><span style="color:#00ccff;">❸ Adjacency list update:</span></p>
+    <p style="margin-left:8px;">G: Adj[${u}] contains ${v} (forward direction)</p>
+    <p style="margin-left:8px;">G<sup>T</sup>: Adj[${v}] now contains ${u} (reverse direction)</p>
+    <p class="note">The <b>indegree</b> of ${u} in G becomes the <b>outdegree</b> of ${u} in G<sup>T</sup>, and vice versa.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let gStr = '', gtStr = '';
+  for (let i = 0; i < V; i++) {
+    gStr += `Adj[${i}]: [${adjG[i].join(', ')}]`;
+    gtStr += `Adj[${i}]: [${adjGT[i].join(', ')}]`;
+    if (i < V - 1) { gStr += '<br>'; gtStr += '<br>'; }
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>All <span class="dim">6</span> edges have been reversed. G<sup>T</sup> is fully built.</p>
+    <h3 style="margin-top:10px;">Final Adjacency Lists</h3>
+    <span class="formula-line" style="font-size:0.8em;">G: ${gStr}</span>
+    <span class="formula-line" style="font-size:0.8em;">G<sup>T</sup>: ${gtStr}</span>
+    <h3 style="margin-top:10px;">Key Insight</h3>
+    <p>The adjacency list of G<sup>T</sup> can be computed in <span class="dim">O(V + E)</span> time by scanning all edges of G and inserting the reverse direction.</p>
+    <p><span class="dim">Space:</span> Θ(V + E) — same as G's representation.</p>
+    <p class="note">(G<sup>T</sup>)<sup>T</sup> = G — transposing twice recovers the original graph.</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+  const tempGT = Array.from({length: V}, () => []);
+  let builtEdges = [];
+  let allAddedKeys = [];
+
+  steps.push({
+    type: 'init',
+    gtEdges: [],
+    addedKeys: [],
+    phase: 'Introduction',
+    edgeLabel: '—',
+    gtCount: 0,
+    explanation: buildInitExplanation(),
+  });
+
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    const rev = [v, u];
+    builtEdges.push(rev);
+    tempGT[v].push(u);
+    const key = v + ',' + u;
+    allAddedKeys.push(key);
+    steps.push({
+      type: 'reverse_edge',
+      edgeIdx: e, u: u, v: v,
+      gtEdges: builtEdges.map(a => a.slice()),
+      addedKeys: allAddedKeys.slice(),
+      currentKey: key,
+      gtCount: builtEdges.length,
+      phase: 'Reversing',
+      edgeLabel: `(${u} → ${v})`,
+    });
+  }
+
+  steps.push({
+    type: 'done',
+    gtEdges: builtEdges.map(a => a.slice()),
+    addedKeys: allAddedKeys.slice(),
+    phase: '✓ Complete',
+    edgeLabel: '—',
+    gtCount: builtEdges.length,
+  });
+}
+
+function applyStep(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('edgeDisplay').textContent = step.edgeLabel;
+  document.getElementById('resultSection').style.display = 'none';
+
+  if (step.type === 'init') {
+    precomputeAll();
+    createSvgG();
+    setSvgGHighlights(-1, [], false);
+    createOrUpdateSvgGT([], -1, []);
+    document.getElementById('adjGDisplay').innerHTML = buildAdjListHTML(adjG, -1, '', []);
+    document.getElementById('adjGTDisplay').innerHTML = buildAdjListHTML(adjGT, -1, '', []);
+    document.getElementById('countDisplay').textContent = '0 / ' + edges.length;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — Introduction`;
+    document.getElementById('explainArea').innerHTML = step.explanation;
+
+  } else if (step.type === 'reverse_edge') {
+    const [ru, rv] = [step.v, step.u];
+    adjGT[ru].push(rv);
+    adjGT[ru].sort((a, b) => a - b);
+
+    setSvgGHighlights(step.edgeIdx, [step.u, step.v], false);
+    createOrUpdateSvgGT(step.gtEdges, -1, [step.u, step.v]);
+    document.getElementById('adjGDisplay').innerHTML = buildAdjListHTML(adjG, -1, '', step.addedKeys);
+    document.getElementById('adjGTDisplay').innerHTML = buildAdjListHTML(adjGT, step.v, step.currentKey, step.addedKeys);
+    document.getElementById('countDisplay').textContent = step.gtCount + ' / ' + edges.length;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — Reversing edge (${step.u} → ${step.v})`;
+    document.getElementById('explainArea').innerHTML = buildEdgeExplanation(step.edgeIdx, step.u, step.v, step.gtCount);
+
+  } else if (step.type === 'done') {
+    setSvgGHighlights(-1, [], true);
+    createOrUpdateSvgGT(step.gtEdges, -1, []);
+    document.getElementById('adjGDisplay').innerHTML = buildAdjListHTML(adjG, -1, '', []);
+    document.getElementById('adjGTDisplay').innerHTML = buildAdjListHTML(adjGT, -1, '', []);
+    document.getElementById('countDisplay').textContent = edges.length + ' / ' + edges.length;
+    document.getElementById('resultSection').style.display = 'block';
+
+    let gStr = '', gtStr = '';
+    for (let i = 0; i < V; i++) {
+      gStr += `Adj[${i}]: [${adjG[i].join(', ')}]`;
+      gtStr += `Adj[${i}]: [${adjGT[i].join(', ')}]`;
+      if (i < V - 1) { gStr += '<br>'; gtStr += '<br>'; }
+    }
+    document.getElementById('resultContent').innerHTML = `
+      <div class="comparison-grid">
+        <div class="comparison-card" style="border-color:#00ccff;">
+          <h4>Original G</h4>
+          <div class="formula" style="font-size:0.82em;margin-top:4px;">${gStr}</div>
+          <div class="tag tag-winner" style="margin-top:10px;">Edges: (u → v)</div>
+        </div>
+        <div class="comparison-card" style="border-color:#00ff88;">
+          <h4>Transpose G<sup>T</sup></h4>
+          <div class="formula" style="font-size:0.82em;margin-top:4px;">${gtStr}</div>
+          <div class="tag tag-winner" style="margin-top:10px;">Edges: (v → u)</div>
+        </div>
+      </div>
+      <p style="margin-top:12px;color:#888;">Every edge direction is reversed. (G<sup>T</sup>)<sup>T</sup> = G.</p>
+    `;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ✅ Complete`;
+    document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('countDisplay').textContent = '0 / ' + edges.length;
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Graph transpose — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  createSvgG();
+  setSvgGHighlights(-1, [], false);
+  createOrUpdateSvgGT([], -1, []);
+  document.getElementById('adjGDisplay').innerHTML = buildAdjListHTML(adjG, -1, '', []);
+  document.getElementById('adjGTDisplay').innerHTML = buildAdjListHTML(adjGT, -1, '', []);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() { animating = false; }
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+precomputeAll();
+buildSteps();
+createSvgG();
+setSvgGHighlights(-1, [], false);
+createOrUpdateSvgGT([], -1, []);
+document.getElementById('adjGDisplay').innerHTML = buildAdjListHTML(adjG, -1, '', []);
+document.getElementById('adjGTDisplay').innerHTML = buildAdjListHTML(adjGT, -1, '', []);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

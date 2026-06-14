@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Square G² Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px; min-width: 420px; max-height: calc(100vh - 100px);
+  overflow-y: auto; position: sticky; top: 10px; background: #0d0d20;
+  border: 1px solid #2a2a44; border-radius: 12px; padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.graphs-container {
+  display: flex; gap: 12px; margin: 15px 0;
+}
+.graph-box {
+  flex: 1; background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; text-align: center; min-width: 0;
+}
+.graph-box h3 { color: #00ccff; font-size: 0.85em; margin-bottom: 6px; }
+.graph-box svg { display: block; margin: 0 auto; max-width: 100%; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.edge-line { stroke: #555; stroke-width: 2; fill: none; transition: all 0.4s; }
+.edge-line.active-edge { stroke: #ff6600; stroke-width: 3; }
+.edge-line.path-edge { stroke: #00ccff; stroke-width: 2; stroke-dasharray: 4,3; }
+.edge-line.new-edge { stroke: #00ff88; stroke-width: 3; }
+.edge-line.dim-edge { stroke: #333; }
+.edge-arrow { fill: #555; transition: all 0.4s; }
+.edge-arrow.active-arrow { fill: #ff6600; }
+.edge-arrow.path-arrow { fill: #00ccff; }
+.edge-arrow.new-arrow { fill: #00ff88; }
+.edge-arrow.dim-arrow { fill: #333; }
+.node-circle { fill: #0d0d1a; stroke: #555; stroke-width: 2; transition: all 0.4s; }
+.node-circle.active-node { stroke: #ff6600; stroke-width: 3; }
+.node-circle.source-node { stroke: #ff6600; stroke-width: 3; }
+.node-circle.target-node { stroke: #00ff88; stroke-width: 3; }
+.node-circle.intermediate-node { stroke: #00ccff; stroke-width: 2; }
+.node-text { fill: #aaa; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; transition: all 0.4s; dominant-baseline: central; text-anchor: middle; }
+.node-text.active-text { fill: #ff6600; }
+.node-text.target-text { fill: #00ff88; }
+.node-text.intermediate-text { fill: #00ccff; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.pair-display {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 12px 20px; margin: 10px 0; text-align: center; font-size: 0.9em;
+}
+.pair-display .pair { color: #ffcc00; font-weight: bold; font-size: 1.2em; }
+.pair-display .status { color: #aaa; }
+.pair-display .status.found { color: #00ff88; font-weight: bold; }
+.pair-display .status.notfound { color: #888; }
+.comparison-grid {
+  display: flex; justify-content: center; gap: 30px; margin: 15px 0; flex-wrap: wrap;
+}
+.comparison-card {
+  background: #0d0d1a; border: 2px solid #333; border-radius: 10px;
+  padding: 18px 25px; min-width: 200px; transition: all 0.4s; text-align: center;
+}
+.comparison-card h4 { color: #00ccff; font-size: 0.85em; margin-bottom: 8px; }
+.comparison-card .big-num { font-size: 1.8em; color: #ffcc00; font-weight: bold; }
+.comparison-card .formula { color: #888; font-size: 0.82em; margin-top: 6px; }
+@media (max-width: 700px) {
+  .graphs-container { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<h1>GRAPH SQUARE G<sup>2</sup></h1>
+<p class="subtitle">Graph Algorithms — Paths of Length ≤ 2</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graphs-container">
+      <div class="graph-box">
+        <h3>Original Graph G</h3>
+        <svg id="graphG" width="220" height="300" viewBox="0 0 220 300"></svg>
+      </div>
+      <div class="graph-box">
+        <h3>Square G<sup>2</sup></h3>
+        <svg id="graphG2" width="220" height="300" viewBox="0 0 220 300"></svg>
+      </div>
+    </div>
+
+    <div class="pair-display" id="pairDisplay">
+      <span class="label">Checking pair: </span><span class="pair" id="pairLabel">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="status" id="statusLabel">Waiting...</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">G<sup>2</sup> Edges:</span> <span class="value" id="countDisplay">0</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Graph Square Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Graph square — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Graph Square: G<sup>2</sup></h3>
+        <p>The <b>square</b> of a directed graph G = (V, E) is the graph G<sup>2</sup> = (V, E<sup>2</sup>) where:</p>
+        <span class="formula-line">(u, v) ∈ E<sup>2</sup> iff G contains a path with at most 2 edges between u and v</span>
+        <p>That means (u, v) ∈ E<sup>2</sup> if either:</p>
+        <p style="margin-left:8px;">• <span class="dim">Direct edge:</span> (u, v) ∈ E (path of length 1)</p>
+        <p style="margin-left:8px;">• <span class="dim">Two-step path:</span> ∃w such that (u, w) ∈ E and (w, v) ∈ E (path of length 2)</p>
+        <p>Our graph: <span class="dim">|V| = 5</span>, <span class="dim">|E| = 6</span></p>
+        <p style="margin-left:8px;">G edges: (0→1), (0→3), (1→2), (1→3), (2→4), (3→4)</p>
+        <p class="note">We check all <b>|V|² = 25</b> pairs (u, v). Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 5;
+const VLABELS = ['0', '1', '2', '3', '4'];
+const edges = [[0,1], [0,3], [1,2], [1,3], [2,4], [3,4]];
+const nodePos = [
+  {x: 110, y: 30},
+  {x: 50, y: 140},
+  {x: 170, y: 140},
+  {x: 70, y: 260},
+  {x: 160, y: 260},
+];
+
+let adjG = [];
+let g2Edges = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgGCreated = false;
+let svgG2Created = false;
+
+function precomputeAll() {
+  adjG = Array.from({length: V}, () => []);
+  g2Edges = [];
+  for (const [u, v] of edges) adjG[u].push(v);
+}
+
+function hasDirectEdge(u, v) {
+  return adjG[u].includes(v);
+}
+
+function findIntermediate(u, v) {
+  for (let w = 0; w < V; w++) {
+    if (adjG[u].includes(w) && adjG[w].includes(v)) return w;
+  }
+  return -1;
+}
+
+function belongsToG2(u, v) {
+  if (u === v) return false;
+  if (hasDirectEdge(u, v)) return true;
+  return findIntermediate(u, v) >= 0;
+}
+
+function createSvgGraph(svgId, allEdges, activeEdges, pathEdges, activeNodes, sourceNode, targetNode, intermediateNodes, filledEdges) {
+  const svg = document.getElementById(svgId);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const edgeSet = new Set(allEdges.map(e => e[0] + ',' + e[1]));
+  const activeSet = new Set(activeEdges ? activeEdges.map(e => e[0] + ',' + e[1]) : []);
+  const pathSet = new Set(pathEdges ? pathEdges.map(e => e[0] + ',' + e[1]) : []);
+  const filledSet = new Set(filledEdges ? filledEdges.map(e => e[0] + ',' + e[1]) : []);
+
+  for (const [u, v] of allEdges) {
+    const key = u + ',' + v;
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 19;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    if (activeSet.has(key)) { line.classList.add('active-edge'); }
+    else if (pathSet.has(key)) { line.classList.add('path-edge'); }
+    else if (filledSet.has(key)) { line.classList.add('new-edge'); }
+    else { line.classList.add('dim-edge'); }
+    svg.appendChild(line);
+
+    const angle = Math.atan2(dy, dx);
+    const as = 8;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    if (activeSet.has(key)) { arrow.classList.add('active-arrow'); }
+    else if (pathSet.has(key)) { arrow.classList.add('path-arrow'); }
+    else if (filledSet.has(key)) { arrow.classList.add('new-arrow'); }
+    else { arrow.classList.add('dim-arrow'); }
+    svg.appendChild(arrow);
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '19');
+    circle.classList.add('node-circle');
+    if (sourceNode === v) { circle.classList.add('source-node'); }
+    else if (targetNode === v) { circle.classList.add('target-node'); }
+    else if (intermediateNodes && intermediateNodes.includes(v)) { circle.classList.add('intermediate-node'); }
+    else if (activeNodes && activeNodes.includes(v)) { circle.classList.add('active-node'); }
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    if (sourceNode === v) { text.classList.add('active-text'); }
+    else if (targetNode === v) { text.classList.add('target-text'); }
+    else if (intermediateNodes && intermediateNodes.includes(v)) { text.classList.add('intermediate-text'); }
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+}
+
+function gEdgeList() {
+  return edges.map(e => e.slice());
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Graph Square G<sup>2</sup></h3>
+    <p><b>G<sup>2</sup> = (V, E<sup>2</sup>)</b> where (u, v) ∈ E<sup>2</sup> iff there is a path of length <span class="dim">≤ 2</span> from u to v in G.</p>
+    <p>For each ordered pair (u, v) with u, v ∈ V, we check:</p>
+    <p style="margin-left:8px;">• <span class="dim">Direct:</span> Is (u, v) ∈ E?</p>
+    <p style="margin-left:8px;">• <span class="dim">Via intermediate:</span> Does some w exist where (u, w) ∈ E and (w, v) ∈ E?</p>
+    <span class="formula-line">E<sup>2</sup> = {(u, v) : (u, v) ∈ E ∨ ∃w ((u, w) ∈ E ∧ (w, v) ∈ E)}</span>
+    <p>We check all <b>|V|² = 25</b> ordered pairs. Edges found are added to G<sup>2</sup>.</p>
+    <p class="note">G has 5 vertices and 6 edges. Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildPairExplanation(u, v, found, how, inter) {
+  const pairStr = `(${u} → ${v})`;
+  if (!found) {
+    return `<div class="explain-section active">
+      <h3>Checking pair (${u} → ${v})</h3>
+      <p>Checking if <span class="dim">${pairStr}</span> ∈ E<sup>2</sup>:</p>
+      <p style="margin-left:8px;margin-top:8px;">
+        <span style="color:#00ccff;">❶ Direct edge:</span> <span class="dim">(${u} → ${v})</span> ${hasDirectEdge(u, v) ? '<span class="result-line">FOUND ✓</span>' : '<span style="color:#888;">not in E</span>'}
+      </p>
+      <p style="margin-left:8px;">
+        <span style="color:#00ccff;">❷ Path of length 2:</span> No intermediate w found.
+      </p>
+      <span class="formula-line">Result: (${u}, ${v}) <span style="color:#888;">∉</span> E<sup>2</sup></span>
+      <p class="note">No path of length ≤ 2 connects ${u} to ${v}.</p>
+    </div>`;
+  }
+  if (how === 'direct') {
+    return `<div class="explain-section active">
+      <h3>✅ Found edge (${u} → ${v}) — Direct</h3>
+      <p>Checking if <span class="dim">${pairStr}</span> ∈ E<sup>2</sup>:</p>
+      <p style="margin-left:8px;margin-top:8px;">
+        <span style="color:#00ccff;">❶ Direct edge:</span> <span class="dim">(${u} → ${v})</span> <span class="result-line">FOUND ✓</span>
+      </p>
+      <span class="formula-line">(${u}, ${v}) ∈ E → (${u}, ${v}) ∈ E<sup>2</sup></span>
+      <p>G already has edge from ${u} to ${v} (path of length 1).</p>
+      <p class="note">All edges of G are automatically in G<sup>2</sup>.</p>
+    </div>`;
+  }
+  return `<div class="explain-section active">
+    <h3>✅ Found edge (${u} → ${v}) — Via ${inter}</h3>
+    <p>Checking if <span class="dim">${pairStr}</span> ∈ E<sup>2</sup>:</p>
+    <p style="margin-left:8px;margin-top:8px;">
+      <span style="color:#00ccff;">❶ Direct edge:</span> <span class="dim">(${u} → ${v})</span> <span style="color:#888;">not in E</span>
+    </p>
+    <p style="margin-left:8px;">
+      <span style="color:#00ccff;">❷ Path via w=${inter}:</span>
+      <span class="dim">(${u} → ${inter})</span> ∈ E <span style="color:#00ccff;">and</span> <span class="dim">(${inter} → ${v})</span> ∈ E <span class="result-line">FOUND ✓</span>
+    </p>
+    <span class="formula-line">(${u}, ${inter}), (${inter}, ${v}) ∈ E → (${u}, ${v}) ∈ E<sup>2</sup></span>
+    <p>A path of length 2 exists: <b>${u} → ${inter} → ${v}</b>.</p>
+    <p class="note">New edge discovered! Added to G<sup>2</sup>.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  const directCount = edges.length;
+  const path2Count = g2Edges.length - edges.length;
+  let g2Str = '';
+  for (let i = 0; i < V; i++) {
+    const out = g2Edges.filter(e => e[0] === i).map(e => e[1]);
+    g2Str += `Adj[${i}]: [${out.join(', ')}]`;
+    if (i < V - 1) g2Str += '<br>';
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>All 25 ordered pairs have been checked. <b>G<sup>2</sup></b> is fully built.</p>
+    <span class="formula-line" style="font-size:0.8em;">${g2Str}</span>
+    <h3 style="margin-top:10px;">Summary</h3>
+    <p><span class="dim">Direct edges (from G):</span> ${directCount}</p>
+    <p><span class="dim">New length-2 paths:</span> ${path2Count}</p>
+    <p><span class="result-line">Total edges in G<sup>2</sup>: ${g2Edges.length}</span></p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(V·(V+E)) — for each of V² pairs, we check up to V intermediates. Can be improved to O(V·E) or O(V^ω) with matrix multiplication.</p>
+    <p><span class="dim">Space:</span> Θ(V + E²) for the resulting graph.</p>
+    <p class="note">G² is used in algorithms for detecting triangles, computing graph powers, and distance-related queries.</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+  const foundEdges = [];
+
+  steps.push({
+    type: 'init',
+    phase: 'Introduction',
+    pairLabel: '—',
+    statusLabel: 'Waiting...',
+    foundEdges: [],
+    g2EdgeCount: 0,
+  });
+
+  for (let u = 0; u < V; u++) {
+    for (let v = 0; v < V; v++) {
+      if (!belongsToG2(u, v)) {
+        const inter = findIntermediate(u, v);
+        const direct = hasDirectEdge(u, v);
+        steps.push({
+          type: 'check_pair',
+          u: u, v: v,
+          found: false,
+          how: 'none',
+          intermediate: inter,
+          directEdge: direct,
+          pairLabel: `(${u} → ${v})`,
+          statusLabel: 'Not in G²',
+          statusClass: 'notfound',
+          foundEdges: foundEdges.map(e => e.slice()),
+          g2EdgeCount: foundEdges.length,
+        });
+      } else {
+        const inter = findIntermediate(u, v);
+        const direct = hasDirectEdge(u, v);
+        const how = direct ? 'direct' : 'intermediate';
+        const edge = [u, v];
+        if (!foundEdges.some(e => e[0] === u && e[1] === v)) {
+          foundEdges.push(edge);
+        }
+        const statusText = direct ? 'Direct edge ✓' : 'Path length 2 ✓';
+        steps.push({
+          type: 'check_pair',
+          u: u, v: v,
+          found: true,
+          how: how,
+          intermediate: inter,
+          directEdge: direct,
+          pairLabel: `(${u} → ${v})`,
+          statusLabel: statusText,
+          statusClass: 'found',
+          foundEdges: foundEdges.map(e => e.slice()),
+          g2EdgeCount: foundEdges.length,
+        });
+      }
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    phase: '✓ Complete',
+    pairLabel: '—',
+    statusLabel: 'Complete',
+    foundEdges: foundEdges.map(e => e.slice()),
+    g2EdgeCount: foundEdges.length,
+  });
+}
+
+function applyStep(step) {
+  document.getElementById('pairLabel').textContent = step.pairLabel;
+  document.getElementById('statusLabel').textContent = step.statusLabel;
+  document.getElementById('statusLabel').className = 'status' + (step.statusClass ? ' ' + step.statusClass : '');
+  document.getElementById('phaseDisplay').textContent = step.phase || 'Checking';
+  document.getElementById('countDisplay').textContent = step.g2EdgeCount;
+  document.getElementById('resultSection').style.display = 'none';
+
+  const allGEdges = gEdgeList();
+
+  if (step.type === 'init') {
+    createSvgGraph('graphG', allGEdges, [], [], [], [], [], [], []);
+    createSvgGraph('graphG2', [], [], [], [], [], [], [], []);
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — Introduction`;
+    document.getElementById('explainArea').innerHTML = step.explanation;
+
+  } else if (step.type === 'check_pair') {
+    let highlightEdges = [];
+    let pathEdges = [];
+    let sourceNode = step.u;
+    let targetNode = step.v;
+    let intermediateNodes = [];
+    let activeNodes = [];
+
+    if (step.directEdge) {
+      highlightEdges = [[step.u, step.v]];
+    } else if (step.intermediate >= 0) {
+      pathEdges = [[step.u, step.intermediate], [step.intermediate, step.v]];
+      intermediateNodes = [step.intermediate];
+    }
+
+    createSvgGraph('graphG', allGEdges, highlightEdges, pathEdges, activeNodes, sourceNode, targetNode, intermediateNodes, []);
+    createSvgGraph('graphG2', step.foundEdges, [], [], [], [], [], [], []);
+
+    const phase = step.found ? '✓ Found' : '✗ Not in G²';
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — (${step.u} → ${step.v})`;
+    document.getElementById('explainArea').innerHTML = buildPairExplanation(step.u, step.v, step.found, step.how, step.intermediate);
+
+  } else if (step.type === 'done') {
+    const allGEdgesList = gEdgeList();
+    const directCount = edges.length;
+    const path2Count = step.foundEdges.length - edges.length;
+    createSvgGraph('graphG', allGEdgesList, [], [], [0,1,2,3,4], [], [], [], []);
+    createSvgGraph('graphG2', step.foundEdges, [], [], [0,1,2,3,4], [], [], [], []);
+
+    document.getElementById('resultSection').style.display = 'block';
+    let g2Str = '';
+    for (let i = 0; i < V; i++) {
+      const out = step.foundEdges.filter(e => e[0] === i).map(e => e[1]);
+      g2Str += `Adj[${i}]: [${out.join(', ')}]`;
+      if (i < V - 1) g2Str += '<br>';
+    }
+    document.getElementById('resultContent').innerHTML = `
+      <div class="comparison-grid">
+        <div class="comparison-card" style="border-color:#00ccff;">
+          <h4>Original G</h4>
+          <div class="big-num">${edges.length}</div>
+          <div class="formula">edges</div>
+        </div>
+        <div class="comparison-card" style="border-color:#00ff88;">
+          <h4>G<sup>2</sup></h4>
+          <div class="big-num">${step.foundEdges.length}</div>
+          <div class="formula">edges (${directCount} direct + ${path2Count} new)</div>
+        </div>
+      </div>
+      <p style="margin-top:12px;color:#888;font-size:0.85em;">${g2Str}</p>
+    `;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ✅ Complete`;
+    document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('countDisplay').textContent = '0';
+  document.getElementById('pairLabel').textContent = '—';
+  document.getElementById('statusLabel').textContent = 'Waiting...';
+  document.getElementById('statusLabel').className = 'status';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Graph square — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  const allGEdges = gEdgeList();
+  createSvgGraph('graphG', allGEdges, [], [], [], [], [], [], []);
+  createSvgGraph('graphG2', [], [], [], [], [], [], [], []);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() { animating = false; }
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+precomputeAll();
+buildSteps();
+const initialGEdges = gEdgeList();
+createSvgGraph('graphG', initialGEdges, [], [], [], [], [], [], []);
+createSvgGraph('graphG2', [], [], [], [], [], [], [], []);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

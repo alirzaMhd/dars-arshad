@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incidence Matrix Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar {
+  width: 420px; min-width: 420px; max-height: calc(100vh - 100px);
+  overflow-y: auto; position: sticky; top: 10px; background: #0d0d20;
+  border: 1px solid #2a2a44; border-radius: 12px; padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.graph-container {
+  background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; margin: 15px 0; text-align: center;
+}
+.graph-container svg { display: block; margin: 0 auto; max-width: 100%; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.matrix-section { margin: 15px 0; }
+.matrix-section .table-title {
+  color: #00ccff; font-size: 0.95em; margin-bottom: 10px; text-align: center;
+}
+.matrix-section .matrix-wrapper { overflow-x: auto; padding: 5px; }
+.matrix-section table { border-collapse: collapse; margin: 0 auto; }
+.matrix-section th, .matrix-section td {
+  width: 34px; height: 30px; text-align: center; border: 1px solid #333;
+  font-size: 0.82em; transition: all 0.3s;
+}
+.matrix-section th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+.matrix-section td { background: #0d0d1a; color: #555; }
+.matrix-section td.one {
+  background: #0a1a12; color: #00ff88; border-color: #00ff8855; font-weight: bold;
+}
+.matrix-section td.current-cell {
+  background: #1a0a00 !important; color: #ff6600 !important;
+  border-color: #ff6600 !important; box-shadow: 0 0 10px #ff660044; transform: scale(1.1); font-weight: bold;
+}
+.matrix-section td.edge-label {
+  background: #1a1a2e; color: #ffcc00; font-weight: bold; font-size: 0.8em;
+}
+.edge-line { stroke: #555; stroke-width: 2; fill: none; transition: all 0.4s; }
+.edge-line.active-edge { stroke: #ff6600; stroke-width: 3; }
+.edge-line.dim-edge { stroke: #333; }
+.edge-arrow { fill: #555; transition: all 0.4s; }
+.edge-arrow.active-arrow { fill: #ff6600; }
+.edge-arrow.dim-arrow { fill: #333; }
+.edge-label-text { fill: #555; font-size: 10px; font-family: 'Courier New', monospace; transition: all 0.4s; dominant-baseline: central; text-anchor: middle; }
+.edge-label-text.active-label { fill: #ff6600; font-weight: bold; }
+.node-circle { fill: #0d0d1a; stroke: #555; stroke-width: 2; transition: all 0.4s; }
+.node-circle.active-node { stroke: #ff6600; stroke-width: 3; }
+.node-circle.incident-node { stroke: #00ff88; stroke-width: 3; }
+.node-text { fill: #aaa; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; transition: all 0.4s; dominant-baseline: central; text-anchor: middle; }
+.node-text.active-text { fill: #ff6600; }
+.node-text.incident-text { fill: #00ff88; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.2em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.edge-info { font-size: 0.85em; color: #ccc; margin: 8px 0; text-align: center; }
+.edge-info .highlight { color: #ffcc00; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>INCIDENCE MATRIX</h1>
+<p class="subtitle">Graph Representations — Vertex-Edge Incidence Matrix B</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="460" height="320" viewBox="0 0 460 320"></svg>
+    </div>
+
+    <div class="edge-info" id="edgeInfo">
+      <span class="label">Current edge:</span> <span class="highlight" id="currentEdgeDisplay">—</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeLabelDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Incident vertices:</span> <span class="value" id="incidentDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="matrix-section">
+      <div class="table-title">|V| × |E| Incidence Matrix B (b<sub>ij</sub> = 1 if vertex i incident to edge j)</div>
+      <div id="matrixDisplay" class="matrix-wrapper"></div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Incidence Matrix Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Incidence matrix — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Incidence Matrix</h3>
+        <p>For a directed graph G = (V, E), the <b>incidence matrix</b> B is a <span class="dim">|V| × |E|</span> matrix where:</p>
+        <span class="formula-line">b<sub>ij</sub> = 1 &nbsp;if vertex v<sub>i</sub> is incident to edge e<sub>j</sub>, 0 otherwise</span>
+        <p>Each column <b>e<sub>j</sub></b> has exactly <b>two</b> ones: one for the <span class="dim">source</span> and one for the <span class="dim">target</span> (self-loops have one 1).</p>
+        <p>For this demo: <span class="dim">|V| = 5</span>, <span class="dim">|E| = 6</span></p>
+        <p style="margin-left:8px;">e<sub>0</sub>: (0→1), e<sub>1</sub>: (0→3), e<sub>2</sub>: (1→2), e<sub>3</sub>: (1→3), e<sub>4</sub>: (2→4), e<sub>5</sub>: (3→4)</p>
+        <p class="note">Press <b>▶ Play</b> or <b>⏭ Step</b> to fill the matrix one edge at a time.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 5;
+const VLABELS = ['0', '1', '2', '3', '4'];
+const edges = [[0,1], [0,3], [1,2], [1,3], [2,4], [3,4]];
+const ELABELS = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5'];
+const nodePos = [
+  {x: 230, y: 30},
+  {x: 110, y: 140},
+  {x: 350, y: 140},
+  {x: 150, y: 275},
+  {x: 370, y: 275},
+];
+
+let incidenceMatrix = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgCreated = false;
+
+function precomputeAll() {
+  incidenceMatrix = Array.from({length: V}, () => Array(edges.length).fill(0));
+}
+
+function createSvgElements() {
+  if (svgCreated) return;
+  const svg = document.getElementById('graphSvg');
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 20;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+    const midx = (p1.x + p2.x) / 2 + (dy/len) * 10;
+    const midy = (p1.y + p2.y) / 2 - (dx/len) * 10;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = e;
+    svg.appendChild(line);
+
+    const angle = Math.atan2(dy, dx);
+    const as = 9;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    arrow.dataset.edge = e;
+    svg.appendChild(arrow);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', midx); label.setAttribute('y', midy);
+    label.classList.add('edge-label-text');
+    label.textContent = ELABELS[e];
+    label.dataset.edge = e;
+    svg.appendChild(label);
+  }
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '20');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+  svgCreated = true;
+}
+
+function setSvgHighlights(activeEdge, activeNodes, incidentNodes) {
+  document.querySelectorAll('.edge-line').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    el.classList.toggle('active-edge', e === activeEdge);
+    el.classList.toggle('dim-edge', activeEdge >= 0 && e < activeEdge);
+  });
+  document.querySelectorAll('.edge-arrow').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    el.classList.toggle('active-arrow', e === activeEdge);
+    el.classList.toggle('dim-arrow', activeEdge >= 0 && e < activeEdge);
+  });
+  document.querySelectorAll('.edge-label-text').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    el.classList.toggle('active-label', e === activeEdge);
+    if (activeEdge >= 0 && e < activeEdge) { el.setAttribute('fill', '#00ff88'); }
+    else if (e === activeEdge) { el.setAttribute('fill', '#ff6600'); }
+    else { el.setAttribute('fill', '#555'); }
+  });
+  document.querySelectorAll('.node-circle').forEach(el => {
+    const n = parseInt(el.dataset.node);
+    el.classList.toggle('active-node', activeNodes && activeNodes.includes(n) && (!incidentNodes || !incidentNodes.includes(n)));
+    el.classList.toggle('incident-node', incidentNodes && incidentNodes.includes(n));
+    if (!activeNodes || !activeNodes.includes(n)) el.classList.remove('active-node');
+  });
+  document.querySelectorAll('.node-text').forEach(el => {
+    const n = VLABELS.indexOf(el.textContent);
+    el.classList.toggle('active-text', activeNodes && activeNodes.includes(n) && (!incidentNodes || !incidentNodes.includes(n)));
+    el.classList.toggle('incident-text', incidentNodes && incidentNodes.includes(n));
+    if (!activeNodes || !activeNodes.includes(n)) el.classList.remove('active-text');
+  });
+}
+
+function buildMatrixHTML(filledCols, currentCol) {
+  if (!filledCols) filledCols = [];
+  let html = '<table><tr><th style="width:30px;"></th>';
+  for (let j = 0; j < edges.length; j++) {
+    html += `<th style="width:34px;font-size:0.78em;">${ELABELS[j]}</th>`;
+  }
+  html += '</tr>';
+  for (let i = 0; i < V; i++) {
+    html += `<tr><th style="width:30px;">${i}</th>`;
+    for (let j = 0; j < edges.length; j++) {
+      let cls = '';
+      if (currentCol === j && incidenceMatrix[i][j] === 1) {
+        cls = 'current-cell';
+      } else if (filledCols.includes(j) || incidenceMatrix[i][j] === 1) {
+        cls = 'one';
+      }
+      html += `<td class="${cls}">${incidenceMatrix[i][j]}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Incidence Matrix B</h3>
+    <p>B is a <span class="dim">|V| × |E|</span> binary matrix where:</p>
+    <span class="formula-line">b<sub>ij</sub> = 1 if vertex v<sub>i</sub> is incident to edge e<sub>j</sub></span>
+    <p>Each edge e<sub>j</sub> = (u, v) produces a column with <b>two ones</b>: at rows u and v.</p>
+    <p>Our graph: <span class="dim">|V| = 5</span>, <span class="dim">|E| = 6</span></p>
+    <p style="margin-left:8px;">e<sub>0</sub>=(0→1), e<sub>1</sub>=(0→3), e<sub>2</sub>=(1→2), e<sub>3</sub>=(1→3), e<sub>4</sub>=(2→4), e<sub>5</sub>=(3→4)</p>
+    <p class="note">The incidence matrix is sized 5×6. Each column will contain exactly two 1s. Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildEdgeExplanation(e, u, v) {
+  return `<div class="explain-section active">
+    <h3>Step: Filling column for ${ELABELS[e]} = (${u} → ${v})</h3>
+    <p>Processing edge <span class="dim">${ELABELS[e]}</span> from <span class="dim">${u}</span> to <span class="dim">${v}</span>:</p>
+    <p style="margin-left:8px;margin-top:8px;">
+      <span style="color:#00ccff;">❶</span> Vertex <span class="split-info">${u}</span> (source) — <b>incident</b> to this edge → B[${u}][${e}] = <span class="result-line">1</span>
+    </p>
+    <p style="margin-left:8px;">
+      <span style="color:#00ccff;">❷</span> Vertex <span class="split-info">${v}</span> (target) — <b>incident</b> to this edge → B[${v}][${e}] = <span class="result-line">1</span>
+    </p>
+    <span class="formula-line">B[${u}][${e}] ← 1, &nbsp; B[${v}][${e}] ← 1</span>
+    <p style="margin-top:8px;">All other vertices in this column remain <span class="dim">0</span> — they are not incident to edge e${e}.</p>
+    <p class="note">Column ${e} now has exactly ${2} ones, representing the two incident vertices of edge ${ELABELS[e]}.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  let matrixStr = '';
+  for (let i = 0; i < V; i++) {
+    matrixStr += `v${i}: [${incidenceMatrix[i].join(' ')}]`;
+    if (i < V - 1) matrixStr += '<br>';
+  }
+  const colSums = [];
+  let totalOnes = 0;
+  for (let j = 0; j < edges.length; j++) {
+    let s = 0;
+    for (let i = 0; i < V; i++) s += incidenceMatrix[i][j];
+    colSums.push(s);
+    totalOnes += s;
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Incidence Matrix Complete!</h3>
+    <p>All <span class="dim">6</span> edges have been processed. The matrix is fully populated.</p>
+    <span class="formula-line" style="font-size:0.8em;">${matrixStr}</span>
+    <h3 style="margin-top:10px;">Verification</h3>
+    <p>Column sums (each should be 2): [${colSums.join(', ')}]</p>
+    <p>Total ones: <span class="result-line">${totalOnes}</span> = 2 × |E| = ${2 * edges.length}</p>
+    <h3 style="margin-top:10px;">Properties</h3>
+    <p><span class="dim">Size:</span> ${V} × ${edges.length}</p>
+    <p><span class="dim">Non-zero entries:</span> 2|E| = ${2 * edges.length} (each column has exactly two 1s)</p>
+    <p><span class="dim">Memory:</span> Θ(V·E) storage — dense representation, used in network flow and algebraic graph theory.</p>
+    <p class="note">The incidence matrix is useful for network flow algorithms (cycle/edge-cut identification) and spectral graph theory (Laplacian matrix = B·B<sup>T</sup>).</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+  steps.push({
+    type: 'init',
+    phase: 'Introduction',
+    edgeLabel: '—',
+    incidentStr: '—',
+    filledCols: [],
+    currentCol: -1,
+  });
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    const filledCols = [];
+    for (let k = 0; k <= e; k++) filledCols.push(k);
+    steps.push({
+      type: 'fill_edge',
+      edgeIdx: e, u: u, v: v,
+      filledCols: filledCols,
+      currentCol: e,
+      phase: 'Filling',
+      edgeLabel: `${ELABELS[e]} = (${u} → ${v})`,
+      incidentStr: `v${u}, v${v}`,
+    });
+  }
+  steps.push({
+    type: 'done',
+    phase: '✓ Complete',
+    edgeLabel: '—',
+    incidentStr: '—',
+    filledCols: Array.from({length: edges.length}, (_, i) => i),
+    currentCol: -1,
+  });
+}
+
+function applyStep(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('edgeLabelDisplay').textContent = step.edgeLabel;
+  document.getElementById('incidentDisplay').textContent = step.incidentStr;
+  document.getElementById('resultSection').style.display = 'none';
+
+  if (step.type === 'init') {
+    precomputeAll();
+    setSvgHighlights(-1, [], []);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML([], -1);
+    document.getElementById('currentEdgeDisplay').textContent = '—';
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — Introduction`;
+    document.getElementById('explainArea').innerHTML = step.explanation;
+
+  } else if (step.type === 'fill_edge') {
+    incidenceMatrix[step.u][step.edgeIdx] = 1;
+    incidenceMatrix[step.v][step.edgeIdx] = 1;
+    setSvgHighlights(step.edgeIdx, [step.u, step.v], [step.u, step.v]);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCols, step.currentCol);
+    document.getElementById('currentEdgeDisplay').textContent = `${ELABELS[step.edgeIdx]} = (${step.u} → ${step.v})`;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${ELABELS[step.edgeIdx]}`;
+    document.getElementById('explainArea').innerHTML = buildEdgeExplanation(step.edgeIdx, step.u, step.v);
+
+  } else if (step.type === 'done') {
+    setSvgHighlights(-1, [], []);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCols, -1);
+    document.getElementById('currentEdgeDisplay').textContent = '✓ Complete';
+    document.getElementById('resultSection').style.display = 'block';
+    const colSums = [];
+    let totalOnes = 0;
+    for (let j = 0; j < edges.length; j++) {
+      let s = 0;
+      for (let i = 0; i < V; i++) s += incidenceMatrix[i][j];
+      colSums.push(s);
+      totalOnes += s;
+    }
+    document.getElementById('resultContent').innerHTML = `
+      <p><span class="big-result">${V} × ${edges.length} Incidence Matrix</span></p>
+      <p>Column sums: [${colSums.join(', ')}] — each column has exactly 2 ones.</p>
+      <p>Total non-zero entries: ${totalOnes} = 2|E|</p>
+      <p style="margin-top:10px;color:#888;">Memory: Θ(V·E). Used in network flow, algebraic graph theory, and the Laplacian L = B·B<sup>T</sup>.</p>
+    `;
+    document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ✅ Complete`;
+    document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('edgeLabelDisplay').textContent = '—';
+  document.getElementById('incidentDisplay').textContent = '—';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Incidence matrix — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  setSvgHighlights(-1, [], []);
+  document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML([], -1);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() { animating = false; }
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+precomputeAll();
+buildSteps();
+createSvgElements();
+setSvgHighlights(-1, [], []);
+document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML([], -1);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

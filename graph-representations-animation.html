@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Representations Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.repr-container {
+  display: flex;
+  gap: 15px;
+  margin: 15px 0;
+}
+.repr-box {
+  flex: 1;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  min-width: 0;
+}
+.repr-box h3 {
+  color: #00ccff;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+  text-align: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #333;
+}
+.adjlist-section { font-size: 0.82em; }
+.adjlist-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  margin: 3px 0;
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 5px;
+  transition: all 0.3s;
+}
+.adjlist-row .vlabel {
+  color: #ffcc00;
+  font-weight: bold;
+  min-width: 48px;
+}
+.adjlist-row .arrow {
+  color: #555;
+  margin: 0 4px;
+}
+.adjlist-row .neighbors {
+  color: #aaa;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.adjlist-row .neighbor-item {
+  display: inline-block;
+  padding: 1px 7px;
+  margin: 1px;
+  border-radius: 4px;
+  font-size: 0.95em;
+  transition: all 0.4s;
+  color: #888;
+  border: 1px solid transparent;
+}
+.adjlist-row .neighbor-item.added {
+  color: #00ff88;
+  background: #0a1a12;
+  border-color: #00ff8855;
+}
+.adjlist-row .neighbor-item.current {
+  border-color: #ff6600 !important;
+  color: #ff6600 !important;
+  background: #1a0a00 !important;
+  box-shadow: 0 0 8px #ff660044;
+}
+.adjlist-row.highlight {
+  border-color: #ff6600;
+  background: #1a0a00;
+  box-shadow: 0 0 10px #ff660033;
+}
+.adjlist-row.query-highlight {
+  border-color: #00ccff;
+  background: #00101a;
+  box-shadow: 0 0 10px #00ccff33;
+}
+.matrix-section { font-size: 0.82em; }
+.matrix-section .matrix-wrapper {
+  overflow-x: auto;
+}
+.matrix-section table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+.matrix-section th, .matrix-section td {
+  width: 34px;
+  height: 30px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.82em;
+  transition: all 0.3s;
+}
+.matrix-section th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.matrix-section td {
+  background: #0d0d1a;
+  color: #555;
+}
+.matrix-section td.one {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+.matrix-section td.current-cell {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 10px #ff660044;
+  transform: scale(1.1);
+  font-weight: bold;
+}
+.matrix-section td.empty-highlight {
+  background: #1a0030 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+}
+@media (max-width: 700px) {
+  .repr-container { flex-direction: column; }
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+.memory-grid {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.memory-card {
+  background: #0d0d1a;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 18px 25px;
+  min-width: 180px;
+  transition: all 0.4s;
+}
+.memory-card h4 {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+}
+.memory-card .big-num {
+  font-size: 2em;
+  color: #ffcc00;
+  font-weight: bold;
+}
+.memory-card .formula {
+  color: #888;
+  font-size: 0.82em;
+  margin-top: 6px;
+}
+.memory-card .tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-top: 8px;
+}
+.tag-winner {
+  background: #002a1a;
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+.tag-loser {
+  background: #2a0000;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+}
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.active-edge {
+  stroke: #ff6600;
+  stroke-width: 3;
+}
+.edge-arrow {
+  fill: #555;
+  transition: all 0.4s;
+}
+.edge-arrow.active-arrow {
+  fill: #ff6600;
+}
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2;
+  transition: all 0.4s;
+}
+.node-circle.active-node {
+  stroke: #ff6600;
+  stroke-width: 3;
+}
+.node-text {
+  fill: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  transition: all 0.4s;
+  dominant-baseline: central;
+  text-anchor: middle;
+}
+.node-text.active-text {
+  fill: #ff6600;
+}
+.query-section {
+  display: flex;
+  gap: 15px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.query-card {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px 20px;
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  transition: all 0.4s;
+}
+.query-card.active-query {
+  border-color: #ff6600;
+  box-shadow: 0 0 15px #ff660033;
+}
+.query-card h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+}
+.query-card .query-result {
+  font-size: 1.1em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 8px 0;
+}
+.query-card .complexity {
+  color: #00ccff;
+  font-size: 0.82em;
+}
+</style>
+</head>
+<body>
+
+<h1>GRAPH REPRESENTATIONS</h1>
+<p class="subtitle">Graph Algorithms — Adjacency List vs Adjacency Matrix</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="480" height="340" viewBox="0 0 480 340">
+      </svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Memory:</span> <span class="value" id="memDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="repr-container">
+      <div class="repr-box">
+        <h3>Adjacency List &nbsp;<span style="color:#888;font-size:0.85em;">Θ(V + E)</span></h3>
+        <div id="adjlistDisplay" class="adjlist-section"></div>
+      </div>
+      <div class="repr-box">
+        <h3>Adjacency Matrix &nbsp;<span style="color:#888;font-size:0.85em;">Θ(V²)</span></h3>
+        <div id="matrixDisplay" class="matrix-section"></div>
+      </div>
+    </div>
+
+    <div id="querySection" class="query-section" style="display:none;"></div>
+
+    <div id="memorySection" class="memory-grid" style="display:none;"></div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Graph Representations Summary</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Graph representations — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Graph Representations</h3>
+        <p>A graph <b>G = (V, E)</b> can be stored in two standard ways:</p>
+        <p><span class="dim">Adjacency-list:</span> Array Adj of |V| lists; Adj[u] contains all vertices v such that (u, v) ∈ E. Memory: <b>Θ(V + E)</b>.</p>
+        <p><span class="dim">Adjacency-matrix:</span> |V| × |V| matrix A where a<sub>ij</sub> = 1 if (i, j) ∈ E. Memory: <b>Θ(V²)</b>.</p>
+        <p class="note">For this demo: V = {0,1,2,3,4}, 6 directed edges. Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 5;
+const VLABELS = ['0', '1', '2', '3', '4'];
+const edges = [[0,1], [0,3], [1,2], [1,3], [2,4], [3,4]];
+const nodePos = [
+  {x: 240, y: 30},
+  {x: 120, y: 150},
+  {x: 360, y: 150},
+  {x: 160, y: 290},
+  {x: 380, y: 290},
+];
+
+let adjList = [];
+let adjMatrix = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgElementsCreated = false;
+
+function precomputeAll() {
+  adjList = Array.from({length: V}, () => []);
+  adjMatrix = Array.from({length: V}, () => Array(V).fill(0));
+}
+
+function buildAdjListHTML(highlightRow, addedItems, currentItems, queryRow) {
+  if (!addedItems) addedItems = [];
+  if (!currentItems) currentItems = [];
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    let rowClass = 'adjlist-row';
+    if (highlightRow === i) rowClass += ' highlight';
+    if (queryRow === i) rowClass += ' query-highlight';
+    html += `<div class="${rowClass}">`;
+    html += `<span class="vlabel">Adj[${i}]:</span>`;
+    html += `<span class="arrow">→</span>`;
+    html += `<span class="neighbors">`;
+    const list = adjList[i];
+    if (list.length === 0) {
+      html += `<span style="color:#555;font-style:italic;">∅</span>`;
+    } else {
+      for (let k = 0; k < list.length; k++) {
+        const val = list[k];
+        let cls = 'neighbor-item';
+        const key = i + ',' + val;
+        if (currentItems.includes(key)) cls += ' current';
+        else if (addedItems.includes(key)) cls += ' added';
+        html += `<span class="${cls}">${val}</span>`;
+        if (k < list.length - 1) html += `<span style="color:#555;">,</span>`;
+      }
+    }
+    html += `</span></div>`;
+  }
+  return html;
+}
+
+function buildMatrixHTML(filledCells, currentCell, emptyHighlights, queryRow) {
+  if (!filledCells) filledCells = [];
+  if (!emptyHighlights) emptyHighlights = [];
+  let html = '<div class="matrix-wrapper"><table><tr><th></th>';
+  for (let j = 0; j < V; j++) html += `<th>${j}</th>`;
+  html += '</tr>';
+  for (let i = 0; i < V; i++) {
+    html += `<tr><th>${i}</th>`;
+    for (let j = 0; j < V; j++) {
+      let cls = '';
+      const val = adjMatrix[i][j];
+      if (currentCell && i === currentCell.i && j === currentCell.j) {
+        cls = 'current-cell';
+      } else if (filledCells.some(f => f.i === i && f.j === j)) {
+        cls = 'one';
+      } else if (emptyHighlights.some(e => e.i === i && e.j === j)) {
+        cls = 'empty-highlight';
+      }
+      html += `<td class="${cls}">${val}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table></div>';
+  return html;
+}
+
+function createSvgElements() {
+  if (svgElementsCreated) return;
+  const svg = document.getElementById('graphSvg');
+
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 22;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = e;
+    svg.appendChild(line);
+
+    const angle = Math.atan2(dy, dx);
+    const as = 10;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    arrow.dataset.edge = e;
+    svg.appendChild(arrow);
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '22');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+
+  svgElementsCreated = true;
+}
+
+function setSvgHighlights(activeEdge, activeNodes) {
+  if (activeEdge === undefined) activeEdge = -1;
+  if (!activeNodes) activeNodes = [];
+
+  document.querySelectorAll('.edge-line').forEach(el => {
+    el.classList.toggle('active-edge', parseInt(el.dataset.edge) === activeEdge);
+  });
+  document.querySelectorAll('.edge-arrow').forEach(el => {
+    el.classList.toggle('active-arrow', parseInt(el.dataset.edge) === activeEdge);
+  });
+  document.querySelectorAll('.node-circle').forEach(el => {
+    el.classList.toggle('active-node', activeNodes.includes(parseInt(el.dataset.node)));
+  });
+  document.querySelectorAll('.node-text').forEach(el => {
+    const idx = parseInt(el.textContent);
+    el.classList.toggle('active-text', activeNodes.includes(idx));
+  });
+}
+
+function initDisplay() {
+  createSvgElements();
+  setSvgHighlights(-1, []);
+  document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, [], [], -1);
+  document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML([], null, [], -1);
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Directed Graph: G = (V, E)</h3>
+    <p>We have <span class="dim">|V| = 5</span> vertices labeled <b>0</b> through <b>4</b> and <span class="dim">|E| = 6</span> directed edges:</p>
+    <p style="margin-left:8px;">• (0 → 1), (0 → 3), (1 → 2), (1 → 3), (2 → 4), (3 → 4)</p>
+    <p>Both representations start empty. As we process each edge, we will add it to <b>both</b> the adjacency list and the adjacency matrix.</p>
+    <h3 style="margin-top:10px;">Key Formulas</h3>
+    <span class="formula-line">Adjacency List: Θ(V + E) = Θ(5 + 6) = O(11) storage units</span>
+    <span class="formula-line">Adjacency Matrix: Θ(V²) = Θ(25) storage cells</span>
+    <p class="note">For sparse graphs (E ≪ V²), adjacency lists use far less memory. For dense graphs (E ≈ V²), matrices are simpler and cache-friendly.</p>
+    <p class="note">Press <b>▶ Play</b> or <b>⏭ Step</b> to watch each edge get added.</p>
+  </div>`;
+}
+
+function buildEdgeExplanation(e, u, v, degU) {
+  return `<div class="explain-section active">
+    <h3>Step: Adding Edge (${u} → ${v})</h3>
+    <p><b>Adding edge <span class="dim">e${e}: ${u} → ${v}</span></b> to both representations:</p>
+    <p style="margin-left:8px;margin-top:8px;">
+      <span style="color:#00ccff;">❶ Adjacency List:</span> Append <span class="dim">${v}</span> to <span class="dim">Adj[${u}]</span>.
+      Degree of vertex ${u} becomes <span class="split-info">${degU}</span>.
+    </p>
+    <p style="margin-left:8px;">
+      <span style="color:#00ccff;">❷ Adjacency Matrix:</span> Set <span class="dim">A[${u}][${v}] = 1</span>.
+    </p>
+    <span class="formula-line">AdjList update: Adj[${u}] ← Adj[${u}] ∪ {${v}}</span>
+    <span class="formula-line">Matrix update: A[${u}][${v}] = 1</span>
+    <p class="note">Directed edge: the reverse direction is <b>not</b> automatically added.</p>
+  </div>`;
+}
+
+function buildMemoryExplanation() {
+  const listSize = V + edges.length;
+  const matrixSize = V * V;
+  return `<div class="explain-section active">
+    <h3>Memory Comparison</h3>
+    <p>After processing all <span class="dim">6</span> edges, let's compare the memory used:</p>
+    <p style="margin-left:8px;margin-top:8px;">
+      <span style="color:#00ccff;">Adjacency List:</span> <span class="dim">Θ(V + E)</span> = Θ(${V} + ${edges.length}) = <span class="split-info">${listSize}</span> storage units
+      <br><span class="note" style="margin-left:16px;">— One array entry per vertex + one entry per edge</span>
+    </p>
+    <p style="margin-left:8px;">
+      <span style="color:#00ccff;">Adjacency Matrix:</span> <span class="dim">Θ(V²)</span> = Θ(${V}²) = <span class="split-info">${matrixSize}</span> storage cells
+      <br><span class="note" style="margin-left:16px;">— Always V² cells, regardless of actual edge count</span>
+    </p>
+    <p>The adjacency list saves <span class="result-line">${matrixSize - listSize}</span> storage units for this sparse graph!</p>
+    <h3 style="margin-top:10px;">Trade-offs</h3>
+    <p><span class="dim">Adjacency List:</span> Fast iteration over outgoing edges (O(degree)), compact for sparse graphs.</p>
+    <p><span class="dim">Adjacency Matrix:</span> O(1) edge-existence check, cache-friendly for dense graphs.</p>
+    <p class="note">Use adjacency lists when E ≪ V² (most real-world graphs). Use matrices when E ≈ V² or when constant-time edge queries dominate.</p>
+  </div>`;
+}
+
+function buildQueryAdjListExplanation(v) {
+  const list = adjList[v];
+  const neighbors = list.length > 0 ? list.join(', ') : 'none';
+  return `<div class="explain-section active">
+    <h3>Query: Find neighbors of vertex ${v}</h3>
+    <p>Using the <span class="dim">adjacency list</span>, we scan <span class="dim">Adj[${v}]</span>:</p>
+    <p style="margin-left:8px;">Adj[${v}] → [${neighbors}]</p>
+    <span class="formula-line">Time to list neighbors: O(degree(${v})) = O(${list.length})</span>
+    <p>The adjacency list is efficient for sparse iteration — we only examine the edges that exist.</p>
+    <p class="note">To check if a <b>specific</b> edge (${v} → w) exists, we must scan the list: O(degree).</p>
+  </div>`;
+}
+
+function buildQueryAdjMatrixExplanation(v) {
+  const row = adjMatrix[v];
+  const neighborIndices = [];
+  for (let j = 0; j < V; j++) { if (row[j] === 1) neighborIndices.push(j); }
+  const neighStr = neighborIndices.length > 0 ? neighborIndices.join(', ') : 'none';
+  return `<div class="explain-section active">
+    <h3>Query: Find neighbors of vertex ${v}</h3>
+    <p>Using the <span class="dim">adjacency matrix</span>, we scan row <span class="dim">${v}</span>:</p>
+    <p style="margin-left:8px;">Row ${v}: [${row.join(', ')}] → neighbors at columns [${neighStr}]</p>
+    <span class="formula-line">Time to list neighbors: O(V) = O(${V}) — must check all V columns</span>
+    <p>The matrix requires scanning <b>all</b> V columns, even if only ${neighborIndices.length} edges exist.</p>
+    <p class="note">However, to check if edge <b>(${v} → w)</b> exists: O(1) — just look up A[${v}][w].</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  const listSize = V + edges.length;
+  const matrixSize = V * V;
+  let adjListStr = '';
+  for (let i = 0; i < V; i++) {
+    adjListStr += `Adj[${i}]: [${adjList[i].join(', ')}]`;
+    if (i < V - 1) adjListStr += ', ';
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>Both graph representations have been fully built for <b>G = (V, E)</b> with <span class="dim">|V| = ${V}</span> and <span class="dim">|E| = ${edges.length}</span>.</p>
+    <h3 style="margin-top:10px;">Final Representations</h3>
+    <span class="formula-line">Adjacency List: ${adjListStr}</span>
+    <span class="formula-line">Adjacency Matrix: ${V}×${V} grid with ${edges.length} ones</span>
+    <h3 style="margin-top:10px;">Complexity Summary</h3>
+    <p><span class="dim">Adjacency List Memory:</span> Θ(V + E) = Θ(${listSize})</p>
+    <p><span class="dim">Adjacency Matrix Memory:</span> Θ(V²) = Θ(${matrixSize})</p>
+    <p><span class="dim">Edge Query (List):</span> O(degree) — scan the list</p>
+    <p><span class="dim">Edge Query (Matrix):</span> O(1) — direct array access</p>
+    <p class="note">For this sparse graph (${edges.length} edges out of ${V*V - V} possible), the adjacency list uses <b>${((matrixSize - listSize)/matrixSize*100).toFixed(0)}%</b> less memory.</p>
+  </div>`;
+}
+
+function buildSteps() {
+  steps = [];
+
+  const tempAdjList = Array.from({length: V}, () => []);
+
+  // Step 0: Show empty structures
+  steps.push({
+    type: 'show_graph',
+    explanation: buildInitExplanation(),
+    addedKeys: [],
+    filledCells: [],
+    phase: 'Introduction',
+    edgeLabel: '—',
+  });
+
+  // Steps 1-6: Add each edge
+  let allAddedKeys = [];
+  let allFilledCells = [];
+  for (let e = 0; e < edges.length; e++) {
+    const [u, v] = edges[e];
+    tempAdjList[u].push(v);
+    const key = u + ',' + v;
+    allAddedKeys.push(key);
+    allFilledCells.push({i: u, j: v});
+
+    steps.push({
+      type: 'add_edge',
+      u: u, v: v,
+      edgeIdx: e,
+      addedKeys: allAddedKeys.slice(),
+      filledCells: allFilledCells.slice(),
+      currentKey: key,
+      degU: tempAdjList[u].length,
+      phase: 'Building',
+      edgeLabel: `(${u} → ${v})`,
+    });
+  }
+
+  // Step 7: Memory comparison
+  steps.push({
+    type: 'memory',
+    addedKeys: allAddedKeys.slice(),
+    filledCells: allFilledCells.slice(),
+    phase: 'Memory',
+    edgeLabel: '—',
+  });
+
+  // Step 8: Query adj list
+  steps.push({
+    type: 'query_adjlist',
+    queryVertex: 1,
+    addedKeys: allAddedKeys.slice(),
+    filledCells: allFilledCells.slice(),
+    phase: 'Query: AdjList',
+    edgeLabel: '—',
+  });
+
+  // Step 9: Query adj matrix
+  steps.push({
+    type: 'query_adjmatrix',
+    queryVertex: 1,
+    addedKeys: allAddedKeys.slice(),
+    filledCells: allFilledCells.slice(),
+    phase: 'Query: AdjMatrix',
+    edgeLabel: '—',
+  });
+
+  // Step 10: Done
+  steps.push({
+    type: 'done',
+    addedKeys: allAddedKeys.slice(),
+    filledCells: allFilledCells.slice(),
+    phase: '✓ Complete',
+    edgeLabel: '—',
+  });
+}
+
+function applyStep(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('edgeDisplay').textContent = step.edgeLabel;
+  document.getElementById('memorySection').style.display = 'none';
+  document.getElementById('querySection').style.display = 'none';
+  document.getElementById('resultSection').style.display = 'none';
+
+  if (step.type === 'show_graph') {
+    precomputeAll();
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, [], [], -1);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML([], null, [], -1);
+    setSvgHighlights(-1, []);
+    document.getElementById('memDisplay').textContent = '—';
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — Introduction`;
+    document.getElementById('explainArea').innerHTML = step.explanation;
+
+  } else if (step.type === 'add_edge') {
+    adjList[step.u].push(step.v);
+    adjMatrix[step.u][step.v] = 1;
+
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(
+      step.u, step.addedKeys, [step.currentKey], -1
+    );
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(
+      step.filledCells, {i: step.u, j: step.v}, [], -1
+    );
+    setSvgHighlights(step.edgeIdx, [step.u, step.v]);
+
+    const degText = step.edgesDone !== undefined ? step.edgesDone : (step.filledCells ? step.filledCells.length : 0);
+    document.getElementById('memDisplay').textContent =
+      `${step.filledCells.length} / ${edges.length} edges`;
+
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — Adding edge (${step.u} → ${step.v})`;
+
+    const degU = adjList[step.u].length;
+    document.getElementById('explainArea').innerHTML = buildEdgeExplanation(
+      step.edgeIdx, step.u, step.v, degU
+    );
+
+  } else if (step.type === 'memory') {
+    const listSize = V + edges.length;
+    const matrixSize = V * V;
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, step.addedKeys, [], -1);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCells, null, [], -1);
+    setSvgHighlights(-1, []);
+    document.getElementById('memorySection').style.display = 'flex';
+    document.getElementById('memorySection').innerHTML = `
+      <div class="memory-card" style="border-color:#00ff88;">
+        <h4>Adjacency List</h4>
+        <div class="big-num">${listSize}</div>
+        <div class="formula">Θ(V+E) = Θ(${V}+${edges.length})</div>
+        <div class="tag tag-winner">✓ More compact for sparse graphs</div>
+      </div>
+      <div class="memory-card" style="border-color:#ff4444;">
+        <h4>Adjacency Matrix</h4>
+        <div class="big-num">${matrixSize}</div>
+        <div class="formula">Θ(V²) = Θ(${V}²)</div>
+        <div class="tag tag-loser">✗ ${matrixSize - listSize} extra cells (${((matrixSize - listSize)/matrixSize*100).toFixed(0)}% waste)</div>
+      </div>
+    `;
+    document.getElementById('memDisplay').textContent = `${listSize} vs ${matrixSize}`;
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — Memory Analysis`;
+    document.getElementById('explainArea').innerHTML = buildMemoryExplanation();
+
+  } else if (step.type === 'query_adjlist') {
+    const v = step.queryVertex;
+    const neighbors = adjList[v];
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, step.addedKeys, [], v);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCells, null, [], v);
+    setSvgHighlights(-1, [v]);
+    document.getElementById('querySection').style.display = 'flex';
+    const data = {neighbors: neighbors.length > 0 ? neighbors.join(', ') : 'none', deg: neighbors.length};
+    document.getElementById('querySection').innerHTML = `
+      <div class="query-card active-query">
+        <h4>Adjacency List Query</h4>
+        <div style="font-size:0.82em;color:#888;">Neighbors of vertex ${v}:</div>
+        <div class="query-result">[${data.neighbors}]</div>
+        <div class="complexity">Time: O(degree) = O(${data.deg})</div>
+      </div>
+      <div class="query-card">
+        <h4>Adjacency Matrix Query</h4>
+        <div style="font-size:0.82em;color:#888;">Would need to scan row ${v}</div>
+        <div class="query-result" style="color:#888;">O(V) = O(${V})</div>
+        <div class="complexity">Slower for listing neighbors</div>
+      </div>
+    `;
+    document.getElementById('memDisplay').textContent = 'Query: AdjList';
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — Query from Adjacency List`;
+    document.getElementById('explainArea').innerHTML = buildQueryAdjListExplanation(v);
+
+  } else if (step.type === 'query_adjmatrix') {
+    const v = step.queryVertex;
+    const row = adjMatrix[v];
+    const neighborIndices = [];
+    for (let j = 0; j < V; j++) { if (row[j] === 1) neighborIndices.push(j); }
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, step.addedKeys, [], -1);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCells, null, [], v);
+    setSvgHighlights(-1, [v]);
+    document.getElementById('querySection').style.display = 'flex';
+    const neighStr = neighborIndices.length > 0 ? neighborIndices.join(', ') : 'none';
+    document.getElementById('querySection').innerHTML = `
+      <div class="query-card">
+        <h4>Adjacency List Query</h4>
+        <div style="font-size:0.82em;color:#888;">Neighbors of vertex ${v}:</div>
+        <div class="query-result">[${adjList[v].join(', ')}]</div>
+        <div class="complexity">O(degree) = O(${adjList[v].length})</div>
+      </div>
+      <div class="query-card active-query">
+        <h4>Adjacency Matrix Query</h4>
+        <div style="font-size:0.82em;color:#888;">Neighbors of vertex ${v}:</div>
+        <div class="query-result">[${neighStr}]</div>
+        <div class="complexity">Time: O(V) = O(${V}) — scanned all ${V} columns</div>
+      </div>
+    `;
+    document.getElementById('memDisplay').textContent = 'Query: AdjMatrix';
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — Query from Adjacency Matrix`;
+    document.getElementById('explainArea').innerHTML = buildQueryAdjMatrixExplanation(v);
+
+  } else if (step.type === 'done') {
+    const listSize = V + edges.length;
+    const matrixSize = V * V;
+    document.getElementById('adjlistDisplay').innerHTML = buildAdjListHTML(-1, step.addedKeys, [], -1);
+    document.getElementById('matrixDisplay').innerHTML = buildMatrixHTML(step.filledCells, null, [], -1);
+    setSvgHighlights(-1, []);
+
+    document.getElementById('memorySection').style.display = 'flex';
+    document.getElementById('memorySection').innerHTML = `
+      <div class="memory-card" style="border-color:#00ff88;">
+        <h4>Adjacency List</h4>
+        <div class="big-num">Θ(V+E) = ${listSize}</div>
+        <div class="formula">Compact for sparse graphs</div>
+      </div>
+      <div class="memory-card" style="border-color:#ff4444;">
+        <h4>Adjacency Matrix</h4>
+        <div class="big-num">Θ(V²) = ${matrixSize}</div>
+        <div class="formula">Always V² cells</div>
+      </div>
+    `;
+
+    let adjListStr = '';
+    for (let i = 0; i < V; i++) {
+      adjListStr += `Adj[${i}]: [${adjList[i].join(', ')}]`;
+      if (i < V - 1) adjListStr += '<br>';
+    }
+    document.getElementById('querySection').style.display = 'flex';
+    document.getElementById('querySection').innerHTML = `
+      <div class="query-card" style="border-color:#00ff88;">
+        <h4>Adjacency List</h4>
+        <div class="query-result" style="font-size:0.9em;">${adjListStr}</div>
+        <div class="complexity">Memory: Θ(V+E) &nbsp;|&nbsp; Iterate: O(degree)</div>
+      </div>
+      <div class="query-card" style="border-color:#00ff88;">
+        <h4>Adjacency Matrix</h4>
+        <div class="query-result" style="font-size:0.9em;color:#00ccff;">${V}×${V} grid &nbsp;|&nbsp; ${edges.length} ones</div>
+        <div class="complexity">Memory: Θ(V²) &nbsp;|&nbsp; Edge query: O(1)</div>
+      </div>
+    `;
+
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultContent').innerHTML = `
+      <p style="font-size:1.1em;margin-bottom:10px;">
+        <span class="dim">Adjacency List:</span> Θ(V+E) memory — iterate quickly over edges, good for sparse graphs
+      </p>
+      <p style="font-size:1.1em;">
+        <span class="dim">Adjacency Matrix:</span> Θ(V²) memory — O(1) edge-existence check, good for dense graphs
+      </p>
+      <p style="margin-top:12px;color:#888;">
+        Choose adjacency lists for <b>most real-world graphs</b> (social networks, web graphs, road networks).<br>
+        Choose adjacency matrices when <b>E ≈ V²</b> or when you need <b>constant-time edge queries</b>.
+      </p>
+    `;
+    document.getElementById('memDisplay').textContent = '✓ Complete';
+    document.getElementById('sidebarPhase').textContent =
+      `Step ${currentStep + 1} / ${steps.length} — ✅ Complete`;
+    document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  }
+
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('memorySection').style.display = 'none';
+  document.getElementById('querySection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('memDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Graph representations — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  initDisplay();
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function finishAnimation() {
+  animating = false;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+precomputeAll();
+buildSteps();
+initDisplay();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
