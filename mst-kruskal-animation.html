@@ -528,6 +528,14 @@ h1 {
         <p style="margin-left:16px;">• If they're already in the <b>same group</b> → skip it (would create a wasteful loop)</p>
         <p style="margin-left:8px;"><b>4.</b> Stop when all cities are in one group.</p>
         <span class="formula-line">Greedy rule: pick the cheapest road that connects two separated groups</span>
+
+        <h4>🎨 Reading the Visualization</h4>
+        <p>In the graph above, watch how edge colors change:</p>
+        <p style="margin-left:8px;">• <span style="color:#ff6600;font-weight:bold;">Orange</span> = edge being examined right now</p>
+        <p style="margin-left:8px;">• <span style="color:#00ff88;font-weight:bold;">Green</span> = edge <b>added</b> to the MST</p>
+        <p style="margin-left:8px;">• <span style="color:#ff3333;font-weight:bold;">Red dashed</span> = edge <b>skipped</b> (would create cycle)</p>
+        <p>The edge table below lists all roads sorted by weight with their status. The Union-Find table tracks each vertex's parent pointer — follow them to find which group each vertex belongs to.</p>
+
         <p class="note">The Union-Find table below shows which group each vertex belongs to. When two vertices have the same <b>root</b> (by following parent pointers), they're in the same group. Press ▶ Play to start!</p>
       </div>
     </div>
@@ -569,6 +577,32 @@ function precomputeAll() {
   mstEdges = [];
   mstTotalWeight = 0;
   edgeStatus = Array(rawEdges.length).fill('pending');
+}
+
+function getFindPath(x, p) {
+  let path = [x];
+  while (p[x] !== x) { x = p[x]; path.push(x); }
+  return path;
+}
+
+function findPathInMst(u, v, edges) {
+  const adj = {};
+  for (let e of edges) {
+    if (!adj[e.u]) adj[e.u] = [];
+    if (!adj[e.v]) adj[e.v] = [];
+    adj[e.u].push(e.v);
+    adj[e.v].push(e.u);
+  }
+  const visited = new Set([u]);
+  const queue = [[u, [u]]];
+  while (queue.length > 0) {
+    const [node, path] = queue.shift();
+    if (node === v) return path;
+    for (const nb of (adj[node] || [])) {
+      if (!visited.has(nb)) { visited.add(nb); queue.push([nb, [...path, nb]]); }
+    }
+  }
+  return null;
 }
 
 function find(x) {
@@ -613,6 +647,9 @@ function buildSteps() {
   for (let si = 0; si < sortedEdges.length; si++) {
     const e = sortedEdges[si];
     const ru = find(e.u), rv = find(e.v);
+    const preParent = [...parent];
+    const pathU = getFindPath(e.u, preParent);
+    const pathV = getFindPath(e.v, preParent);
 
     if (ru !== rv) {
       edgeStatus[e.idx] = 'added';
@@ -624,7 +661,8 @@ function buildSteps() {
         idx: e.idx,
         u: e.u, v: e.v, w: e.w,
         ru: ru, rv: rv,
-        explanation: buildAddExplanation(e.u, e.v, e.w, ru, rv, si + 1),
+        pathU: pathU, pathV: pathV,
+        explanation: buildAddExplanation(e.u, e.v, e.w, ru, rv, si + 1, pathU, pathV),
         parent: [...parent],
         mstEdges: [...mstEdges],
         mstWeight: mstTotalWeight,
@@ -640,7 +678,8 @@ function buildSteps() {
         idx: e.idx,
         u: e.u, v: e.v, w: e.w,
         ru: ru, rv: rv,
-        explanation: buildSkipExplanation(e.u, e.v, e.w, ru, si + 1),
+        pathU: pathU, pathV: pathV,
+        explanation: buildSkipExplanation(e.u, e.v, e.w, ru, si + 1, pathU, pathV),
         parent: [...parent],
         mstEdges: [...mstEdges],
         mstWeight: mstTotalWeight,
@@ -708,18 +747,29 @@ function buildInitExplanation() {
     <span class="formula-line">Sorted edges: ${edgeList}</span>
     <p>The lightest edge is <span class="dim">(2,5) with weight 1</span> — that'll be the first one we check!</p>
 
+    <h4>🗺️ Understanding the Graph Visualization</h4>
+    <p>Look at the graph displayed above. Here's how to read it:</p>
+    <p style="margin-left:8px;">• Each <b>circle</b> = a vertex (node), labeled 0 through ${V-1}</p>
+    <p style="margin-left:8px;">• Each <b>line</b> connecting two circles = an edge (road)</p>
+    <p style="margin-left:8px;">• The <b>number</b> near each line = the edge's weight (cost to build)</p>
+    <p>As the algorithm runs, edges will change color to show their status:</p>
+    <p style="margin-left:8px;">• <span style="color:#ff6600;font-weight:bold;">Orange</span> = edge currently being examined</p>
+    <p style="margin-left:8px;">• <span style="color:#00ff88;font-weight:bold;">Green</span> = edge has been <b>added</b> to the MST</p>
+    <p style="margin-left:8px;">• <span style="color:#ff3333;font-weight:bold;">Red dashed</span> = edge was <b>skipped</b> (would create a cycle)</p>
+    <p>The edge table below shows the same information: all edges sorted by weight with their current status (pending, added, or skipped).</p>
+
     <h4>📌 Step B: Initialize Union-Find</h4>
     <p>We need a way to track <b>"which group is each vertex in?"</b> Initially, every vertex is alone in its own group (like 8 separate islands):</p>
     <span class="formula-line">Parent[0]=0, Parent[1]=1, Parent[2]=2, ..., Parent[7]=7</span>
-    <p><b>What does Parent[i] mean?</b> It's like a "pointer" — to find which group vertex i belongs to, we follow these pointers until we reach a vertex that points to <b>itself</b>. That vertex is the <b>root</b> (the group leader).</p>
+    <p><b>What does Parent[i] mean?</b> It's like a "pointer" — to find which group vertex i belongs to, we follow these pointers until we reach a vertex that points to <b>itself</b>. That vertex is the <b>root</b> (the group leader). The <b>Union-Find Parent Array</b> table below shows the current value of each parent pointer.</p>
 
     <div class="analogy">🌴 <b>Analogy:</b> Think of each vertex as a person. Initially, everyone is their own "team leader." When two teams merge (via Union), one leader reports to the other. To check if two people are on the same team, we follow the chain of command up to the top leader — if they have the same top leader, they're on the same team!</div>
 
-    <p class="note">Now look at the graph. Each dark-gray <b>circle</b> is a vertex, each gray <b>line</b> is a road, and the <b>number</b> on each line is the cost to build that road. Press ▶ Play to start building!</p>
+    <p class="note">Now look at the graph. Each dark-gray <b>circle</b> is a vertex, each gray <b>line</b> is a road, and the <b>number</b> on each line is the cost to build that road. The sorted edge table below lists all roads from cheapest to most expensive. Press ▶ Play to start building!</p>
   </div>`;
 }
 
-function buildAddExplanation(u, v, w, ru, rv, stepNum) {
+function buildAddExplanation(u, v, w, ru, rv, stepNum, pathU, pathV) {
   let comps = getComponents(parent);
   let foundU = -1, foundV = -1;
   for (let ci = 0; ci < comps.length; ci++) {
@@ -739,16 +789,19 @@ function buildAddExplanation(u, v, w, ru, rv, stepNum) {
   afterHtml += '</div>';
 
   let edgeCount = mstEdges.length;
+  let pathUStr = pathU.join(' → ');
+  let pathVStr = pathV.join(' → ');
 
   return `<div class="explain-section active">
     <h3>✅ Adding Edge (${u},${v}) — Weight ${w} (item #${stepNum})</h3>
     <p>We're checking the next cheapest road: connecting vertex <span class="dim">${u}</span> and vertex <span class="dim">${v}</span>, costing <span class="dim">${w}</span>.</p>
 
     <h4>🔍 Step 1: Find their group leaders</h4>
-    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b></p>
-    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent chain: ${u} → … → root = <span class="split-info">${ru}</span></p>
-    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent chain: ${v} → … → root = <span class="split-info">${rv}</span></p>
+    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b> To find the root of a vertex, we follow parent pointers until we reach a vertex that points to itself:</p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent pointers: <span class="formula-line" style="display:inline;padding:2px 8px;">${pathUStr}</span> → root = <span class="split-info">${ru}</span></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent pointers: <span class="formula-line" style="display:inline;padding:2px 8px;">${pathVStr}</span> → root = <span class="split-info">${rv}</span></p>
     <p>The roots are <b>different</b> (${ru} ≠ ${rv})! This means ${u} and ${v} are in <b>different groups</b> right now.</p>
+    <p class="note">Notice how <b>Find</b> walks the parent array step by step — this is the path we'd follow in code too. The root is the vertex whose parent is itself.</p>
 
     <h4>📊 Before merging — current groups:</h4>
     ${beforeHtml}
@@ -757,7 +810,12 @@ function buildAddExplanation(u, v, w, ru, rv, stepNum) {
     <h4>✅ Step 2: Build the road! (Union operation)</h4>
     <p>Since ${u} and ${v} are in <b>different groups</b>, adding this road <b>will not create a loop</b> (no cycle). We can safely build it! We merge the two groups by making root ${rv} point to root ${ru}:</p>
     <span class="formula-line">Union(${ru}, ${rv})  →  Parent[${rv}] = ${ru}</span>
-    <p>Now <b>all</b> vertices in those two groups are connected through this new road.</p>
+    <p>Now <b>all</b> vertices in those two groups are connected through this new road. Any future Find on a vertex in ${rv}'s former group will now lead to ${ru}.</p>
+
+    <h4>🧠 Why This Works — The Cut Property</h4>
+    <p>At this moment the vertices are partitioned into separate groups (components). The edge <b>(${u},${v})</b> with weight <b>${w}</b> is the <b>cheapest edge that connects two different groups</b> among all remaining edges (because we process edges in sorted order).</p>
+    <p>The <b>cut property</b> of MSTs states: for any partition of vertices into two sets, the minimum-weight edge crossing between the sets <b>must belong to some MST</b>. Since this edge is the cheapest crossing between these two components, adding it is always safe — it will be part of the final minimum spanning tree.</p>
+    <span class="formula-line">Cut property: min-weight edge across any cut → belongs to some MST</span>
 
     <h4>📊 After merging — updated groups:</h4>
     ${afterHtml}
@@ -766,43 +824,34 @@ function buildAddExplanation(u, v, w, ru, rv, stepNum) {
     <div class="analogy">🏙️ <b>Analogy:</b> Two islands are separate. We build a bridge (cost ${w}) connecting them. Now both islands form one bigger island. Future bridges will only be built if they connect <b>different</b> islands (avoiding wasteful bridges within the same island).</div>
 
     <p><b>MST so far:</b> ${edgeCount} edge${edgeCount > 1 ? 's' : ''}, total weight = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
-    <p class="note">💡 <b>Why is this safe?</b> Since ${u} and ${v} were in different groups, there was <b>no path</b> connecting them yet. Adding this edge CANNOT create a cycle — it's the first connection between these two groups!</p>
+    <p class="note">💡 <b>Why is this safe?</b> Since ${u} and ${v} were in different groups, there was <b>no path</b> connecting them yet. Adding this edge CANNOT create a cycle — it's the first connection between these two groups! The cut property guarantees this greedy choice is optimal.</p>
   </div>`;
 }
 
-function buildSkipExplanation(u, v, w, r, stepNum) {
+function buildSkipExplanation(u, v, w, r, stepNum, pathU, pathV) {
   let comps = getComponents(parent);
-  let foundComp = comps.find(g => g.includes(u));
-  let pathStr = '';
-  if (foundComp) {
-    let idx = foundComp.indexOf(u);
-    let idx2 = foundComp.indexOf(v);
-    if (idx >= 0 && idx2 >= 0 && foundComp.length > 2) {
-      let sorted = [...foundComp].sort((a,b)=>a-b);
-      pathStr = sorted.join(' → ');
-    } else if (foundComp.length === 2) {
-      let other = foundComp.find(x => x !== u);
-      pathStr = u + ' → ' + v + ' (direct edge)';
-    } else {
-      pathStr = foundComp.join(' → ');
-    }
-  }
+  let pathUStr = pathU.join(' → ');
+  let pathVStr = pathV.join(' → ');
+
+  // Find the concrete path in the MST that already connects u and v
+  const mstCyclePath = findPathInMst(u, v, mstEdges);
+  const mstCycleStr = mstCyclePath ? mstCyclePath.join(' → ') : null;
 
   return `<div class="explain-section active">
     <h3>⏭️ Skipping Edge (${u},${v}) — Weight ${w} (item #${stepNum})</h3>
     <p>We're checking the next cheapest road: connecting vertex <span class="dim">${u}</span> and vertex <span class="dim">${v}</span>, costing <span class="dim">${w}</span>.</p>
 
     <h4>🔍 Step 1: Find their group leaders</h4>
-    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b></p>
-    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent chain: ${u} → … → root = <span class="split-info">${r}</span></p>
-    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent chain: ${v} → … → root = <span class="split-info">${r}</span></p>
-    <p>The roots are the <b>same</b> (${r})! This means ${u} and ${v} are <b>already in the same group</b>.</p>
+    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b> To find the root, we follow parent pointers step by step:</p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent pointers: <span class="formula-line" style="display:inline;padding:2px 8px;">${pathUStr}</span> → root = <span class="split-info">${r}</span></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent pointers: <span class="formula-line" style="display:inline;padding:2px 8px;">${pathVStr}</span> → root = <span class="split-info">${r}</span></p>
+    <p>The roots are the <b>same</b> (${r})! This means ${u} and ${v} are <b>already in the same group</b> — there's already a path connecting them through the MST edges we've built.</p>
 
-    <h4>⚠️ What does this mean?</h4>
-    <p>Since ${u} and ${v} are already connected through other roads in the MST, adding this edge would create a <b>cycle</b> (a loop). Let's see why:</p>
-    <p style="margin-left:8px;">• There is already a path connecting ${u} → … → ${v} using MST edges we've already built.</p>
-    <p style="margin-left:8px;">• If we now add the direct edge (${u},${v}), we create <b>two different paths</b> between ${u} and ${v} — that's a cycle!</p>
-    <span class="formula-line">Find(${u}) = Find(${v}) = ${r}  →  Cycle detected! Skip this edge.</span>
+    <h4>⚠️ Step 2: Cycle detected!</h4>
+    <p>Since ${u} and ${v} share the same root, they are already connected. Let's trace the <b>existing path</b> in the MST:</p>
+    ${mstCycleStr ? `<p style="margin-left:8px;">• Existing MST path: <span class="formula-line" style="display:inline;padding:2px 8px;">${mstCycleStr}</span></p>
+    <p style="margin-left:8px;">• Adding direct edge (${u},${v}) would create a <b>cycle</b>: <span class="formula-line" style="display:inline;padding:2px 8px;">${mstCycleStr} → ${v}</span></p>` : `<p style="margin-left:8px;">• There is already a connection between ${u} and ${v} through other MST edges.</p>`}
+    <span class="formula-line">Find(${u}) = Find(${v}) = ${r}  →  Cycle would form! Skip this edge.</span>
 
     <div class="analogy">🏙️ <b>Analogy:</b> Imagine there's already a road connecting city ${u} to city ${v} (going through other cities). Building this <b>extra</b> direct road would be <b>wasteful</b> — you're spending ${w} more for a connection that already exists! A spanning tree must use the <b>minimum</b> number of roads — exactly |V|−1 = 7 for 8 cities. Any extra road creates a wasteful loop.</div>
 
@@ -811,7 +860,7 @@ function buildSkipExplanation(u, v, w, r, stepNum) {
     <p>Both vertices <span class="dim">${u}</span> and <span class="dim">${v}</span> are inside the <span style="color:#00ff88;">same group</span>. No merge needed.</p>
 
     <p><b>MST unchanged:</b> ${mstEdges.length} edge${mstEdges.length !== 1 ? 's' : ''}, total weight = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
-    <p class="note">💡 <b>Why skip?</b> Every edge we add to the MST must connect two <b>previously unconnected</b> groups. This rule guarantees the final structure has <b>no cycles</b> — a tree! Skipping this heavier edge is exactly why Kruskal's algorithm finds the <b>minimum</b> weight tree.</p>
+    <p class="note">💡 <b>Why skip?</b> Every edge we add to the MST must connect two <b>previously unconnected</b> groups. This rule guarantees the final structure has <b>no cycles</b> — a tree! If we added (${u},${v}), it would create a second path between these vertices (a cycle), violating the tree property. By skipping, we also save the cost ${w}, keeping the total weight minimal.</p>
   </div>`;
 }
 
@@ -834,7 +883,13 @@ function buildDoneExplanation() {
     <p>These 7 edges connect all 8 vertices with the <b>minimum possible total cost</b> of <b>${mstTotalWeight}</b>.</p>
 
     <h4>🤔 Why Is This the Minimum?</h4>
-    <p>Kruskal's algorithm follows the <b>cut property</b>: at every step, the cheapest edge crossing between any two separated groups <b>must</b> belong to some MST. By always picking the absolute cheapest edge that connects two different groups, Kruskal's <b>guarantees</b> the result is optimal.</p>
+    <p>Kruskal's algorithm is correct because of a fundamental theorem called the <b>cut property</b>:</p>
+    <p style="margin-left:8px;">• A <b>cut</b> is any partition of the graph's vertices into two disjoint sets.</p>
+    <p style="margin-left:8px;">• An edge <b>crosses</b> the cut if its two endpoints are in different sets.</p>
+    <p style="margin-left:8px;">• The <b>cut property</b> states: the minimum-weight edge crossing any cut <b>must belong to some minimum spanning tree</b>.</p>
+    <p>Kruskal's algorithm implicitly creates cuts: after each step, the current connected components form a natural partition. When we process the sorted edges and pick the cheapest edge connecting two different components, that edge is exactly the minimum-weight edge crossing the cut between those two components. The cut property guarantees this greedy choice is always safe — it will be part of <b>some</b> MST.</p>
+    <p>Since we always pick the globally cheapest available edge that connects two unconnected groups (thanks to sorting), and the cut property guarantees each such edge belongs to some MST, the final set of edges is guaranteed to be <b>the</b> minimum spanning tree.</p>
+    <span class="formula-line">Greedy choice + Cut property = Optimal MST guaranteed</span>
     <p>Think of it this way: every time we added an edge, it was the <b>cheapest possible way</b> to connect those two groups at that moment. Since we never second-guess past decisions (that's the "greedy" part), we end up with the globally cheapest solution.</p>
 
     <h4>📈 Algorithm Complexity (How Fast Is It?)</h4>
@@ -1199,6 +1254,14 @@ function resetAnimation() {
       <p style="margin-left:16px;">• If they're already in the <b>same group</b> → skip it (would create a wasteful loop)</p>
       <p style="margin-left:8px;"><b>4.</b> Stop when all cities are in one group.</p>
       <span class="formula-line">Greedy rule: pick the cheapest road that connects two separated groups</span>
+
+      <h4>🎨 Reading the Visualization</h4>
+      <p>In the graph above, watch how edge colors change:</p>
+      <p style="margin-left:8px;">• <span style="color:#ff6600;font-weight:bold;">Orange</span> = edge being examined right now</p>
+      <p style="margin-left:8px;">• <span style="color:#00ff88;font-weight:bold;">Green</span> = edge <b>added</b> to the MST</p>
+      <p style="margin-left:8px;">• <span style="color:#ff3333;font-weight:bold;">Red dashed</span> = edge <b>skipped</b> (would create cycle)</p>
+      <p>The edge table below lists all roads sorted by weight with their status. The Union-Find table tracks each vertex's parent pointer — follow them to find which group each vertex belongs to.</p>
+
       <p class="note">The Union-Find table below shows which group each vertex belongs to. When two vertices have the same <b>root</b> (by following parent pointers), they're in the same group. Press ▶ Play to start!</p>
     </div>`;
   clearHighlights();
