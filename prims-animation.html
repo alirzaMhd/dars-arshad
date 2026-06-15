@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prim's Algorithm Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 440px;
+  min-width: 440px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.84em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 8px 0 4px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 5px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 0.94em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .concept-box {
+  background: #0a0a1a;
+  border: 1px solid #334;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.explain-section .concept-box .term {
+  color: #00ccff;
+  font-weight: bold;
+}
+.explain-section .concept-box .defn {
+  color: #ddd;
+}
+.explain-section .key-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #0a0a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin: 2px;
+}
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.queue-display {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.queue-label {
+  color: #00ccff;
+  font-weight: bold;
+  font-size: 0.9em;
+  min-width: 55px;
+}
+.queue-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  border: 2px solid #555;
+  background: #0d0d1a;
+  color: #888;
+  transition: all 0.4s;
+}
+.queue-item .qi-label {
+  font-weight: bold;
+  font-size: 0.95em;
+}
+.queue-item .qi-key {
+  font-size: 0.75em;
+  color: #888;
+}
+.queue-item.in-q {
+  border-color: #ffcc00;
+  background: #1a1a00;
+}
+.queue-item.in-q .qi-label { color: #ffcc00; }
+.queue-item.in-q .qi-key { color: #ffff00; }
+.queue-item.extracted {
+  border-color: #ff6600;
+  background: #1a0a00;
+  box-shadow: 0 0 10px #ff660044;
+  transform: scale(1.1);
+}
+.queue-item.extracted .qi-label { color: #ff6600; }
+.queue-item.extracted .qi-key { color: #ff9944; }
+.queue-item.done {
+  border-color: #00ff88;
+  background: #0a1a12;
+}
+.queue-item.done .qi-label { color: #00ff88; }
+.queue-item.done .qi-key { color: #00ff88; }
+.queue-arrow { color: #555; font-size: 1.1em; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+.prim-table-section { margin: 15px 0; }
+.prim-table-title {
+  color: #00ccff;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.prim-table-wrapper { overflow-x: auto; }
+.prim-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 600px;
+}
+.prim-table th, .prim-table td {
+  padding: 8px 12px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.82em;
+  transition: all 0.3s;
+}
+.prim-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.prim-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.prim-table td.inf { color: #555; }
+.prim-table td.finite { color: #ffcc00; font-weight: bold; }
+.prim-table td.current-key {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  font-weight: bold;
+}
+.prim-table td.extracted-row {
+  color: #00ff88 !important;
+  background: #0a1a12 !important;
+}
+.prim-table td.updated-cell {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  font-weight: bold;
+}
+.prim-table td.in-q-yes {
+  color: #ffcc00;
+  font-weight: bold;
+}
+.prim-table td.in-q-no {
+  color: #555;
+}
+.mst-edge-list {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 42px;
+}
+.mst-edge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #00ff88;
+  font-weight: bold;
+  animation: mstPop 0.3s ease;
+}
+@keyframes mstPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.mst-weight-display {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.mst-weight-display .weight-value { color: #00ff88; font-weight: bold; font-size: 1.1em; }
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2.5;
+  transition: all 0.4s;
+}
+.node-circle.in-q {
+  stroke: #ffcc00;
+  stroke-width: 3;
+  fill: #1a1a00;
+}
+.node-circle.extracted {
+  stroke: #ff6600;
+  stroke-width: 4;
+  fill: #1a0a00;
+}
+.node-circle.in-mst {
+  stroke: #00ff88;
+  stroke-width: 3.5;
+  fill: #0a1a12;
+}
+.node-circle.relaxed {
+  stroke: #ffff00;
+  stroke-width: 3.5;
+  fill: #1a1a00;
+}
+.node-text {
+  fill: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  dominant-baseline: central;
+  text-anchor: middle;
+  transition: all 0.4s;
+}
+.node-text.in-q { fill: #ffcc00; }
+.node-text.extracted { fill: #ff6600; }
+.node-text.in-mst { fill: #00ff88; }
+.node-text.relaxed { fill: #ffff00; }
+.node-key-label {
+  fill: #888;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.node-key-label.in-q { fill: #ffcc00; }
+.node-key-label.extracted { fill: #ff6600; }
+.node-key-label.in-mst { fill: #00ff88; }
+.node-key-label.relaxed { fill: #ffff00; }
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.active {
+  stroke: #ff6600;
+  stroke-width: 3.5;
+}
+.edge-line.relaxed {
+  stroke: #ffff00;
+  stroke-width: 3;
+}
+.edge-line.in-mst {
+  stroke: #00ff88;
+  stroke-width: 3.5;
+}
+.edge-line.skipped {
+  stroke: #555;
+  stroke-width: 1.5;
+  stroke-dasharray: 4,3;
+}
+.edge-label {
+  fill: #888;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.edge-label.active { fill: #ff6600; }
+.edge-label.relaxed { fill: #ffff00; }
+.edge-label.in-mst { fill: #00ff88; }
+</style>
+</head>
+<body>
+
+<h1>PRIM'S ALGORITHM</h1>
+<p class="subtitle">Graph Algorithms — Minimum Spanning Tree via Prim's Algorithm</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="640" height="390" viewBox="0 0 640 390"></svg>
+    </div>
+
+    <div class="mst-edge-list" id="mstEdgeList">
+      <span style="color:#555;font-size:0.85em;">MST edges: none yet</span>
+    </div>
+
+    <div class="mst-weight-display">
+      <span class="label">MST Total Weight:</span> <span class="weight-value" id="mstTotalWeight">0</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edges:</span> <span class="weight-value" id="mstEdgeCount">0</span> / <span class="weight-value" id="mstRequiredCount">5</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current Vertex:</span> <span class="value" id="currentVertexDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current Edge:</span> <span class="value" id="currentEdgeDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="queue-display" id="queueDisplay">
+      <span class="queue-label">Q:</span>
+      <span id="queueItems" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#555;">&empty;</span>
+    </div>
+
+    <div class="prim-table-section">
+      <div class="prim-table-title">Vertex State: Key &middot; Parent &middot; In Queue</div>
+      <div class="prim-table-wrapper">
+        <table class="prim-table" id="primTable">
+          <thead><tr><th>Vertex</th><th>key</th><th>&pi; (parent)</th><th>In Q?</th></tr></thead>
+          <tbody id="primTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; MST Complete!</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>&#127891; Prim's Algorithm</h3>
+        <p><b>Prim's algorithm</b> finds a <b>Minimum Spanning Tree (MST)</b> by growing a tree from a starting vertex, always adding the <b>cheapest edge</b> from the tree to a vertex not yet in the tree.</p>
+
+        <h4>&#128220; How It Works</h4>
+        <div class="concept-box">
+          <p><span class="term">key[v]:</span> <span class="defn">minimum weight of any edge connecting v to the current tree. Starts at &infin;.</span></p>
+          <p><span class="term">&pi;[v]:</span> <span class="defn">parent of v in the growing MST tree. Starts at NIL.</span></p>
+          <p><span class="term">Q:</span> <span class="defn">min-priority queue of all vertices not yet in the tree, keyed by key[v].</span></p>
+        </div>
+
+        <h4>&#128214; Pseudocode</h4>
+        <span class="formula-line">Prim(G, w, r):</span>
+        <p style="margin-left:8px;"><b>1.</b> For each u &isin; V: u.key = &infin;, u.&pi; = NIL</p>
+        <p style="margin-left:8px;"><b>2.</b> r.key = 0, Q = V</p>
+        <p style="margin-left:8px;"><b>3.</b> While Q &ne; &empty;:</p>
+        <p style="margin-left:16px;">u = EXTRACT-MIN(Q)</p>
+        <p style="margin-left:16px;">For each v &isin; Adj[u]:</p>
+        <p style="margin-left:24px;">if v &isin; Q and w(u,v) &lt; v.key:</p>
+        <p style="margin-left:32px;">v.&pi; = u, v.key = w(u,v)</p>
+        <p style="margin-left:32px;">DECREASE-KEY(Q, v, v.key)</p>
+        <p style="margin-left:8px;"><b>4.</b> Return A = {(v, v.&pi;) : v &isin; V &minus; {r}}</p>
+
+        <h4>&#127913; Graph for This Demo</h4>
+        <p>6 vertices, 9 edges. Starting from vertex <span class="dim">a</span>.</p>
+        <p style="margin-left:8px;"><span class="dim">Vertices:</span> a, b, c, d, e, f</p>
+        <p style="margin-left:8px;"><span class="dim">Edges:</span> a&ndash;b(6), a&ndash;c(5), b&ndash;c(8), b&ndash;d(7), b&ndash;e(4), c&ndash;e(9), c&ndash;f(3), d&ndash;e(2), e&ndash;f(1)</p>
+
+        <span class="formula-line">Key invariant: For v &notin; tree, key[v] = min{ w(u,v) : u &isin; tree }</span>
+        <p class="note">Press &#9654; Play or &#9197; Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 6;
+const VLABELS = ['a', 'b', 'c', 'd', 'e', 'f'];
+const VPOS = [
+  {x: 310, y: 40},   // a - top center
+  {x: 130, y: 170},  // b - left mid
+  {x: 490, y: 170},  // c - right mid
+  {x: 130, y: 330},  // d - bottom left
+  {x: 220, y: 330},  // e - bottom left-center
+  {x: 490, y: 330},  // f - bottom right
+];
+const EDGES = [
+  {u: 0, v: 1, w: 6, label: '(a,b)'},
+  {u: 0, v: 2, w: 5, label: '(a,c)'},
+  {u: 1, v: 2, w: 8, label: '(b,c)'},
+  {u: 1, v: 3, w: 7, label: '(b,d)'},
+  {u: 1, v: 4, w: 4, label: '(b,e)'},
+  {u: 2, v: 4, w: 9, label: '(c,e)'},
+  {u: 2, v: 5, w: 3, label: '(c,f)'},
+  {u: 3, v: 4, w: 2, label: '(d,e)'},
+  {u: 4, v: 5, w: 1, label: '(e,f)'},
+];
+
+const SOURCE = 0;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgCreated = false;
+
+let key = [];
+let pi = [];
+let inQ = [];
+let mstEdgeIndices = [];
+let mstTotalWeight = 0;
+let queueContents = [];
+
+function precomputeAll() {
+  key = Array(V).fill(Infinity);
+  pi = Array(V).fill(null);
+  inQ = Array(V).fill(true);
+  mstEdgeIndices = [];
+  mstTotalWeight = 0;
+  queueContents = [];
+}
+
+function getNeighbors(v) {
+  let result = [];
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    if (e.u === v) result.push({v: e.v, w: e.w, idx: i});
+    if (e.v === v) result.push({v: e.u, w: e.w, idx: i});
+  }
+  return result;
+}
+
+function extractMin() {
+  let minV = -1, minKey = Infinity;
+  for (let i = 0; i < V; i++) {
+    if (inQ[i] && key[i] < minKey) {
+      minKey = key[i];
+      minV = i;
+    }
+  }
+  if (minV >= 0) {
+    inQ[minV] = false;
+    if (pi[minV] !== null && minV !== SOURCE) {
+      const neighbors = getNeighbors(minV);
+      for (let n of neighbors) {
+        if (n.v === pi[minV]) {
+          mstEdgeIndices.push(n.idx);
+          mstTotalWeight += n.w;
+          break;
+        }
+      }
+    }
+  }
+  return minV;
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>&#127891; Initialization</h3>
+    <p>We start by initializing all vertices before the main loop:</p>
+    <p style="margin-left:8px;">&#8226; Source <span class="dim">${VLABELS[SOURCE]}</span>: <span class="key-value">key = <span style="color:#00ff88;">0</span></span>, <span class="key-value">&pi; = <span style="color:#888;">NIL</span></span></p>
+    <p style="margin-left:8px;">&#8226; All other vertices: <span class="key-value">key = <span style="color:#555;">&infin;</span></span>, <span class="key-value">&pi; = <span style="color:#888;">NIL</span></span></p>
+    <p style="margin-left:8px;">&#8226; <span class="dim">Q = V</span> = {${VLABELS.join(', ')}}</p>
+    <span class="formula-line">r.key = 0 &nbsp;&nbsp; Q = V &nbsp;&nbsp; For each u &ne; r: u.key = &infin;, u.&pi; = NIL</span>
+    <p>The algorithm will now repeatedly <b>extract</b> the vertex with smallest key from Q and <b>relax</b> its incident edges.</p>
+    <p class="note">The key of a vertex represents the cheapest connection from the current tree to that vertex.</p>
+  </div>`;
+}
+
+function buildExtractExplanation(u) {
+  let neighbors = getNeighbors(u);
+  let neighborStr = neighbors.map(n => `${VLABELS[n.v]}(w=${n.w})`).join(', ');
+  let keyStr = key[u] === Infinity ? '&infin;' : key[u];
+  let piStr = pi[u] === null ? 'NIL' : VLABELS[pi[u]];
+  let isSource = u === SOURCE;
+  return `<div class="explain-section active">
+    <h3>&#10549; Extract Vertex ${VLABELS[u]} from Q</h3>
+    <p>${isSource ? 'The source vertex' : 'Vertex'} <span class="dim">${VLABELS[u]}</span> has the <b>smallest key</b> (${keyStr}) in Q. We extract it and add it to the growing MST tree.</p>
+    <p style="margin-left:8px;">&#8226; <span class="dim">${VLABELS[u]}</span>.key = <span class="split-info">${keyStr}</span></p>
+    <p style="margin-left:8px;">&#8226; <span class="dim">${VLABELS[u]}</span>.&pi; = <span class="split-info">${piStr}</span></p>
+    ${!isSource && pi[u] !== null ? `<p style="margin-left:8px;">&#8226; Adding edge <span class="dim">(${VLABELS[pi[u]]},${VLABELS[u]})</span> to MST</p>` : ''}
+    <p>Now we examine all neighbors of <span class="dim">${VLABELS[u]}</span>:</p>
+    <p style="margin-left:8px;">Neighbors: <span class="dim">[${neighborStr}]</span></p>
+    <span class="formula-line">For each v &isin; Adj[${VLABELS[u]}]: if v &isin; Q and w(${VLABELS[u]},v) &lt; v.key &#8658; relax</span>
+    <p>For each neighbor still in Q, we check if the edge weight is &lt; its current key.</p>
+    <p class="note">After extracting ${VLABELS[u]}, the tree now contains ${(currentStep > 0 ? mstEdgeIndices.length : 0) + (isSource ? 0 : 1)} edge(s).</p>
+  </div>`;
+}
+
+function buildRelaxExplanation(u, v, w) {
+  return `<div class="explain-section active">
+    <h3>&#9889; Relax Edge (${VLABELS[u]},${VLABELS[v]})</h3>
+    <p>Examining neighbor <span class="dim">${VLABELS[v]}</span> via edge (${VLABELS[u]},${VLABELS[v]}) with weight <span class="dim">${w}</span>.</p>
+    <div class="concept-box">
+      <p><span class="term">Check:</span> <span class="defn">Is ${VLABELS[v]} &isin; Q? <b>Yes</b>. Is ${w} &lt; ${key[v] === Infinity ? '&infin;' : key[v]}? <b>Yes</b>.</span></p>
+    </div>
+    <p><b>Relaxation!</b> We found a cheaper connection to ${VLABELS[v]}:</p>
+    <p style="margin-left:8px;">&#8226; <span class="dim">${VLABELS[v]}</span>.key = ${w} (was ${key[v] === Infinity ? '&infin;' : key[v]})</p>
+    <p style="margin-left:8px;">&#8226; <span class="dim">${VLABELS[v]}</span>.&pi; = ${VLABELS[u]} (was ${pi[v] === null ? 'NIL' : VLABELS[pi[v]]})</p>
+    <span class="formula-line">DECREASE-KEY(Q, ${VLABELS[v]}, ${w}) &nbsp;&nbsp; key[${VLABELS[v]}] = ${w}, &pi;[${VLABELS[v]}] = ${VLABELS[u]}</span>
+    <p>This means the cheapest way to connect ${VLABELS[v]} to the current tree is now through <span class="dim">${VLABELS[u]}</span> with cost <span class="split-info">${w}</span>.</p>
+    <p class="note">A Decrease-Key operation in a binary heap takes O(lg V) time.</p>
+  </div>`;
+}
+
+function buildSkipExplanation(u, v, w, reason) {
+  let reasonText = reason === 'not-in-q'
+    ? `${VLABELS[v]} is no longer in Q (already in the tree)`
+    : `w(${VLABELS[u]},${VLABELS[v]}) = ${w} &ge; ${VLABELS[v]}.key = ${key[v]} (not an improvement)`;
+  return `<div class="explain-section active">
+    <h3>&#9200; Skip Edge (${VLABELS[u]},${VLABELS[v]})</h3>
+    <p>Examining neighbor <span class="dim">${VLABELS[v]}</span> via edge (${VLABELS[u]},${VLABELS[v]}) with weight <span class="dim">${w}</span>.</p>
+    <p><b>No relaxation needed:</b> ${reasonText}.</p>
+    <span class="formula-line">Skip: v &notin; Q &#8759; w(u,v) &ge; v.key</span>
+    <p>We move on to the next neighbor.</p>
+    <p class="note">Vertices already in the tree are removed from Q and never need to be reconsidered.</p>
+  </div>`;
+}
+
+function buildDoneExplanation() {
+  let edgeDetails = '';
+  let sumParts = '';
+  let total = 0;
+  for (let i = 0; i < mstEdgeIndices.length; i++) {
+    const e = EDGES[mstEdgeIndices[i]];
+    edgeDetails += `<p style="margin-left:12px;">&bull; ${e.label} &mdash; weight <span class="dim">${e.w}</span></p>`;
+    sumParts += (i > 0 ? ' + ' : '') + e.w;
+    total += e.w;
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; Algorithm Complete!</h3>
+    <p>All vertices have been extracted from Q. The Minimum Spanning Tree is built!</p>
+    <div class="concept-box">
+      <p style="color:#00ff88;font-size:1.1em;font-weight:bold;">MST Total Weight: ${total}</p>
+    </div>
+    <h4 style="margin-top:10px;">&#127795; MST Edges</h4>
+    ${edgeDetails}
+    <span class="formula-line">${sumParts} = ${total}</span>
+    <h4 style="margin-top:10px;">&#128161; Why Greedy Works</h4>
+    <p>Prim's algorithm is correct because of the <b>cut property</b>: at each step, the set of vertices already in the tree forms a cut. The edge we add is the <b>light edge</b> crossing this cut, which is guaranteed to belong to some MST.</p>
+    <span class="formula-line">Cut Property: minimum-weight edge crossing any cut &rArr; belongs to some MST</span>
+    <h4 style="margin-top:10px;">Complexity</h4>
+    <p><span class="dim">Time:</span> O(E lg V) with binary heap | O(E + V lg V) with Fibonacci heap</p>
+    <p><span class="dim">Space:</span> O(V + E)</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  return buildDoneExplanation();
+}
+
+function buildSteps() {
+  steps = [];
+  precomputeAll();
+
+  const initKeys = Array(V).fill(Infinity);
+  const initPi = Array(V).fill(null);
+  const initInQ = Array(V).fill(true);
+  initKeys[SOURCE] = 0;
+
+  steps.push({
+    type: 'init',
+    keys: [...initKeys],
+    pis: [...initPi],
+    inQs: [...initInQ],
+    mstEdges: [],
+    mstWeight: 0,
+    currentVertex: -1,
+    currentEdge: -1,
+    activeEdges: [],
+    relaxedEdges: [],
+    mstEdgeSet: [],
+    queue: [...Array(V).keys()],
+    explanation: buildInitExplanation(),
+    phase: 'Initialized'
+  });
+
+  key = [...initKeys];
+  pi = [...initPi];
+  inQ = [...initInQ];
+  mstEdgeIndices = [];
+  mstTotalWeight = 0;
+
+  while (true) {
+    const u = extractMin();
+    if (u < 0) break;
+
+    const curQueue = [];
+    for (let i = 0; i < V; i++) {
+      if (inQ[i]) curQueue.push(i);
+    }
+
+    const curKeys = [...key];
+    const curPi = [...pi];
+    const curInQ = [...inQ];
+
+    const edgeAddedIdx = (u !== SOURCE && pi[u] !== null)
+      ? (() => {
+          for (let i = 0; i < EDGES.length; i++) {
+            const e = EDGES[i];
+            if ((e.u === u && e.v === pi[u]) || (e.v === u && e.u === pi[u])) return i;
+          }
+          return -1;
+        })()
+      : -1;
+
+    steps.push({
+      type: 'extract',
+      vertex: u,
+      keys: [...curKeys],
+      pis: [...curPi],
+      inQs: [...curInQ],
+      mstEdges: [...mstEdgeIndices],
+      mstWeight: mstTotalWeight,
+      currentVertex: u,
+      currentEdge: -1,
+      activeEdges: getNeighbors(u).map(n => n.idx),
+      relaxedEdges: [],
+      mstEdgeSet: [...mstEdgeIndices],
+      queue: [...curQueue],
+      explanation: buildExtractExplanation(u),
+      phase: `Extracted ${VLABELS[u]}`
+    });
+
+    if (edgeAddedIdx >= 0 && !steps[steps.length - 1].mstEdgeSet.includes(edgeAddedIdx)) {
+      steps[steps.length - 1].mstEdgeSet = [...mstEdgeIndices];
+      steps[steps.length - 1].mstEdges = [...mstEdgeIndices];
+      steps[steps.length - 1].mstWeight = mstTotalWeight;
+    }
+
+    let neighbors = getNeighbors(u);
+    neighbors.sort((a, b) => a.v - b.v);
+
+    for (let n of neighbors) {
+      if (inQ[n.v] && n.w < key[n.v]) {
+        key[n.v] = n.w;
+        pi[n.v] = u;
+
+        const afterKeys = [...key];
+        const afterPi = [...pi];
+
+        steps.push({
+          type: 'relax',
+          vertex: u,
+          neighbor: n.v,
+          weight: n.w,
+          edgeIdx: n.idx,
+          keys: [...afterKeys],
+          pis: [...afterPi],
+          inQs: [...curInQ],
+          mstEdges: [...mstEdgeIndices],
+          mstWeight: mstTotalWeight,
+          currentVertex: u,
+          currentEdge: n.idx,
+          activeEdges: [n.idx],
+          relaxedEdges: [n.idx],
+          mstEdgeSet: [...mstEdgeIndices],
+          queue: [...curQueue],
+          explanation: buildRelaxExplanation(u, n.v, n.w),
+          phase: `Relax (${VLABELS[u]},${VLABELS[n.v]})`
+        });
+      } else {
+        const reason = !inQ[n.v] ? 'not-in-q' : 'no-improvement';
+        steps.push({
+          type: 'skip',
+          vertex: u,
+          neighbor: n.v,
+          weight: n.w,
+          edgeIdx: n.idx,
+          keys: [...key],
+          pis: [...pi],
+          inQs: [...curInQ],
+          mstEdges: [...mstEdgeIndices],
+          mstWeight: mstTotalWeight,
+          currentVertex: u,
+          currentEdge: n.idx,
+          activeEdges: [n.idx],
+          relaxedEdges: [],
+          mstEdgeSet: [...mstEdgeIndices],
+          queue: [...curQueue],
+          explanation: buildSkipExplanation(u, n.v, n.w, reason),
+          phase: `Skip (${VLABELS[u]},${VLABELS[n.v]})`
+        });
+      }
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    keys: [...key],
+    pis: [...pi],
+    inQs: Array(V).fill(false),
+    mstEdges: [...mstEdgeIndices],
+    mstWeight: mstTotalWeight,
+    currentVertex: -1,
+    currentEdge: -1,
+    activeEdges: [],
+    relaxedEdges: [],
+    mstEdgeSet: [...mstEdgeIndices],
+    queue: [],
+    explanation: buildDoneExplanation(),
+    phase: '&#10004; Complete!'
+  });
+}
+
+function createSvgGraph() {
+  if (svgCreated) return;
+  const svg = document.getElementById('graphSvg');
+
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    const p1 = VPOS[e.u], p2 = VPOS[e.v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 22;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = i;
+    svg.appendChild(line);
+
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', mx);
+    label.setAttribute('y', my - 12);
+    label.classList.add('edge-label');
+    label.textContent = e.w;
+    label.dataset.edgeLabel = i;
+    svg.appendChild(label);
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = VPOS[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '22');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y - 4);
+    text.classList.add('node-text');
+    text.textContent = VLABELS[v];
+    text.dataset.nodeText = v;
+    svg.appendChild(text);
+
+    const keyLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    keyLabel.setAttribute('x', p.x); keyLabel.setAttribute('y', p.y + 16);
+    keyLabel.classList.add('node-key-label');
+    keyLabel.dataset.nodeKey = v;
+    svg.appendChild(keyLabel);
+  }
+
+  svgCreated = true;
+}
+
+function setGraphState(step) {
+  document.querySelectorAll('.edge-line').forEach(el => {
+    const idx = parseInt(el.dataset.edge);
+    el.classList.remove('active', 'relaxed', 'in-mst', 'skipped');
+    if (step.activeEdges && step.activeEdges.includes(idx)) {
+      el.classList.add('active');
+    }
+    if (step.relaxedEdges && step.relaxedEdges.includes(idx)) {
+      el.classList.remove('active');
+      el.classList.add('relaxed');
+    }
+    if (step.mstEdgeSet && step.mstEdgeSet.includes(idx)) {
+      el.classList.remove('active', 'relaxed');
+      el.classList.add('in-mst');
+    }
+  });
+
+  document.querySelectorAll('.edge-label').forEach(el => {
+    const idx = parseInt(el.dataset.edgeLabel);
+    el.className = 'edge-label';
+    if (step.activeEdges && step.activeEdges.includes(idx)) {
+      el.classList.add('active');
+    }
+    if (step.relaxedEdges && step.relaxedEdges.includes(idx)) {
+      el.classList.add('relaxed');
+    }
+    if (step.mstEdgeSet && step.mstEdgeSet.includes(idx)) {
+      el.classList.add('in-mst');
+    }
+  });
+
+  document.querySelectorAll('.node-circle').forEach(el => {
+    const idx = parseInt(el.dataset.node);
+    el.className = 'node-circle';
+    if (idx === step.currentVertex && step.type === 'extract') {
+      el.classList.add('extracted');
+    } else if (step.inQs && !step.inQs[idx]) {
+      el.classList.add('in-mst');
+    } else if (step.inQs && step.inQs[idx]) {
+      const wasRelaxed = step.relaxedEdges && step.relaxedEdges.some(ei => {
+        const e = EDGES[ei];
+        return e.u === idx || e.v === idx;
+      });
+      if (wasRelaxed && (step.type === 'relax')) {
+        el.classList.add('relaxed');
+      } else if (idx === step.currentVertex && step.type === 'extract') {
+        el.classList.add('extracted');
+      } else {
+        el.classList.add('in-q');
+      }
+    }
+  });
+
+  document.querySelectorAll('.node-text').forEach(el => {
+    const idx = parseInt(el.dataset.nodeText);
+    el.className = 'node-text';
+    if (idx === step.currentVertex && step.type === 'extract') {
+      el.classList.add('extracted');
+    } else if (step.inQs && !step.inQs[idx]) {
+      el.classList.add('in-mst');
+    } else if (step.inQs && step.inQs[idx]) {
+      const wasRelaxed = step.relaxedEdges && step.relaxedEdges.some(ei => {
+        const e = EDGES[ei];
+        return e.u === idx || e.v === idx;
+      });
+      if (wasRelaxed && (step.type === 'relax')) {
+        el.classList.add('relaxed');
+      } else if (idx === step.currentVertex && step.type === 'extract') {
+        el.classList.add('extracted');
+      } else {
+        el.classList.add('in-q');
+      }
+    }
+  });
+
+  document.querySelectorAll('.node-key-label').forEach(el => {
+    const v = parseInt(el.dataset.nodeKey);
+    const k = step.keys ? step.keys[v] : Infinity;
+    el.textContent = k === Infinity ? '∞' : 'k=' + k;
+    el.className = 'node-key-label';
+    if (v === step.currentVertex && step.type === 'extract') {
+      el.classList.add('extracted');
+    } else if (step.inQs && !step.inQs[v]) {
+      el.classList.add('in-mst');
+    } else if (step.inQs && step.inQs[v]) {
+      const wasRelaxed = step.relaxedEdges && step.relaxedEdges.some(ei => {
+        const e = EDGES[ei];
+        return e.u === v || e.v === v;
+      });
+      if (wasRelaxed && (step.type === 'relax')) {
+        el.classList.add('relaxed');
+      } else {
+        el.classList.add('in-q');
+      }
+    }
+  });
+}
+
+function updateQueueDisplay(queue, step) {
+  const container = document.getElementById('queueItems');
+  if (!queue || queue.length === 0) {
+    container.innerHTML = '<span style="color:#555;">∅</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < queue.length; i++) {
+    const v = queue[i];
+    const k = step.keys ? step.keys[v] : Infinity;
+    const isExtracted = step.currentVertex === v && step.type === 'extract';
+    const cls = isExtracted ? 'extracted' : 'in-q';
+    html += `<span class="queue-item ${cls}">
+      <span class="qi-label">${VLABELS[v]}</span>
+      <span class="qi-key">${k === Infinity ? '∞' : k}</span>
+    </span>`;
+    if (i < queue.length - 1) {
+      html += `<span class="queue-arrow">&rarr;</span>`;
+    }
+  }
+  container.innerHTML = html;
+}
+
+function updatePrimTable(step) {
+  const tbody = document.getElementById('primTableBody');
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    const k = step.keys ? step.keys[i] : Infinity;
+    const p = step.pis ? step.pis[i] : null;
+    const iq = step.inQs ? step.inQs[i] : true;
+    const kStr = k === Infinity ? '∞' : k;
+    const pStr = p === null ? 'NIL' : VLABELS[p];
+    const iqStr = iq ? 'Yes' : 'No';
+
+    const isCurrent = i === step.currentVertex && (step.type === 'extract');
+    const isExtracted = !iq && step.type !== 'init';
+
+    const wasUpdated = step.type === 'relax' && i === step.neighbor;
+
+    let keyClass = 'finite';
+    if (k === Infinity) keyClass = 'inf';
+    if (isCurrent) keyClass = 'current-key';
+    if (isExtracted) keyClass = 'extracted-row';
+    if (wasUpdated) keyClass = 'updated-cell';
+
+    let piClass = isExtracted ? 'extracted-row' : '';
+    let iqClass = '';
+    if (iq) iqClass = 'in-q-yes'; else iqClass = 'in-q-no';
+    if (isExtracted) iqClass = 'extracted-row';
+
+    let sharedClass = keyClass;
+
+    html += `<tr>
+      <td class="${sharedClass}">${VLABELS[i]}</td>
+      <td class="${keyClass}">${kStr}</td>
+      <td class="${piClass}">${pStr}</td>
+      <td class="${iqClass}">${iqStr}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function updateMstDisplay(step) {
+  const container = document.getElementById('mstEdgeList');
+  const edges = step.mstEdgeSet || [];
+  if (edges.length === 0) {
+    container.innerHTML = '<span style="color:#555;font-size:0.85em;">MST edges: none yet</span>';
+  } else {
+    let html = '';
+    for (let idx of edges) {
+      const e = EDGES[idx];
+      html += `<span class="mst-edge-item">${e.label}(${e.w})</span>`;
+    }
+    container.innerHTML = html;
+  }
+  document.getElementById('mstTotalWeight').textContent = step.mstWeight || 0;
+  document.getElementById('mstEdgeCount').textContent = edges.length;
+}
+
+function initTables() {
+  const tbody = document.getElementById('primTableBody');
+  let html = '';
+  for (let i = 0; i < V; i++) {
+    const kStr = i === SOURCE ? '0' : '∞';
+    const pStr = 'NIL';
+    const iqStr = 'Yes';
+    const cls = i === SOURCE ? 'finite' : 'inf';
+    html += `<tr>
+      <td class="${cls}">${VLABELS[i]}</td>
+      <td class="${cls}">${kStr}</td>
+      <td>${pStr}</td>
+      <td class="in-q-yes">${iqStr}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+
+  for (let v = 0; v < V; v++) {
+    const kl = document.querySelector(`.node-key-label[data-node-key="${v}"]`);
+    if (kl) {
+      kl.textContent = v === SOURCE ? 'k=0' : '∞';
+    }
+  }
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.edge-line').forEach(el => {
+    el.classList.remove('active', 'relaxed', 'in-mst', 'skipped');
+  });
+  document.querySelectorAll('.edge-label').forEach(el => {
+    el.className = 'edge-label';
+  });
+  document.querySelectorAll('.node-circle').forEach(el => {
+    el.className = 'node-circle';
+  });
+  document.querySelectorAll('.node-text').forEach(el => {
+    el.className = 'node-text';
+  });
+  document.querySelectorAll('.node-key-label').forEach(el => {
+    el.className = 'node-key-label';
+  });
+}
+
+function applyStep(step) {
+  const stepIdx = currentStep;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${stepIdx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('currentVertexDisplay').textContent = '—';
+    document.getElementById('currentEdgeDisplay').textContent = '—';
+    setGraphState(step);
+    updateQueueDisplay([], step);
+    updatePrimTable(step);
+    updateMstDisplay(step);
+    return;
+  }
+
+  document.getElementById('phaseDisplay').textContent =
+    step.type === 'init' ? 'Initialized' :
+    step.type === 'extract' ? `Extracting ${VLABELS[step.vertex]}` :
+    step.type === 'relax' ? `Relaxing (${VLABELS[step.vertex]},${VLABELS[step.neighbor]})` :
+    step.type === 'skip' ? `Skipping (${VLABELS[step.vertex]},${VLABELS[step.neighbor]})` : '—';
+
+  document.getElementById('currentVertexDisplay').textContent =
+    step.currentVertex >= 0 ? VLABELS[step.currentVertex] : '—';
+  document.getElementById('currentEdgeDisplay').textContent =
+    step.currentEdge >= 0 ? EDGES[step.currentEdge].label + ' w=' + EDGES[step.currentEdge].w : '—';
+
+  setGraphState(step);
+  updateQueueDisplay(step.queue, step);
+  updatePrimTable(step);
+  updateMstDisplay(step);
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('currentVertexDisplay').textContent = '—';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `...`;
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('mstEdgeList').innerHTML = '<span style="color:#555;font-size:0.85em;">MST edges: none yet</span>';
+  document.getElementById('mstTotalWeight').textContent = '0';
+  document.getElementById('mstEdgeCount').textContent = '0';
+
+  const initialKeys = Array(V).fill(Infinity);
+  initialKeys[SOURCE] = 0;
+  const initialQ = [...Array(V).keys()];
+  const initStep = { keys: initialKeys, pis: Array(V).fill(null), inQs: Array(V).fill(true), queue: initialQ, type: 'init', currentVertex: -1, currentEdge: -1 };
+  updateQueueDisplay(initialQ, initStep);
+
+  const ike = Array(V).fill(false);
+  for (let v = 0; v < V; v++) {
+    const kl = document.querySelector(`.node-key-label[data-node-key="${v}"]`);
+    if (kl) {
+      kl.textContent = v === SOURCE ? 'k=0' : '∞';
+      kl.className = 'node-key-label';
+    }
+    const nc = document.querySelector(`.node-circle[data-node="${v}"]`);
+    if (nc) {
+      nc.className = 'node-circle';
+      if (v === SOURCE) {
+        nc.classList.add('in-q');
+      } else {
+        nc.classList.add('in-q');
+      }
+    }
+    const nt = document.querySelector(`.node-text[data-node-text="${v}"]`);
+    if (nt) {
+      nt.className = 'node-text';
+      if (v === SOURCE) {
+        nt.classList.add('in-q');
+      } else {
+        nt.classList.add('in-q');
+      }
+    }
+  }
+
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('resultSection').style.display = 'block';
+  let edgeHtml = '';
+  let total = 0;
+  for (let idx of mstEdgeIndices) {
+    const e = EDGES[idx];
+    edgeHtml += `<p style="margin-left:8px;">• ${e.label} &mdash; weight ${e.w}</p>`;
+    total += e.w;
+  }
+  document.getElementById('resultContent').innerHTML = `
+    <div class="big-result">MST Total Weight: ${total}</div>
+    <p style="text-align:left;display:inline-block;">Edges in MST:<br>${edgeHtml}</p>
+    <p style="margin-top:12px;color:#888;">Prim's algorithm built the MST by greedily adding the cheapest edge from the current tree to a vertex not yet in the tree.</p>
+  `;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+createSvgGraph();
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+const initialKeys = Array(V).fill(Infinity);
+initialKeys[SOURCE] = 0;
+const initialQ = [...Array(V).keys()];
+const initStep = { keys: initialKeys, pis: Array(V).fill(null), inQs: Array(V).fill(true), queue: initialQ, type: 'init', currentVertex: -1, currentEdge: -1 };
+updateQueueDisplay(initialQ, initStep);
+</script>
+</body>
+</html>
