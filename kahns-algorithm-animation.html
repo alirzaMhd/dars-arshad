@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kahn's Algorithm Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 8px 0;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444;
+}
+.legend-idle { background: #0d0d1a; border-color: #555; }
+.legend-queue { background: #0a1a2a; border-color: #00ccff; }
+.legend-done { background: #0a1a12; border-color: #00ff88; }
+.legend-active { background: #1a0a00; border-color: #ff6600; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.idle-state {
+  background: #0d0d1a;
+  color: #888;
+}
+td.queue-state {
+  background: #0a1a2a !important;
+  color: #00ccff !important;
+  font-weight: bold;
+}
+td.done-state {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+  font-weight: bold;
+}
+td.active-state {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  font-weight: bold;
+}
+
+.queue-section { margin: 18px 0; }
+.section-label {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.section-label .queue-count { color: #00ccff; }
+.section-label .output-count { color: #00ff88; }
+
+.queue-container, .output-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 48px;
+  flex-wrap: wrap;
+}
+.q-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ccff;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #00ccff;
+  background: #0a1a2a;
+  animation: qPop 0.3s ease;
+}
+.o-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #00ff88;
+  background: #0a1a12;
+  animation: oPop 0.3s ease;
+}
+.o-arrow {
+  color: #00ff8844;
+  font-size: 1em;
+}
+.empty-label {
+  color: #555;
+  font-size: 0.85em;
+  font-style: italic;
+}
+@keyframes qPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes oPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.result-order {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.result-order .ro-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.result-order .ro-arrow {
+  color: #00ff8866;
+  font-size: 1.3em;
+  margin: 0 5px;
+}
+.verify-item {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 2px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.verify-pass { color: #00ff88; }
+.verify-fail { color: #ff6600; }
+</style>
+</head>
+<body>
+
+<h1>KAHN'S ALGORITHM</h1>
+<p class="subtitle">Graph Algorithms — Topological Sort via In-Degree Counting</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="680" height="520"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-idle"></span> Idle</span>
+      <span class="legend-item"><span class="legend-swatch legend-queue"></span> In Queue</span>
+      <span class="legend-item"><span class="legend-swatch legend-active"></span> Active</span>
+      <span class="legend-item"><span class="legend-swatch legend-done"></span> Output</span>
+    </div>
+
+    <div class="queue-section">
+      <div class="section-label">Queue <span id="queueSizeLabel" class="queue-count">(0)</span></div>
+      <div id="queueContainer" class="queue-container"><span class="empty-label">empty</span></div>
+    </div>
+
+    <div class="queue-section">
+      <div class="section-label">Topological Order <span id="outputSizeLabel" class="output-count">(0/7)</span></div>
+      <div id="outputContainer" class="output-container"><span class="empty-label">empty</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Operation:</span> <span class="value" id="opDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="vertexDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">In-Degree &amp; Status Table</div>
+      <div class="table-wrapper">
+        <table id="degreeTable">
+          <thead>
+            <tr><th>Vertex</th><th>In-Degree</th><th>Status</th></tr>
+          </thead>
+          <tbody id="degreeBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Topological Sort Complete!</h2>
+      <div class="big-result" id="finalTopoOrder">—</div>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>What is Kahn's Algorithm?</h3>
+        <p>Kahn's algorithm performs a <b>topological sort</b> of a <b>Directed Acyclic Graph (DAG)</b> by repeatedly removing vertices with <b>in-degree 0</b>.</p>
+        <h3 style="margin-top:10px;">Key Idea</h3>
+        <p>Every DAG has at least one vertex with <span class="dim">in-degree 0</span> (no incoming edges). Such a vertex has <b>no prerequisites</b> and can be placed first in the order.</p>
+        <h3 style="margin-top:10px;">Algorithm Steps</h3>
+        <p style="margin-left:8px;">1. Compute <span class="dim">in-degree</span> for every vertex.</p>
+        <p style="margin-left:8px;">2. Enqueue all vertices with <span class="dim">in-degree 0</span>.</p>
+        <p style="margin-left:8px;">3. While queue is not empty:</p>
+        <p style="margin-left:20px;">• Dequeue <span class="dim">u</span>, append to output.</p>
+        <p style="margin-left:20px;">• For each neighbor <span class="dim">v</span>, <b>decrement</b> in-degree(v).</p>
+        <p style="margin-left:20px;">• If in-degree(v) becomes 0, enqueue <span class="dim">v</span>.</p>
+        <p style="margin-left:8px;">4. If all vertices output → valid topological sort.</p>
+        <p style="margin-left:8px;">5. If some remain → graph has a <span style="color:#ff6600;font-weight:bold;">cycle</span>.</p>
+        <h3 style="margin-top:10px;">This Graph</h3>
+        <p>7 vertices {<span class="dim">0,1,2,3,4,5,6</span>} with 8 edges forming a DAG.</p>
+        <p>Edges: <span class="dim">0→1, 0→2, 1→3, 2→3, 2→4, 3→5, 4→5, 5→6</span></p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertices = [0, 1, 2, 3, 4, 5, 6];
+const adjList = {
+  0: [1, 2],
+  1: [3],
+  2: [3, 4],
+  3: [5],
+  4: [5],
+  5: [6],
+  6: []
+};
+const edgeList = [
+  { u: 0, v: 1 }, { u: 0, v: 2 },
+  { u: 1, v: 3 },
+  { u: 2, v: 3 }, { u: 2, v: 4 },
+  { u: 3, v: 5 },
+  { u: 4, v: 5 },
+  { u: 5, v: 6 }
+];
+const nodePositions = {
+  0: { x: 340, y: 60 },
+  1: { x: 170, y: 165 },
+  2: { x: 510, y: 165 },
+  3: { x: 210, y: 275 },
+  4: { x: 470, y: 275 },
+  5: { x: 340, y: 385 },
+  6: { x: 340, y: 470 }
+};
+const nodeRadius = 22;
+const V = 7;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let finalResult = [];
+
+function computeInitialDegrees() {
+  let deg = {};
+  for (let v of vertices) deg[v] = 0;
+  for (let e of edgeList) deg[e.v]++;
+  return deg;
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation(inDeg) {
+  let rows = vertices.map(v => '<span class="dim">' + v + '</span>: d=' + inDeg[v]).join(', ');
+  return '<div class="explain-section active">\n<h3>Initial State — In-Degrees Computed</h3>\n<p>All <span class="dim">7</span> vertices are <span style="color:#888;">idle</span>. In-degrees have been computed:</p>\n<p style="margin-left:8px;">' + rows + '</p>\n<h3 style="margin-top:10px;">Identifying Sources</h3>\n<p>Vertices with <span class="dim">in-degree 0</span> have no incoming edges — they are <b>sources</b> with no prerequisites.</p>\n<p>These are candidates to be output first: <span class="split-info">vertex 0 (d=0)</span></p>\n<p class="note">Press Play or Step to begin.</p>\n</div>';
+}
+
+function buildEnqueueExplanation(v, queue) {
+  let qStr = queue.join(', ');
+  return '<div class="explain-section active">\n<h3>📥 Enqueue Vertex ' + v + '</h3>\n<p>Vertex <span class="dim">' + v + '</span> has <span class="result-line">in-degree 0</span> — no edges point to it.</p>\n<p>Added to the queue.</p>\n<p>Current queue: <span class="formula-line">[' + qStr + ']</span></p>\n<p class="note">The queue holds all vertices ready to be output.</p>\n</div>';
+}
+
+function buildDequeueExplanation(v, result, queue) {
+  let resStr = result.join(' → ');
+  return '<div class="explain-section active">\n<h3>📤 Dequeue &amp; Output Vertex ' + v + '</h3>\n<p>Remove <span class="dim">' + v + '</span> from the front of the queue and <b>append</b> it to the topological order.</p>\n<p class="result-line">Current order: ' + resStr + '</p>\n<p>Now decrement in-degree of all neighbors of <span class="dim">' + v + '</span>.</p>\n<p class="note">Removing a vertex may unlock its successors by reducing their in-degrees.</p>\n</div>';
+}
+
+function buildDecrementExplanation(src, v, newDeg, enqueued, result) {
+  let resStr = result.join(' → ');
+  if (enqueued) {
+    return '<div class="explain-section active">\n<h3>⬇ Decrement &amp; Enqueue: ' + src + ' → ' + v + '</h3>\n<p>Removing <span class="dim">' + src + '</span> means edge <span class="dim">' + src + '→' + v + '</span> is removed.</p>\n<p>in-degree(<span class="dim">' + v + '</span>): <span class="dim">' + (newDeg + 1) + '</span> → <span class="result-line">' + newDeg + '</span></p>\n<p>Vertex <span class="dim">' + v + '</span> now has <span class="split-info">in-degree 0</span> → <b>enqueued!</b></p>\n<p class="result-line">All prerequisites satisfied. It can now be output.</p>\n<p>Current order: ' + resStr + '</p>\n<p class="note">Key insight: processing a vertex may unlock its successors.</p>\n</div>';
+  } else {
+    return '<div class="explain-section active">\n<h3>⬇ Decrement: ' + src + ' → ' + v + '</h3>\n<p>Removing <span class="dim">' + src + '</span> means edge <span class="dim">' + src + '→' + v + '</span> is removed.</p>\n<p>in-degree(<span class="dim">' + v + '</span>): <span class="dim">' + (newDeg + 1) + '</span> → <span class="dim">' + newDeg + '</span></p>\n<p>Still has <span class="dim">' + newDeg + '</span> incoming edge(s) — <span style="color:#ffcc00;">not yet ready</span>.</p>\n<p>Current order: ' + resStr + '</p>\n<p class="note">A vertex can only be output when all incoming edges have been removed.</p>\n</div>';
+  }
+}
+
+function buildDoneExplanation(result) {
+  let orderStr = result.join(' → ');
+  let verifyHtml = '';
+  for (let e of edgeList) {
+    let uPos = result.indexOf(e.u);
+    let vPos = result.indexOf(e.v);
+    let pass = uPos < vPos;
+    verifyHtml += '<span class="verify-item ' + (pass ? 'verify-pass' : 'verify-fail') + '">' + e.u + '→' + e.v + ' ' + (pass ? '✓' : '✗') + '</span>';
+  }
+  return '<div class="explain-section active" style="border-left-color:#00ff88;">\n<h3>✅ Algorithm Complete!</h3>\n<p>All <span class="dim">7</span> vertices output. Graph is a valid DAG (no cycle detected).</p>\n<h3 style="margin-top:10px;">Final Topological Order</h3>\n<span class="result-line" style="font-size:1.1em;">' + orderStr + '</span>\n<h3 style="margin-top:10px;">Verification</h3>\n<p>For every edge <span class="dim">u → v</span>, <span class="dim">u</span> appears before <span class="dim">v</span>:</p>\n<p>' + verifyHtml + '</p>\n<p class="result-line" style="margin-top:8px;">All edges satisfied. ✓</p>\n<h3 style="margin-top:10px;">Key Intuition</h3>\n<p>Kahn\'s algorithm <b>peels off</b> layers of the DAG: each iteration removes vertices with no remaining dependencies.</p>\n<h3 style="margin-top:10px;">Complexity</h3>\n<p><span class="dim">Time:</span> O(V + E) — each vertex dequeued once, each edge examined once</p>\n<p><span class="dim">Space:</span> O(V) — queue and in-degree array</p>\n</div>';
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let inDeg = {};
+  for (let v of vertices) inDeg[v] = 0;
+  for (let e of edgeList) inDeg[e.v]++;
+
+  let q = [];
+  let res = [];
+  let nodeState = {};
+  for (let v of vertices) nodeState[v] = 'idle';
+
+  steps.push({
+    type: 'init',
+    inDegrees: Object.assign({}, inDeg),
+    queue: q.slice(),
+    result: res.slice(),
+    nodeState: Object.assign({}, nodeState),
+    activeVertex: null,
+    edgeHighlight: null,
+    phase: 'Initial state — in-degrees computed'
+  });
+
+  let initialSources = [];
+  for (let v of vertices) {
+    if (inDeg[v] === 0) {
+      initialSources.push(v);
+      nodeState[v] = 'in_queue';
+      steps.push({
+        type: 'enqueue',
+        vertex: v,
+        inDegrees: Object.assign({}, inDeg),
+        queue: initialSources.slice(),
+        result: res.slice(),
+        nodeState: Object.assign({}, nodeState),
+        activeVertex: v,
+        edgeHighlight: null,
+        phase: 'Enqueued vertex ' + v + ' (in-degree 0)'
+      });
+    }
+  }
+  q = initialSources.slice();
+
+  while (q.length > 0) {
+    let u = q.shift();
+    res.push(u);
+
+    nodeState[u] = 'processing';
+    steps.push({
+      type: 'dequeue',
+      vertex: u,
+      inDegrees: Object.assign({}, inDeg),
+      queue: q.slice(),
+      result: res.slice(),
+      nodeState: Object.assign({}, nodeState),
+      activeVertex: u,
+      edgeHighlight: null,
+      phase: 'Dequeued vertex ' + u + ' — added to order'
+    });
+    nodeState[u] = 'done';
+
+    for (let v of adjList[u]) {
+      inDeg[v]--;
+      let enqueued = false;
+      if (inDeg[v] === 0) {
+        q.push(v);
+        nodeState[v] = 'in_queue';
+        enqueued = true;
+      }
+      steps.push({
+        type: 'decrement',
+        vertex: v,
+        source: u,
+        newDegree: inDeg[v],
+        enqueued: enqueued,
+        inDegrees: Object.assign({}, inDeg),
+        queue: q.slice(),
+        result: res.slice(),
+        nodeState: Object.assign({}, nodeState),
+        activeVertex: v,
+        edgeHighlight: { u: u, v: v },
+        phase: 'Decremented in-degree of ' + v + ': ' + (inDeg[v] + 1) + ' → ' + inDeg[v] + (enqueued ? ' (enqueued!)' : '')
+      });
+    }
+  }
+
+  finalResult = res.slice();
+
+  steps.push({
+    type: 'done',
+    inDegrees: Object.assign({}, inDeg),
+    queue: q.slice(),
+    result: res.slice(),
+    nodeState: Object.assign({}, nodeState),
+    activeVertex: null,
+    edgeHighlight: null,
+    phase: '✓ Complete! All 7 vertices output'
+  });
+}
+
+// --- Canvas drawing ---
+
+function drawArrow(ctx, fromX, fromY, toX, toY, colorVal, lineWidth) {
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist;
+  let ny = dy / dist;
+  let startX = fromX + nx * (nodeRadius + 2);
+  let startY = fromY + ny * (nodeRadius + 2);
+  let endX = toX - nx * (nodeRadius + 2);
+  let endY = toY - ny * (nodeRadius + 2);
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+
+  let arrLen = 12;
+  let arrW = 6;
+  let ax = endX - nx * arrLen;
+  let ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const nState = step.nodeState || {};
+  const active = step.activeVertex;
+  const edgeHL = step.edgeHighlight;
+  const inDeg = step.inDegrees || {};
+
+  // Collect previously decremented edges
+  let collectedEdges = [];
+  for (let si = 0; si < steps.length && steps[si] !== step; si++) {
+    if (steps[si].type === 'decrement' && steps[si].edgeHighlight) {
+      let key = steps[si].edgeHighlight.u + '-' + steps[si].edgeHighlight.v;
+      if (!collectedEdges.includes(key)) collectedEdges.push(key);
+    }
+  }
+
+  // Draw edges
+  for (let e of edgeList) {
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+    let key = e.u + '-' + e.v;
+    let isActive = edgeHL && edgeHL.u === e.u && edgeHL.v === e.v;
+    let isCollected = collectedEdges.includes(key);
+
+    let color = '#444';
+    let lw = 1.5;
+
+    if (isActive) {
+      color = '#ff6600';
+      lw = 4;
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 18;
+    } else if (isCollected) {
+      color = '#555';
+      lw = 2;
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, color, lw);
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw nodes
+  for (let v of vertices) {
+    let pos = nodePositions[v];
+    let state = nState[v] || 'idle';
+    let isActive = (v === active);
+
+    let fillColor, strokeColor, textColor;
+
+    if (state === 'done') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else if (state === 'in_queue') {
+      fillColor = '#0a1a2a';
+      strokeColor = '#00ccff';
+      textColor = '#00ccff';
+    } else if (state === 'processing') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+    }
+
+    if (isActive && state !== 'processing') {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      fillColor = '#1a0a00';
+    }
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = isActive ? 3.5 : 2;
+    ctx.stroke();
+
+    if (isActive) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = strokeColor + '44';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Vertex ID
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 18px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.toString(), pos.x, pos.y);
+
+    // In-degree label
+    let deg = inDeg[v];
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = strokeColor;
+    ctx.fillText('d=' + deg, pos.x, pos.y + nodeRadius + 3);
+  }
+
+  if (step.type === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('DAG ready — in-degrees computed. Press Play or Step.', 10, 14);
+  }
+}
+
+// --- Queue & Output display ---
+
+function renderQueue(step) {
+  let container = document.getElementById('queueContainer');
+  let q = step.queue || [];
+  let html = '';
+  if (q.length === 0) {
+    html = '<span class="empty-label">empty</span>';
+  } else {
+    for (let i = 0; i < q.length; i++) {
+      html += '<span class="q-item">' + q[i] + '</span>';
+    }
+  }
+  container.innerHTML = html;
+  document.getElementById('queueSizeLabel').textContent = '(' + q.length + ')';
+}
+
+function renderOutput(step) {
+  let container = document.getElementById('outputContainer');
+  let res = step.result || [];
+  let html = '';
+  if (res.length === 0) {
+    html = '<span class="empty-label">empty</span>';
+  } else {
+    for (let i = 0; i < res.length; i++) {
+      if (i > 0) html += '<span class="o-arrow">→</span>';
+      html += '<span class="o-item">' + res[i] + '</span>';
+    }
+  }
+  container.innerHTML = html;
+  document.getElementById('outputSizeLabel').textContent = '(' + res.length + '/' + V + ')';
+}
+
+// --- Table rendering ---
+
+function renderTable(step) {
+  let tbody = document.getElementById('degreeBody');
+  let nState = step.nodeState || {};
+  let inDeg = step.inDegrees || {};
+  let active = step.activeVertex;
+  let html = '';
+  for (let v of vertices) {
+    let state = nState[v] || 'idle';
+    let stateClass = 'idle-state';
+    let stateLabel = 'Idle';
+    if (state === 'in_queue') { stateClass = 'queue-state'; stateLabel = 'In Queue'; }
+    else if (state === 'processing') { stateClass = 'active-state'; stateLabel = 'Processing'; }
+    else if (state === 'done') { stateClass = 'done-state'; stateLabel = 'Output'; }
+
+    if (v === active && state !== 'processing') {
+      stateClass = 'active-state';
+      stateLabel = 'Active';
+    }
+
+    html += '<tr><td>' + v + '</td><td>' + inDeg[v] + '</td><td class="' + stateClass + '">' + stateLabel + '</td></tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '—';
+  let opLabel = '—';
+  switch (step.type) {
+    case 'init': opLabel = 'Compute In-Degrees'; break;
+    case 'enqueue': opLabel = 'Enqueue'; break;
+    case 'dequeue': opLabel = 'Dequeue & Output'; break;
+    case 'decrement': opLabel = 'Decrement In-Degree'; break;
+    case 'done': opLabel = '✓ Complete'; break;
+  }
+  document.getElementById('opDisplay').textContent = opLabel;
+  let vtx = (step.activeVertex !== null && step.activeVertex !== undefined) ? step.activeVertex : '—';
+  document.getElementById('vertexDisplay').textContent = vtx;
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  updateInfo(step);
+  drawGraph(step);
+  renderTable(step);
+  renderQueue(step);
+  renderOutput(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation(step.inDegrees);
+      break;
+    case 'enqueue':
+      explanation = buildEnqueueExplanation(step.vertex, step.queue);
+      break;
+    case 'dequeue':
+      explanation = buildDequeueExplanation(step.vertex, step.result, step.queue);
+      break;
+    case 'decrement':
+      explanation = buildDecrementExplanation(step.source, step.vertex, step.newDegree, step.enqueued, step.result);
+      break;
+    case 'done':
+      explanation = buildDoneExplanation(step.result);
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  let idx = steps.indexOf(step);
+  document.getElementById('sidebarPhase').textContent = 'Step ' + (idx + 1) + ' / ' + steps.length + ' — ' + step.phase;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(function() {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('opDisplay').textContent = '✓ Done';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let orderHtml = '';
+  for (let i = 0; i < finalResult.length; i++) {
+    if (i > 0) orderHtml += '<span class="ro-arrow">→</span>';
+    orderHtml += '<span class="ro-box">' + finalResult[i] + '</span>';
+  }
+  document.getElementById('finalTopoOrder').innerHTML = orderHtml;
+
+  let verifyHtml = '';
+  let allPass = true;
+  for (let e of edgeList) {
+    let uPos = finalResult.indexOf(e.u);
+    let vPos = finalResult.indexOf(e.v);
+    let pass = uPos < vPos;
+    if (!pass) allPass = false;
+    verifyHtml += '<span class="verify-item ' + (pass ? 'verify-pass' : 'verify-fail') + '">' + e.u + '→' + e.v + ' ' + (pass ? '✓' : '✗') + '</span> ';
+  }
+
+  document.getElementById('resultDisplay').innerHTML =
+    '<p style="margin-top:10px;"><b>Verification</b> — every edge u→v has u before v:</p>\n' +
+    '     <p>' + verifyHtml + '</p>\n' +
+    '     <p class="' + (allPass ? 'verify-pass' : 'verify-fail') + '" style="margin-top:6px;font-weight:bold;">\n' +
+    '       ' + (allPass ? 'All edges satisfied. ✓ Valid topological order!' : 'ERROR: Edge constraint violated!') + '\n' +
+    '     </p>\n' +
+    '     <p style="margin-top:12px;color:#888;font-size:0.85em;">\n' +
+    '       ' + V + ' vertices processed in topological order\n' +
+    '     </p>';
+
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(finalResult);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('opDisplay').textContent = '—';
+  document.getElementById('vertexDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = '<div class="explain-section active">\n<h3>What is Kahn\'s Algorithm?</h3>\n<p>Kahn\'s algorithm performs a <b>topological sort</b> of a <b>Directed Acyclic Graph (DAG)</b> by repeatedly removing vertices with <b>in-degree 0</b>.</p>\n<h3 style="margin-top:10px;">Key Idea</h3>\n<p>Every DAG has at least one vertex with <span class="dim">in-degree 0</span> (no incoming edges).</p>\n<h3 style="margin-top:10px;">Algorithm Steps</h3>\n<p style="margin-left:8px;">1. Compute <span class="dim">in-degree</span> for every vertex.</p>\n<p style="margin-left:8px;">2. Enqueue all vertices with <span class="dim">in-degree 0</span>.</p>\n<p style="margin-left:8px;">3. While queue is not empty:</p>\n<p style="margin-left:20px;">• Dequeue <span class="dim">u</span>, append to output.</p>\n<p style="margin-left:20px;">• For each neighbor <span class="dim">v</span>, <b>decrement</b> in-degree(v).</p>\n<p style="margin-left:20px;">• If in-degree(v) becomes 0, enqueue <span class="dim">v</span>.</p>\n<p style="margin-left:8px;">4. If all vertices output → valid topological sort.</p>\n<p style="margin-left:8px;">5. If some remain → graph has a <span style="color:#ff6600;font-weight:bold;">cycle</span>.</p>\n<h3 style="margin-top:10px;">This Graph</h3>\n<p>7 vertices forming a DAG.</p>\n<p>Edges: <span class="dim">0→1, 0→2, 1→3, 2→3, 2→4, 3→5, 4→5, 5→6</span></p>\n<p class="note">Press Play or Step to begin.</p>\n</div>';
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function clearHighlights() {}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(function() {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
