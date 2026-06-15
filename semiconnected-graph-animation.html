@@ -238,22 +238,28 @@ td.ok { background: #0a1a12 !important; color: #00ff88 !important; border-color:
 
   </div>
 
-  <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar">
     <h2>📖 Step-by-Step Explanation</h2>
     <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
     <div id="explainArea">
       <div class="explain-section active">
-        <h3>What is a Semiconnected Graph?</h3>
-        <p>A directed graph G = (V, E) is <b>semiconnected</b> if for every pair of vertices <span class="dim">(u, v)</span>, there is a path <span class="dim">u ⇝ v</span> <b>or</b> <span class="dim">v ⇝ u</span> (or both).</p>
-        <p>This is <b>weaker</b> than strong connectivity (where both directions must exist) but <b>stronger</b> than weak connectivity.</p>
-        <h3 style="margin-top:10px;">Algorithm: How to Test</h3>
-        <p>1. Compute <b>SCCs</b> (Kosaraju's algorithm)</p>
-        <p>2. Build the <b>condensation DAG</b> G<sup>SCC</sup></p>
-        <p>3. G is semiconnected <b>iff</b> G<sup>SCC</sup> has a <b>unique topological ordering</b> (equivalently: a Hamiltonian path covering all SCCs)</p>
-        <h3 style="margin-top:10px;">Graphs</h3>
-        <p><span class="dim">Graph A:</span> 5 vertices, edges 0→1, 1→2, 2→3, 3→4, 0→2, 1→3</p>
-        <p><span class="dim">Graph B:</span> 5 vertices, edges 0→1, 1→2, 2→0, 3→4, 4→3</p>
-        <p class="note">Press <b>Play</b> or <b>Step</b> to begin the analysis.</p>
+        <h3>🧠 What You're Looking At</h3>
+        <p>Welcome! This page visualizes two <b>directed graphs</b> to help you understand the concept of <b style="color:#00ff88;">semiconnectedness</b>.</p>
+        <p>A <b>directed graph</b> is just a collection of <b>vertices</b> (the numbered circles, 0–4) connected by <b>edges</b> (the arrows). An arrow u → v means you can travel from u to v in one step.</p>
+        <p>A <b>path</b> u ⇝ v means you can follow arrows from u to v in multiple steps (like 0→1→2 is a path from 0 to 2).</p>
+        <div style="margin:10px 0;padding:10px;background:#0a0a18;border-radius:6px;border-left:3px solid #00ff88;">
+          <b style="color:#00ff88;">🌟 The Big Question:</b>
+          <p style="margin:6px 0 0;color:#ccc;">For <b>every</b> pair of vertices (u, v), can u reach v <b>OR</b> can v reach u? If yes, the graph is <b style="color:#00ff88;">semiconnected</b>.</p>
+          <p style="margin:4px 0 0;color:#888;font-size:0.9em;">Think of it like a tournament bracket: for any two players, one must have a path to victory over the other.</p>
+        </div>
+        <h3 style="margin-top:10px;">🔬 How We'll Find Out — 3 Steps</h3>
+        <p><b>Step 1 — Find SCCs:</b> Run Kosaraju's algorithm to find groups of vertices that all reach each other (cycles).</p>
+        <p><b>Step 2 — Build Condensation DAG:</b> Shrink each SCC group into one "super-node". The result has no cycles.</p>
+        <p><b>Step 3 — Check for Unique Topological Order:</b> If there's exactly one way to order the super-nodes left-to-right, the graph is semiconnected. This means the condensation forms a single chain.</p>
+        <h3 style="margin-top:10px;">📊 The Two Graphs</h3>
+         <p><span style="color:#00ff88;font-weight:bold;">Graph A (left)</span> — Chain <span class="dim">0→1→2→3→4</span> with shortcuts <span style="color:#ff9944;">0→2, 1→3</span> (orange arcs). <b>No cycles</b>.</p>
+         <p><span style="color:#ff6600;font-weight:bold;">Graph B (right)</span> — Edges: 0→1, 1→2, 2→0, 3→4, 4→3. Has <b>two cycles</b>, no arrows between them.</p>
+        <p class="note">Press <b>▶ Play</b> for automatic animation, or <b>⏭ Step</b> to advance manually. Adjust speed with the slider.</p>
       </div>
     </div>
   </div>
@@ -266,12 +272,13 @@ const VLABELS = ['0','1','2','3','4'];
 const graphA = {
   name: 'Graph A',
   edges: [[0,1],[1,2],[2,3],[3,4],[0,2],[1,3]],
+  curved: [4, 5],
   positions: [
-    {x: 50, y: 70},
-    {x: 160, y: 70},
-    {x: 260, y: 70},
-    {x: 160, y: 280},
-    {x: 260, y: 280},
+    {x: 45, y: 180},
+    {x: 105, y: 180},
+    {x: 165, y: 180},
+    {x: 225, y: 180},
+    {x: 285, y: 180},
   ]
 };
 
@@ -448,6 +455,34 @@ function drawSelfLoop(ctx, x, y, colorVal, lw) {
   ctx.fill();
 }
 
+function drawCurvedArrow(ctx, fromX, fromY, toX, toY, cpX, cpY, colorVal, lw) {
+  let sdx = cpX - fromX, sdy = cpY - fromY;
+  let sdist = Math.sqrt(sdx*sdx + sdy*sdy);
+  if (sdist < 1) return;
+  let snx = sdx/sdist, sny = sdy/sdist;
+  let sx = fromX + snx*(NR+2), sy = fromY + sny*(NR+2);
+  let edx = toX - cpX, edy = toY - cpY;
+  let edist = Math.sqrt(edx*edx + edy*edy);
+  if (edist < 1) return;
+  let enx = edx/edist, eny = edy/edist;
+  let ex = toX - enx*(NR+2), ey = toY - eny*(NR+2);
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.quadraticCurveTo(cpX, cpY, ex, ey);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lw;
+  ctx.stroke();
+  let al = 10, aw = 5;
+  let ax = ex - enx*al, ay = ey - eny*al;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ax - eny*aw*0.5, ay + enx*aw*0.5);
+  ctx.lineTo(ax + eny*aw*0.5, ay - enx*aw*0.5);
+  ctx.closePath();
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+}
+
 function drawGraph(ctx, canvasId, graph, state) {
   const W = 310, H = 380;
   ctx.clearRect(0, 0, W, H);
@@ -473,8 +508,15 @@ function drawGraph(ctx, canvasId, graph, state) {
     else if (edgeColors[key]) { color = edgeColors[key]; lw = 2.5; }
     ctx.shadowBlur = (isActive || isHighlighted) ? 12 : 0;
     ctx.shadowColor = color;
-    if (isLoop) drawSelfLoop(ctx, p1.x, p1.y, color, lw);
-    else drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, color, lw);
+    if (isLoop) {
+      drawSelfLoop(ctx, p1.x, p1.y, color, lw);
+    } else if (graph.curved && graph.curved.includes(ei)) {
+      let mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      let cpX = mx, cpY = my - 60;
+      drawCurvedArrow(ctx, p1.x, p1.y, p2.x, p2.y, cpX, cpY, color, lw);
+    } else {
+      drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, color, lw);
+    }
     ctx.shadowBlur = 0;
   }
 
@@ -545,90 +587,122 @@ let animTimer = null;
 
 function buildIntroExplanation() {
   return '<div class="explain-section active">' +
-'<h3>Problem Setup</h3>' +
-'<p>We analyze two directed graphs to determine if they are <b>semiconnected</b>.</p>' +
-'<h3 style="margin-top:10px;">Graph A — Path with shortcuts</h3>' +
-'<p>Edges: <span class="dim">0→1, 1→2, 2→3, 3→4, 0→2, 1→3</span></p>' +
-'<p>Vertices form a chain 0→1→2→3→4 with extra edges 0→2 and 1→3. <b>No cycles</b> — all SCCs are trivial.</p>' +
-'<h3 style="margin-top:10px;">Graph B — Two disconnected cycles</h3>' +
-'<p>Edges: <span class="dim">0→1, 1→2, 2→0, 3→4, 4→3</span></p>' +
-'<p>Two <b>strongly connected components</b>: {<span class="dim">0,1,2</span>} (3-cycle) and {<span class="dim">3,4</span>} (2-cycle). <b>No edges</b> between the two SCCs.</p>' +
-'<h3 style="margin-top:10px;">Testing Approach</h3>' +
-'<p>1. Compute SCC decomposition via Kosaraju\'s algorithm</p>' +
-'<p>2. Build condensation DAG G<sup>SCC</sup></p>' +
-'<p>3. G is semiconnected <b>iff</b> G<sup>SCC</sup> has a unique topological ordering</p>' +
-'<p class="note">Press <b>Play</b> or <b>Step</b> to begin the DFS traversal.</p>' +
+'<h3>🧠 First Things First — What Is a Graph?</h3>' +
+'<p>A <b>directed graph</b> is a set of <b>vertices</b> (dots, labeled 0–4) connected by <b>edges</b> (arrows).' +
+' An arrow <span class="dim">u → v</span> means you can travel <b>from u to v</b> (but not backwards unless there\'s also a reverse arrow).</p>' +
+'<p>A <b>path</b> from u to v (written <span class="dim">u ⇝ v</span>) means you can follow arrows from u to v through any number of intermediate vertices.' +
+' For example, if you have 0→1 and 1→2, then 0 ⇝ 2 (path 0→1→2).</p>' +
+'<div style="margin:10px 0;padding:10px;background:#0a0a18;border-radius:6px;border-left:3px solid #00ff88;">' +
+'<b style="color:#00ff88;">Semiconnected Definition:</b>' +
+'<p style="margin:6px 0 0;color:#ccc;">A directed graph is <b style="color:#00ff88;">semiconnected</b> if for <b>every</b> pair of vertices (u, v), there\'s a path <span class="dim">u ⇝ v</span> <b style="color:#ffcc00;">OR</b> <span class="dim">v ⇝ u</span> (or both).' +
+' In other words: from any two vertices, at least one can reach the other.</p>' +
+'<p style="margin:4px 0 0;color:#888;font-size:0.9em;">🔹 <b>Strongly connected</b> = both directions exist (u→v AND v→u). Semiconnected is <b>weaker</b> — you only need <b>one</b> direction.</p>' +
+'</div>' +
+'<h3 style="margin-top:12px;">📊 Our Two Graphs</h3>' +
+'<p><span style="color:#00ff88;font-weight:bold;">Graph A</span> — Edges: <span class="dim">0→1, 1→2, 2→3, 3→4</span> + shortcuts <span style="color:#ff9944;">0→2, 1→3</span></p>' +
+'<p style="padding-left:16px;color:#aaa;">Vertices arranged in a chain 0→1→2→3→4 with two <span style="color:#ff9944;">shortcut edges</span> (drawn as orange arcs). <b>No cycles</b> (you can never loop back).</p>' +
+'<p><span style="color:#ff6600;font-weight:bold;">Graph B</span> — Edges: <span class="dim">0→1, 1→2, 2→0, 3→4, 4→3</span></p>' +
+'<p style="padding-left:16px;color:#aaa;">Has <b>two cycles</b>: 0→1→2→0 (a triangle) and 3→4→3 (a 2-cycle). No arrows <b>between</b> these two groups.</p>' +
+'<h3 style="margin-top:12px;">🔬 How We\'ll Test — Algorithm Overview</h3>' +
+'<p><b>Step 1:</b> Run <b>Kosaraju\'s algorithm</b> (two DFS passes) to find <b>Strongly Connected Components (SCCs)</b> — groups of vertices that can all reach each other.</p>' +
+'<p><b>Step 2:</b> Build the <b>condensation DAG</b> G<sup>SCC</sup> — shrink each SCC into a single "super-node".</p>' +
+'<p><b>Step 3:</b> Check if G<sup>SCC</sup> has a <b>unique topological ordering</b>. If yes → semiconnected! This is equivalent to there being a <b>Hamiltonian path</b> (a single line) through all SCCs.</p>' +
+'<p class="note">Press <b>▶ Play</b> to watch the algorithm run automatically, or <b>⏭ Step</b> to go one step at a time.</p>' +
 '</div>';
 }
 
 function buildDfsA1Explanation() {
   return '<div class="explain-section active">' +
-'<h3>🔍 First DFS Pass — Graph A</h3>' +
-'<p>Starting from vertex <span class="dim">0</span>. Kosaraju\'s first DFS computes discovery (<span class="dim">d</span>) and finish (<span class="dim">f</span>) times.</p>' +
-'<p><span class="result-line">d[0] = 1</span> — vertex 0 discovered. Color: white → <span style="color:#ff6600;">gray</span>.</p>' +
-'<p>Graph A has no cycles, so the DFS tree will be a path visiting all vertices.</p>' +
-'<p class="note">Discovery time stamps are shown below each vertex.</p>' +
+'<h3>🔍 Starting DFS on Graph A — What\'s Happening?</h3>' +
+'<p><b>DFS</b> = Depth-First Search. Think of it like exploring a maze: you go as deep as possible along one path, then backtrack and try other paths.</p>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">Vertex Colors:</b>' +
+'<p style="margin:4px 0;color:#aaa;">⬜ <b>White</b> = not yet visited</p>' +
+'<p style="margin:4px 0;color:#ff6600;">🟧 <b>Gray</b> = currently being explored (on the recursion stack)</p>' +
+'<p style="margin:4px 0;color:#00ff88;">⬛ <b>Black</b> = finished (all neighbors explored)</p>' +
+'</div>' +
+'<p><span class="result-line">d[v]</span> = <b>discovery time</b> — the step number when vertex v is first seen. We start at time 1.</p>' +
+'<p>▶ Vertex <span class="dim">0</span> is discovered first: <span class="result-line">d[0] = 1</span>. It turns <span style="color:#ff6600;">gray</span>.</p>' +
+'<p>Graph A has <b>no cycles</b> (it\'s a DAG), so DFS will trace a straight path through all vertices before backtracking.</p>' +
+'<p class="note">The discovery time is shown below each vertex on the graph.</p>' +
 '</div>';
 }
 
 function buildDfsA2Explanation(u, v) {
   return '<div class="explain-section active">' +
-'<h3>🌲 Tree Edge ' + u + '→' + v + ' (Graph A)</h3>' +
-'<p>Edge <span class="dim">(' + u + ',' + v + ')</span> is a <span class="result-line">tree edge</span> — <span class="dim">' + v + '</span> is white (undiscovered).</p>' +
-'<p><span class="result-line">d[' + v + '] = ' + preA.d[v] + '</span></p>' +
-'<p>DFS continues deeper, building a chain through the graph.</p>' +
-'<p class="note">Every edge in Graph A goes from a lower-numbered vertex to a higher-numbered one — a DAG.</p>' +
+'<h3>🌲 Following Arrow ' + u + '→' + v + ' — A "Tree Edge"</h3>' +
+'<p>We\'re at vertex <span class="dim">' + u + '</span> and looking at its outgoing arrow to <span class="dim">' + v + '</span>.</p>' +
+'<p>Vertex <span class="dim">' + v + '</span> is still <b>white</b> (never visited). This is called a <b style="color:#00ff88;">tree edge</b> — it extends our DFS tree deeper.</p>' +
+'<p><span class="result-line">d[' + v + '] = ' + preA.d[v] + '</span> — we record when we discover ' + v + '.</p>' +
+'<p>We <b>push</b> deeper into the graph instead of exploring other options at ' + u + '. This "depth-first" strategy is why it\'s called Depth-First Search!</p>' +
+'<p class="note">Graph A has no cycles, so every edge we follow will be a tree edge — we never revisit an already-visited vertex.</p>' +
 '</div>';
 }
 
 function buildDfsAFinishExplanation() {
   return '<div class="explain-section active">' +
-'<h3>✓ First DFS Complete — Graph A</h3>' +
-'<p>All vertices explored in one DFS tree. Finish times (reverse order):</p>' +
+'<h3>✓ First DFS on Graph A — All Done!</h3>' +
+'<p><b>f[v]</b> = <b>finish time</b> — the step number when DFS is done exploring vertex v and all its descendants.</p>' +
+'<p>Finish times (higher = finished later, meaning DFS stayed inside that subtree longer):</p>' +
 '<p><span class="dim">f[4]=6, f[3]=7, f[2]=8, f[1]=9, f[0]=10</span></p>' +
-'<p>Finish order (decreasing f): <span class="result-line">0, 1, 2, 3, 4</span></p>' +
-'<p>Since Graph A is a DAG, the second DFS pass will also find all vertices as singleton SCCs.</p>' +
-'<p class="note">Now we move to performing the first DFS on Graph B.</p>' +
+'<p>Notice: we discovered 4 last (d[4]=5) but it finished <b>first</b> (f[4]=6). That\'s because 4 has no outgoing edges, so DFS returns from it immediately.</p>' +
+'<p><b>Finish order</b> (vertices sorted by decreasing finish time): <span class="result-line">0 → 1 → 2 → 3 → 4</span></p>' +
+'<p>This order is actually a <b>topological order</b> of Graph A! In a DAG, sorting by decreasing finish time gives a valid topological ordering.</p>' +
+'<p>Since Graph A has no cycles, <b>every vertex is its own SCC</b> (trivial SCC). The second DFS pass will confirm this.</p>' +
+'<p class="note">✅ Next: we repeat the first DFS pass on <b>Graph B</b> (which <i>does</i> have cycles).</p>' +
 '</div>';
 }
 
 function buildDfsB1Explanation() {
   return '<div class="explain-section active">' +
-'<h3>🔍 First DFS Pass — Graph B</h3>' +
-'<p>Starting from vertex <span class="dim">0</span>. Graph B has cycles!</p>' +
-'<p><span class="result-line">d[0] = 1</span> — vertex 0 discovered.</p>' +
-'<p>The cycle <span class="dim">0→1→2→0</span> will produce <b>back edges</b>.</p>' +
-'<p class="note">Unlike Graph A, this graph has strongly connected components.</p>' +
+'<h3>🔍 Now Starting DFS on Graph B — Cycles Ahead!</h3>' +
+'<p>Same DFS algorithm, but Graph B behaves very differently because it has <b>cycles</b>.</p>' +
+'<p><span class="result-line">d[0] = 1</span> — vertex 0 discovered, turns <span style="color:#ff6600;">gray</span>.</p>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">What\'s a cycle?</b>' +
+'<p style="margin:4px 0;color:#aaa;">A cycle is a path that starts and ends at the same vertex, like 0→1→2→0. This means <b>all vertices in a cycle can reach each other</b> — they form a <b>Strongly Connected Component</b>.</p>' +
+'</div>' +
+'<p>When DFS encounters a cycle, it produces something called a <b>back edge</b> — an arrow pointing to an ancestor that\'s still gray (on the recursion stack). We\'ll see this soon!</p>' +
+'<p class="note">Pay attention to how the vertex colors differ from Graph A — cycles create back edges!</p>' +
 '</div>';
 }
 
 function buildDfsB2Explanation(u, v) {
   if (u === 2 && v === 0) {
     return '<div class="explain-section active">' +
-'<h3>⭯ Back Edge 2→0 (Graph B)</h3>' +
-'<p>Edge <span class="dim">(2,0)</span> is a <span style="color:#ff6600;font-weight:bold;">back edge</span> — vertex 0 is <span style="color:#ff6600;">gray</span> (ancestor on the recursion stack).</p>' +
-'<p>This creates a <b>cycle</b>: <span class="split-info">0 → 1 → 2 → 0</span></p>' +
-'<p>Vertices {<span class="dim">0,1,2</span>} will form a <b>strongly connected component</b>.</p>' +
-'<p class="note">Back edges are exactly what Kosaraju\'s algorithm uses to detect SCCs.</p>' +
+'<h3>⭯ Back Edge 2→0 — This Is How SCCs Form!</h3>' +
+'<p>We\'re at vertex <span class="dim">2</span>, and its outgoing arrow points to <span class="dim">0</span>.</p>' +
+'<p>But <span class="dim">0</span> is <b style="color:#ff6600;">gray</b> — it\'s still on the recursion stack (we haven\'t finished exploring it yet)!</p>' +
+'<div style="margin:8px 0;padding:8px;background:#1a0a00;border-radius:4px;border-left:3px solid #ff6600;">' +
+'<b style="color:#ff6600;">Back Edge Detected!</b>' +
+'<p style="margin:4px 0;color:#ccc;">A <b>back edge</b> points from a vertex to an ancestor that\'s still being explored (gray). This <b>completes a cycle</b>: <span style="color:#ffcc00;">0 → 1 → 2 → 0</span></p>' +
+'<p style="margin:4px 0;color:#ccc;">All vertices in a cycle can reach each other — they belong to the same <b>Strongly Connected Component (SCC)</b>. Here, vertices {<span class="dim" style="color:#ffcc00;">0, 1, 2</span>} will be one SCC.</p>' +
+'</div>' +
+'<p>This is the key difference between Graph A (no cycles → no back edges → all trivial SCCs) and Graph B (has cycles → has back edges → non-trivial SCCs).</p>' +
+'<p class="note">The second DFS of Kosaraju\'s algorithm (on the reversed graph) will extract these SCCs.</p>' +
 '</div>';
   }
   return '<div class="explain-section active">' +
 '<h3>🌲 Tree Edge ' + u + '→' + v + ' (Graph B)</h3>' +
-'<p>Edge <span class="dim">(' + u + ',' + v + ')</span> is a <span class="result-line">tree edge</span>.</p>' +
-'<p><span class="result-line">d[' + v + '] = ' + preB.d[v] + '</span></p>' +
-'<p>DFS exploring component 1 ({<span class="dim">0,1,2</span>}).</p>' +
+'<p>Edge <span class="dim">(' + u + ',' + v + ')</span> is a <b style="color:#00ff88;">tree edge</b> — ' + v + ' is white (undiscovered). We \'re extending the DFS path.</p>' +
+'<p><span class="result-line">d[' + v + '] = ' + preB.d[v] + '</span> — vertex ' + v + ' discovered, turns gray.</p>' +
+'<p>We\'re inside the cycle {<span class="dim">0,1,2</span>}. Next: a back edge will complete the triangle!</p>' +
 '</div>';
 }
 
 function buildDfsBFinishExplanation() {
   return '<div class="explain-section active">' +
-'<h3>✓ First DFS Complete — Graph B</h3>' +
-'<p>Two DFS trees found:</p>' +
-'<p>• Tree 1: {<span class="dim">0,1,2</span>} — finish order: <span class="result-line">2→1→0</span></p>' +
-'<p>• Tree 2: {<span class="dim">3,4</span>} — finish order: <span class="result-line">4→3</span></p>' +
-'<p>Decreasing finish time: <span class="dim">3, 4, 0, 1, 2</span></p>' +
-'<p>Now we run the second DFS on the transpose graph G<sup>T</sup> in this order.</p>' +
-'<p class="note">In Kosaraju\'s algorithm, the second pass on G<sup>T</sup> reveals SCCs.</p>' +
+'<h3>✓ First DFS on Graph B Complete!</h3>' +
+'<p>DFS found <b>two separate trees</b> (called a "forest"), because Graph B has two disconnected parts:</p>' +
+'<p>🌲 <b>Tree 1</b>: vertices {<span class="dim">0,1,2</span>} — finish order: <span class="result-line">2 → 1 → 0</span></p>' +
+'<p>🌲 <b>Tree 2</b>: vertices {<span class="dim">3,4</span>} — finish order: <span class="result-line">4 → 3</span></p>' +
+'<p>These two trees exist separately because there\'s <b>no path</b> from the first group to the second!</p>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#00ccff;">Next Step — Kosaraju\'s Second Pass</b>' +
+'<p style="margin:4px 0;color:#aaa;">Kosaraju\'s algorithm now runs a second DFS on the <b>transposed graph</b> (all arrows reversed), processing vertices in <b>decreasing finish order</b>: <span class="dim">3, 4, 0, 1, 2</span></p>' +
+'<p style="margin:4px 0;color:#aaa;">This second pass reveals the <b>SCCs</b>. In the reversed graph, each SCC\'s internal arrows become cycles in the opposite direction, but the SCCs themselves stay intact!</p>' +
+'</div>' +
+'<p class="note">Key insight: On the transposed graph, DFS can only stay within each SCC — it can\'t cross between them.</p>' +
 '</div>';
 }
 
@@ -640,75 +714,128 @@ function buildSccExplanation() {
     return '<span style="color:' + sccColors[i%sccColors.length] + ';">{' + s.join(',') + '}</span>';
   }).join(', ');
   return '<div class="explain-section active">' +
-'<h3>🔬 SCC Decomposition Result</h3>' +
-'<p>Using Kosaraju\'s algorithm (two DFS passes):</p>' +
-'<h3 style="margin-top:10px;">Graph A — SCCs</h3>' +
+'<h3>🔬 SCC Decomposition — What Kosaraju Found</h3>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">What Is a Strongly Connected Component (SCC)?</b>' +
+'<p style="margin:4px 0;color:#aaa;">An SCC is a maximal group of vertices where <b>every vertex can reach every other vertex</b> in the group (by following arrows). Think of it as a "mutual reachability club".</p>' +
+'<p style="margin:4px 0;color:#aaa;">🔹 A single vertex with no cycle is its own "trivial" SCC.</p>' +
+'<p style="margin:4px 0;color:#aaa;">🔹 A cycle creates a non-trivial SCC — all vertices in the cycle can reach each other.</p>' +
+'</div>' +
+'<h3 style="margin-top:10px;">📗 Graph A — SCCs</h3>' +
 '<p>' + sA + '</p>' +
-'<p>All SCCs are <span class="dim">trivial</span> (singletons) — Graph A has no cycles.</p>' +
-'<h3 style="margin-top:10px;">Graph B — SCCs</h3>' +
+'<p>All <b>singleton</b> (trivial) SCCs. Each vertex is alone because Graph A has <b>no cycles</b> — you can\'t loop back to any vertex. The second DFS confirmed there\'s no way to return to a vertex once you leave it.</p>' +
+'<h3 style="margin-top:10px;">📕 Graph B — SCCs</h3>' +
 '<p>' + sB + '</p>' +
-'<p>Two nontrivial SCCs: <span class="split-info">{0,1,2}</span> (3-cycle) and <span class="split-info">{3,4}</span> (2-cycle).</p>' +
-'<p class="note">SCCs are the building blocks for the condensation DAG.</p>' +
+'<p>Two <b>non-trivial</b> SCCs:</p>' +
+'<p>• <span class="split-info">{0,1,2}</span> — the 3-cycle: 0 can reach 1 and 2, 1 can reach 2 and 0, 2 can reach 0 and 1. <b>Mutual reachability!</b></p>' +
+'<p>• <span class="split-info">{3,4}</span> — the 2-cycle: 3⇝4 and 4⇝3.</p>' +
+'<p>Notice: there is <b>no path</b> between the two groups! You can\'t get from {0,1,2} to {3,4} or vice versa.</p>' +
+'<p class="note">SCCs are the "building blocks" of directed graphs. Next, we\'ll condense each SCC into a single node!</p>' +
 '</div>';
 }
 
 function buildDagExplanation() {
   return '<div class="explain-section active">' +
-'<h3>📊 Condensation DAG G<sup>SCC</sup></h3>' +
-'<p>Each SCC becomes a node. An edge exists from SCC<sub>i</sub> to SCC<sub>j</sub> if any original edge goes from a vertex in SCC<sub>i</sub> to a vertex in SCC<sub>j</sub>.</p>' +
-'<h3 style="margin-top:10px;">Graph A — G<sup>SCC</sup></h3>' +
-'<p><span class="result-line">0 → 1 → 2 → 3 → 4</span></p>' +
-'<p>The condensation DAG is a <b>linear chain</b> (Hamiltonian path). Every SCC can reach every later SCC.</p>' +
-'<h3 style="margin-top:10px;">Graph B — G<sup>SCC</sup></h3>' +
-'<p><span class="split-info">{0,1,2}</span> &nbsp; <span style="color:#555;">(no edges)</span> &nbsp; <span class="split-info">{3,4}</span></p>' +
-'<p>The two SCCs have <b>no edges</b> between them — they are incomparable.</p>' +
-'<p class="note">A graph is semiconnected iff G<sup>SCC</sup> has a unique topological ordering (a Hamiltonian path).</p>' +
+'<h3>📊 Condensation DAG — Shrinking SCCs into Super-Nodes</h3>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">The Big Idea:</b>' +
+'<p style="margin:4px 0;color:#aaa;">A <b>condensation DAG</b> (G<sup>SCC</sup>) takes each SCC and replaces it with a single "super-node". If any arrow in the original graph goes from SCC<sub>i</sub> to SCC<sub>j</sub>, we draw a single arrow from super-node i to super-node j.</p>' +
+'<p style="margin:4px 0;color:#aaa;">The result is always a <b>DAG</b> (Directed Acyclic Graph) — the condensation removes all cycles!</p>' +
+'</div>' +
+'<h3 style="margin-top:10px;">📗 Graph A — Condensation</h3>' +
+'<p><span class="result-line">[0] → [1] → [2] → [3] → [4]</span></p>' +
+'<p>Since all SCCs are trivial (single vertices), the condensation looks just like the original graph — a <b>linear chain</b>. Each super-node can reach every super-node to its right. This chain is called a <b>Hamiltonian path</b> — it visits every node exactly once.</p>' +
+'<h3 style="margin-top:10px;">📕 Graph B — Condensation</h3>' +
+'<p><span class="split-info">SCC₀: {0,1,2}</span> &nbsp; <span style="color:#555;">— no arrows —</span> &nbsp; <span class="split-info">SCC₁: {3,4}</span></p>' +
+'<p>There are <b>zero edges</b> between the two SCCs in the condensation DAG! Neither super-node can reach the other.</p>' +
+'<div style="margin:8px 0;padding:8px;background:#0a1a12;border-radius:4px;border-left:3px solid #00ff88;">' +
+'<b style="color:#00ff88;">Key Insight — Why Condensation Matters:</b>' +
+'<p style="margin:4px 0;color:#ccc;">A graph is <b>semiconnected</b> if and only if its condensation DAG has a <b>Hamiltonian path</b> (a single line through all super-nodes). This is equivalent to the DAG having a <b>unique topological ordering</b>.</p>' +
+'</div>' +
+'<p class="note">Graph A\'s condensation is a single chain → candidate for semiconnected! Graph B\'s has two isolated components → likely NOT semiconnected.</p>' +
 '</div>';
 }
 
 function buildTopoExplanation() {
   return '<div class="explain-section active">' +
-'<h3>Unique Topological Ordering Check</h3>' +
-'<p>Using Kahn\'s algorithm on the condensation DAG:</p>' +
-'<h3 style="margin-top:10px;">Graph A</h3>' +
-'<p>At each step, <b>exactly one</b> node has indegree 0.</p>' +
-'<p>Unique topological order: <span class="result-line">0, 1, 2, 3, 4</span></p>' +
-'<p>This is a <b>Hamiltonian path</b> covering all SCCs → <span class="result-line">Semiconnected ✓</span></p>' +
-'<h3 style="margin-top:10px;">Graph B</h3>' +
-'<p>At the first step, <b>two</b> nodes have indegree 0 (SCC<sub>0</sub> and SCC<sub>1</sub>).</p>' +
-'<p>Multiple topological orderings exist → <span style="color:#ff6600;font-weight:bold;">NOT semiconnected ✗</span></p>' +
-'<p class="note">When multiple nodes have indegree 0 at any step, the DAG has no unique topological ordering.</p>' +
+'<h3>📐 Unique Topological Ordering — The Decisive Test</h3>' +
+'<div style="margin:8px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">What\'s a Topological Ordering?</b>' +
+'<p style="margin:4px 0;color:#aaa;">A <b>topological ordering</b> of a DAG is an ordering of its nodes where <b>every arrow goes from left to right</b>. Think of it as arranging tasks so prerequisites come before dependents.</p>' +
+'<p style="margin:4px 0;color:#aaa;">We use <b>Kahn\'s algorithm</b>: repeatedly pick a node with <b>indegree = 0</b> (no incoming arrows), remove it, and repeat.</p>' +
+'</div>' +
+'<h3 style="margin-top:10px;">📗 Graph A — Kahn\'s Algorithm</h3>' +
+'<p>• Step 1: only <b>SCC₀ (vertex 0)</b> has indegree 0. Remove it.</p>' +
+'<p>• Step 2: only <b>SCC₁ (vertex 1)</b> has indegree 0. Remove it.</p>' +
+'<p>• Steps 3–5: only <b>one</b> choice at each step.</p>' +
+'<p><span class="result-line">Unique topological order: 0 → 1 → 2 → 3 → 4 ✓</span></p>' +
+'<p>This is a <b>Hamiltonian path</b> — a single line through all SCCs. Every pair of vertices has a path in at least one direction (from left to right).</p>' +
+'<p style="font-size:1em;margin:8px 0;color:#00ff88;font-weight:bold;">→ Graph A is SEMICONNECTED! ✅</p>' +
+'<h3 style="margin-top:10px;">📕 Graph B — Kahn\'s Algorithm</h3>' +
+'<p>• Step 1: <b style="color:#ff6600;">two nodes</b> have indegree 0: SCC₀ and SCC₁. There\'s no arrow between them!</p>' +
+'<p>• We could pick SCC₀ first <i>or</i> SCC₁ first — <b>multiple topological orders exist</b>.</p>' +
+'<p><span style="color:#ff6600;font-weight:bold;">NOT a unique topological ordering ✗</span></p>' +
+'<p>Pairs like (0,3): neither SCC₀ can reach SCC₁ (no path from 0 to 3), nor can SCC₁ reach SCC₀ (no path from 3 to 0). They are <b>incomparable</b>.</p>' +
+'<p style="font-size:1em;margin:8px 0;color:#ff6600;font-weight:bold;">→ Graph B is NOT semiconnected ❌</p>' +
+'<div style="margin:8px 0;padding:8px;background:#0a1a12;border-radius:4px;border-left:3px solid #00ff88;">' +
+'<b style="color:#00ff88;">Why This Works:</b>' +
+'<p style="margin:4px 0;color:#ccc;">A condensation DAG has a unique topological ordering <b>iff</b> it has a Hamiltonian path. And a Hamiltonian path through all SCCs means every SCC can reach every later SCC — which means every original vertex pair has a path in at least one direction!</p>' +
+'</div>' +
+'<p class="note">When Kahn\'s algorithm ever has ≥2 nodes with indegree 0, there is no unique topological order → not semiconnected.</p>' +
 '</div>';
 }
 
 function buildPairTableExplanation() {
   return '<div class="explain-section active">' +
-'<h3>📋 Pairwise Reachability Check</h3>' +
-'<p>For every unordered pair <span class="dim">(u, v)</span>, we check:</p>' +
-'<p>• <span class="result-line">u ⇝ v</span> — path from u to v?</p>' +
-'<p>• <span class="result-line">v ⇝ u</span> — path from v to u?</p>' +
-'<p>A pair <span style="color:#ff4444;font-weight:bold;">fails</span> if <b>neither</b> direction has a path.</p>' +
-'<h3 style="margin-top:10px;">Graph A</h3>' +
-'<p>All 10 pairs have a path in at least one direction (always from lower to higher).</p>' +
-'<h3 style="margin-top:10px;">Graph B</h3>' +
-'<p>Pairs crossing between {<span class="dim">0,1,2</span>} and {<span class="dim">3,4</span>} <b>fail</b>.</p>' +
-'<p class="note">Failing pairs are highlighted in <span style="color:#ff4444;">red</span> in the table below.</p>' +
+'<h3>📋 Checking Every Pair — The Direct Definition</h3>' +
+'<p>Let\'s verify the definition directly: for every unordered pair of vertices <span class="dim">(u, v)</span>:</p>' +
+'<p>✅ <span style="color:#00ff88;">PASS</span> if <span class="dim">u ⇝ v</span> <b>OR</b> <span class="dim">v ⇝ u</span> exists</p>' +
+'<p>❌ <span style="color:#ff4444;">FAIL</span> if <b>neither</b> direction has a path</p>' +
+'<div style="margin:10px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">How to Read the Table Below</b>' +
+'<p style="margin:4px 0;color:#aaa;">Each row shows one pair (u,v).</p>' +
+'<p style="margin:4px 0;color:#aaa;">The <b>Graph A</b> column shows ✓ (green) if at least one direction works, ✗ (red) if neither does.</p>' +
+'<p style="margin:4px 0;color:#aaa;">Then we break it down: <span class="dim">u⇝v?</span> and <span class="dim">v⇝u?</span> columns show ✓ or ✗ for each direction.</p>' +
+'<p style="margin:4px 0;color:#aaa;">The <b>Graph B</b> columns work the same way.</p>' +
+'</div>' +
+'<h3 style="margin-top:10px;">📗 Graph A — Expected Result</h3>' +
+'<p>All <b>10 pairs</b> should pass. Since vertices are in a chain (0→1→2→3→4), for any pair (u, v) where u < v, the path u⇝v exists. The two shortcut edges (0→2, 1→3) don\'t change this.</p>' +
+'<h3 style="margin-top:10px;">📕 Graph B — Expected Result</h3>' +
+'<p>Pairs within each SCC pass (e.g., 0⇝1 and 1⇝0 both exist inside the triangle). But pairs <b>crossing</b> between {<span class="dim">0,1,2</span>} and {<span class="dim">3,4</span>} <b>fail</b> — there\'s no path in either direction.</p>' +
+'<p class="note">The table below confirms what we predicted from the condensation DAG analysis!</p>' +
 '</div>';
 }
 
 function buildResultExplanation() {
   return '<div class="explain-section active" style="border-left-color:#00ff88;">' +
-'<h3>✅ Final Result</h3>' +
-'<h3 style="margin-top:10px;">Graph A — <span class="result-line">SEMICONNECTED ✓</span></h3>' +
-'<p>Every pair of vertices has a path in at least one direction. The condensation DAG has a unique topological order <span class="dim">(0,1,2,3,4)</span>.</p>' +
-'<h3 style="margin-top:10px;">Graph B — <span style="color:#ff6600;">NOT Semiconnected ✗</span></h3>' +
-'<p>The SCCs {<span class="dim">0,1,2</span>} and {<span class="dim">3,4</span>} have <b>no edges</b> between them. Pairs like <span class="dim">(0,3)</span>, <span class="dim">(1,4)</span>, etc. have <span style="color:#ff4444;">no path</span> in either direction.</p>' +
-'<h3 style="margin-top:10px;">Key Insight</h3>' +
-'<p>A graph is semiconnected iff its condensation DAG has a <b>Hamiltonian path</b>. This is equivalent to the DAG having a <b>unique topological ordering</b>.</p>' +
-'<h3 style="margin-top:10px;">Complexity</h3>' +
-'<p><span class="dim">Time:</span> O(V + E) — Kosaraju\'s algorithm + Kahn\'s algorithm</p>' +
-'<p><span class="dim">Space:</span> O(V + E)</p>' +
-'<p class="note">Applications: Checking if reachability in a graph forms a total preorder; compiler optimization.</p>' +
+'<h3>🏁 Final Result — Putting It All Together</h3>' +
+'<div style="margin:10px 0;padding:12px;background:#0a1a12;border-radius:6px;border:1px solid #00ff8844;">' +
+'<h3 style="color:#00ff88;margin:0 0 8px 0;">✅ Graph A — SEMICONNECTED</h3>' +
+'<p style="margin:4px 0;color:#ccc;">Why it passes:</p>' +
+'<p style="margin:4px 0;color:#aaa;">❶ No cycles → every vertex is its own trivial SCC</p>' +
+'<p style="margin:4px 0;color:#aaa;">❷ Condensation DAG is a linear chain: <span class="dim">0→1→2→3→4</span></p>' +
+'<p style="margin:4px 0;color:#aaa;">❸ Unique topological order: <span class="dim">0, 1, 2, 3, 4</span> (Hamiltonian path)</p>' +
+'<p style="margin:4px 0;color:#aaa;">❹ Every pair (u,v) has a path — from the smaller-numbered vertex to the larger one</p>' +
+'<p style="margin:8px 0 0 0;color:#00ff88;font-weight:bold;">→ For every pair of vertices, one can reach the other. That\'s the definition of semiconnected!</p>' +
+'</div>' +
+'<div style="margin:10px 0;padding:12px;background:#1a0a0a;border-radius:6px;border:1px solid #ff660044;">' +
+'<h3 style="color:#ff6600;margin:0 0 8px 0;">❌ Graph B — NOT Semiconnected</h3>' +
+'<p style="margin:4px 0;color:#ccc;">Why it fails:</p>' +
+'<p style="margin:4px 0;color:#aaa;">❶ Two cycles → two non-trivial SCCs: {<span class="dim">0,1,2</span>} and {<span class="dim">3,4</span>}</p>' +
+'<p style="margin:4px 0;color:#aaa;">❷ Condensation DAG has <b>two isolated nodes</b> with no edges between them</p>' +
+'<p style="margin:4px 0;color:#aaa;">❸ Kahn\'s algorithm: <b>two</b> nodes have indegree 0 at step 1 → <b>no unique topological order</b></p>' +
+'<p style="margin:4px 0;color:#aaa;">❹ Pairs like (0,3), (0,4), (1,3), (1,4), (2,3), (2,4) have <b>no path in either direction</b></p>' +
+'<p style="margin:8px 0 0 0;color:#ff6600;font-weight:bold;">→ For 6 out of 10 pairs, neither vertex can reach the other. Violates the semiconnected definition!</p>' +
+'</div>' +
+'<div style="margin:10px 0;padding:8px;background:#0a0a18;border-radius:4px;">' +
+'<b style="color:#ffcc00;">💡 The Big Lesson</b>' +
+'<p style="margin:4px 0;color:#aaa;">A directed graph is <b>semiconnected</b> ⇔ its condensation DAG has a <b>Hamiltonian path</b> (a single line through all SCCs) ⇔ the condensation DAG has a <b>unique topological ordering</b>.</p>' +
+'<p style="margin:4px 0;color:#aaa;">If two SCCs are incomparable (no edges between them in either direction), the graph is NOT semiconnected — those SCCs\' vertices form failing pairs.</p>' +
+'</div>' +
+'<h3 style="margin-top:10px;">📊 Complexity</h3>' +
+'<p><span class="dim">Time:</span> O(V + E) — linear in the size of the graph! Kosaraju\'s algorithm is two DFS passes (O(V+E)), and Kahn\'s algorithm is also O(V+E).</p>' +
+'<p><span class="dim">Space:</span> O(V + E) — storing the graph, its transpose, and auxiliary arrays.</p>' +
+'<p class="note">Applications: Checking if a graph\'s reachability relation is a total preorder (useful in compilers, formal verification, and dependency analysis).</p>' +
 '</div>';
 }
 
@@ -720,8 +847,8 @@ function buildSteps() {
     phaseA: 'Showing graph structure',
     phaseB: 'Showing graph structure',
     phase: 'Introduction',
-    stateA: { nodeColors: {}, edgeColors: {}, label: 'Vertices 0-4, 6 edges' },
-    stateB: { nodeColors: {}, edgeColors: {}, label: 'Vertices 0-4, 5 edges' },
+    stateA: { nodeColors: {}, edgeColors: {'0-2': '#ff9944', '1-3': '#ff9944'}, label: 'Chain 0→1→2→3→4 + shortcuts (orange)' },
+    stateB: { nodeColors: {}, edgeColors: {}, label: 'Two isolated cycles' },
     explanation: buildIntroExplanation()
   });
 
@@ -1151,14 +1278,22 @@ function resetAnimation() {
   document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
   document.getElementById('explainArea').innerHTML =
     '<div class="explain-section active">' +
-    '<h3>What is a Semiconnected Graph?</h3>' +
-    '<p>A directed graph G = (V, E) is <b>semiconnected</b> if for every pair of vertices <span class="dim">(u, v)</span>, there is a path <span class="dim">u ⇝ v</span> <b>or</b> <span class="dim">v ⇝ u</span> (or both).</p>' +
-    '<p>This is <b>weaker</b> than strong connectivity (where both directions must exist) but <b>stronger</b> than weak connectivity.</p>' +
-    '<h3 style="margin-top:10px;">Algorithm: How to Test</h3>' +
-    '<p>1. Compute <b>SCCs</b> (Kosaraju\'s algorithm)</p>' +
-    '<p>2. Build the <b>condensation DAG</b> G<sup>SCC</sup></p>' +
-    '<p>3. G is semiconnected <b>iff</b> G<sup>SCC</sup> has a <b>unique topological ordering</b> (equivalently: a Hamiltonian path covering all SCCs)</p>' +
-    '<p class="note">Press <b>Play</b> or <b>Step</b> to begin.</p></div>';
+    '<h3>🧠 What You\'re Looking At</h3>' +
+    '<p>Welcome! This page visualizes two <b>directed graphs</b> to help you understand <b style="color:#00ff88;">semiconnectedness</b>.</p>' +
+    '<p>A <b>directed graph</b> = <b>vertices</b> (circles 0–4) + <b>edges</b> (arrows). Arrow u→v = travel from u to v.</p>' +
+    '<p><b>Path</b> u⇝v = follow arrows in multiple steps (like 0→1→2).</p>' +
+    '<div style="margin:10px 0;padding:10px;background:#0a0a18;border-radius:6px;border-left:3px solid #00ff88;">' +
+    '<b style="color:#00ff88;">🌟 The Question:</b>' +
+    '<p style="margin:6px 0 0;color:#ccc;">For <b>every</b> pair (u,v), can u reach v <b>OR</b> v reach u? If yes → <b style="color:#00ff88;">semiconnected</b>.</p>' +
+    '</div>' +
+    '<h3 style="margin-top:10px;">🔬 3 Steps</h3>' +
+    '<p><b>1.</b> Find SCCs (Kosaraju\'s algorithm) — groups where all can reach each other</p>' +
+    '<p><b>2.</b> Build condensation DAG — shrink each SCC to one super-node</p>' +
+    '<p><b>3.</b> Check unique topological order — if exactly one way to line them up, it\'s semiconnected!</p>' +
+    '<h3 style="margin-top:10px;">📊 Graphs</h3>' +
+    '<p><span style="color:#00ff88;font-weight:bold;">Graph A</span> — chain <span class="dim">0→1→2→3→4</span> + shortcuts <span style="color:#ff9944;">0→2, 1→3</span>, no cycles</p>' +
+    '<p><span style="color:#ff6600;font-weight:bold;">Graph B</span> — two cycles, no arrows between them</p>' +
+    '<p class="note">▶ Play for auto-animation, ⏭ Step for manual, slider for speed.</p></div>';
   precomputeAll();
   buildSteps();
   applyStep(steps[0]);

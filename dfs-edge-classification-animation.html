@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DFS Edge Classification Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p { color: #ccc; margin: 6px 0; font-size: 0.9em; }
+.result-table {
+  margin: 15px auto;
+  border-collapse: collapse;
+}
+.result-table td {
+  padding: 6px 16px;
+  border: 1px solid #333;
+  font-size: 0.85em;
+}
+.result-table .tree-cell { color: #00ff88; }
+.result-table .back-cell { color: #ff6600; }
+.result-table .forward-cell { color: #00ccff; }
+.result-table .cross-cell { color: #ff66ff; }
+
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+}
+.graph-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.edge-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+  font-size: 0.8em;
+}
+.edge-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.edge-legend .swatch {
+  display: inline-block;
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.stack-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 15px;
+  margin: 12px 0;
+  font-size: 0.85em;
+}
+.stack-title {
+  color: #888;
+  margin-bottom: 6px;
+  font-size: 0.9em;
+}
+.stack-display {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 30px;
+  align-items: center;
+}
+.stack-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #555;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.9em;
+  background: #0d0d1a;
+  color: #888;
+  transition: all 0.3s;
+}
+.stack-node.gray {
+  border-color: #ff6600;
+  color: #ff6600;
+  background: #1a0a00;
+}
+.stack-node.black {
+  border-color: #00ff88;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.stack-arrow {
+  color: #555;
+  font-size: 1em;
+}
+
+.legend-detail {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 15px;
+  margin: 12px 0;
+  font-size: 0.82em;
+  line-height: 1.8;
+}
+.legend-detail h3 {
+  color: #888;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.legend-detail .row { display: flex; gap: 16px; flex-wrap: wrap; }
+.legend-detail .item { display: flex; align-items: center; gap: 6px; }
+.legend-detail .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+</style>
+</head>
+<body>
+
+<h1>DFS Edge Classification</h1>
+<p class="subtitle">Graph Algorithms — Tree, Back, Forward &amp; Cross Edges in Directed Graphs</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="700" height="420" viewBox="0 0 700 420"></svg>
+    </div>
+
+    <div class="edge-legend">
+      <span><span class="swatch" style="background:#00ff88;"></span> Tree</span>
+      <span><span class="swatch" style="background:#ff6600;"></span> Back</span>
+      <span><span class="swatch" style="background:#00ccff;"></span> Forward</span>
+      <span><span class="swatch" style="background:#ff66ff;"></span> Cross</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Current Node:</span> <span class="value" id="currentNode">—</span>
+      <span style="color:#333;margin:0 8px;">|</span>
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+      <span style="color:#333;margin:0 8px;">|</span>
+      <span class="label">d / f:</span> <span class="value" id="timeDisplay">—</span>
+      <span style="color:#333;margin:0 8px;">|</span>
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+    </div>
+
+    <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span></div>
+
+    <div class="stack-section">
+      <div class="stack-title">DFS Stack (gray = in recursion stack)</div>
+      <div class="stack-display" id="stackDisplay">
+        <span style="color:#555;">—</span>
+      </div>
+    </div>
+
+    <div class="legend-detail">
+      <h3>Edge Classification Rules</h3>
+      <div class="row">
+        <span class="item"><span class="dot" style="background:#00ff88;"></span> <b>Tree</b>: neighbor unvisited</span>
+        <span class="item"><span class="dot" style="background:#ff6600;"></span> <b>Back</b>: neighbor is <span style="color:#ff6600;">gray</span> (in stack)</span>
+        <span class="item"><span class="dot" style="background:#00ccff;"></span> <b>Forward</b>: neighbor <span style="color:#00ff88;">black</span> + descendant</span>
+        <span class="item"><span class="dot" style="background:#ff66ff;"></span> <b>Cross</b>: neighbor <span style="color:#00ff88;">black</span> + not descendant</span>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>&#10004; DFS Complete!</h2>
+      <p>All 7 directed edges have been classified.</p>
+      <table class="result-table">
+        <tr><td style="color:#00ff88;">&#9679; Tree:</td><td>4 edges</td><td style="color:#555;font-size:0.8em;">A→B, B→C, A→D, D→F</td></tr>
+        <tr><td style="color:#ff6600;">&#9679; Back:</td><td>1 edge</td><td style="color:#555;font-size:0.8em;">C→A</td></tr>
+        <tr><td style="color:#00ccff;">&#9679; Forward:</td><td>1 edge</td><td style="color:#555;font-size:0.8em;">A→C</td></tr>
+        <tr><td style="color:#ff66ff;">&#9679; Cross:</td><td>1 edge</td><td style="color:#555;font-size:0.8em;">D→B</td></tr>
+      </table>
+      <p class="note" style="color:#ff6600;margin-top:8px;">The back edge C→A indicates a cycle in the graph!</p>
+      <div id="classificationSummary"></div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>We perform <b>Depth-First Search (DFS)</b> on a directed graph, classifying each edge as one of four types based on the <b>color</b> and <b>ancestry</b> of the target node.</p>
+        <p>Starting node: <span class="dim">A</span>. Neighbors visited in alphabetical order.</p>
+        <h3 style="margin-top:10px;">Classification Rules</h3>
+        <span class="formula-line"><span style="color:#00ff88;">Tree</span> — target unvisited</span>
+        <span class="formula-line"><span style="color:#ff6600;">Back</span> — target is <span style="color:#ff6600;font-weight:bold;">gray</span> (in stack, i.e. ancestor)</span>
+        <span class="formula-line"><span style="color:#00ccff;">Forward</span> — target is <span style="color:#00ff88;">black</span> and is a <b>descendant</b></span>
+        <span class="formula-line"><span style="color:#ff66ff;">Cross</span> — target is <span style="color:#00ff88;">black</span> and <b>not</b> a descendant</span>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+const nodePos = {
+  A: { x: 350, y: 65 },
+  B: { x: 170, y: 200 },
+  C: { x: 115, y: 345 },
+  D: { x: 530, y: 200 },
+  F: { x: 575, y: 345 }
+};
+
+const graph = {
+  A: ['B', 'D', 'C'],
+  B: ['C'],
+  C: ['A'],
+  D: ['B', 'F'],
+  F: []
+};
+
+const edgeList = [
+  { id: 'ab', from: 'A', to: 'B' },
+  { id: 'bc', from: 'B', to: 'C' },
+  { id: 'ad', from: 'A', to: 'D' },
+  { id: 'df', from: 'D', to: 'F' },
+  { id: 'ca', from: 'C', to: 'A' },
+  { id: 'ac', from: 'A', to: 'C' },
+  { id: 'db', from: 'D', to: 'B' }
+];
+
+const edgeTypeColor = {
+  unknown: '#555',
+  tree: '#00ff88',
+  back: '#ff6600',
+  forward: '#00ccff',
+  cross: '#ff66ff'
+};
+
+function getDir(p1, p2) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  const d = Math.sqrt(dx*dx + dy*dy);
+  return { dx: dx/d, dy: dy/d, d: d };
+}
+
+function lineEnd(p, dir, r) {
+  return { x: p.x - dir.dx * r, y: p.y - dir.dy * r };
+}
+
+function lineStart(p, dir, r) {
+  return { x: p.x + dir.dx * r, y: p.y + dir.dy * r };
+}
+
+function computeAngle(p1, p2) {
+  return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+}
+
+function arrowPoints(x, y, angle, size) {
+  size = size || 10;
+  const wid = size * 0.45;
+  const bx = x - size * Math.cos(angle);
+  const by = y - size * Math.sin(angle);
+  const lx = bx + wid * Math.cos(angle + Math.PI/2);
+  const ly = by + wid * Math.sin(angle + Math.PI/2);
+  const rx = bx + wid * Math.cos(angle - Math.PI/2);
+  const ry = by + wid * Math.sin(angle - Math.PI/2);
+  return `${x},${y} ${lx},${ly} ${rx},${ry}`;
+}
+
+function curvePath(u, v, cp1, cp2) {
+  const p1 = nodePos[u], p2 = nodePos[v];
+  const dir = getDir(p1, p2);
+  const s = lineStart(p1, dir, 24);
+  const e = lineEnd(p2, dir, 24);
+  return `M${s.x},${s.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${e.x},${e.y}`;
+}
+
+function straightPath(u, v) {
+  const p1 = nodePos[u], p2 = nodePos[v];
+  const dir = getDir(p1, p2);
+  const s = lineStart(p1, dir, 24);
+  const e = lineEnd(p2, dir, 24);
+  return `M${s.x},${s.y} L${e.x},${e.y}`;
+}
+
+function curveAngle(u, v, cp2) {
+  const p2 = nodePos[v];
+  const dx = p2.x - cp2.x;
+  const dy = p2.y - cp2.y;
+  return Math.atan2(dy, dx);
+}
+
+function straightAngle(u, v) {
+  const p1 = nodePos[u], p2 = nodePos[v];
+  return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+}
+
+const edgePaths = {
+  ab: { d: straightPath('A', 'B'), angle: straightAngle('A', 'B'), x: () => lineEnd(nodePos.B, getDir(nodePos.A, nodePos.B), 24).x, y: () => lineEnd(nodePos.B, getDir(nodePos.A, nodePos.B), 24).y },
+  bc: { d: straightPath('B', 'C'), angle: straightAngle('B', 'C'), x: () => lineEnd(nodePos.C, getDir(nodePos.B, nodePos.C), 24).x, y: () => lineEnd(nodePos.C, getDir(nodePos.B, nodePos.C), 24).y },
+  ad: { d: straightPath('A', 'D'), angle: straightAngle('A', 'D'), x: () => lineEnd(nodePos.D, getDir(nodePos.A, nodePos.D), 24).x, y: () => lineEnd(nodePos.D, getDir(nodePos.A, nodePos.D), 24).y },
+  df: { d: straightPath('D', 'F'), angle: straightAngle('D', 'F'), x: () => lineEnd(nodePos.F, getDir(nodePos.D, nodePos.F), 24).x, y: () => lineEnd(nodePos.F, getDir(nodePos.D, nodePos.F), 24).y },
+  ca: { d: curvePath('C', 'A', {x:80, y:200}, {x:240, y:70}), angle: (function() { const cp2 = {x:240, y:70}; const p2 = nodePos.A; return Math.atan2(p2.y - cp2.y, p2.x - cp2.x); })(),
+       x: (function() { const p2 = nodePos.A, cp2 = {x:240,y:70}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.x - dx/d*24;})(),
+       y: (function() { const p2 = nodePos.A, cp2 = {x:240,y:70}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.y - dy/d*24;})() },
+  ac: { d: curvePath('A', 'C', {x:250, y:55}, {x:130, y:130}), angle: (function() { const cp2 = {x:130, y:130}; const p2 = nodePos.C; return Math.atan2(p2.y - cp2.y, p2.x - cp2.x); })(),
+       x: (function() { const p2 = nodePos.C, cp2 = {x:130,y:130}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.x - dx/d*24;})(),
+       y: (function() { const p2 = nodePos.C, cp2 = {x:130,y:130}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.y - dy/d*24;})() },
+  db: { d: curvePath('D', 'B', {x:530, y:90}, {x:170, y:90}), angle: (function() { const cp2 = {x:170, y:90}; const p2 = nodePos.B; return Math.atan2(p2.y - cp2.y, p2.x - cp2.x); })(),
+       x: (function() { const p2 = nodePos.B, cp2 = {x:170,y:90}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.x - dx/d*24;})(),
+       y: (function() { const p2 = nodePos.B, cp2 = {x:170,y:90}; const dx=p2.x-cp2.x, dy=p2.y-cp2.y, d=Math.sqrt(dx*dx+dy*dy); return p2.y - dy/d*24;})() }
+};
+
+let edgeTypes = {};
+let nodeColors = {};
+let discTimes = {};
+let finTimes = {};
+let nodeParent = {};
+
+function precomputeAll() {
+  let color = {}, d = {}, f = {}, parent = {};
+  let types = {};
+  let time = 0;
+  let pending = [];
+
+  function dfs(u) {
+    time++; d[u] = time;
+    color[u] = 'gray';
+    for (let v of graph[u]) {
+      if (!color[v]) {
+        parent[v] = u;
+        types[`${u}-${v}`] = 'tree';
+        dfs(v);
+      } else if (color[v] === 'gray') {
+        types[`${u}-${v}`] = 'back';
+      } else {
+        pending.push({ u, v });
+      }
+    }
+    time++; f[u] = time;
+    color[u] = 'black';
+  }
+
+  dfs('A');
+
+  for (let p of pending) {
+    if (d[p.u] < d[p.v] && d[p.v] < f[p.v] && f[p.v] < f[p.u]) {
+      types[`${p.u}-${p.v}`] = 'forward';
+    } else {
+      types[`${p.u}-${p.v}`] = 'cross';
+    }
+  }
+
+  return { d, f, parent, types };
+}
+
+function buildSteps() {
+  let { d, f, parent, types } = precomputeAll();
+  edgeTypes = types;
+  discTimes = d;
+  finTimes = f;
+  nodeParent = parent;
+  steps = [];
+  let color = {};
+  let stk = [];
+
+  function visit(u) {
+    color[u] = 'gray';
+    stk.push(u);
+    steps.push({
+      type: 'discover',
+      node: u,
+      d: d[u],
+      f: null,
+      stack: [...stk],
+      explanation: buildDiscoverExplanation(u, d[u], [...stk])
+    });
+
+    for (let v of graph[u]) {
+      let ekey = `${u}-${v}`;
+      let etype = types[ekey];
+      let stp = {
+        type: etype,
+        from: u,
+        to: v,
+        edgeId: ekey,
+        stack: [...stk],
+        explanation: buildEdgeExplanation(u, v, etype, d, f, [...stk])
+      };
+      steps.push(stp);
+      if (etype === 'tree') {
+        visit(v);
+      }
+    }
+
+    color[u] = 'black';
+    stk.pop();
+    steps.push({
+      type: 'finish',
+      node: u,
+      d: d[u],
+      f: f[u],
+      stack: [...stk],
+      explanation: buildFinishExplanation(u, f[u], [...stk])
+    });
+  }
+
+  visit('A');
+}
+
+function initGraph() {
+  const svg = document.getElementById('graphSvg');
+  let html = '<defs>';
+  const filterId = 'glow';
+  html += `<filter id="${filterId}" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="4" result="blur"/>
+    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+  </filter>`;
+  html += '</defs>';
+
+  for (let e of edgeList) {
+    const ep = edgePaths[e.id];
+    html += `<path id="edge-${e.id}" d="${ep.d}" fill="none" stroke="#555" stroke-width="2.5" stroke-dasharray="6,4" stroke-linecap="round" />`;
+    const ax = ep.x, ay = ep.y, aa = ep.angle;
+    html += `<polygon id="arrow-${e.id}" points="${arrowPoints(ax, ay, aa, 9)}" fill="#555" opacity="0.6" />`;
+  }
+
+  for (let [name, pos] of Object.entries(nodePos)) {
+    html += `<g id="node-${name}">`;
+    html += `<circle id="circle-${name}" cx="${pos.x}" cy="${pos.y}" r="24" fill="#0d0d1a" stroke="#555" stroke-width="2.5" />`;
+    html += `<text x="${pos.x}" y="${pos.y - 3}" text-anchor="middle" dominant-baseline="central" fill="#e0e0e0" font-size="17" font-weight="bold">${name}</text>`;
+    html += `<text id="times-${name}" x="${pos.x}" y="${pos.y + 16}" text-anchor="middle" dominant-baseline="central" fill="#888" font-size="11" font-family="Courier New"></text>`;
+    html += `</g>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+function updateStackDisplay(stack) {
+  const el = document.getElementById('stackDisplay');
+  if (!stack || stack.length === 0) {
+    el.innerHTML = '<span style="color:#555;">— (empty)</span>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < stack.length; i++) {
+    if (i > 0) html += '<span class="stack-arrow">→</span>';
+    html += `<span class="stack-node gray">${stack[i]}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function updateNodeColor(name, state) {
+  const circle = document.getElementById(`circle-${name}`);
+  if (!circle) return;
+  if (state === 'unvisited') {
+    circle.setAttribute('fill', '#0d0d1a');
+    circle.setAttribute('stroke', '#555');
+    circle.removeAttribute('filter');
+  } else if (state === 'gray') {
+    circle.setAttribute('fill', '#1a0a00');
+    circle.setAttribute('stroke', '#ff6600');
+    circle.setAttribute('filter', 'url(#glow)');
+  } else if (state === 'black') {
+    circle.setAttribute('fill', '#0a1a12');
+    circle.setAttribute('stroke', '#00ff88');
+    circle.removeAttribute('filter');
+  } else if (state === 'current') {
+    circle.setAttribute('fill', '#1a1a00');
+    circle.setAttribute('stroke', '#ffff00');
+    circle.setAttribute('filter', 'url(#glow)');
+  }
+}
+
+function updateEdgeColor(edgeKey, type) {
+  const parts = edgeKey.split('-');
+  const eid = edgeList.find(e => e.from === parts[0] && e.to === parts[1]);
+  if (!eid) return;
+  const path = document.getElementById(`edge-${eid.id}`);
+  const arrow = document.getElementById(`arrow-${eid.id}`);
+  const color = edgeTypeColor[type] || '#555';
+  if (path) {
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-dasharray', type === 'unknown' ? '6,4' : 'none');
+    path.setAttribute('stroke-width', type === 'unknown' ? '2.5' : '3');
+  }
+  if (arrow) {
+    arrow.setAttribute('fill', color);
+    arrow.setAttribute('opacity', type === 'unknown' ? '0.4' : '1');
+  }
+}
+
+function clearHighlights() {
+  for (let name of Object.keys(nodePos)) {
+    updateNodeColor(name, 'unvisited');
+    const t = document.getElementById(`times-${name}`);
+    if (t) t.textContent = '';
+  }
+  for (let e of edgeList) {
+    updateEdgeColor(`${e.from}-${e.to}`, 'unknown');
+  }
+}
+
+function applyStep(step) {
+  if (step.type === 'discover') {
+    for (let n of Object.keys(nodePos)) {
+      updateNodeColor(n, step.stack.includes(n) ? 'gray' : 'unvisited');
+    }
+    updateNodeColor(step.node, 'current');
+    const t = document.getElementById(`times-${step.node}`);
+    if (t) t.textContent = `${step.d} / —`;
+    document.getElementById('currentNode').textContent = step.node;
+    document.getElementById('phaseDisplay').textContent = `Discovering ${step.node}`;
+    document.getElementById('timeDisplay').textContent = `d=${step.d}`;
+    document.getElementById('edgeDisplay').textContent = '—';
+    updateStackDisplay(step.stack);
+
+  } else if (step.type === 'tree' || step.type === 'back' || step.type === 'forward' || step.type === 'cross') {
+    updateEdgeColor(step.edgeId, step.type);
+    document.getElementById('currentNode').textContent = step.from;
+    document.getElementById('phaseDisplay').textContent = `Edge: ${step.from} → ${step.to}`;
+    document.getElementById('timeDisplay').textContent = `${discTimes[step.from]} / ${finTimes[step.from] || '—'}`;
+    document.getElementById('edgeDisplay').textContent = `${step.from} → ${step.to} = ${step.type}`;
+    updateStackDisplay(step.stack);
+
+  } else if (step.type === 'finish') {
+    updateNodeColor(step.node, 'black');
+    const t = document.getElementById(`times-${step.node}`);
+    if (t) t.textContent = `${step.d} / ${step.f}`;
+    document.getElementById('currentNode').textContent = step.node;
+    document.getElementById('phaseDisplay').textContent = `Finishing ${step.node}`;
+    document.getElementById('timeDisplay').textContent = `f=${step.f}`;
+    document.getElementById('edgeDisplay').textContent = '—';
+    updateStackDisplay(step.stack);
+
+    if (step.node === 'A' && step.stack.length === 0) {
+      document.getElementById('currentNode').textContent = '—';
+    }
+  }
+
+  const phaseLabels = {
+    discover: 'Discover Node',
+    tree: 'Tree Edge',
+    back: 'Back Edge',
+    forward: 'Forward Edge',
+    cross: 'Cross Edge',
+    finish: 'Finish Node'
+  };
+  const phase = phaseLabels[step.type] || step.type;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// -- Explanation builders --
+
+function buildDiscoverExplanation(node, d, stack) {
+  const parent = nodeParent[node];
+  const parentStr = parent ? ` from parent <span class="dim">${parent}</span>` : '';
+  return `<div class="explain-section active">
+    <h3>&#128269; Discover Node ${node}</h3>
+    <p>Entering node <span class="dim">${node}</span>${parentStr}. Set discovery time <span class="dim">d[${node}] = ${d}</span>.</p>
+    <p>Node <span class="dim">${node}</span> is now <span style="color:#ff6600;font-weight:bold;">gray</span> (pushed onto recursion stack).</p>
+    <span class="formula-line">Stack: [${stack.join(' → ')}]</span>
+    <p class="note">We will now examine each outgoing edge from ${node}.</p>
+  </div>`;
+}
+
+function buildEdgeExplanation(u, v, etype, d, f, stack) {
+  const colorMap = { tree: '#00ff88', back: '#ff6600', forward: '#00ccff', cross: '#ff66ff' };
+  const color = colorMap[etype] || '#fff';
+  const emoji = { tree: '&#127794;', back: '&#8617;', forward: '&#10132;', cross: '&#8596;' };
+  const labels = { tree: 'Tree Edge', back: 'Back Edge', forward: 'Forward Edge', cross: 'Cross Edge' };
+  const label = labels[etype];
+  const e = emoji[etype];
+
+  let why = '';
+  if (etype === 'tree') {
+    why = `<p><span class="dim">${v}</span> is <b>unvisited</b> (white).</p><p>We recursively visit <span class="dim">${v}</span> as a child of <span class="dim">${u}</span>.</p>`;
+  } else if (etype === 'back') {
+    why = `<p><span class="dim">${v}</span> is <span style="color:#ff6600;font-weight:bold;">gray</span> (in the current recursion stack).</p><p>This means <span class="dim">${v}</span> is an <b>ancestor</b> of <span class="dim">${u}</span> in the DFS tree.</p><p class="note" style="color:#ff6600;">Back edges indicate a <b>cycle</b> in the directed graph!</p>`;
+  } else if (etype === 'forward') {
+    why = `<p><span class="dim">${v}</span> is <span style="color:#00ff88;font-weight:bold;">black</span> (finished).</p><p>Since d[${u}] = ${d[u]} &lt; d[${v}] = ${d[v]} &lt; f[${v}] = ${f[v]} &lt; f[${u}], node <span class="dim">${v}</span> is a <b>descendant</b> of <span class="dim">${u}</span>.</p><p class="note">Forward edges go from ancestor to non-child descendant.</p>`;
+  } else if (etype === 'cross') {
+    why = `<p><span class="dim">${v}</span> is <span style="color:#00ff88;font-weight:bold;">black</span> (finished).</p><p><span class="dim">${v}</span> is <b>neither an ancestor nor a descendant</b> of <span class="dim">${u}</span> — they belong to different branches of the DFS tree.</p><p class="note">Cross edges connect unrelated subtrees.</p>`;
+  }
+
+  return `<div class="explain-section active">
+    <h3>${e} ${label}: ${u} → ${v}</h3>
+    <p>Examining edge <span class="dim">${u} → ${v}</span>.</p>
+    <span class="formula-line">Classification: <span style="color:${color};font-weight:bold;">${label}</span></span>
+    ${why}
+    <span class="formula-line">Stack: [${stack.join(' → ')}]</span>
+  </div>`;
+}
+
+function buildFinishExplanation(node, f, stack) {
+  return `<div class="explain-section active">
+    <h3>&#10003; Finish Node ${node}</h3>
+    <p>All outgoing edges from <span class="dim">${node}</span> have been processed. Set finish time <span class="dim">f[${node}] = ${f}</span>.</p>
+    <p>Node <span class="dim">${node}</span> is now <span style="color:#00ff88;font-weight:bold;">black</span> (finished, popped from stack).</p>
+    <span class="formula-line">Stack: [${stack.length ? stack.join(' → ') : 'empty'}]</span>
+    <p class="note">Backtracking to the parent node${stack.length ? ' <span class="dim">' + stack[stack.length-1] + '</span>' : ' — DFS complete'}.</p>
+  </div>`;
+}
+
+function buildFinalExplanation(types) {
+  let treeCount = 0, backCount = 0, forwardCount = 0, crossCount = 0;
+  let treeEdges = [], backEdges = [], forwardEdges = [], crossEdges = [];
+  for (let [k, v] of Object.entries(types)) {
+    const [u, w] = k.split('-');
+    if (v === 'tree') { treeCount++; treeEdges.push(`${u}→${w}`); }
+    else if (v === 'back') { backCount++; backEdges.push(`${u}→${w}`); }
+    else if (v === 'forward') { forwardCount++; forwardEdges.push(`${u}→${w}`); }
+    else if (v === 'cross') { crossCount++; crossEdges.push(`${u}→${w}`); }
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; DFS Complete!</h3>
+    <p>All edges have been classified through DFS traversal.</p>
+    <h3 style="margin-top:10px;">Edge Classification Summary</h3>
+    <p><span style="color:#00ff88;">&#9679;</span> <b>Tree (${treeCount})</b>: ${treeEdges.join(', ')}</p>
+    <p><span style="color:#ff6600;">&#9679;</span> <b>Back (${backCount})</b>: ${backEdges.join(', ')} <span style="color:#ff6600;">&#8592; cycle!</span></p>
+    <p><span style="color:#00ccff;">&#9679;</span> <b>Forward (${forwardCount})</b>: ${forwardEdges.join(', ')}</p>
+    <p><span style="color:#ff66ff;">&#9679;</span> <b>Cross (${crossCount})</b>: ${crossEdges.join(', ')}</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(V + E) — each vertex and edge visited once</p>
+    <p><span class="dim">Space:</span> O(V) — recursion stack and color labels</p>
+  </div>`;
+}
+
+// -- Animation controls --
+
+function processStep() {
+  if (currentStep >= steps.length) { return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+  if (currentStep >= steps.length) {
+    finishAnimation();
+  }
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('currentNode').textContent = '—';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('timeDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>We perform <b>Depth-First Search (DFS)</b> on a directed graph, classifying each edge as one of four types based on the <b>color</b> and <b>ancestry</b> of the target node.</p>
+    <p>Starting node: <span class="dim">A</span>. Neighbors visited in alphabetical order.</p>
+    <h3 style="margin-top:10px;">Classification Rules</h3>
+    <span class="formula-line"><span style="color:#00ff88;">Tree</span> — target unvisited</span>
+    <span class="formula-line"><span style="color:#ff6600;">Back</span> — target is <span style="color:#ff6600;font-weight:bold;">gray</span> (in stack, i.e. ancestor)</span>
+    <span class="formula-line"><span style="color:#00ccff;">Forward</span> — target is <span style="color:#00ff88;">black</span> and is a <b>descendant</b></span>
+    <span class="formula-line"><span style="color:#ff66ff;">Cross</span> — target is <span style="color:#00ff88;">black</span> and <b>not</b> a descendant</span>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+  document.getElementById('sidebar').scrollTop = 0;
+  clearHighlights();
+  updateStackDisplay([]);
+  buildSteps();
+  initGraph();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('currentNode').textContent = '—';
+  document.getElementById('phaseDisplay').textContent = '&#10003; Complete!';
+  document.getElementById('timeDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — &#10004; Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinalExplanation(edgeTypes);
+  document.getElementById('sidebar').scrollTop = 0;
+  updateStackDisplay([]);
+}
+
+// -- Init --
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initGraph();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

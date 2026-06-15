@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Component Graph (G^SCC) Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+}
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section {
+  margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px;
+  border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7;
+}
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line {
+  color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px;
+  margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap;
+}
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111; border: 1px solid #333; border-radius: 10px;
+  padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.canvas-wrapper {
+  background: #0d0d1a; border: 1px solid #333; border-radius: 10px;
+  padding: 10px; text-align: center; position: relative;
+}
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.controls {
+  display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0;
+  border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace;
+  font-size: 0.85em; transition: all 0.3s;
+}
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.legend {
+  display: flex; justify-content: center; gap: 16px; margin: 8px 0;
+  font-size: 0.78em; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.l-scca { background: #00ff8822; border-color: #00ff88; }
+.l-sccb { background: #00ccff22; border-color: #00ccff; }
+.l-sccc { background: #ff660022; border-color: #ff6600; }
+.l-cross { background: #ff66ff44; border-color: #ff66ff; }
+.l-dag { background: #ffcc0022; border-color: #ffcc00; }
+.l-contract { background: #ff994422; border-color: #ff9944; }
+.table-section { margin: 20px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 10px; text-align: center; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td { width: 72px; height: 38px; text-align: center; border: 1px solid #333; font-size: 0.78em; transition: all 0.3s; }
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.scca { background: #002a1a !important; color: #00ff88 !important; border-color: #00ff88 !important; font-weight: bold; }
+td.sccb { background: #001a2a !important; color: #00ccff !important; border-color: #00ccff !important; font-weight: bold; }
+td.sccc { background: #2a1a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; font-weight: bold; }
+td.active-highlight { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; box-shadow: 0 0 15px #ff660044; transform: scale(1.05); font-weight: bold; }
+.cg-canvas { display: block; margin: 0 auto; max-width: 100%; }
+.sets-container {
+  display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px; background: #0d0d1a; border: 1px solid #333; border-radius: 10px; min-height: 50px;
+}
+.set-box { border: 2px solid; border-radius: 8px; padding: 8px 14px; background: #0d0d1a; font-size: 0.85em; transition: all 0.4s; }
+.set-box .set-member { font-weight: bold; }
+.set-box .set-label { color: #aaa; }
+.set-box .set-comma { color: #555; }
+.result-section {
+  background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px;
+  padding: 20px; margin: 25px 0; text-align: center;
+}
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.edge-label { font-size: 0.75em; fill: #888; font-family: 'Courier New', monospace; text-anchor: middle; }
+.phase-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 4px;
+  font-size: 0.8em; font-weight: bold; margin: 2px;
+}
+.scc-card {
+  border: 2px solid; border-radius: 10px; padding: 14px 20px;
+  background: #0d0d1a; text-align: center; display: inline-block; margin: 6px;
+}
+.scc-card .scc-name { font-size: 1.1em; font-weight: bold; }
+.scc-card .scc-members { font-size: 0.85em; color: #ccc; margin-top: 4px; }
+.contract-arrow {
+  font-size: 2em; color: #ff9944; text-align: center; margin: 10px 0;
+  animation: pulseArrow 1.5s ease-in-out infinite;
+}
+@keyframes pulseArrow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.dag-proof-box {
+  background: #0a0a18; border: 1px solid #00ff8855; border-radius: 8px;
+  padding: 12px; margin: 10px 0;
+}
+.dag-proof-box .proof-step { color: #ccc; margin: 6px 0; }
+.dag-proof-box .proof-step .num { color: #ff9944; font-weight: bold; }
+.edge-table { width: 100%; }
+.edge-table th { width: auto; padding: 4px 10px; }
+.edge-table td { width: auto; padding: 4px 10px; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<h1>COMPONENT GRAPH G<sup>SCC</sup></h1>
+<p class="subtitle">Graph Algorithms — Contracting SCCs into a DAG</p>
+<div class="layout">
+  <div class="main-panel">
+    <div class="canvas-wrapper">
+      <canvas id="mainCanvas" width="700" height="400"></canvas>
+    </div>
+    <div class="legend" id="legendArea">
+      <span class="legend-item"><span class="legend-swatch l-scca"></span> SCC A: {0,1,2}</span>
+      <span class="legend-item"><span class="legend-swatch l-sccb"></span> SCC B: {3,4}</span>
+      <span class="legend-item"><span class="legend-swatch l-sccc"></span> SCC C: {5,6,7}</span>
+      <span class="legend-item"><span class="legend-swatch l-cross"></span> Inter-SCC Edge</span>
+      <span class="legend-item"><span class="legend-swatch l-dag"></span> Component Graph (DAG)</span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready &#8212; Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Focus:</span> <span class="value" id="focusDisplay">&#8212;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">SCCs Found:</span> <span class="value" id="sccCountDisplay">0</span>
+    </div>
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+    <div class="table-section">
+      <div class="table-title">Vertex SCC Membership</div>
+      <div class="table-wrapper">
+        <table><thead><tr><th>Vertex</th><th>Component</th><th>Edges To</th></tr></thead>
+        <tbody id="tableBody"></tbody></table>
+      </div>
+    </div>
+    <div id="sccCardsArea" class="table-section" style="display:none;">
+      <div class="table-title">Strongly Connected Components</div>
+      <div style="text-align:center;" id="sccCardsDisplay"></div>
+    </div>
+    <div id="compGraphArea" class="table-section" style="display:none;">
+      <div class="table-title">Component Graph G<sup>SCC</sup> &#8212; Always a DAG</div>
+      <div style="background:#0d0d1a;border:1px solid #333;border-radius:10px;padding:10px;text-align:center;">
+        <canvas id="compGraphCanvas" class="cg-canvas" width="500" height="200"></canvas>
+      </div>
+    </div>
+    <div id="edgeTableArea" class="table-section" style="display:none;">
+      <div class="table-title">Inter-SCC Edge Classification</div>
+      <div class="table-wrapper">
+        <table class="edge-table"><thead><tr><th>Edge (u &#8594; v)</th><th>u in SCC</th><th>v in SCC</th><th>Direction</th></tr></thead>
+        <tbody id="edgeTableBody"></tbody></table>
+      </div>
+    </div>
+    <div id="dagProofArea" class="table-section" style="display:none;">
+      <div class="table-title">Proof: G<sup>SCC</sup> is Always a DAG</div>
+      <div class="dag-proof-box" id="dagProofContent"></div>
+    </div>
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; Component Graph Construction Complete</h2>
+      <div id="resultContent"></div>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &#8212; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Component Graph Concept</h3>
+        <p>A <b>component graph</b> G<sup>SCC</sup> = (V<sup>SCC</sup>, E<sup>SCC</sup>) is formed from a directed graph G = (V, E) by:</p>
+        <p style="margin-left:8px;">&#8226; <span class="dim">V<sup>SCC</sup></span>: one vertex per <b>strongly connected component</b></p>
+        <p style="margin-left:8px;">&#8226; <span class="dim">E<sup>SCC</sup></span>: edge (C<sub>i</sub>, C<sub>j</sub>) if there is an edge from any vertex in C<sub>i</sub> to any vertex in C<sub>j</sub> in G</p>
+        <h3 style="margin-top:10px;">The Critical Property</h3>
+        <p><span class="result-line">G<sup>SCC</sup> is always a directed acyclic graph (DAG).</span></p>
+        <p>If there were a cycle in G<sup>SCC</sup>, all vertices on that cycle would be mutually reachable &#8594; they'd belong to one SCC. Contradiction.</p>
+        <h3 style="margin-top:10px;">Our Graph</h3>
+        <p><span class="dim">|V| = 8</span>, <span class="dim">|E| = 12</span>, with <span class="result-line">3 SCCs</span>.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const vertices = [0,1,2,3,4,5,6,7];
+const adjList = {0:[1],1:[2,4],2:[0,3,5],3:[4],4:[3,5],5:[6],6:[7],7:[5]};
+const edgeList = [{u:0,v:1},{u:1,v:2},{u:2,v:0},{u:2,v:3},{u:3,v:4},{u:4,v:3},{u:4,v:5},{u:5,v:6},{u:6,v:7},{u:7,v:5},{u:1,v:4},{u:2,v:5}];
+const nodePositions = {
+  0:{x:300,y:55},1:{x:160,y:175},2:{x:440,y:175},
+  3:{x:255,y:295},4:{x:395,y:295},
+  5:{x:485,y:225},6:{x:435,y:365},7:{x:555,y:365}
+};
+const nodeRadius = 22;
+const sccColors = {A:'#00ff88', B:'#00ccff', C:'#ff6600'};
+const sccNames = {A:'SCC A', B:'SCC B', C:'SCC C'};
+const sccMembers = {A:[0,1,2], B:[3,4], C:[5,6,7]};
+const vertexSCC = {0:'A',1:'A',2:'A',3:'B',4:'B',5:'C',6:'C',7:'C'};
+const sccOrder = ['A','B','C'];
+
+let steps = [], currentStep = 0, animating = false, animTimer = null;
+
+function buildSteps() {
+  steps = [];
+  steps.push({type:'intro', ph:'Introduction - Graph with 3 SCCs', focus:null, sccHighlight:null, interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_a', ph:'Identifying SCC A: {0, 1, 2}', focus:0, sccHighlight:'A', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_a_edges', ph:'Edges from SCC A', focus:null, sccHighlight:'A', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_b', ph:'Identifying SCC B: {3, 4}', focus:3, sccHighlight:'B', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_b_edges', ph:'Edges from SCC B', focus:null, sccHighlight:'B', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_c', ph:'Identifying SCC C: {5, 6, 7}', focus:5, sccHighlight:'C', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'identify_c_edges', ph:'Edges from SCC C', focus:null, sccHighlight:'C', interHighlight:null, showCompGraph:false, showSccCards:false, showEdgeTable:false, showDagProof:false, sccSets:{}, interEdges:[]});
+  steps.push({type:'show_sccs', ph:'SCCs Identified - 3 components found', focus:null, sccHighlight:null, interHighlight:null, showCompGraph:false, showSccCards:true, showEdgeTable:false, showDagProof:false, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges:[]});
+  let interEdges = [];
+  for (let e of edgeList) {
+    let sccU = vertexSCC[e.u], sccV = vertexSCC[e.v];
+    if (sccU !== sccV) {
+      interEdges.push({u:e.u, v:e.v, sccU, sccV});
+    }
+  }
+  steps.push({type:'inter_edges', ph:'Inter-SCC edges identified', focus:null, sccHighlight:null, interHighlight:null, showCompGraph:false, showSccCards:true, showEdgeTable:true, showDagProof:false, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges});
+  steps.push({type:'contract_a', ph:'Contract SCC A into a single vertex', focus:null, sccHighlight:'A', interHighlight:null, showCompGraph:true, showSccCards:true, showEdgeTable:true, showDagProof:false, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges, contractHighlight:'A'});
+  steps.push({type:'contract_b', ph:'Contract SCC B into a single vertex', focus:null, sccHighlight:'B', interHighlight:null, showCompGraph:true, showSccCards:true, showEdgeTable:true, showDagProof:false, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges, contractHighlight:'B'});
+  steps.push({type:'contract_c', ph:'Contract SCC C into a single vertex', focus:null, sccHighlight:'C', interHighlight:null, showCompGraph:true, showSccCards:true, showEdgeTable:true, showDagProof:false, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges, contractHighlight:'C'});
+  steps.push({type:'dag_check', ph:'Verifying G^SCC is a DAG', focus:null, sccHighlight:null, interHighlight:null, showCompGraph:true, showSccCards:true, showEdgeTable:true, showDagProof:true, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges});
+  steps.push({type:'done', ph:'Complete! Component graph is always a DAG', focus:null, sccHighlight:null, interHighlight:null, showCompGraph:true, showSccCards:true, showEdgeTable:true, showDagProof:true, sccSets:{A:[0,1,2],B:[3,4],C:[5,6,7]}, interEdges});
+}
+
+function drawArrow(ctx, fx, fy, tx, ty, cl, lw, glow) {
+  let dx=tx-fx, dy=ty-fy, dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<1) return;
+  let nx=dx/dist, ny=dy/dist;
+  let r=nodeRadius+3;
+  let sx=fx+nx*r, sy=fy+ny*r;
+  let ex=tx-nx*r, ey=ty-ny*r;
+  if (glow) { ctx.shadowColor=cl; ctx.shadowBlur=glow; }
+  ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+  ctx.strokeStyle=cl; ctx.lineWidth=lw; ctx.stroke();
+  ctx.shadowBlur=0;
+  let al=11, aw=5.5, ax=ex-nx*al, ay=ey-ny*al;
+  ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ax-ny*aw*0.5, ay+nx*aw*0.5);
+  ctx.lineTo(ax+ny*aw*0.5, ay-nx*aw*0.5);
+  ctx.closePath(); ctx.fillStyle=cl; ctx.fill();
+}
+
+function drawMainGraph(st) {
+  let cv=document.getElementById('mainCanvas'), ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  let sccH = st.sccHighlight;
+  let interH = st.interHighlight;
+  let interEdges = st.interEdges || [];
+  let cH = st.contractHighlight || null;
+  let ieSet = {};
+  for (let e of interEdges) { ieSet[e.u+'-'+e.v] = e; }
+  let focusV = st.focus;
+  for (let e of edgeList) {
+    let p1=nodePositions[e.u], p2=nodePositions[e.v];
+    if (!p1||!p2) continue;
+    let sccU=vertexSCC[e.u], sccV=vertexSCC[e.v];
+    let isInter = (sccU !== sccV);
+    let fc, lw=1.5;
+    if (isInter) {
+      fc='#ff66ff';
+      if (st.showCompGraph) { lw=1.2; }
+      else { lw=2.5; }
+    } else {
+      fc=sccColors[sccU] || '#555';
+      fc=fc+'88';
+      lw=1.2;
+    }
+    if (st.showCompGraph && !isInter) { lw=0.5; fc='#333'; }
+    drawArrow(ctx,p1.x,p1.y,p2.x,p2.y,fc,lw);
+  }
+  for (let v of vertices) {
+    let pos=nodePositions[v];
+    let scc = vertexSCC[v];
+    let col = sccColors[scc] || '#555';
+    let fillColor, strokeColor, textColor;
+    let isFocus = (focusV === v);
+    let isHighlighted = (scc === sccH) && !st.showCompGraph;
+    if (st.showCompGraph) {
+      if (cH !== null && scc === cH) {
+        fillColor='#001a0a'; strokeColor='#ffcc00'; textColor='#ffcc00';
+      } else {
+        fillColor='#0d0d1a'; strokeColor='#444'; textColor='#555';
+      }
+    } else if (isFocus) {
+      fillColor='#1a0a00'; strokeColor='#ff6600'; textColor='#ff6600';
+    } else if (isHighlighted) {
+      fillColor='#0a1a12'; strokeColor=col; textColor=col;
+    } else {
+      fillColor='#0d0d1a'; strokeColor=col+55; textColor='#888';
+    }
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,nodeRadius,0,Math.PI*2);
+    ctx.fillStyle=fillColor; ctx.fill();
+    ctx.strokeStyle=strokeColor; ctx.lineWidth=isFocus||(cH!==null&&scc===cH)?3.5:2; ctx.stroke();
+    if (isFocus) {
+      ctx.beginPath(); ctx.arc(pos.x,pos.y,nodeRadius+5,0,Math.PI*2);
+      ctx.strokeStyle='#ff660044'; ctx.lineWidth=2; ctx.stroke();
+    }
+    ctx.fillStyle=textColor; ctx.font='bold 17px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(v.toString(),pos.x,pos.y);
+    if (st.showSccCards || st.showCompGraph) {
+      ctx.fillStyle=col; ctx.font='9px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText(scc,pos.x,pos.y+nodeRadius+2);
+    }
+  }
+  if (st.type === 'intro') {
+    ctx.fillStyle='#666'; ctx.font='11px Courier New';
+    ctx.textAlign='left'; ctx.fillText('Original directed graph with 8 vertices. SCCs are color-coded.',10,14);
+  }
+}
+
+function drawCompGraph(st) {
+  let cv=document.getElementById('compGraphCanvas'), ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  let cH = st.contractHighlight || null;
+  let compNodes = [
+    {id:'A', x:100, y:100, label:'SCC A\n{0,1,2}', color:sccColors.A},
+    {id:'B', x:250, y:160, label:'SCC B\n{3,4}', color:sccColors.B},
+    {id:'C', x:400, y:100, label:'SCC C\n{5,6,7}', color:sccColors.C}
+  ];
+  let compEdges = [
+    {from:'A', to:'B', via:'1\u21924'},
+    {from:'A', to:'C', via:'2\u21925'},
+    {from:'B', to:'C', via:'4\u21925'}
+  ];
+  for (let ce of compEdges) {
+    let n1=compNodes.find(n=>n.id===ce.from), n2=compNodes.find(n=>n.id===ce.to);
+    if (!n1||!n2) continue;
+    let r=32; let dx=n2.x-n1.x, dy=n2.y-n1.y; let d=Math.sqrt(dx*dx+dy*dy); if (d<1) continue;
+    let nx=dx/d, ny=dy/d;
+    let sx=n1.x+nx*r, sy=n1.y+ny*r, ex=n2.x-nx*r, ey=n2.y-ny*r;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+    ctx.strokeStyle='#888'; ctx.lineWidth=2.5; ctx.stroke();
+    let al=12, aw=6, ax=ex-nx*al, ay=ey-ny*al;
+    ctx.beginPath(); ctx.moveTo(ex,ey);
+    ctx.lineTo(ax-ny*aw*0.5, ay+nx*aw*0.5);
+    ctx.lineTo(ax+ny*aw*0.5, ay-nx*aw*0.5);
+    ctx.closePath(); ctx.fillStyle='#888'; ctx.fill();
+    let mx=(sx+ex)/2-10, my=(sy+ey)/2-10;
+    ctx.fillStyle='#666'; ctx.font='10px Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText(ce.via, (sx+ex)/2, (sy+ey)/2-6);
+  }
+  for (let n of compNodes) {
+    let isHighlighted = (cH === n.id);
+    let fill = isHighlighted ? '#0a1a12' : '#0d0d1a';
+    let stroke = isHighlighted ? '#ffcc00' : n.color;
+    let lw = isHighlighted ? 3.5 : 2.5;
+    ctx.beginPath(); ctx.arc(n.x, n.y, 30, 0, Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();
+    if (isHighlighted) {
+      ctx.beginPath(); ctx.arc(n.x, n.y, 35, 0, Math.PI*2);
+      ctx.strokeStyle='#ffcc0044'; ctx.lineWidth=2; ctx.stroke();
+    }
+    let lines=n.label.split('\n');
+    lines.forEach((l,i)=>{
+      ctx.fillStyle=isHighlighted?'#ffcc00':n.color;
+      ctx.font=i===0?'bold 14px Courier New':'11px Courier New';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(l, n.x, n.y-6+i*14);
+    });
+  }
+  let dagLabel='G\u1d38\u1d04\u1d04 = Directed Acyclic Graph';
+  ctx.fillStyle='#00ff88'; ctx.font='bold 13px Courier New';
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText(dagLabel, 250, 22);
+  let arrowText='\u2190 CONTRACT \u2192';
+  ctx.fillStyle='#ff9944'; ctx.font='bold 11px Courier New';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(arrowText, 250, 175);
+}
+
+function renderTable(st) {
+  let tb=document.getElementById('tableBody');
+  let sccH = st.sccHighlight || st.contractHighlight || null;
+  let interEdges = st.interEdges || [];
+  let html='';
+  for (let v of vertices) {
+    let scc=vertexSCC[v];
+    let cls='';
+    if (scc==='A') cls='scca';
+    else if (scc==='B') cls='sccb';
+    else if (scc==='C') cls='sccc';
+    if (v === st.focus) cls='active-highlight';
+    let outEdges = (adjList[v]||[]).map(w=>''+w).join(', ');
+    if (!outEdges) outEdges='\u2014';
+    html+='<tr><td>'+v+'</td><td class="'+cls+'">'+scc+'</td><td>'+outEdges+'</td></tr>';
+  }
+  tb.innerHTML=html;
+}
+
+function renderSccCards(st) {
+  let container=document.getElementById('sccCardsDisplay');
+  let sccH = st.sccHighlight || null;
+  let sets = st.sccSets || {};
+  let keys=Object.keys(sets);
+  if (keys.length===0) { container.innerHTML=''; return; }
+  let html='';
+  for (let k of keys) {
+    let mems=sets[k]||[];
+    let col=sccColors[k];
+    let hl=sccH===k?'border-color:#ffcc00;box-shadow:0 0 15px #ffcc0044;':'';
+    html+='<div class="scc-card" style="border-color:'+col+';'+hl+'">';
+    html+='<div class="scc-name" style="color:'+col+';">SCC '+k+'</div>';
+    html+='<div class="scc-members">{'+mems.sort((a,b)=>a-b).join(', ')+'}</div>';
+    html+='</div>';
+  }
+  container.innerHTML=html;
+}
+
+function renderEdgeTable(st) {
+  let tb=document.getElementById('edgeTableBody');
+  let interEdges = st.interEdges || [];
+  let html='';
+  for (let e of interEdges) {
+    let dir = e.sccU + ' \u2192 ' + e.sccV;
+    html+='<tr><td>'+e.u+' \u2192 '+e.v+'</td><td class="'+sccClass(e.sccU)+'">'+e.sccU+'</td><td class="'+sccClass(e.sccV)+'">'+e.sccV+'</td><td>'+dir+'</td></tr>';
+  }
+  tb.innerHTML=html;
+}
+
+function sccClass(s) {
+  if (s==='A') return 'scca';
+  if (s==='B') return 'sccb';
+  if (s==='C') return 'sccc';
+  return '';
+}
+
+function renderDagProof(st) {
+  let div=document.getElementById('dagProofContent');
+  let html='';
+  html+='<div class="proof-step"><span class="num">1.</span> Suppose G<sup>SCC</sup> had a directed cycle: C<sub>1</sub> \u2192 C<sub>2</sub> \u2192 ... \u2192 C<sub>k</sub> \u2192 C<sub>1</sub>.</div>';
+  html+='<div class="proof-step"><span class="num">2.</span> By construction, there is an edge from some vertex in C<sub>i</sub> to some vertex in C<sub>i+1</sub> in the original graph G.</div>';
+  html+='<div class="proof-step"><span class="num">3.</span> Since each C<sub>i</sub> is an SCC, every vertex in C<sub>i</sub> can reach every other vertex in C<sub>i</sub>.</div>';
+  html+='<div class="proof-step"><span class="num">4.</span> Therefore, a path exists from any vertex in C<sub>1</sub> to any vertex in C<sub>1</sub> going through C<sub>2</sub>, ..., C<sub>k</sub>.</div>';
+  html+='<div class="proof-step"><span class="num">5.</span> This means all vertices in C<sub>1</sub> &cup; C<sub>2</sub> &cup; ... &cup; C<sub>k</sub> are <b>mutually reachable</b>.</div>';
+  html+='<div class="proof-step" style="color:#00ff88;font-weight:bold;"><span class="num" style="color:#ff9944;">6.</span> &#8756; They should form a single SCC. Contradiction. &#8756; G<sup>SCC</sup> has NO cycles.</div>';
+  html+='<div class="proof-step" style="color:#00ff88;font-weight:bold;margin-top:8px;">G<sup>SCC</sup> of ANY directed graph is always a <span class="result-line">DAG</span>.</div>';
+  let edgeCount = st.interEdges ? st.interEdges.length : 0;
+  html+='<div class="proof-step" style="margin-top:8px;">In our example: <span class="dim">'+edgeCount+' inter-SCC edges</span> produce <span class="result-line">'+edgeCount+' edges</span> in G<sup>SCC</sup>. No cycles exist: A\u2192B, A\u2192C, B\u2192C forms a clear topological order.</div>';
+  div.innerHTML=html;
+}
+
+function applyStep(st) {
+  document.getElementById('phaseDisplay').textContent=st.ph||'\u2014';
+  let focusTxt=st.focus!==null?'Vertex '+st.focus:(st.sccHighlight?'SCC '+st.sccHighlight:'\u2014');
+  document.getElementById('focusDisplay').textContent=focusTxt;
+  document.getElementById('sccCountDisplay').textContent=st.sccSets?Object.keys(st.sccSets).length:'0';
+  drawMainGraph(st);
+  renderTable(st);
+  let showScc = st.showSccCards && st.sccSets && Object.keys(st.sccSets).length>0;
+  document.getElementById('sccCardsArea').style.display=showScc?'block':'none';
+  if (showScc) renderSccCards(st);
+  let showEdge = st.showEdgeTable && st.interEdges && st.interEdges.length>0;
+  document.getElementById('edgeTableArea').style.display=showEdge?'block':'none';
+  if (showEdge) renderEdgeTable(st);
+  let showDag = st.showDagProof;
+  document.getElementById('dagProofArea').style.display=showDag?'block':'none';
+  if (showDag) renderDagProof(st);
+  let showCg = st.showCompGraph;
+  document.getElementById('compGraphArea').style.display=showCg?'block':'none';
+  if (showCg) drawCompGraph(st);
+  let exp='';
+  switch (st.type) {
+    case 'intro': exp=buildIntroExplain(); break;
+    case 'identify_a': exp=buildIdentifyExplain('A',[0,1,2],'#00ff88','A directed triangle: 0\u21921\u21922\u21920'); break;
+    case 'identify_a_edges': exp=buildSccEdgesExplain('A','#00ff88',[
+      {desc:'1\u21924', to:'B'},
+      {desc:'2\u21923', to:'B'},
+      {desc:'2\u21925', to:'C'}
+    ]); break;
+    case 'identify_b': exp=buildIdentifyExplain('B',[3,4],'#00ccff','Mutual edges: 3\u21924 and 4\u21923'); break;
+    case 'identify_b_edges': exp=buildSccEdgesExplain('B','#00ccff',[
+      {desc:'4\u21925', to:'C'}
+    ]); break;
+    case 'identify_c': exp=buildIdentifyExplain('C',[5,6,7],'#ff6600','A directed cycle: 5\u21926\u21927\u21925'); break;
+    case 'identify_c_edges': exp=buildSccEdgesExplain('C','#ff6600',[]); break;
+    case 'show_sccs': exp=buildShowSccsExplain(); break;
+    case 'inter_edges': exp=buildInterEdgesExplain(st.interEdges); break;
+    case 'contract_a': exp=buildContractExplain('A',[0,1,2],'#00ff88'); break;
+    case 'contract_b': exp=buildContractExplain('B',[3,4],'#00ccff'); break;
+    case 'contract_c': exp=buildContractExplain('C',[5,6,7],'#ff6600'); break;
+    case 'dag_check': exp=buildDagCheckExplain(); break;
+    case 'done': exp=buildFinishedExplain(); break;
+    default: exp='<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML=exp;
+  let idx=steps.indexOf(st);
+  document.getElementById('sidebarPhase').textContent='Step '+(idx+1)+' / '+steps.length+' \u2014 '+st.ph;
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function buildIntroExplain() {
+  return '<div class="explain-section active"><h3>Original Directed Graph</h3><p>We have <span class="dim">8 vertices</span> and <span class="dim">12 directed edges</span>.</p><p>The graph contains <b>3 SCCs</b> (color-coded):</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#00ff88;font-weight:bold;">SCC A</span> = {<span class="dim">0, 1, 2</span>} &#8212; triangle cycle</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#00ccff;font-weight:bold;">SCC B</span> = {<span class="dim">3, 4</span>} &#8212; mutual edges</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#ff6600;font-weight:bold;">SCC C</span> = {<span class="dim">5, 6, 7</span>} &#8212; directed cycle</p>'+
+    '<h3 style="margin-top:10px;">Component Graph Goal</h3><p>We will <b>contract</b> each SCC into a single vertex, preserving edges between SCCs.</p><p>The result will be a <span class="result-line">Directed Acyclic Graph</span>.</p><p class="note">Press Step to identify each SCC.</p></div>';
+}
+function buildIdentifyExplain(name, members, color, structure) {
+  return '<div class="explain-section active"><h3>Identifying SCC '+name+'</h3><p>Strongly connected component <span style="color:'+color+';font-weight:bold;">'+name+'</span> = {<span class="dim">'+members.join(', ')+'</span>}</p>'+
+    '<p>Structure: <span class="formula-line">'+structure+'</span></p>'+
+    '<p>Every pair of vertices in this set can <b>reach each other</b> via directed paths.</p>'+
+    '<p>These vertices are <b>mutually reachable</b> and form a maximal SCC.</p>'+
+    '<p class="note">SCCs are identified using Kosaraju\'s or Tarjan\'s algorithm.</p></div>';
+}
+function buildSccEdgesExplain(name, color, outs) {
+  let outHtml=outs.length>0?'':'<p>No outgoing inter-SCC edges from SCC '+name+'.</p>';
+  if (outs.length>0) {
+    outHtml='<p>Outgoing inter-SCC edges from SCC '+name+':</p>';
+    for (let o of outs) {
+      outHtml+='<p style="margin-left:8px;">&#8226; <span class="split-info">'+o.desc+'</span> &#8594; SCC '+o.to+'</p>';
+    }
+  }
+  return '<div class="explain-section active"><h3>Edges from SCC '+name+'</h3>'+outHtml+
+    '<p>Edges that go <b>between</b> SCCs will become edges in the component graph.</p>'+
+    '<p class="note">Inter-SCC edges always go in one direction (never both, or they\'d merge SCCs).</p></div>';
+}
+function buildShowSccsExplain() {
+  return '<div class="explain-section active"><h3>&#10003; All 3 SCCs Identified</h3><p>The graph decomposes into <span class="result-line">3 strongly connected components</span>:</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#00ff88;font-weight:bold;">SCC A</span>: {<span class="dim">0, 1, 2</span>}</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#00ccff;font-weight:bold;">SCC B</span>: {<span class="dim">3, 4</span>}</p>'+
+    '<p style="margin-left:8px;">&#8226; <span style="color:#ff6600;font-weight:bold;">SCC C</span>: {<span class="dim">5, 6, 7</span>}</p>'+
+    '<p>Each SCC is internally strongly connected. Next: identify edges <b>between</b> SCCs.</p></div>';
+}
+function buildInterEdgesExplain(edges) {
+  let html='<div class="explain-section active"><h3>Inter-SCC Edges</h3><p>Edges connecting different SCCs (<span class="result-line">'+edges.length+' total</span>):</p>';
+  for (let e of edges) {
+    html+='<p style="margin-left:8px;">&#8226; <span class="dim">'+e.u+'\u2192'+e.v+'</span>: SCC '+e.sccU+' \u2192 SCC '+e.sccV+'</p>';
+  }
+  html+='<p>These edges will become the edges of the <b>component graph</b>.</p><p class="note">Notice no inter-SCC edge goes in both directions (that would merge the SCCs).</p></div>';
+  return html;
+}
+function buildContractExplain(name, members, color) {
+  return '<div class="explain-section active"><h3>Contracting SCC '+name+'</h3><p style="font-size:1.1em;"><span style="color:'+color+';font-weight:bold;">SCC '+name+'</span> = {<span class="dim">'+members.join(', ')+'</span>}</p>'+
+    '<p>All <span class="dim">'+members.length+' vertices</span> in SCC '+name+' are <b>contracted</b> into <span class="result-line">one super-vertex</span>.</p>'+
+    '<p>Internal edges within SCC '+name+' disappear (they become self-loops on the super-vertex).</p>'+
+    '<p>Edges <b>leaving</b> or <b>entering</b> SCC '+name+' are preserved between super-vertices.</p>'+
+    '<div class="contract-arrow">&#8658;</div>'+
+    '<p>Watch the component graph canvas below as the contraction happens.</p>'+
+    '<p class="note">The result: 3 super-vertices (one per SCC) with directed edges between them.</p></div>';
+}
+function buildDagCheckExplain() {
+  return '<div class="explain-section active"><h3>Verifying the DAG Property</h3><p>Let\'s check if G<sup>SCC</sup> contains any cycles:</p>'+
+    '<p style="margin-left:8px;">&#8226; Edges: <span class="dim">A \u2192 B</span>, <span class="dim">A \u2192 C</span>, <span class="dim">B \u2192 C</span></p>'+
+    '<p style="margin-left:8px;">&#8226; Topological order: <span class="result-line">A, B, C</span></p>'+
+    '<p>No cycles exist! Each inter-SCC edge goes from an earlier SCC to a later one.</p>'+
+    '<h3 style="margin-top:10px;">Proof by Contradiction</h3>'+
+    '<div class="dag-proof-box"><p style="color:#ccc;"><b>Claim:</b> The component graph of <b>any</b> directed graph is a DAG.</p>'+
+    '<p style="color:#ccc;margin-top:6px;"><b>Proof:</b> If G<sup>SCC</sup> had a cycle C<sub>1</sub> \u2192 C<sub>2</sub> \u2192 ... \u2192 C<sub>k</sub> \u2192 C<sub>1</sub>, then every vertex in these SCCs can reach every other (via the cycle + internal connectivity). They would form a <b>single</b> SCC. Contradiction. &#8756; No cycles exist.</p></div>'+
+    '<p class="note">This is why G<sup>SCC</sup> is always a DAG, for ANY directed graph.</p></div>';
+}
+function buildFinishedExplain() {
+  return '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>&#10004; Component Graph Complete!</h3>'+
+    '<p>The original graph\'s <b>3 SCCs</b> have been contracted into super-vertices.</p>'+
+    '<p>The <span class="result-line">Component Graph G<sup>SCC</sup></span> has:</p>'+
+    '<p style="margin-left:8px;">&#8226; <span class="dim">|V<sup>SCC</sup>| = 3</span> super-vertices (A, B, C)</p>'+
+    '<p style="margin-left:8px;">&#8226; <span class="dim">|E<sup>SCC</sup>| = 3</span> edges (A\u2192B, A\u2192C, B\u2192C)</p>'+
+    '<p>G<sup>SCC</sup> is a <span class="result-line">Directed Acyclic Graph (DAG)</span> &#8212; no cycles exist.</p>'+
+    '<h3 style="margin-top:10px;">Key Takeaways</h3>'+
+    '<p style="margin-left:8px;">&#8226; <b>Every</b> directed graph has a well-defined SCC decomposition.</p>'+
+    '<p style="margin-left:8px;">&#8226; The component graph is <b>always a DAG</b>, regardless of the original graph.</p>'+
+    '<p style="margin-left:8px;">&#8226; This DAG structure enables <b>topological ordering</b> of SCCs.</p>'+
+    '<h3 style="margin-top:10px;">Applications</h3>'+
+    '<p style="margin-left:8px;">&#8226; <span class="dim">Web ranking</span>: PageRank operates on the SCC DAG</p>'+
+    '<p style="margin-left:8px;">&#8226; <span class="dim">Program analysis</span>: Control flow SCC DAG for loop detection</p>'+
+    '<p style="margin-left:8px;">&#8226; <span class="dim">Semiconnectivity</span>: Checking if G<sup>SCC</sup> has a unique topological order</p>'+
+    '<h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(V + E) &#8212; Kosaraju/Tarjan + contraction</p><p><span class="dim">Space:</span> O(V) for SCC assignments</p></div>';
+}
+
+function processStep() {
+  if (currentStep>=steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+function startAnimation() {
+  if (currentStep>=steps.length) return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if (!animating||currentStep>=steps.length) { clearInterval(animTimer); if (currentStep>=steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+function getSpeed(){return 1200-parseInt(document.getElementById('speedSlider').value)*100;}
+function pauseAnimation(){animating=false; clearInterval(animTimer);}
+function stepForward(){pauseAnimation(); processStep();}
+function finishAnimation() {
+  animating=false;
+  document.getElementById('phaseDisplay').textContent='\u2713 Complete!';
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('resultContent').innerHTML=
+    '<div class="big-result">G<sup>SCC</sup> is always a DAG</div>'+
+    '<p><span class="dim">3 SCCs</span> contracted into 3 super-vertices</p>'+
+    '<p><span class="dim">3 inter-SCC edges</span> form the DAG: A \u2192 B \u2192 C and A \u2192 C</p>'+
+    '<p style="margin-top:8px;">Topological order: <span class="result-line">A, B, C</span></p>';
+  document.getElementById('sidebarPhase').textContent='Step '+steps.length+' / '+steps.length+' \u2014 \u2713 Complete';
+  document.getElementById('explainArea').innerHTML=buildFinishedExplain();
+  document.getElementById('sidebar').scrollTop=0;
+}
+function resetAnimation() {
+  pauseAnimation(); currentStep=0;
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('compGraphArea').style.display='none';
+  document.getElementById('sccCardsArea').style.display='none';
+  document.getElementById('edgeTableArea').style.display='none';
+  document.getElementById('dagProofArea').style.display='none';
+  document.getElementById('phaseDisplay').textContent='Ready \u2014 Press Play';
+  document.getElementById('focusDisplay').textContent='\u2014';
+  document.getElementById('sccCountDisplay').textContent='0';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle \u2014 press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=buildIntroExplain();
+  buildSteps();
+  if (steps.length>0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent=steps.length;
+  document.getElementById('sidebar').scrollTop=0;
+}
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if (animating) { clearInterval(animTimer); animTimer=setInterval(()=>{if (!animating||currentStep>=steps.length){clearInterval(animTimer);if (currentStep>=steps.length)finishAnimation();return;}processStep();},getSpeed());}
+});
+buildSteps();
+if (steps.length>0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent=steps.length;
+</script>
+</body>
+</html>
