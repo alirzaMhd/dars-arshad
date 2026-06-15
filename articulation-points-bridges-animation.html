@@ -290,108 +290,211 @@ let animTimer = null;
 
 function buildInitExplanation() {
   return `<div class="explain-section active">
-<h3>Initial State</h3>
-<p>All 8 vertices are <span style="color:#555;">white</span> (undiscovered). DFS starts from vertex <span class="dim">0</span>.</p>
-<h3 style="margin-top:10px;">Low-Link Concept</h3>
-<p><span class="dim">low[v]</span> = the earliest discovered vertex reachable from v via tree edges and <b>at most one back edge</b>.</p>
-<p>Initially, <span class="dim">low[v] = d[v]</span> (discovery time).</p>
-<p>low[v] <span style="color:#ff6600;">decreases</span> when we find a back edge to an ancestor or propagate a child's lower low.</p>
-<p class="note">Press Play or Step to begin.</p>
+<h3>What Are Articulation Points &amp; Bridges?</h3>
+<p>An <b>articulation point</b> (cut vertex) is a vertex whose removal <span style="color:#ff0044;font-weight:bold;">disconnects</span> the graph into two or more components. A <b>bridge</b> (cut edge) is an edge whose removal <span style="color:#ff0066;font-weight:bold;">disconnects</span> the graph.</p>
+<p class="note">Think of them as "critical failures" — if a network router (vertex) or cable (edge) fails, can the remaining nodes still communicate?</p>
+
+<h3 style="margin-top:12px;">Our Graph</h3>
+<p>8 vertices {<span class="dim">0,1,2,3,4,5,6,7</span>} with 9 undirected edges.</p>
+<p style="margin-left:8px;">• <b>Left cycle</b> {<span class="dim">0,1,2,3</span>}: 0-1-2-3-1 (triangle with one extra edge)</p>
+<p style="margin-left:8px;">• <b>Middle node</b> <span class="dim">4</span>: sits on a bridge connecting left and right</p>
+<p style="margin-left:8px;">• <b>Right cycle</b> {<span class="dim">5,6,7</span>}: 4-5-6-7-5 (triangle)</p>
+
+<h3 style="margin-top:12px;">How the Algorithm Works</h3>
+<p>We run a single DFS traversal. Each vertex gets a <span class="dim">discovery time d[v]</span> (when first visited) and a <span class="dim">low-link value low[v]</span>.</p>
+<p><span class="dim">low[v]</span> = the <b>earliest discovered vertex</b> reachable from <span class="dim">v</span> via tree edges and <b>at most one back edge</b> (i.e., the lowest <span class="dim">d[·]</span> we can reach without going back up the DFS tree).</p>
+
+<h3 style="margin-top:12px;">Key Conditions</h3>
+<p><span class="formula-line">Root (no parent): articulation point if it has &ge; 2 child subtrees</span></p>
+<p><span class="formula-line">Non-root: articulation point if &exist; child w with low[w] &ge; d[v]</span></p>
+<p><span class="formula-line">Bridge: edge (u,v) with low[v] &gt; d[u]  (child v cannot reach above u)</span></p>
+<p>The condition <span class="dim">low[w] &ge; d[v]</span> means: child <span class="dim">w</span>'s entire subtree has no back edge that reaches <b>above</b> <span class="dim">v</span>. Removing <span class="dim">v</span> would cut off <span class="dim">w</span>'s subtree from the rest.</p>
+<p class="note">Press <b>Play</b> to watch DFS discover the graph step by step, or <b>Step</b> to go one event at a time.</p>
 </div>`;
 }
 
 function buildDiscoverExplanation(v, dTime) {
   return `<div class="explain-section active">
-<h3>&#128269; Discover Vertex ${v}</h3>
-<p>Entering vertex <span class="dim">${v}</span> at time <span class="result-line">d = ${dTime}</span>.</p>
-<p>Initialize <span class="dim">low[${v}] = d[${v}] = ${dTime}</span>.</p>
-<p>Color: <span style="color:#555;">white</span> &rarr; <span style="color:#ff6600;">gray</span> (on recursion stack).</p>
-<p>We will explore each neighbor and then compute the final low value.</p>
+<h3>&#128269; DFS Arrival: Enter Vertex ${v}</h3>
+<p>The DFS recursion reaches vertex <span class="dim">${v}</span>. This is the <span class="result-line">${dTime}th</span> vertex discovered overall.</p>
+<p><b>State change:</b> <span style="color:#555;">white</span> (undiscovered) &rarr; <span style="color:#ff6600;">gray</span> (on the recursion stack, "in progress").</p>
+<h3 style="margin-top:8px;">Initialize Low-Link</h3>
+<p>At the start, we assume <span class="dim">${v}</span> can only reach itself:</p>
+<span class="formula-line">low[${v}] = d[${v}] = ${dTime}</span>
+<p>This is the <b>default</b> — we'll see if back edges or child propagations can <span style="color:#ff6600;">lower</span> this value later.</p>
+<h3 style="margin-top:8px;">What Happens Next</h3>
+<p>DFS will now examine <b>each neighbor</b> of <span class="dim">${v}</span> one by one:</p>
+<p style="margin-left:8px;">• If neighbor is <span style="color:#555;">white</span>: follow a <span style="color:#00ff88;">tree edge</span> and recurse into it</p>
+<p style="margin-left:8px;">• If neighbor is <span style="color:#ff6600;">gray</span> (already on stack): found a <span style="color:#ff6600;">back edge to an ancestor</span> — may improve low[v]</p>
+<p style="margin-left:8px;">• If neighbor is <span style="color:#00ff88;">black</span> (already finished): it's a cross edge to a descendant — no effect on low[v]</p>
+<p class="note">The recursion stack tracks all vertices currently being explored — they form a path from root to current node.</p>
 </div>`;
 }
 
 function buildTreeEdgeExplanation(u, v, v_d) {
   return `<div class="explain-section active">
-<h3>&#127794; Tree Edge ${u}&minus;${v}</h3>
-<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span class="result-line">tree edge</span>.</p>
-<p><span class="dim">${v}</span> is <span style="color:#555;">white</span> (undiscovered) &rarr; becomes child of <span class="dim">${u}</span>.</p>
-<p>Discovered at time <span class="result-line">d[${v}] = ${v_d}</span>. low[${v}] = ${v_d}.</p>
-<p>DFS will recursively explore <span class="dim">${v}</span>'s subtree.</p>
+<h3>&#127794; Tree Edge: Follow ${u} &rarr; ${v}</h3>
+<p>DFS examines neighbor <span class="dim">${v}</span> of current vertex <span class="dim">${u}</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#555;font-weight:bold;">white</span> (undiscovered) &rarr; this edge becomes a <span class="result-line">TREE EDGE</span> in the DFS spanning tree.</p>
+<h3 style="margin-top:8px;">Parent-Child Relationship</h3>
+<p>Setting <span class="dim">parent[${v}] = ${u}</span>. DFS will now <b>recursively descend</b> into <span class="dim">${v}</span>'s subtree before returning to <span class="dim">${u}</span>.</p>
+<span class="formula-line">d[${v}] = ${v_d},  low[${v}] = ${v_d}</span>
+<h3 style="margin-top:8px;">Why This Matters</h3>
+<p>Tree edges <b>build the DFS tree</b>. Later, when we check <span class="dim">low[${v}] &ge; d[${u}]</span>, we're asking: "Can <span class="dim">${v}</span>'s subtree reach an ancestor of <span class="dim">${u}</span> via a back edge?"</p>
+<p>If not (low[${v}] &ge; d[${u}]), then <span class="dim">${u}</span> is an articulation point — removing it disconnects <span class="dim">${v}</span>'s subtree from the rest.</p>
+<p class="note">The DFS tree is not the same as the original graph — it's a subgraph that records the order of traversal.</p>
 </div>`;
 }
 
 function buildBackEdgeExplanation(u, v, d_v, oldLow, newLow, isAncestor) {
   let ancestorNote = isAncestor
-    ? '<span style="color:#ff6600;font-weight:bold;">ancestor</span> on the recursion stack'
-    : '<span style="color:#00ff88;">descendant</span> (already finished)';
+    ? '<span style="color:#ff6600;font-weight:bold;">ANCESTOR</span> that is still on the recursion stack (gray)'
+    : '<span style="color:#00ff88;">descendant</span> that has already finished (black)';
   let improvedNote = newLow < oldLow
-    ? `<p><span class="result-line">low[${u}] improved from ${oldLow} to ${newLow}</span> via back edge to ${isAncestor ? 'ancestor' : 'descendant'} ${v}.</p>`
-    : `<p class="note">No improvement &mdash; d[${v}] = ${d_v} is not lower than low[${u}] = ${oldLow}.</p>`;
+    ? `<p><span class="result-line">&#11088; low[${u}] IMPROVED from ${oldLow} to ${newLow}</span> via this back edge to ${isAncestor ? 'ancestor' : 'descendant'} <span class="dim">${v}</span>.</p><p>The lower the low value, the more "connected" this vertex is to the upper part of the graph — it has a path that bypasses its parent.</p>`
+    : `<p class="note">No improvement — d[${v}] = ${d_v} is not lower than current low[${u}] = ${oldLow}. Only back edges to <b>ancestors</b> (with smaller d values) improve low.</p>`;
   return `<div class="explain-section active">
-<h3>&#8635; Back Edge ${u}&minus;${v}</h3>
-<p>Neighbor <span class="dim">${v}</span> is ${ancestorNote} &rarr; <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>
-<p><span class="dim">low[${u}]</span> update via this back edge:</p>
+<h3>&#8635; Back Edge Found: ${u} &minus; ${v}</h3>
+<p>While exploring <span class="dim">${u}</span>'s neighbors, we find <span class="dim">${v}</span> which is already visited.</p>
+<p><span class="dim">${v}</span> is an ${ancestorNote} &rarr; this edge is a <span style="color:#ff6600;font-weight:bold;">BACK EDGE</span> (dashed orange).</p>
+<h3 style="margin-top:8px;">Low-Link Update</h3>
+<p>We update <span class="dim">low[${u}]</span> by considering the shortest path back up via this edge:</p>
 <span class="formula-line">low[${u}] = min(low[${u}], d[${v}]) = min(${oldLow}, ${d_v}) = ${newLow}</span>
 ${improvedNote}
+<h3 style="margin-top:8px;">Why Back Edges Matter</h3>
+<p>Back edges are <b>redundant connections</b> that create <b>alternate paths</b> in the graph. The more back edges a subtree has to high ancestors, the more resilient the graph is to vertex/edge removal.</p>
+<p style="margin-left:8px;">• Many back edges = fewer articulation points and bridges</p>
+<p style="margin-left:8px;">• Few back edges = more critical nodes and edges</p>
+<p class="note">A back edge to an <b>ancestor</b> (gray) improves low because the ancestor has a smaller d. A back edge to a <b>descendant</b> (black) typically does NOT improve low (descendants have larger d).</p>
 </div>`;
 }
 
-function buildAfterChildExplanation(u, v, oldLow, newLow) {
-  if (newLow < oldLow) {
+function buildAfterChildExplanation(u, v, oldLowU, lowV, dU, parentU, childrenU) {
+  let newLowU = Math.min(oldLowU, lowV);
+  let improved = newLowU < oldLowU;
+  let isRoot = parentU === null || parentU === undefined;
+
+  let apCheck = '';
+  if (!isRoot) {
+    let isAP = lowV >= dU;
+    apCheck = `<h3 style="margin-top:10px;">&#128270; Articulation Point Check for ${u}</h3>
+<p>Testing condition: <span class="dim">low[${v}] = ${lowV} &ge; d[${u}] = ${dU}</span></p>`;
+    if (isAP) {
+      apCheck += `<p><span style="color:#ff0044;font-weight:bold;">&#9888; CONDITION MET:</span> low[${v}] (=${lowV}) &ge; d[${u}] (=${dU})</p>
+<p>This means <span class="dim">${v}</span>'s entire subtree can only reach up to discovery time ${lowV}, which is at <b>or below</b> vertex <span class="dim">${u}</span>. No back edge in <span class="dim">${v}</span>'s subtree reaches above <span class="dim">${u}</span>.</p>
+<p style="color:#ff0044;"><b>Result: ${u} is an ARTICULATION POINT!</b> Removing ${u} disconnects ${v}'s subtree from the rest of the graph.</p>`;
+    } else {
+      apCheck += `<p><span style="color:#00ff88;font-weight:bold;">&#10003; Condition NOT met:</span> low[${v}] (=${lowV}) &lt; d[${u}] (=${dU})</p>
+<p>Since low[${v}] can reach above ${u} (to discovery time ${lowV}), ${v}'s subtree has an alternate path that bypasses ${u}. Even if ${u} is removed, ${v}'s subtree stays connected.</p>`;
+    }
+  } else {
+    apCheck = `<p><span style="color:#888;">Root check: ${u} has <b>${childrenU} children</b>. Root is AP if &ge; 2 children.</span></p>`;
+  }
+
+  let bridgeCheck = '';
+  if (lowV > dU) {
+    bridgeCheck = `<h3 style="margin-top:10px;">&#128270; Bridge Check for (${u}, ${v})</h3>
+<p>Testing condition: <span class="dim">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span></p>
+<p><span style="color:#ff0066;font-weight:bold;">&#9888; CONDITION MET.</span> Edge <span class="dim">(${u},${v})</span> is a <b>BRIDGE</b>.</p>
+<p>low[${v}] = ${lowV} — the best <span class="dim">${v}</span>'s subtree can do is reach vertex with discovery time ${lowV}. Since that's strictly below ${u} (d=${dU}), <span class="dim">${v}</span>'s subtree cannot reach anything <b>at or above</b> ${u}.</p>
+<p>The edge (${u},${v}) is the <b>sole connection</b> — removing it isolates ${v}'s entire subtree.</p>`;
+  } else if (lowV === dU) {
+    bridgeCheck = `<h3 style="margin-top:10px;">&#128270; Bridge Check for (${u}, ${v})</h3>
+<p>Testing: <span class="dim">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span></p>
+<p><span style="color:#00ff88;font-weight:bold;">&#10003; Not a bridge.</span> low[${v}] = ${lowV} = d[${u}], so ${v}'s subtree can reach <b>as high as</b> ${u}. The edge is redundant.</p>`;
+  } else {
+    bridgeCheck = `<h3 style="margin-top:10px;">&#128270; Bridge Check for (${u}, ${v})</h3>
+<p>Testing: <span class="dim">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span></p>
+<p><span style="color:#00ff88;font-weight:bold;">&#10003; Not a bridge.</span> low[${v}] = ${lowV} &lt; d[${u}] = ${dU}, so ${v}'s subtree can reach <b>above</b> ${u}. There's a backup path via a back edge.</p>`;
+  }
+
+  if (improved) {
     return `<div class="explain-section active">
-<h3>&#8593; Propagate low from Child ${v}</h3>
-<p>Returned from child <span class="dim">${v}</span> back to <span class="dim">${u}</span>.</p>
-<p>Child <span class="dim">${v}</span> has <span class="dim">low[${v}] = ${newLow}</span>:</p>
-<span class="formula-line">low[${u}] = min(low[${u}], low[${v}]) = min(${oldLow}, ${newLow}) = ${newLow}</span>
-<p><span class="result-line">low[${u}] improved from ${oldLow} to ${newLow}</span> via child ${v}.</p>
+<h3>&#8593; Return from Child ${v} &rarr; Propagate to ${u}</h3>
+<p>DFS finished exploring <span class="dim">${v}</span>'s entire subtree and returns to parent <span class="dim">${u}</span>.</p>
+<p>Child's computed low-link: <span class="dim">low[${v}] = ${lowV}</span></p>
+<p>We propagate the child's low value upward (a child's ability to reach high ancestors extends the parent's reach):</p>
+<span class="formula-line">low[${u}] = min(low[${u}], low[${v}]) = min(${oldLowU}, ${lowV}) = ${newLowU}</span>
+<p><span class="result-line">&#11088; low[${u}] IMPROVED from ${oldLowU} to ${newLowU}</span> &mdash; child <span class="dim">${v}</span> can reach discovery time ${lowV}, and this path goes through <span class="dim">${u}</span>, so <span class="dim">${u}</span> inherits that reachability.</p>
+${apCheck}
+${bridgeCheck}
+<p class="note">The propagation step is where low-link values flow upward through the DFS tree, carrying information about alternate connectivity.</p>
 </div>`;
   }
   return `<div class="explain-section active">
-<h3>&#8617; Back from Child ${v}</h3>
-<p>Returned from child <span class="dim">${v}</span> back to <span class="dim">${u}</span>.</p>
-<p>Child low: <span class="dim">low[${v}] = ${newLow}</span>. Current <span class="dim">low[${u}] = ${oldLow}</span>.</p>
-<span class="formula-line">low[${u}] = min(${oldLow}, ${newLow}) = ${oldLow}</span>
-<p>No improvement &mdash; <span class="dim">low[${u}]</span> stays <span class="result-line">${oldLow}</span>.</p>
+<h3>&#8617; Return from Child ${v} &rarr; No Propagation</h3>
+<p>DFS finished exploring <span class="dim">${v}</span>'s entire subtree and returns to parent <span class="dim">${u}</span>.</p>
+<p>Child's computed low-link: <span class="dim">low[${v}] = ${lowV}</span></p>
+<p>Compare with current <span class="dim">low[${u}] = ${oldLowU}</span>:</p>
+<span class="formula-line">low[${u}] = min(${oldLowU}, ${lowV}) = ${oldLowU}</span>
+<p><span class="dim">low[${v}] = ${lowV} &ge; low[${u}] = ${oldLowU}</span>, so no change. <span class="dim">${u}</span> already has a better (lower) path via other children or a back edge.</p>
+${apCheck}
+${bridgeCheck}
+<p class="note">Even though low didn't improve, this return step still performs the critical AP and bridge checks.</p>
 </div>`;
 }
 
 function buildMarkAPExplanation(v, child, lowChild, dV) {
   return `<div class="explain-section active" style="border-left-color:#ff0044;">
-<h3>&#9888; Articulation Point: ${v}</h3>
-<p>Vertex <span class="dim">${v}</span> is an <span style="color:#ff0044;font-weight:bold;">articulation point!</span></p>
-<p>Child <span class="dim">${child}</span> has <span class="dim">low[${child}] = ${lowChild}</span>.</p>
-<span class="formula-line">low[${child}] = ${lowChild} &ge; d[${v}] = ${dV}</span>
-<p>Removing <span style="color:#ff0044;font-weight:bold;">${v}</span> disconnects the graph &mdash; <span class="dim">${child}</span>'s subtree becomes separated.</p>
-${v === 1 ? '<p class="note">Connects the left cycle to vertex 4 and the rest of the graph.</p>' : ''}
-${v === 4 ? '<p class="note">Sits on the bridge between the left cycle and right cycle.</p>' : ''}
-${v === 5 ? '<p class="note">Connects vertices 6,7 to the rest via the bridge to 4.</p>' : ''}
+<h3>&#9888; ARTICULATION POINT FOUND: Vertex ${v}</h3>
+<p>Vertex <span class="dim">${v}</span> has been identified as an <span style="color:#ff0044;font-weight:bold;">articulation point (cut vertex).</span></p>
+<h3 style="margin-top:8px;">Why?</h3>
+<p>Child <span class="dim">${child}</span> has <span class="dim">low[${child}] = ${lowChild}</span> and <span class="dim">d[${v}] = ${dV}</span>.</p>
+<span class="formula-line">low[${child}] (=${lowChild}) &ge; d[${v}] (=${dV})  &rarr; CONDITION MET</span>
+<p>This means: the entire subtree rooted at <span class="dim">${child}</span> can reach <b>at best</b> discovery time <span class="dim">${lowChild}</span>, which is <b>not higher</b> (not smaller) than <span class="dim">${v}</span>'s discovery time <span class="dim">${dV}</span>.</p>
+<p>In plain terms: <span class="dim">${child}</span>'s subtree has <b>no back edge</b> that reaches above <span class="dim">${v}</span>. The only path from that subtree to the rest of the graph goes <b>through</b> <span class="dim">${v}</span>.</p>
+<h3 style="margin-top:8px;">Consequence</h3>
+<p>Removing vertex <span style="color:#ff0044;font-weight:bold;">${v}</span> would <b>disconnect</b> <span class="dim">${child}</span>'s entire subtree from the rest of the graph — the graph would split into at least two separate components.</p>
+${v === 1 ? '<p class="note"><b>Context:</b> Vertex 1 connects three parts: the rest of the left cycle {0,2,3}, the middle node 4, and beyond. Without 1, nodes 0, 2, and 3 become isolated from each other and from 4,5,6,7.</p>' : ''}
+${v === 4 ? '<p class="note"><b>Context:</b> Vertex 4 sits on the only bridge between the left cycle {0,1,2,3} and the right cycle {5,6,7}. Removing 4 splits the graph into two disconnected halves.</p>' : ''}
+${v === 5 ? '<p class="note"><b>Context:</b> Vertex 5 connects vertices 6 and 7 to the rest. Without 5, the right cycle {6,7} becomes isolated from 4 and the rest of the graph.</p>' : ''}
+<p class="note">Articulation points are critical infrastructure in networks — they represent single points of failure.</p>
 </div>`;
 }
 
 function buildRootAPExplanation(v, childCount) {
   return `<div class="explain-section active" style="border-left-color:#ff0044;">
-<h3>&#9888; Root Articulation Point: ${v}</h3>
+<h3>&#9888; ROOT ARTICULATION POINT: Vertex ${v}</h3>
+<p>The DFS traversal started at <span class="dim">${v}</span> (the root).</p>
 <p>Root <span class="dim">${v}</span> has <span class="result-line">${childCount} children</span> in the DFS tree.</p>
-<p>A root is an articulation point if it has <span style="color:#ff0044;font-weight:bold;">&ge; 2 children</span>.</p>
-<p>Removing root <span class="dim">${v}</span> would disconnect its children's subtrees from each other.</p>
+<h3 style="margin-top:8px;">Special Rule for the Root</h3>
+<p><span class="formula-line">Root is an articulation point if it has &ge; 2 DFS tree children</span></p>
+<p>Why the special rule? The root has no parent, so the usual condition <span class="dim">low[w] &ge; d[root]</span> doesn't apply (every child will have <span class="dim">low[w] &ge; d[root]</span> since the root has the smallest d, so the condition would <b>always</b> be true, making the root always an AP — which is wrong).</p>
+<h3 style="margin-top:8px;">Why It's an AP</h3>
+<p>Since root <span class="dim">${v}</span> has <span class="result-line">${childCount} &ge; 2</span> children in the DFS tree, the <b>only</b> connections between those child subtrees must go through the root (by definition of DFS tree). Removing <span class="dim">${v}</span> disconnects those child subtrees from each other.</p>
+${childCount >= 2 ? `<p style="color:#ff0044;font-weight:bold;">Removing vertex ${v} splits the graph into at least ${childCount} separate components.</p>` : ''}
 </div>`;
 }
 
 function buildMarkBridgeExplanation(u, v, lowV, dU) {
   return `<div class="explain-section active" style="border-left-color:#ff0066;">
-<h3>&#127794; Bridge: ${u}&minus;${v}</h3>
-<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) is a <span style="color:#ff0066;font-weight:bold;">bridge!</span></p>
-<span class="formula-line">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span>
-<p>Removing this edge disconnects the graph &mdash; <span class="dim">${v}</span>'s entire subtree has no back edge reaching above <span class="dim">${u}</span>.</p>
+<h3>&#127794; BRIDGE FOUND: Edge ${u} &minus; ${v}</h3>
+<p>Edge (<span class="dim">${u}</span>, <span class="dim">${v}</span>) has been identified as a <span style="color:#ff0066;font-weight:bold;">bridge (cut edge).</span></p>
+<h3 style="margin-top:8px;">Why?</h3>
+<p>After exploring <span class="dim">${v}</span>'s subtree, we check the condition:</p>
+<span class="formula-line">low[${v}] (=${lowV}) &gt; d[${u}] (=${dU})  &rarr; CONDITION MET</span>
+<p>This means: the best (lowest) discovery time reachable from <span class="dim">${v}</span>'s entire subtree is <span class="dim">${lowV}</span>, which is <b>strictly greater</b> than <span class="dim">d[${u}] = ${dU}</span>.</p>
+<p>In plain terms: <span class="dim">${v}</span>'s subtree has <b>no back edge at all</b> that reaches <span class="dim">${u}</span> or any vertex above <span class="dim">${u}</span>. The edge <span class="dim">(${u},${v})</span> is the <b>only connection</b> between <span class="dim">${v}</span>'s subtree and the rest of the graph.</p>
+<h3 style="margin-top:8px;">Consequence</h3>
+<p>Removing this edge <b>disconnects</b> the graph — <span class="dim">${v}</span>'s entire subtree becomes an island with no connection to anything above <span class="dim">${u}</span>.</p>
+<h3 style="margin-top:8px;">AP vs Bridge: Key Difference</h3>
+<p style="margin-left:8px;">• <b>Bridge:</b> <span class="dim">low[child] &gt; d[parent]</span> — child's subtree can't even reach the parent via another path</p>
+<p style="margin-left:8px;">• <b>Articulation point:</b> <span class="dim">low[child] &ge; d[parent]</span> — child's subtree can reach the parent, but not above it</p>
+<p>The difference is strict inequality (>) for bridges vs. (&ge;) for APs. A bridge always implies its parent endpoint is an AP (unless the parent has only one child subtree and is not the root).</p>
 </div>`;
 }
 
-function buildFinishExplanation(v, fTime, lowV) {
+function buildFinishExplanation(v, fTime, lowV, dV) {
   return `<div class="explain-section active">
-<h3>&#10003; Finish Vertex ${v}</h3>
-<p>Vertex <span class="dim">${v}</span> finished at time <span class="result-line">f = ${fTime}</span>.</p>
-<p>Final <span class="dim">low[${v}] = ${lowV}</span>. Color: <span style="color:#ff6600;">gray</span> &rarr; <span style="color:#00ff88;">black</span>.</p>
-<p>All descendants of <span class="dim">${v}</span> have been fully explored. DFS backtracks to its parent.</p>
+<h3>&#10003; Finish Vertex ${v} &rarr; Backtrack</h3>
+<p>All neighbors of <span class="dim">${v}</span> have been fully explored. Vertex <span class="dim">${v}</span> is now <b>complete</b>.</p>
+<p><b>State change:</b> <span style="color:#ff6600;">gray</span> (on recursion stack) &rarr; <span style="color:#00ff88;">black</span> (fully processed, off the stack).</p>
+<h3 style="margin-top:8px;">Summary for ${v}</h3>
+<span class="formula-line">d[${v}] = ${dV}  &nbsp;&nbsp; low[${v}] = ${lowV}  &nbsp;&nbsp; f[${v}] = ${fTime}</span>
+<p>Low-link interpretation: from <span class="dim">${v}</span>'s subtree, we can reach all the way up to discovery time <span class="dim">${lowV}</span> (vertex with d=${lowV}) using tree edges and at most one back edge.</p>
+<h3 style="margin-top:8px;">What Happens Next</h3>
+<p>DFS <b>backtracks</b> to <span class="dim">${v}</span>'s parent. The parent will then propagate <span class="dim">${v}</span>'s low value upward and check for articulation points and bridges.</p>
+<p class="note">The finish time f[v] is when we finally leave v, after exploring its entire subtree. It's useful for topological ordering but not needed for AP/bridge detection.</p>
 </div>`;
 }
 
@@ -402,21 +505,52 @@ function buildCompleteExplanation(apList, bridgeList) {
   let brStr = bridgeList.length > 0
     ? bridgeList.map(e => `<span class="bridge-item">${e.u}&minus;${e.v}</span>`).join(', ')
     : '<span style="color:#888;">None</span>';
+
+  let apDetail = '';
+  if (apList.length > 0) {
+    let reasons = [];
+    if (apList.includes(1)) reasons.push('<span class="dim">1</span> connects the left cycle {0,2,3} with the rest — removing it splits the left cycle apart and disconnects it from the right side');
+    if (apList.includes(4)) reasons.push('<span class="dim">4</span> is the sole bridge node between the left and right halves — without it, the graph splits into two');
+    if (apList.includes(5)) reasons.push('<span class="dim">5</span> connects {6,7} to the graph — removing it isolates the right triangle');
+    apDetail = reasons.map(r => `<p style="margin-left:8px;">• ${r}</p>`).join('');
+  }
+
+  let bridgeDetail = '';
+  if (bridgeList.length > 0) {
+    let reasons = [];
+    for (let e of bridgeList) {
+      if (e.u === 1 && e.v === 4) reasons.push('<span class="dim">(1,4)</span> — the only edge connecting the left cycle to node 4');
+      if (e.u === 4 && e.v === 5) reasons.push('<span class="dim">(4,5)</span> — the only edge connecting node 4 to the right cycle');
+    }
+    bridgeDetail = reasons.map(r => `<p style="margin-left:8px;">• ${r}</p>`).join('');
+  }
+
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
 <h3>&#10004; Algorithm Complete!</h3>
-<p>All 8 vertices explored via DFS starting from vertex <span class="dim">0</span>.</p>
-<h3 style="margin-top:10px;">Articulation Points</h3>
-<p>${apStr}</p>
-<p>These vertices, if removed, would disconnect the graph into multiple components.</p>
-<h3 style="margin-top:10px;">Bridges</h3>
-<p>${brStr}</p>
-<p>These edges, if removed, would disconnect the graph.</p>
-<h3 style="margin-top:10px;">Low-Link Insight</h3>
-<p>A vertex <span class="dim">v</span> is an articulation point if some child <span class="dim">w</span> has <span class="dim">low[w] &ge; d[v]</span> &mdash; meaning <span class="dim">w</span>'s subtree has no back edge reaching above <span class="dim">v</span>.</p>
-<p>An edge <span class="dim">(u,v)</span> is a bridge if <span class="dim">low[v] &gt; d[u]</span> &mdash; meaning <span class="dim">v</span>'s subtree cannot reach <span class="dim">u</span> or above via any alternate path.</p>
-<h3 style="margin-top:10px;">Complexity</h3>
-<p><span class="dim">Time:</span> O(V + E) &mdash; single DFS pass</p>
-<p><span class="dim">Space:</span> O(V) for recursion stack and arrays</p>
+<p>All 8 vertices explored via a single DFS traversal starting from vertex <span class="dim">0</span>.</p>
+
+<h3 style="margin-top:12px;">Results: Articulation Points</h3>
+<p><span style="font-size:1.1em;">${apStr}</span></p>
+${apDetail || '<p style="color:#888;">None found — the graph is 2-vertex-connected.</p>'}
+<h3 style="margin-top:8px;">Results: Bridges</h3>
+<p><span style="font-size:1.1em;">${brStr}</span></p>
+${bridgeDetail || '<p style="color:#888;">None found — the graph is 2-edge-connected.</p>'}
+
+<h3 style="margin-top:14px;">Understanding Our Graph's Structure</h3>
+<p style="margin-left:8px;">• The <b>left cycle</b> {<span class="dim">0,1,2,3</span>} internally has <b>no bridges</b> — it's a 2-connected component</p>
+<p style="margin-left:8px;">• But vertex <span class="dim">1</span> is an AP because it's the only connection point to the rest of the graph AND it holds the cycle together</p>
+<p style="margin-left:8px;">• Vertices <span class="dim">1 &rarr; 4 &rarr; 5</span> form a <b>bridge chain</b> — each is a critical link</p>
+<p style="margin-left:8px;">• The <b>right cycle</b> {<span class="dim">5,6,7</span>} has no bridges internally (it's a cycle), but <span class="dim">5</span> is the sole connection point</p>
+
+<h3 style="margin-top:14px;">Intuition Recap</h3>
+<p>The <span class="dim">low[v]</span> value tells us: <b>"What's the highest (earliest) vertex in the DFS tree that v can reach via a detour?"</b></p>
+<p style="margin-left:8px;">• If <span class="dim">low[child] &ge; d[parent]</span>: child's subtree can only reach itself and the parent, nothing higher &rarr; parent is an <b>AP</b></p>
+<p style="margin-left:8px;">• If <span class="dim">low[child] &gt; d[parent]</span>: child's subtree can't even reach the parent via another path &rarr; edge is a <b>bridge</b></p>
+
+<h3 style="margin-top:14px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) — single DFS pass visits each vertex and edge once</p>
+<p><span class="dim">Space:</span> O(V) — stores d[], low[], parent[], color[] plus recursion stack depth</p>
+<p class="note">This algorithm (Tarjan's bridge-finding) is a classic example of how a single clever number — the low-link value — can reveal all critical points in a graph in linear time.</p>
 </div>`;
 }
 
@@ -866,7 +1000,7 @@ function applyStep(step) {
     }
     case 'after_child': {
       let u = step.currentEdge.u, v = step.currentEdge.v;
-      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.lowUpdateTo);
+      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.low[v], step.d[u], step.parent[u], step.children[u]);
       break;
     }
     case 'mark_ap': {
@@ -888,7 +1022,7 @@ function applyStep(step) {
       break;
     }
     case 'finish':
-      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex]);
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex], step.d[step.currentVertex]);
       break;
     case 'complete': {
       let apList = [], bridgeList = [];

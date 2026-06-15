@@ -323,62 +323,136 @@ function getEdgeBCIndex(bcList, u, v) {
 // --- Explanation builders ---
 
 function buildInitExplanation() {
-  return '<div class="explain-section active">\
-<h3>Initial State</h3>\
-<p>All 7 vertices are <span style="color:#555;">white</span> (undiscovered). DFS starts from vertex <span class="dim">0</span>.</p>\
-<h3 style="margin-top:10px;">Biconnected Component Definition</h3>\
-<p>A maximal set of edges where any two edges lie on a common simple cycle. Also called a <b>2-connected component</b>.</p>\
-<p>A single-edge <b>bridge</b> (whose removal disconnects the graph) forms its own biconnected component.</p>\
-<h3 style="margin-top:10px;">Algorithm</h3>\
-<p>1. Run DFS, maintain <span class="dim">d[v]</span> (discovery time) and <span class="dim">low[v]</span>.</p>\
-<p>2. Push each tree edge and back edge onto the <b>edge stack</b>.</p>\
-<p>3. On backtracking from child v to parent u: if <span class="result-line">low[v] &ge; d[u]</span>, pop edges from stack until (u,v). These form a biconnected component.</p>\
-<p>4. <span class="dim">Articulation points</span> separate biconnected components.</p>\
-<p class="note">Press Play or Step to begin.</p>\
-</div>';
+  return `<div class="explain-section active">
+<h3>What Are Biconnected Components?</h3>
+<p>A <b>biconnected component</b> (2-connected component) is a <b>maximal set of edges</b> where any two edges lie on a common <b>simple cycle</b>. Equivalently: if you remove any <b>single vertex</b>, the remaining edges in that component stay connected.</p>
+<p>A lone <b>bridge</b> (cut edge) — which belongs to no cycle — forms its own single-edge biconnected component.</p>
+<p class="note">Think of biconnected components as "2-edge-tied" groups — failure of any one vertex in a cycle component doesn't disconnect the edges within it.</p>
+
+<h3 style="margin-top:12px;">Our Graph</h3>
+<p>7 vertices {<span class="dim">0,1,2,3,4,5,6</span>} with 8 undirected edges.</p>
+<p style="margin-left:8px;">• <b>Left triangle</b> {<span class="dim">0,1,2</span>}: 0-1-2-0 &mdash; a 2-connected cycle (3 edges)</p>
+<p style="margin-left:8px;">• <b>Bridge 1-3</b>: connects the left triangle to the rest</p>
+<p style="margin-left:8px;">• <b>Right triangle</b> {<span class="dim">3,4,5</span>}: 3-4-5-3 &mdash; another 2-connected cycle (3 edges)</p>
+<p style="margin-left:8px;">• <b>Bridge 5-6</b>: connects vertex 6 as a leaf</p>
+<p>Expected: <span class="result-line">4 biconnected components</span> — 2 triangles, 2 bridges</p>
+<p>Articulation points separating them: <span style="color:#ff0044;font-weight:bold;">1, 3, 5</span></p>
+
+<h3 style="margin-top:12px;">How the Algorithm Works</h3>
+<p>We extend Tarjan's DFS low-link algorithm with an <b>edge stack</b>:</p>
+<p style="margin-left:8px;">1. Run DFS tracking <span class="dim">d[v]</span> (discovery time) and <span class="dim">low[v]</span> (low-link value)</p>
+<p style="margin-left:8px;">2. <b>Push every edge</b> (tree or back) onto the stack as we traverse it</p>
+<p style="margin-left:8px;">3. When backtracking from child <span class="dim">v</span> to parent <span class="dim">u</span>, check: <span class="result-line">low[v] &ge; d[u]</span></p>
+<p style="margin-left:8px;">4. If true: pop edges from stack up to (u,v) — they form one biconnected component</p>
+
+<h3 style="margin-top:12px;">Key Insight</h3>
+<p><span class="dim">low[v] &ge; d[u]</span> means child <span class="dim">v</span>'s subtree has <b>no back edge</b> reaching above <span class="dim">u</span>. The edges between <span class="dim">u</span> and <span class="dim">v</span>'s subtree are <b>all in the same 2-connected piece</b> — once separated, they form a complete biconnected component.</p>
+<p class="note">Press <b>Play</b> to watch the algorithm discover the components one by one, or <b>Step</b> to go through each event.</p>
+</div>`;
 }
 
 function buildDiscoverExplanation(v, dTime) {
-  return '<div class="explain-section active">\
-<h3>&#128269; Discover Vertex ' + v + '</h3>\
-<p>Entering vertex <span class="dim">' + v + '</span> at time <span class="result-line">d = ' + dTime + '</span>.</p>\
-<p>Initialize <span class="dim">low[' + v + '] = d[' + v + '] = ' + dTime + '</span>.</p>\
-<p>Color: <span style="color:#555;">white</span> &rarr; <span style="color:#ff6600;">gray</span> (on recursion stack).</p>\
-<p>We will explore each neighbor and later propagate low-link values upward.</p>\
-</div>';
+  return `<div class="explain-section active">
+<h3>&#128269; DFS Arrival: Enter Vertex ${v}</h3>
+<p>The DFS recursion reaches vertex <span class="dim">${v}</span>. This is the <span class="result-line">${dTime}th</span> vertex discovered overall.</p>
+<p><b>State change:</b> <span style="color:#555;">white</span> (undiscovered) &rarr; <span style="color:#ff6600;">gray</span> (on the recursion stack, "in progress").</p>
+
+<h3 style="margin-top:8px;">Initialize Low-Link</h3>
+<p>At first, we assume <span class="dim">${v}</span> can only reach itself:</p>
+<span class="formula-line">low[${v}] = d[${v}] = ${dTime}</span>
+<p>As we explore <span class="dim">${v}</span>'s neighbors, this value may <span style="color:#ff6600;">decrease</span> if we find back edges to ancestors, or propagate from children.</p>
+
+<h3 style="margin-top:8px;">What Happens Next</h3>
+<p>DFS examines <b>each neighbor</b> of <span class="dim">${v}</span>:</p>
+<p style="margin-left:8px;">• <span style="color:#555;">White</span> neighbor &rarr; follow a <span style="color:#00ff88;">tree edge</span>, push it on the stack, recurse</p>
+<p style="margin-left:8px;">• <span style="color:#ff6600;">Gray</span> neighbor (ancestor on stack) &rarr; found a <span style="color:#ff6600;">back edge</span>, push it on the stack, update low</p>
+<p style="margin-left:8px;">• <span style="color:#00ff88;">Black</span> neighbor (finished descendant) &rarr; skip (already fully processed)</p>
+<p class="note">The edge stack is crucial — it collects all edges belonging to the current biconnected component being built.</p>
+</div>`;
 }
 
 function buildTreeEdgeExplanation(u, v, v_d) {
-  return '<div class="explain-section active">\
-<h3>&#127794; Tree Edge ' + u + '&minus;' + v + '</h3>\
-<p>Edge (<span class="dim">' + u + '</span>, <span class="dim">' + v + '</span>) is a <span class="result-line">tree edge</span>.</p>\
-<p><span class="dim">' + v + '</span> is <span style="color:#555;">white</span> &rarr; becomes child of <span class="dim">' + u + '</span>.</p>\
-<p>Pushing (' + u + ',' + v + ') onto the stack. low[' + v + '] = d[' + v + '] = <span class="result-line">' + v_d + '</span>.</p>\
-<p>DFS will recursively explore <span class="dim">' + v + '</span>&#39;s entire subtree before returning.</p>\
-</div>';
+  return `<div class="explain-section active">
+<h3>&#127794; Tree Edge: Follow ${u} &rarr; ${v}</h3>
+<p>DFS examines neighbor <span class="dim">${v}</span> of current vertex <span class="dim">${u}</span>.</p>
+<p><span class="dim">${v}</span> is <span style="color:#555;font-weight:bold;">white</span> (undiscovered) &rarr; this edge becomes a <span class="result-line">TREE EDGE</span> in the DFS spanning tree.</p>
+
+<h3 style="margin-top:8px;">Parent-Child &amp; Edge Stack</h3>
+<p>Setting <span class="dim">parent[${v}] = ${u}</span>. Edge <span class="dim">(${u},${v})</span> is <span class="result-line">pushed onto the edge stack</span>.</p>
+<span class="formula-line">d[${v}] = ${v_d},  low[${v}] = ${v_d}</span>
+<p>DFS will <b>recursively descend</b> into <span class="dim">${v}</span>'s entire subtree before returning to <span class="dim">${u}</span>.</p>
+
+<h3 style="margin-top:8px;">Why Push to Stack?</h3>
+<p>Every edge we traverse is <b>tentatively part of the current biconnected component</b>. Later, when the condition <span class="dim">low[${v}] &ge; d[${u}]</span> is checked upon returning, we'll either:</p>
+<p style="margin-left:8px;">• Pop all edges up to and including (${u},${v}) if the condition holds &mdash; they form a complete BC</p>
+<p style="margin-left:8px;">• Keep them on the stack if the condition doesn't hold &mdash; they belong to a larger component above</p>
+<p class="note">The stack grows as we go deeper and shrinks as we complete components — like a "trail of edges" waiting to be assigned.</p>
+</div>`;
 }
 
 function buildBackEdgeExplanation(u, v, dV, oldLow, newLow) {
   let improved = newLow < oldLow;
-  return '<div class="explain-section active">\
-<h3>&#8635; Back Edge ' + u + '&minus;' + v + '</h3>\
-<p>Neighbor <span class="dim">' + v + '</span> is <span style="color:#ff6600;font-weight:bold;">gray</span> (ancestor on recursion stack) &rarr; <span style="color:#ff6600;font-weight:bold;">back edge</span>.</p>\
-<p>Pushing (' + u + ',' + v + ') onto the stack. Updating low[' + u + ']:</p>\
-<span class="formula-line">low[' + u + '] = min(low[' + u + '], d[' + v + ']) = min(' + oldLow + ', ' + dV + ') = ' + newLow + '</span>\
-' + (improved ? '<p><span class="result-line">low[' + u + '] improved from ' + oldLow + ' to ' + newLow + '</span> via back edge to ancestor ' + v + '.</p>' : '<p class="note">No improvement &mdash; d[' + v + '] = ' + dV + ' is not lower than current low[' + u + '] = ' + oldLow + '.</p>') + '\
-</div>';
+  return `<div class="explain-section active">
+<h3>&#8635; Back Edge Found: ${u} &minus; ${v}</h3>
+<p>While exploring <span class="dim">${u}</span>'s neighbors, we find <span class="dim">${v}</span> which is already <span style="color:#ff6600;font-weight:bold;">gray</span> (an ancestor on the recursion stack).</p>
+<p>This is a <span style="color:#ff6600;font-weight:bold;">BACK EDGE</span> (dashed orange) — it creates a <b>cycle</b> in the graph!</p>
+
+<h3 style="margin-top:8px;">Push to Stack &amp; Update Low</h3>
+<p>Pushing <span class="dim">(${u},${v})</span> onto the edge stack. This edge is part of the current biconnected component.</p>
+<span class="formula-line">low[${u}] = min(low[${u}], d[${v}]) = min(${oldLow}, ${dV}) = ${newLow}</span>
+${improved
+  ? `<p><span class="result-line">&#11088; low[${u}] IMPROVED from ${oldLow} to ${newLow}</span> — now ${u}'s subtree can reach discovery time ${newLow} via this back edge.</p>`
+  : `<p class="note">No improvement — d[${v}] = ${dV} is not lower than current low[${u}] = ${oldLow}.</p>`}
+
+<h3 style="margin-top:8px;">Why Back Edges Matter for BCs</h3>
+<p>Back edges are what make a graph <b>biconnected</b> — they create the <b>cycles</b> that bind edges together. Without back edges, the graph would be a tree with every edge as a bridge (single-edge BC).</p>
+<p style="margin-left:8px;">• Back edges cause <span class="dim">low</span> values to <b>decrease</b> (improve)</p>
+<p style="margin-left:8px;">• Lower low values mean edges are <b>more tightly connected</b> — they belong to larger BCs</p>
+<p style="margin-left:8px;">• The condition <span class="dim">low[v] &ge; d[u]</span> only becomes false when a back edge lets <span class="dim">v</span>'s subtree reach above <span class="dim">u</span></p>
+<p class="note">Each back edge adds redundancy — it's an "escape route" that binds the edges between u and v into the same 2-connected component.</p>
+</div>`;
 }
 
-function buildAfterChildExplanation(u, v, oldLow, newLow, lowV) {
+function buildAfterChildExplanation(u, v, oldLow, newLow, lowV, dU, parentU, childrenU) {
   let improved = newLow < oldLow;
-  let html = '<div class="explain-section active">\
-<h3>&#8617; Back from Child ' + v + '</h3>\
-<p>Returned from child <span class="dim">' + v + '</span> back to parent <span class="dim">' + u + '</span>.</p>\
-<p>Child low: <span class="dim">low[' + v + '] = ' + lowV + '</span>. Current parent low: <span class="dim">low[' + u + '] = ' + oldLow + '</span>.</p>\
-<span class="formula-line">low[' + u + '] = min(low[' + u + '], low[' + v + ']) = min(' + oldLow + ', ' + lowV + ') = ' + newLow + '</span>\
-' + (improved ? '<p><span class="result-line">low[' + u + '] improved from ' + oldLow + ' to ' + newLow + '</span> via child ' + v + '.</p>' : '<p class="note">No change &mdash; low[' + u + '] stays ' + oldLow + '.</p>') + '\
-</div>';
-  return html;
+  let isRoot = parentU === null || parentU === undefined;
+  let conditionMet = lowV >= dU;
+
+  let condHtml = `<h3 style="margin-top:10px;">&#128270; BC Separation Check</h3>
+<p>Testing: <span class="dim">low[${v}] = ${lowV} &ge; d[${u}] = ${dU}</span></p>`;
+  if (conditionMet) {
+    condHtml += `<p><span style="color:#ffcc00;font-weight:bold;">&#9888; CONDITION MET.</span> Edge (${u},${v}) <b>separates</b> a biconnected component.</p>
+<p>This means: <span class="dim">${v}</span>'s entire subtree can only reach up to discovery time ${lowV}, which is <b>at or below</b> <span class="dim">${u}</span>. No back edge in <span class="dim">${v}</span>'s subtree reaches above <span class="dim">${u}</span>.</p>
+${!isRoot ? `<p style="color:#ff0044;"><b>Result: ${u} is an ARTICULATION POINT</b> — removing ${u} separates ${v}'s subtree (and its component) from the rest.</p>` : ''}
+<p>All edges from the stack up to (${u},${v}) will now be <b>popped</b> to form a completed biconnected component.</p>`;
+  } else {
+    condHtml += `<p><span style="color:#00ff88;font-weight:bold;">&#10003; Condition NOT met.</span></p>
+<p>low[${v}] = ${lowV} &lt; d[${u}] = ${dU} &mdash; <span class="dim">${v}</span>'s subtree can reach <b>above</b> <span class="dim">${u}</span> (to discovery time ${lowV}) via some back edge. This means <span class="dim">${v}</span>'s edges are <b>not yet separable</b> — they belong to a larger biconnected component that extends above ${u}.</p>
+<p>Edges remain on the stack.</p>`;
+  }
+
+  if (improved) {
+    return `<div class="explain-section active">
+<h3>&#8593; Return from Child ${v} &rarr; Propagate to ${u}</h3>
+<p>DFS finished exploring <span class="dim">${v}</span>'s entire subtree and returns to parent <span class="dim">${u}</span>.</p>
+<p>Child's computed low-link: <span class="dim">low[${v}] = ${lowV}</span></p>
+<p>Propagating upward (a child's reach extends the parent's reach):</p>
+<span class="formula-line">low[${u}] = min(low[${u}], low[${v}]) = min(${oldLow}, ${lowV}) = ${newLow}</span>
+<p><span class="result-line">&#11088; low[${u}] IMPROVED from ${oldLow} to ${newLow}</span> &mdash; <span class="dim">${v}</span>'s subtree can reach discovery time ${lowV}, so <span class="dim">${u}</span> inherits that reachability.</p>
+${condHtml}
+<p class="note">The return step is where biconnected components are actually carved out — each time we check the condition and potentially pop a completed component.</p>
+</div>`;
+  }
+  return `<div class="explain-section active">
+<h3>&#8617; Return from Child ${v} &rarr; No Propagation</h3>
+<p>DFS finished exploring <span class="dim">${v}</span>'s entire subtree and returns to parent <span class="dim">${u}</span>.</p>
+<p>Child's low-link: <span class="dim">low[${v}] = ${lowV}</span></p>
+<p>Compare with current <span class="dim">low[${u}] = ${oldLow}</span>:</p>
+<span class="formula-line">low[${u}] = min(${oldLow}, ${lowV}) = ${oldLow}</span>
+<p><span class="dim">low[${v}] &ge; low[${u}]</span>, so no change. <span class="dim">${u}</span> already has a better (lower) path via other children or a back edge.</p>
+${condHtml}
+<p class="note">Even when low doesn't change, the condition check still runs every time we return from a child — this is where components are detected.</p>
+</div>`;
 }
 
 function buildPopComponentExplanation(u, v, popped, bcList, bcIdx, isBridge, lowV, dU) {
@@ -386,48 +460,73 @@ function buildPopComponentExplanation(u, v, popped, bcList, bcIdx, isBridge, low
   let color = bc.color;
   let edgeStrs = popped.map(function(e) { return formatEdge(e.u, e.v); }).join(', ');
   let conditionNote = isBridge
-    ? '<p>Condition: <span class="result-line">low[' + v + '] = ' + lowV + ' > d[' + u + '] = ' + dU + '</span> &mdash; child\'s subtree has <b>no back edge</b> reaching above ' + u + '.</p>'
-    : '<p>Condition: <span class="result-line">low[' + v + '] = ' + lowV + ' &ge; d[' + u + '] = ' + dU + '</span> &mdash; vertex <span class="dim">' + u + '</span> is an <b>articulation point</b> separating this component.</p>';
+    ? `<p>Trigger condition: <span class="formula-line">low[${v}] = ${lowV} &gt; d[${u}] = ${dU}</span></p>
+<p><span style="color:#ff0066;font-weight:bold;">Bridge condition:</span> low[${v}] &gt; d[${u}] means <span class="dim">${v}</span>'s subtree has <b>no back edge at all</b> — not even to <span class="dim">${u}</span>. The edge (${u},${v}) is the sole connection.</p>`
+    : `<p>Trigger condition: <span class="formula-line">low[${v}] = ${lowV} &ge; d[${u}] = ${dU}</span></p>
+<p>low[${v}] &ge; d[${u}] means the subtree rooted at <span class="dim">${v}</span> has <b>no back edge</b> reaching above <span class="dim">${u}</span>. All edges accumulated on the stack between <span class="dim">${u}</span> and <span class="dim">${v}</span>'s subtree form a 2-connected "chunk" separated by articulation point <span class="dim">${u}</span>.</p>`;
   let typeNote = isBridge
-    ? '<p>This is a <span style="color:#ff66ff;font-weight:bold;">bridge</span> &mdash; a single-edge biconnected component. Removing it disconnects the graph.</p>'
-    : '<p>This is a <span style="color:' + color + ';font-weight:bold;">cycle-based component</span> with ' + popped.length + ' edges &mdash; any two edges share a common simple cycle.</p>';
-  return '<div class="explain-section active" style="border-left-color:' + color + ';">\
-<h3>&#9888; Biconnected Component Found! (' + (isBridge ? 'Bridge' : 'BC' + (bcIdx + 1)) + ')</h3>\
-<p>Popped ' + popped.length + ' edge' + (popped.length > 1 ? 's' : '') + ' from the stack: <span class="result-line">{' + edgeStrs + '}</span></p>\
-' + conditionNote + '\
-' + typeNote + '\
-<p><span style="color:' + color + ';font-weight:bold;">Component ' + (bcIdx + 1) + '</span> highlighted on the graph.</p>\
-</div>';
+    ? `<p>This is a <span style="color:#ff66ff;font-weight:bold;">BRIDGE</span> — a single-edge biconnected component. Removing it disconnects the graph. Bridges are the <b>only</b> edges that form 1-edge BCs (no cycle).</p>`
+    : `<p>This is a <span style="color:${color};font-weight:bold;">CYCLE-BASED COMPONENT</span> with <b>${popped.length} edges</b> — any two of these edges lie on a common simple cycle, making them 2-vertex-connected (no single vertex removal disconnects these edges from each other).</p>`;
+  return `<div class="explain-section active" style="border-left-color:${color};">
+<h3>&#9888; Biconnected Component #${bcIdx + 1} ${isBridge ? '(Bridge)' : ''}</h3>
+<p>Popped <b>${popped.length}</b> edge${popped.length > 1 ? 's' : ''} from the stack: <span class="result-line">{${edgeStrs}}</span></p>
+${conditionNote}
+${typeNote}
+<h3 style="margin-top:8px;">Edge Stack After Pop</h3>
+<p>These edges are now <b>removed</b> from the stack. The remaining edges on the stack belong to higher (incomplete) biconnected components that will be closed when we backtrack further.</p>
+<p style="color:${color};font-weight:bold;">&#9679; Component #${bcIdx + 1} highlighted on the graph in ${color}.</p>
+</div>`;
 }
 
-function buildFinishExplanation(v, fTime, lowV) {
-  return '<div class="explain-section active">\
-<h3>&#10003; Finish Vertex ' + v + '</h3>\
-<p>Vertex <span class="dim">' + v + '</span> finished at time <span class="result-line">f = ' + fTime + '</span>.</p>\
-<p>Final <span class="dim">low[' + v + '] = ' + lowV + '</span>.</p>\
-<p>Color: <span style="color:#ff6600;">gray</span> &rarr; <span style="color:#00ff88;">black</span>.</p>\
-<p>All descendants have been explored. DFS backtracks to its parent.</p>\
-</div>';
+function buildFinishExplanation(v, fTime, lowV, dV) {
+  return `<div class="explain-section active">
+<h3>&#10003; Finish Vertex ${v} &rarr; Backtrack</h3>
+<p>All neighbors of <span class="dim">${v}</span> have been fully explored. Vertex <span class="dim">${v}</span> is now <b>complete</b>.</p>
+<p><b>State change:</b> <span style="color:#ff6600;">gray</span> (on recursion stack) &rarr; <span style="color:#00ff88;">black</span> (fully processed).</p>
+
+<h3 style="margin-top:8px;">Summary for ${v}</h3>
+<span class="formula-line">d[${v}] = ${dV}  &nbsp;&nbsp; low[${v}] = ${lowV}  &nbsp;&nbsp; f[${v}] = ${fTime}</span>
+<p>Low-link interpretation: from <span class="dim">${v}</span>'s subtree, we can reach all the way up to discovery time <span class="dim">${lowV}</span> via tree edges and at most one back edge.</p>
+
+<h3 style="margin-top:8px;">What Happens Next</h3>
+<p>DFS <b>backtracks</b> to <span class="dim">${v}</span>'s parent. The parent will then:</p>
+<p style="margin-left:8px;">1. Propagate <span class="dim">low[${v}]</span> upward into its own low value</p>
+<p style="margin-left:8px;">2. Check if <span class="dim">low[${v}] &ge; d[parent]</span> &mdash; if so, pop a new biconnected component</p>
+<p class="note">The edge stack currently contains all edges that were traversed during ${v}'s DFS subtree and haven't been popped yet.</p>
+</div>`;
 }
 
 function buildCompleteExplanation() {
-  return '<div class="explain-section active" style="border-left-color:#00ff88;">\
-<h3>&#10004; Algorithm Complete!</h3>\
-<p>All 7 vertices explored via DFS starting from vertex <span class="dim">0</span>.</p>\
-<p>Found <span class="result-line">4 biconnected components</span> from 8 undirected edges.</p>\
-<h3 style="margin-top:10px;">Biconnected Components</h3>\
-<p>&#9679; <span style="color:#00ff88;font-weight:bold;">BC1</span> — Triangle {0-1, 1-2, 2-0} (3 edges, 2-connected)</p>\
-<p>&#9679; <span style="color:#ff66ff;font-weight:bold;">BC2</span> — Bridge {1-3} (1 edge)</p>\
-<p>&#9679; <span style="color:#ff6600;font-weight:bold;">BC3</span> — Triangle {3-4, 4-5, 5-3} (3 edges, 2-connected)</p>\
-<p>&#9679; <span style="color:#ff66ff;font-weight:bold;">BC4</span> — Bridge {5-6} (1 edge)</p>\
-<h3 style="margin-top:10px;">Articulation Points (separate components)</h3>\
-<p><span style="color:#ff0044;font-weight:bold;">1, 3, 5</span> &mdash; removing any of these disconnects the graph between different biconnected components.</p>\
-<h3 style="margin-top:10px;">How the Algorithm Works</h3>\
-<p><span class="dim">low[child] &ge; d[parent]</span> means the child\'s subtree has no back edge reaching above the parent. The parent is an <b>articulation point</b> that separates the child\'s subtree (plus edges in between) as a distinct biconnected component.</p>\
-<h3 style="margin-top:10px;">Complexity</h3>\
-<p><span class="dim">Time:</span> O(V + E) &mdash; single DFS pass</p>\
-<p><span class="dim">Space:</span> O(V + E) for recursion stack and edge stack</p>\
-</div>';
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>&#10004; Algorithm Complete!</h3>
+<p>All 7 vertices explored via a single DFS traversal starting from vertex <span class="dim">0</span>.</p>
+<p>Found <span class="result-line">4 biconnected components</span> from 8 undirected edges.</p>
+
+<h3 style="margin-top:12px;">The 4 Components</h3>
+<p><span style="color:#00ff88;font-weight:bold;">&#9679; BC1 (Triangle {0-1, 1-2, 0-2})</span></p>
+<p style="margin-left:16px;">The left triangle — all 3 edges lie on a common cycle 0&rarr;1&rarr;2&rarr;0. Removing any single vertex (0, 1, or 2) leaves the other two still connected via the remaining edge.</p>
+<p><span style="color:#ff66ff;font-weight:bold;">&#9679; BC2 (Bridge {1-3})</span></p>
+<p style="margin-left:16px;">A single edge with no cycle — removing vertex 1 or edge (1,3) disconnects the left triangle from the rest. Vertex <span class="ap-item">1</span> is the articulation point separating BC1 and BC2.</p>
+<p><span style="color:#ff6600;font-weight:bold;">&#9679; BC3 (Triangle {3-4, 4-5, 3-5})</span></p>
+<p style="margin-left:16px;">The right triangle — a 2-connected cycle component. Vertex <span class="ap-item">3</span> is the articulation point separating BC2 and BC3.</p>
+<p><span style="color:#ff66ff;font-weight:bold;">&#9679; BC4 (Bridge {5-6})</span></p>
+<p style="margin-left:16px;">A leaf edge — vertex <span class="ap-item">5</span> is the articulation point separating BC3 and BC4. Removing edge (5,6) isolates vertex 6.</p>
+
+<h3 style="margin-top:12px;">Articulation Points</h3>
+<p><span class="ap-item">1</span>, <span class="ap-item">3</span>, <span class="ap-item">5</span> &mdash; each sits <b>between</b> two biconnected components. Removing any of them merges the adjacent edges into your hand but disconnects the graph.</p>
+
+<h3 style="margin-top:12px;">Intuition Recap</h3>
+<p>The condition <span class="dim">low[child] &ge; d[parent]</span> is the <b>heart</b> of this algorithm:</p>
+<p style="margin-left:8px;">• It means the child's subtree has <b>no back edge</b> reaching above the parent</p>
+<p style="margin-left:8px;">• The edges between parent and child's subtree form a <b>self-contained 2-connected piece</b></p>
+<p style="margin-left:8px;">• The parent is the <b>articulation point</b> that connects this piece to the rest of the graph</p>
+<p style="margin-left:8px;">• Popping these edges from the stack "closes" the component — they won't be part of any larger component above</p>
+
+<h3 style="margin-top:12px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) &mdash; single DFS pass with O(1) stack operations per edge</p>
+<p><span class="dim">Space:</span> O(V + E) &mdash; stores d[], low[], parent[], and the edge stack (each edge pushed/popped once)</p>
+<p class="note">This elegant algorithm by John Hopcroft and Robert Tarjan finds all biconnected components in linear time — one of the foundational results in graph theory.</p>
+</div>`;
 }
 
 // --- Canvas drawing ---
@@ -907,7 +1006,7 @@ function applyStep(step) {
     }
     case 'after_child': {
       let u = step.currentEdge.u, v = step.currentEdge.v;
-      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.lowUpdateTo, step.low[v]);
+      explanation = buildAfterChildExplanation(u, v, step.lowUpdateFrom, step.lowUpdateTo, step.low[v], step.d[u], step.parent[u], step.children[u]);
       break;
     }
     case 'pop_component': {
@@ -918,7 +1017,7 @@ function applyStep(step) {
       break;
     }
     case 'finish':
-      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex]);
+      explanation = buildFinishExplanation(step.currentVertex, step.f[step.currentVertex], step.low[step.currentVertex], step.d[step.currentVertex]);
       break;
     case 'complete':
       explanation = buildCompleteExplanation();

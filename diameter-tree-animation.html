@@ -848,63 +848,96 @@ function applyStep(step) {
 // --- Explanation builders ---
 
 function buildInitExplanation() {
-  return '<div class="explain-section active">'
-    + '<h3>Problem Setup</h3>'
-    + '<p>We have a <b>tree</b> with <span class="dim">10</span> vertices and <span class="dim">9</span> undirected edges.</p>'
-    + '<p>The <b>diameter</b> is the <span style="color:#ffcc00;">longest shortest-path distance</span> between any two vertices.</p>'
-    + '<h3 style="margin-top:10px;">Two-BFS Algorithm</h3>'
-    + '<p>1. Pick any vertex, run BFS &rarr; farthest vertex <span class="dim">a</span></p>'
-    + '<p>2. Run BFS from <span class="dim">a</span> &rarr; farthest vertex <span class="dim">b</span></p>'
-    + '<p>3. Distance <span class="dim">dist(a,b)</span> = <span class="result-line">diameter</span></p>'
-    + '<span class="formula-line">BFS #1 from 0 &rarr; find a &nbsp;|&nbsp; BFS #2 from a &rarr; find b</span>'
-    + '<p class="note">The farthest vertex from any node is always an endpoint of some diameter.</p>'
-    + '<p class="note">Press <b>&#9654; Play</b> or <b>&#9199; Step</b> to start BFS #1.</p>'
-    + '</div>';
+  return `<div class="explain-section active">
+<h3>What Is the Diameter of a Tree?</h3>
+<p>The <b>diameter</b> is the <span style="color:#ffcc00;">longest shortest-path distance</span> between any two vertices. In a tree (which has exactly one unique path between any two vertices), this is simply the longest path.</p>
+<p class="note">Think of it as the tree's "width" — the farthest you'd have to travel between any two nodes.</p>
+
+<h3 style="margin-top:12px;">Our Tree</h3>
+<p>10 vertices {<span class="dim">0..9</span>}, 9 undirected edges (a tree has V&minus;1 edges).</p>
+<p style="margin-left:8px;">• <b>Spine:</b> 0&ndash;1&ndash;2&ndash;5&ndash;6&ndash;8&ndash;9 (long chain through the middle)</p>
+<p style="margin-left:8px;">• <b>Branch 1:</b> 2&ndash;3&ndash;4 (side chain off vertex 2)</p>
+<p style="margin-left:8px;">• <b>Branch 2:</b> 6&ndash;7 (side chain off vertex 6)</p>
+<p>The diameter endpoint candidates are leaves: <span class="dim">0, 4, 7, 9</span>.</p>
+
+<h3 style="margin-top:12px;">Algorithm: Two-BFS (Double Pass)</h3>
+<p>A clever O(V+E) method that needs only <b>two</b> BFS traversals:</p>
+<p style="margin-left:8px;"><b>Step 1:</b> Pick <b>any</b> vertex (we use <span class="dim">0</span>), run BFS &rarr; find farthest vertex <span style="color:#ff66ff;font-weight:bold;">a</span></p>
+<p style="margin-left:8px;"><b>Step 2:</b> Run BFS from <span style="color:#ff66ff;font-weight:bold;">a</span> &rarr; find farthest vertex <span style="color:#ffcc00;font-weight:bold;">b</span></p>
+<p style="margin-left:8px;"><b>Step 3:</b> <span class="result-line">Diameter = distance(a, b)</span></p>
+
+<h3 style="margin-top:12px;">Why Does Two BFS Passes Work?</h3>
+<p>The farthest vertex from <b>any</b> starting point is always an <b>endpoint of some diameter</b>. So the first BFS finds one endpoint <span class="dim">a</span>, and the second BFS from <span class="dim">a</span> finds the other endpoint <span class="dim">b</span>.</p>
+<span class="formula-line">BFS #1 from 0 &rarr; find a &nbsp;|&nbsp; BFS #2 from a &rarr; find b &nbsp;|&nbsp; diameter = dist(a,b)</span>
+<p class="note">Press <b>Play</b> to watch BFS #1 find the farthest endpoint.</p>
+</div>`;
 }
 
 function buildBfsStartExplanation(step) {
   let pass = step.bfsPass;
   let src = step.current;
   let extra = pass === 1
-    ? 'The BFS wave will expand level by level. Nodes closest to the source are discovered first.'
-    : 'Starting BFS from the farthest node found in BFS #1. The node farthest from ' + src + ' will be the other endpoint of the diameter.';
-  return '<div class="explain-section active">'
-    + '<h3>&#128640; BFS #' + pass + ': Start from Vertex ' + src + '</h3>'
-    + '<p>Source vertex <span class="dim">' + src + '</span> is discovered. Color: <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span>.</p>'
-    + '<p style="margin-left:8px;">&bull; Distance: <span class="dim">d[' + src + '] = 0</span></p>'
-    + '<p style="margin-left:8px;">&bull; Parent: <span class="dim">\u03c0[' + src + '] = NIL</span> (root)</p>'
-    + '<span class="formula-line">Enqueue ' + src + ' &rarr; Queue: [' + src + ']</span>'
-    + '<p>' + extra + '</p>'
-    + '</div>';
+    ? `<p>We'll explore the tree <b>level by level</b> from <span class="dim">${src}</span>. Vertices closest to the source are discovered first. The vertex farthest from ${src} will become our first diameter endpoint candidate <span style="color:#ff66ff;">a</span>.</p>`
+    : `<p>Starting BFS from the farthest endpoint <span style="color:#ff66ff;">a = ${src}</span> found in BFS #1. The vertex farthest from <span class="dim">${src}</span> will be the <b>other endpoint</b> of the diameter.</p>`;
+  return `<div class="explain-section active">
+<h3>&#128640; BFS #${pass}: Start from Vertex ${src}</h3>
+<p>Source vertex <span class="dim">${src}</span> is discovered. Color: <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span> (in the queue, waiting to be processed).</p>
+<p style="margin-left:8px;">&bull; <span class="dim">d[${src}] = 0</span> &mdash; distance to itself is zero</p>
+<p style="margin-left:8px;">&bull; <span class="dim">&pi;[${src}] = NIL</span> &mdash; root of the BFS tree, no parent</p>
+<span class="formula-line">Enqueue ${src} &rarr; Queue: [${src}]</span>
+${extra}
+<h3 style="margin-top:8px;">How BFS Works</h3>
+<p>BFS explores vertices in order of their distance from the source:</p>
+<p style="margin-left:8px;">1. Dequeue front vertex <span class="dim">u</span></p>
+<p style="margin-left:8px;">2. For each unvisited neighbor <span class="dim">v</span>: set <span class="dim">d[v] = d[u] + 1</span>, <span class="dim">&pi;[v] = u</span>, enqueue <span class="dim">v</span></p>
+<p style="margin-left:8px;">3. Mark <span class="dim">u</span> as <span style="color:#00ff88;">BLACK</span> (finished)</p>
+<p style="margin-left:8px;">4. Repeat until queue is empty</p>
+<p class="note">When BFS finishes, every vertex will have its shortest distance from the source and a parent pointer tracing the shortest path back.</p>
+</div>`;
 }
 
 function buildDequeueExplanation(step) {
   let u = step.current;
   let neigh = getNeighbors(u);
   let neighStr = neigh.length > 0 ? neigh.join(', ') : 'none';
-  return '<div class="explain-section active">'
-    + '<h3>&#9199; Dequeue Vertex ' + u + '</h3>'
-    + '<p>Dequeue <span class="dim">' + u + '</span> from the front. Exploring its neighbors: <span class="dim">[' + neighStr + ']</span></p>'
-    + '<p style="margin-left:8px;">&bull; Current distance: <span class="dim">d[' + u + '] = ' + step.dist[u] + '</span></p>'
-    + '<span class="formula-line">For each white neighbor v: set d[v]=d[' + u + ']+1, \u03c0[v]=' + u + ', enqueue v</span>'
-    + '<p>If a neighbor is already <span style="color:#00ff88;">BLACK</span> (visited), it is skipped &mdash; BFS visits each vertex only once.</p>'
-    + '<p class="note">After processing all neighbors, ' + u + ' becomes <span style="color:#00ff88;">BLACK</span>.</p>'
-    + '</div>';
+  let queueAfter = step.queue || [];
+  let queueStr = queueAfter.length > 0 ? queueAfter.join(' &rarr; ') : '(empty)';
+  return `<div class="explain-section active">
+<h3>&#9199; Dequeue Vertex ${u} &mdash; Explore Neighbors</h3>
+<p>Remove <span class="dim">${u}</span> from the front of the queue. It's the closest unprocessed vertex to the source.</p>
+<p style="margin-left:8px;">&bull; Current distance: <span class="dim">d[${u}] = ${step.dist[u]}</span></p>
+<p>Examining <span class="dim">${u}</span>'s neighbors: <span class="dim">[${neighStr}]</span></p>
+
+<h3 style="margin-top:8px;">For Each White Neighbor v</h3>
+<span class="formula-line">d[v] = d[${u}] + 1 = ${step.dist[u] + 1} &nbsp; &pi;[v] = ${u} &nbsp; Enqueue v</span>
+<p>Any white neighbor is discovered at distance <span class="result-line">d[${u}] + 1 = ${step.dist[u] + 1}</span> from the source. This is the BFS <b>layer expansion</b> &mdash; we're moving one edge further from the source.</p>
+<p>Queue after dequeue: <span class="split-info">[ ${queueStr} ]</span></p>
+<p>Gray vertices (queue) are at the BFS frontier &mdash; discovered but not yet explored.</p>
+<p class="note">After processing all neighbors, ${u} becomes <span style="color:#00ff88;">BLACK</span> (fully processed). BFS guarantees shortest paths because we process vertices in order of increasing distance.</p>
+</div>`;
 }
 
 function buildDiscoverExplanation(step) {
   let u = step.edgeU, v = step.edgeV;
   let dv = step.dist[v];
-  return '<div class="explain-section active">'
-    + '<h3>&#9654; Discover Vertex ' + v + '</h3>'
-    + '<p>White neighbor <span class="dim">' + v + '</span> discovered from <span class="dim">' + u + '</span>.</p>'
-    + '<p style="margin-left:8px;">&bull; Color: <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span></p>'
-    + '<p style="margin-left:8px;">&bull; Distance: <span class="dim">d[' + v + '] = d[' + u + '] + 1 = ' + dv + '</span></p>'
-    + '<p style="margin-left:8px;">&bull; Parent: <span class="dim">\u03c0[' + v + '] = ' + u + '</span></p>'
-    + '<span class="formula-line">BFS tree edge: ' + u + ' &rarr; ' + v + ' &nbsp;(shortest path: source&rarr;\u22ef&rarr;' + u + '&rarr;' + v + ')</span>'
-    + '<p>Enqueue <span class="dim">' + v + '</span> for later exploration.</p>'
-    + '<p class="note">d[' + v + '] = ' + dv + ' means the shortest path from source has ' + dv + ' edge(s).</p>'
-    + '</div>';
+  let queueAfter = step.queue || [];
+  let queueStr = queueAfter.length > 0 ? queueAfter.join(' &rarr; ') : '(empty)';
+  return `<div class="explain-section active">
+<h3>&#9654; Discover Vertex ${v} at Distance ${dv}</h3>
+<p>While exploring <span class="dim">${u}</span>'s neighbors, we find white vertex <span class="dim">${v}</span>.</p>
+
+<h3 style="margin-top:8px;">New Discovery</h3>
+<p style="margin-left:8px;">&bull; <b>State:</b> <span style="color:#888;">WHITE</span> &rarr; <span style="color:#ffcc00;">GRAY</span> (added to the BFS frontier)</p>
+<p style="margin-left:8px;">&bull; <b>Distance:</b> <span class="result-line">d[${v}] = d[${u}] + 1 = ${dv}</span></p>
+<p style="margin-left:8px;">&bull; <b>Parent:</b> <span class="dim">&pi;[${v}] = ${u}</span> &mdash; shortest path from source goes through ${u}</p>
+<span class="formula-line">BFS Tree Edge: ${u} &rarr; ${v} &nbsp; (source &rarr; ... &rarr; ${u} &rarr; ${v})</span>
+<p>Edge <span class="dim">(${u},${v})</span> becomes part of the <b>BFS tree</b> &mdash; it records the shortest path from the source to <span class="dim">${v}</span>.</p>
+
+<h3 style="margin-top:8px;">Queue Update</h3>
+<p>Enqueued <span class="dim">${v}</span> for later exploration. Queue: <span class="split-info">[ ${queueStr} ]</span></p>
+<p>d[${v}] = ${dv} means the shortest path from the source has <b>${dv} edge${dv > 1 ? 's' : ''}</b>. When BFS finishes, the vertex with the largest <span class="dim">d[&middot;]</span> will be the farthest from the source.</p>
+<p class="note">In a tree, the BFS tree is the same as the actual tree &mdash; there's only one path between any two vertices.</p>
+</div>`;
 }
 
 function buildFinishExplanation(step) {
@@ -915,13 +948,23 @@ function buildFinishExplanation(step) {
     if (prevStep.type === 'discover') u = prevStep.edgeU;
     else u = prevStep.current;
   }
-  return '<div class="explain-section active">'
-    + '<h3>&#10003; Vertex ' + (u >= 0 ? u : '') + ' Finished</h3>'
-    + '<p>Vertex <span class="dim">' + (u >= 0 ? u : '') + '</span> is now <span style="color:#00ff88;">BLACK</span>.</p>'
-    + '<p style="margin-left:8px;">&bull; Color: <span style="color:#ffcc00;">GRAY</span> &rarr; <span style="color:#00ff88;">BLACK</span></p>'
-    + '<span class="formula-line">BLACK = fully processed &mdash; will not be visited again</span>'
-    + '<p>All neighbors have been examined. The BFS wave continues with the next vertex in the queue.</p>'
-    + '</div>';
+  let queueAfter = step.queue || [];
+  let queueStr = queueAfter.length > 0 ? queueAfter.join(' &rarr; ') : '(empty)';
+  let remainingMsg = queueAfter.length > 0
+    ? `<p>Queue still has <b>${queueAfter.length}</b> vertex${queueAfter.length > 1 ? 'es' : ''} waiting to be processed: <span class="split-info">[${queueStr}]</span></p>`
+    : `<p style="color:#ffcc00;">Queue is now empty &mdash; BFS #${bfsPass} is complete!</p>`;
+  return `<div class="explain-section active">
+<h3>&#10003; Vertex ${u >= 0 ? u : ''} Finished &mdash; Marked BLACK</h3>
+<p><span class="dim">${u >= 0 ? u : ''}</span> has been fully processed. All its neighbors have been examined.</p>
+<p style="margin-left:8px;">&bull; <b>State:</b> <span style="color:#ffcc00;">GRAY</span> &rarr; <span style="color:#00ff88;">BLACK</span> (removed from BFS frontier)</p>
+<span class="formula-line">BLACK = fully processed &mdash; will never be visited again</span>
+
+<h3 style="margin-top:8px;">BFS Progress</h3>
+<p>Current distance from source: <span class="dim">d[${u >= 0 ? u : ''}] = ${u >= 0 ? step.dist[u] : '&mdash;'}</span></p>
+${remainingMsg}
+<p>The BFS wave expands outward level by level. Black vertices are "behind" the wave, gray vertices are "at" the wavefront, and white vertices are "ahead" of it.</p>
+<p class="note">BFS #${bfsPass} is tracking distances from ${bfsPass === 1 ? 'source 0' : 'endpoint a'}. When all vertices are BLACK, we can identify the farthest one.</p>
+</div>`;
 }
 
 function buildBfs1DoneExplanation(step) {
@@ -931,40 +974,54 @@ function buildBfs1DoneExplanation(step) {
   for (let i = 0; i < V; i++) { if (step.dist[i] > maxD) maxD = step.dist[i]; }
   let farthestNodes = [];
   for (let i = 0; i < V; i++) { if (step.dist[i] === maxD) farthestNodes.push(i); }
-  return '<div class="explain-section active" style="border-left-color:#ff66ff;">'
-    + '<h3>&#10003; BFS #1 Complete!</h3>'
-    + '<p>All vertices reachable from source <span class="dim">0</span> have been explored.</p>'
-    + '<p style="margin-left:8px;">&bull; Farthest vertex <span class="dim">a</span> = <span class="split-info" style="color:#ff66ff;">' + a + '</span></p>'
-    + '<p style="margin-left:8px;">&bull; Distance: <span class="result-line">dist(0, ' + a + ') = ' + d + '</span></p>'
-    + '<p style="margin-left:8px;">&bull; Farthest nodes: [' + farthestNodes.join(', ') + '] at distance ' + maxD + '</p>'
-    + '<span class="formula-line">BFS #2: Starting from vertex ' + a + ' to find the other endpoint</span>'
-    + '<p class="note">Vertex ' + a + ' is guaranteed to be an endpoint of some diameter.</p>'
-    + '</div>';
+  return `<div class="explain-section active" style="border-left-color:#ff66ff;">
+<h3>&#10003; BFS #1 Complete &mdash; Farthest Vertex Found</h3>
+<p>All vertices reachable from source <span class="dim">0</span> have been explored. The BFS tree spans the entire tree.</p>
+
+<h3 style="margin-top:8px;">Results</h3>
+<p style="margin-left:8px;">&bull; Farthest vertex: <span style="color:#ff66ff;font-weight:bold;">a = ${a}</span></p>
+<p style="margin-left:8px;">&bull; Distance from source: <span class="result-line">dist(0, ${a}) = ${d}</span></p>
+<p style="margin-left:8px;">&bull; Farthest node(s) at distance ${maxD}: <span class="dim">[${farthestNodes.join(', ')}]</span></p>
+<span class="formula-line">BFS #2: Starting from vertex ${a} to find the other diameter endpoint</span>
+
+<h3 style="margin-top:8px;">Why This Works</h3>
+<p>Vertex <span style="color:#ff66ff;font-weight:bold;">${a}</span> is guaranteed to be an <b>endpoint of some diameter</b> of the tree. This is the key lemma of the Two-BFS algorithm: the farthest vertex from any starting point is always a diameter endpoint.</p>
+<p>Starting BFS #2 from <span class="dim">${a}</span> will find the <b>other</b> diameter endpoint <span class="dim">b</span>. The distance between them is the tree's diameter.</p>
+<p class="note">We used vertex 0 as the arbitrary start. The farthest from 0 happened to be ${a} at distance ${d}.</p>
+</div>`;
 }
 
 function buildBfs2DoneExplanation(step) {
   let a = step.farthest1, b = step.farthest2;
   let d = step.diameter;
-  let path = step.diameterPath.join(' \u2192 ');
-  return '<div class="explain-section active" style="border-left-color:#00ff88;">'
-    + '<h3>&#10003; Diameter Found!</h3>'
-    + '<p>Two-BFS algorithm complete.</p>'
-    + '<p style="margin-left:8px;">&bull; BFS #1 from <span class="dim">0</span> &rarr; farthest vertex <span style="color:#ff66ff;">a = ' + a + '</span></p>'
-    + '<p style="margin-left:8px;">&bull; BFS #2 from <span style="color:#ff66ff;">' + a + '</span> &rarr; farthest vertex <span style="color:#ffcc00;">b = ' + b + '</span></p>'
-    + '<p style="margin-left:8px;">&bull; <span class="result-line">Diameter = distance(' + a + ', ' + b + ') = ' + d + '</span></p>'
-    + '<span class="formula-line">Diameter path: ' + path + '</span>'
-    + '<h3 style="margin-top:10px;">Proof Sketch (Why Two BFS Works)</h3>'
-    + '<p>Let <span class="dim">s</span> be any vertex, <span class="dim">a</span> farthest from <span class="dim">s</span>, and <span class="dim">(u,v)</span> a true diameter.</p>'
-    + '<p>If the path from <span class="dim">a</span> to <span class="dim">v</span> does not intersect the path from <span class="dim">a</span> to <span class="dim">s</span>, then dist(a,v) &ge; dist(s,v) + 1 > dist(s,v), contradicting that (u,v) is the diameter.</p>'
-    + '<p>By similar reasoning, <span class="dim">a</span> is an endpoint of some diameter, and BFS from <span class="dim">a</span> finds the other endpoint.</p>'
-    + '<h3 style="margin-top:10px;">Applications</h3>'
-    + '<p>&bull; <span class="dim">Network Design:</span> Minimize maximum latency between any two nodes</p>'
-    + '<p>&bull; <span class="dim">Facility Location:</span> Place resources to minimize worst-case distance</p>'
-    + '<p>&bull; <span class="dim">Tree Structure Analysis:</span> Understand the "span" or "width" of a tree</p>'
-    + '<h3 style="margin-top:10px;">Complexity</h3>'
-    + '<p><span class="dim">Time:</span> O(V + E) &mdash; each vertex and edge processed twice</p>'
-    + '<p><span class="dim">Space:</span> O(V) &mdash; queue, color, distance, and parent arrays</p>'
-    + '</div>';
+  let path = step.diameterPath.join(' &rarr; ');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>&#10004; Diameter Found!</h3>
+<p>Two-BFS algorithm complete. The tree's diameter has been identified.</p>
+
+<h3 style="margin-top:10px;">Full Results</h3>
+<p style="margin-left:8px;">&bull; BFS #1 from <span class="dim">0</span> &rarr; farthest: <span style="color:#ff66ff;font-weight:bold;">a = ${a}</span></p>
+<p style="margin-left:8px;">&bull; BFS #2 from <span style="color:#ff66ff;font-weight:bold;">${a}</span> &rarr; farthest: <span style="color:#ffcc00;font-weight:bold;">b = ${b}</span></p>
+<p style="margin-left:8px;">&bull; <span class="result-line">Diameter = distance(${a}, ${b}) = ${d}</span></p>
+<span class="formula-line">Diameter path: ${path}</span>
+
+<h3 style="margin-top:10px;">Understanding the Diameter Path</h3>
+<p>The diameter connects vertices <span style="color:#ff66ff;">${a}</span> and <span style="color:#ffcc00;">${b}</span> with <b>${d} edges</b>. Every other vertex in the tree lies within ${d/2} edges of this path (approximately).</p>
+<p style="margin-left:8px;">• <span style="color:#ff66ff;">${a}</span> is one endpoint</p>
+<p style="margin-left:8px;">• <span style="color:#ffcc00;">${b}</span> is the other endpoint</p>
+<p style="margin-left:8px;">• Green-highlighted edges form the diameter path</p>
+
+<h3 style="margin-top:10px;">Proof Sketch: Why Two BFS Works</h3>
+<p>Let <span class="dim">s</span> be any start vertex, <span class="dim">a</span> farthest from <span class="dim">s</span>, and <span class="dim">(x,y)</span> be a true diameter.</p>
+<p><b>Claim:</b> <span class="dim">a</span> must be <span class="dim">x</span> or <span class="dim">y</span> (or some other diameter endpoint).</p>
+<p>If not, consider the distances from <span class="dim">a</span> to <span class="dim">x</span> and <span class="dim">a</span> to <span class="dim">y</span>. The unique tree path from <span class="dim">a</span> to the diameter path creates a contradiction with the maximality of <span class="dim">dist(s, a)</span>.</p>
+<p>Therefore BFS from <span class="dim">a</span> finds the other endpoint <span class="dim">b</span>, and <span class="dim">dist(a,b)</span> = diameter.</p>
+
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) &mdash; each vertex and edge visited exactly twice (once per BFS)</p>
+<p><span class="dim">Space:</span> O(V) &mdash; queue, color[], dist[], parent[] arrays</p>
+<p class="note">This is optimal &mdash; you must examine every edge at least once to determine the diameter.</p>
+</div>`;
 }
 
 function buildFinishedExplanation() {

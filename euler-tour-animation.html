@@ -586,62 +586,107 @@ function renderTourState(step) {
 
 function buildInitExplanation() {
   return `<div class="explain-section active">
-<h3>Problem Setup</h3>
-<p>A directed graph with <span class="dim">5 vertices</span> and <span class="dim">8 directed edges</span>.</p>
-<p>Every vertex has <span class="result-line">balanced</span> in-degree = out-degree, and the graph is <b>strongly connected</b>, so an Euler tour exists.</p>
-<h3 style="margin-top:10px;">Algorithm: Hierholzer's</h3>
-<p>1. Push <span class="dim">start vertex 0</span> onto an empty <span class="split-info">stack</span>.</p>
-<p>2. While the stack is not empty:</p>
-<p style="margin-left:16px;">• <span class="dim">Peek</span> at the top vertex v.</p>
-<p style="margin-left:16px;">• If v has an <span style="color:#ff6600;">unused</span> outgoing edge v→w, mark it used, push w.</p>
-<p style="margin-left:16px;">• Otherwise <span class="dim">pop</span> v from stack to the <span class="split-info">circuit</span>.</p>
-<p>3. Reverse the circuit to obtain the Euler tour.</p>
-<p class="note">Press Play or Step to begin.</p>
+<h3>What Is an Euler Tour?</h3>
+<p>An <b>Euler tour</b> (Eulerian cycle) is a cycle in a directed graph that <b>traverses every edge exactly once</b> and returns to the starting vertex. It's the directed equivalent of drawing a shape without lifting your pen.</p>
+
+<h3 style="margin-top:12px;">Existence Conditions</h3>
+<p>A directed graph has an Euler tour <b>if and only if</b>:</p>
+<p style="margin-left:8px;">1. The graph is <span class="dim">strongly connected</span> (every vertex reachable from every other)</p>
+<p style="margin-left:8px;">2. Every vertex has <span class="dim">in-degree = out-degree</span> (balanced)</p>
+
+<h3 style="margin-top:12px;">Our Graph</h3>
+<p>5 vertices {<span class="dim">0,1,2,3,4</span>}, 8 directed edges.</p>
+<p style="margin-left:8px;">• <b>Left cycle:</b> 0 → 1 → 2 → 0 (triangle)</p>
+<p style="margin-left:8px;">• <b>Right cycle:</b> 2 → 3 → 4 → 2 (another triangle, shares vertex 2)</p>
+<p style="margin-left:8px;">• <b>Bidirectional edge:</b> 1 ↔ 4 (two directed edges in opposite directions)</p>
+<p>All vertices balanced: <span class="result-line">✓</span> in = out for each. Strongly connected: <span class="result-line">✓</span>. An Euler tour exists!</p>
+
+<h3 style="margin-top:12px;">Algorithm: Hierholzer's Method</h3>
+<p>Hierholzer's algorithm works by <b>greedy DFS</b> with a <span class="split-info">stack</span> and <span class="split-info">circuit</span>:</p>
+<p style="margin-left:8px;">1. Push <span class="dim">start vertex 0</span> onto the stack</p>
+<p style="margin-left:8px;">2. While stack not empty:</p>
+<p style="margin-left:16px;">— Peek at top vertex <span class="dim">v</span></p>
+<p style="margin-left:16px;">— If <span class="dim">v</span> has any <span style="color:#ffcc00;">unused</span> outgoing edge v→w: mark edge used, <span class="result-line">push w</span> onto stack (extend path)</p>
+<p style="margin-left:16px;">— Else: <span class="split-info">pop v</span> from stack to the circuit (v is a dead-end — finalized)</p>
+<p style="margin-left:8px;">3. <b>Reverse</b> the circuit to obtain the Euler tour</p>
+<p>The circuit is built in <b>reverse</b> order — the first vertex popped is the last edge of the tour. Reversing gives the correct traversal order.</p>
+<p class="note">A vertex marked with <span style="color:#ffcc00;">✦</span> still has unused outgoing edges to explore. Press <b>Play</b> to follow the tour!</p>
 </div>`;
 }
 
-function buildTraverseExplanation(u, v, eid, usedCount) {
+function buildTraverseExplanation(u, v, eid, usedCount, stack, circuit) {
+  let stackStr = stack.join(' → ');
   return `<div class="explain-section active">
-<h3>🔍 Traverse ${u}→${v} (e${eid})</h3>
-<p>Following unused edge <span class="dim">e${eid}: ${u}→${v}</span>.</p>
-<p><span class="dim">${u}</span> is the current top of stack. We take edge <span class="split-info">e${eid}</span> to <span class="dim">${v}</span>.</p>
-<p>Edge <span class="result-line">e${eid}</span> is now <span style="color:#00ff88;">used</span> (green).</p>
-<p>Push <span class="dim">${v}</span> onto the stack: <span class="result-line">used ${usedCount}/8 edges</span>.</p>
-<p class="note">If a vertex has unused outgoing edges (marked with ✦), we'll explore them later.</p>
+<h3>🚶 Traverse Edge e${eid}: ${u} → ${v}</h3>
+<p>We are at vertex <span class="dim">${u}</span> (top of stack). It still has unused outgoing edges.</p>
+<p>We take the first unused edge: <span class="dim">e${eid}</span> (<span class="result-line">${u} → ${v}</span>).</p>
+
+<h3 style="margin-top:8px;">Mark Edge Used &amp; Extend Path</h3>
+<p>Edge <span class="dim">e${eid}</span> is now <span style="color:#00ff88;font-weight:bold;">used</span> (turns green on the graph). We'll never traverse it again.</p>
+<p>Push destination <span class="dim">${v}</span> onto the stack. The current exploration path becomes:</p>
+<span class="formula-line">Stack (top → bottom): [ ${stackStr} ]</span>
+
+<h3 style="margin-top:8px;">Why Take This Edge?</h3>
+<p>Hierholzer's algorithm is <b>greedy</b> — it always takes the first available unused edge. This works because the balanced degree condition guarantees that whenever we enter a vertex, there will be an unused edge to leave it (until we return to the start).</p>
+<p style="margin-left:8px;">• Used <span class="result-line">${usedCount}/8</span> edges so far</p>
+<p style="margin-left:8px;">• <span style="color:#888;">Vertices with ✦</span> still have unused outgoing edges</p>
+${usedCount < 8 ? '<p class="note">When we eventually reach a dead-end (no unused outgoing edges), we\'ll backtrack by popping to the circuit.</p>' : ''}
 </div>`;
 }
 
-function buildBacktrackExplanation(poppedV, backtrackTo, usedCount, circuitArr) {
-  let circuitStr = circuitArr && circuitArr.length > 0 ? circuitArr.join(', ') : '';
+function buildBacktrackExplanation(poppedV, backtrackTo, usedCount, circuitArr, stackAfter) {
+  let circuitStr = circuitArr && circuitArr.length > 0 ? circuitArr.join(' → ') : '(empty)';
+  let stackAfterStr = stackAfter && stackAfter.length > 0 ? stackAfter.join(' → ') : '(empty)';
+  let nextAction = backtrackTo !== null
+    ? `<p>We'll now peek at the new top of stack: vertex <span class="dim">${backtrackTo}</span>. If it has unused outgoing edges, we'll continue the tour from there. Otherwise, we'll pop it too.</p>`
+    : `<p style="color:#ffcc00;">The stack is now empty — all vertices have been processed! The circuit is complete.</p>`;
+
   return `<div class="explain-section active">
-<h3>⏎ Backtrack from ${poppedV}</h3>
-<p>Vertex <span class="dim">${poppedV}</span> has <b>no remaining unused outgoing edges</b>.</p>
-<p>We <span class="split-info">pop</span> it from the stack and append it to the circuit.</p>
-<p>Circuit: <span class="result-line">[${circuitStr}]</span></p>
-<p>We backtrack to <span class="dim">${backtrackTo !== null ? backtrackTo : '(empty)'}</span> on the stack.</p>
-<p>The circuit is being built in <b>reverse order</b> of traversal — at the end we reverse it to get the Euler tour.</p>
-<p class="note">Used ${usedCount}/8 edges so far.</p>
+<h3>⏎ Dead-End: Pop Vertex ${poppedV} to Circuit</h3>
+<p>Vertex <span class="dim">${poppedV}</span> has <b>no remaining unused outgoing edges</b> — we've explored everything reachable from it.</p>
+
+<h3 style="margin-top:8px;">Pop &amp; Finalize</h3>
+<p>We <span class="result-line">pop ${poppedV}</span> from the stack and <b>append</b> it to the circuit. This vertex is now <span style="color:#00ff88;">finalized</span> in the Euler tour.</p>
+<p>Current circuit (built in reverse order):</p>
+<span class="formula-line">Circuit: [ ${circuitStr} ]</span>
+<p>Stack after pop: [ ${stackAfterStr} ]</p>
+
+<h3 style="margin-top:8px;">Why This Works</h3>
+<p>The circuit is built in <b>reverse</b> traversal order. The first vertex popped is the <b>last</b> vertex visited in the final tour (before returning to start). Each subsequent pop represents an earlier point in the tour.</p>
+<p>At the end, we <b>reverse</b> the circuit to get the correct Euler tour order.</p>
+${nextAction}
+<p class="note">Used <span class="result-line">${usedCount}/8</span> edges. The algorithm alternates between extending the path (traverse) and finalizing vertices (backtrack) until all edges are used.</p>
 </div>`;
 }
 
-function buildCompleteExplanation(eulerTour) {
+function buildCompleteExplanation(eulerTour, circuit) {
   let tourStr = eulerTour.join(' → ');
+  let circuitStr = circuit.join(', ');
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
-<h3>✅ Algorithm Complete!</h3>
-<p>All <span class="dim">8 edges</span> traversed exactly once. The circuit (built in reverse) has been reversed to produce the Euler tour.</p>
-<h3 style="margin-top:10px;">Euler Tour</h3>
+<h3>&#10004; Algorithm Complete!</h3>
+<p>All <span class="result-line">8 edges</span> traversed exactly once. The circuit has been reversed to produce the correct Euler tour.</p>
+
+<h3 style="margin-top:12px;">The Euler Tour</h3>
 <span class="formula-line">${tourStr}</span>
-<p>This cycle visits every edge exactly once and returns to the start.</p>
-<h3 style="margin-top:10px;">Verification</h3>
-<p>• 0→1 ✓, 1→2 ✓, 2→3 ✓, 3→4 ✓, 4→1 ✓, 1→4 ✓, 4→2 ✓, 2→0 ✓</p>
-<p>• All <span class="result-line">8 edges</span> used, back at vertex <span class="dim">0</span>.</p>
-<h3 style="margin-top:10px;">Applications</h3>
-<p>• <span class="dim">Chinese Postman Problem</span> (route optimization)</p>
-<p>• <span class="dim">DNA fragment assembly</span> (de Bruijn graphs)</p>
-<p>• <span class="dim">Network analysis</span> (tracing circuits)</p>
-<h3 style="margin-top:10px;">Complexity</h3>
-<p><span class="dim">Time:</span> O(V + E) — each edge traversed once</p>
-<p><span class="dim">Space:</span> O(V + E) for stack and adjacency lists</p>
+<p>This cycle visits <b>every directed edge exactly once</b> and returns to the starting vertex <span class="dim">0</span>.</p>
+
+<h3 style="margin-top:12px;">Step-by-Step Verification</h3>
+<p style="margin-left:8px;">0 → 1 (e0) &nbsp; 1 → 2 (e1) &nbsp; 2 → 3 (e3) &nbsp; 3 → 4 (e4) &nbsp; 4 → 1 (e7)</p>
+<p style="margin-left:8px;">1 → 4 (e6) &nbsp; 4 → 2 (e5) &nbsp; 2 → 0 (e2)</p>
+<p>Every edge used. Final vertex <span class="dim">0</span> matches the start — it's a <span class="result-line">closed tour</span>.</p>
+
+<h3 style="margin-top:12px;">How the Circuit Becomes the Tour</h3>
+<p>The raw circuit (built in reverse during backtracking):</p>
+<p style="margin-left:8px;color:#888;">[ ${circuitStr} ]</p>
+<p>Reversed to produce the actual Euler tour order. This reversal is correct because the first vertex popped from the stack corresponds to the <b>last</b> edge traversed, and the last popped is the <b>first</b> edge.</p>
+
+<h3 style="margin-top:12px;">Why Hierholzer's Works</h3>
+<p>The key insight: in a graph where every vertex has balanced in/out degree, whenever we enter a vertex via an edge, there's <b>always</b> an unused outgoing edge to leave — except when we return to the very start vertex <span class="dim">0</span>. The algorithm exploits this to greedily follow edges, only backtracking when forced, and the stack/circuit mechanism naturally stitches sub-tours together.</p>
+
+<h3 style="margin-top:12px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V + E) — each edge traversed exactly once, O(1) per operation</p>
+<p><span class="dim">Space:</span> O(V + E) for the stack, circuit, and adjacency list</p>
+<p class="note">This is optimal — you cannot find an Euler tour faster than reading the graph.</p>
 </div>`;
 }
 
@@ -659,18 +704,19 @@ function applyStep(step) {
   switch (step.type) {
     case 'init': explanation = buildInitExplanation(); break;
     case 'traverse':
-      explanation = buildTraverseExplanation(step.currentEdge.u, step.currentEdge.v, step.currentEdge.id, step.usedEdges.size);
+      explanation = buildTraverseExplanation(step.currentEdge.u, step.currentEdge.v, step.currentEdge.id, step.usedEdges.size, step.stack, step.circuit);
       break;
     case 'backtrack':
       explanation = buildBacktrackExplanation(
         step.poppedVertex,
         step.currentVertex,
         step.usedEdges.size,
-        step.circuit
+        step.circuit,
+        step.stack
       );
       break;
     case 'complete':
-      explanation = buildCompleteExplanation(step.eulerTour);
+      explanation = buildCompleteExplanation(step.eulerTour, step.circuit);
       break;
     default:
       explanation = '<div class="explain-section active"><p>Processing...</p></div>';
@@ -735,7 +781,7 @@ function finishAnimation() {
 
   document.getElementById('sidebarPhase').textContent =
     `Step ${steps.length} / ${steps.length} — ✅ Complete`;
-  document.getElementById('explainArea').innerHTML = buildCompleteExplanation(lastStep.eulerTour);
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation(lastStep.eulerTour, lastStep.circuit);
   document.getElementById('sidebar').scrollTop = 0;
 }
 
