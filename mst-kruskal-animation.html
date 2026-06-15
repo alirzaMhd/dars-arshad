@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MST (Kruskal) Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 440px;
+  min-width: 440px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.84em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 8px 0 4px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 5px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 0.94em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .analogy {
+  color: #bb99ff;
+  font-style: italic;
+  background: #0d0a1a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #9966ff;
+  margin: 8px 0;
+  font-size: 0.93em;
+}
+.explain-section .concept-box {
+  background: #0a0a1a;
+  border: 1px solid #334;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.explain-section .concept-box .term {
+  color: #00ccff;
+  font-weight: bold;
+}
+.explain-section .concept-box .defn {
+  color: #ddd;
+}
+.explain-section .comp-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.explain-section .comp-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: #0a1a12;
+  border: 1px solid #00ff8855;
+  border-radius: 5px;
+  font-size: 0.9em;
+  color: #00ff88;
+}
+.explain-section .comp-group.skip-group {
+  background: #1a0a0a;
+  border-color: #ff333355;
+  color: #ff6666;
+}
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2.5;
+  transition: all 0.4s;
+}
+.node-circle.mst-included { stroke: #00ff88; stroke-width: 3.5; fill: #0a1a12; }
+.node-circle.current { stroke: #ff6600; stroke-width: 4; fill: #1a0a00; }
+.node-circle.considered { stroke: #ffff00; stroke-width: 3.5; fill: #1a1a00; }
+.node-text {
+  fill: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  dominant-baseline: central;
+  text-anchor: middle;
+  transition: all 0.4s;
+}
+.node-text.mst-included { fill: #00ff88; }
+.node-text.current { fill: #ff6600; }
+.node-text.considered { fill: #ffff00; }
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.considered { stroke: #ffff00; stroke-width: 3; }
+.edge-line.added { stroke: #00ff88; stroke-width: 3.5; }
+.edge-line.skipped { stroke: #ff3333; stroke-width: 2; stroke-dasharray: 6,4; }
+.edge-line.current { stroke: #ff6600; stroke-width: 4; }
+.edge-label {
+  fill: #888;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.edge-label.considered { fill: #ffff00; }
+.edge-label.added { fill: #00ff88; }
+.edge-label.current { fill: #ff6600; }
+.edge-label.skipped { fill: #ff3333; }
+.table-section { margin: 18px 0; }
+.table-title {
+  font-size: 0.9em;
+  color: #00ccff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; }
+.mst-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 700px;
+}
+.mst-table th, .mst-table td {
+  padding: 7px 10px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.8em;
+  transition: all 0.3s;
+}
+.mst-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.mst-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.mst-table td.pending { color: #888; }
+.mst-table td.added { color: #00ff88; background: #0a1a12; font-weight: bold; }
+.mst-table td.skipped { color: #ff3333; background: #1a0a0a; }
+.mst-table td.current-edge {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  font-weight: bold;
+}
+.mst-table td.uf-same { color: #ffcc00; font-weight: bold; }
+.uf-table { max-width: 500px; }
+.uf-table td { font-family: 'Courier New', monospace; }
+.mst-edge-list {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 42px;
+}
+.mst-edge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #00ff88;
+  font-weight: bold;
+  animation: mstPop 0.3s ease;
+}
+@keyframes mstPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.mst-weight-display {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.mst-weight-display .weight-value { color: #00ff88; font-weight: bold; font-size: 1.1em; }
+.step-graphic {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.step-graphic .sg-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  font-size: 0.8em;
+  font-weight: bold;
+  border: 2px solid #555;
+  background: #0d0d1a;
+  color: #888;
+}
+.step-graphic .sg-box.highlight { border-color: #ff6600; color: #ff6600; background: #1a0a00; }
+.step-graphic .sg-box.ingroup { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+.step-graphic .sg-label {
+  color: #888;
+  font-size: 0.75em;
+  margin: 0 2px;
+}
+</style>
+</head>
+<body>
+
+<h1>MINIMUM SPANNING TREE</h1>
+<p class="subtitle">Graph Algorithms — Kruskal's Algorithm</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="600" height="300" viewBox="0 0 600 300"></svg>
+    </div>
+
+    <div class="mst-edge-list" id="mstEdgeList">
+      <span style="color:#555;font-size:0.85em;">MST edges added so far: none</span>
+    </div>
+
+    <div class="mst-weight-display">
+      MST Total Weight: <span class="weight-value" id="mstTotalWeight">0</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      Edges in MST: <span class="weight-value" id="mstEdgeCount">0</span> / <span class="weight-value" id="mstRequiredCount">7</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current Edge:</span> <span class="value" id="currentEdgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Action:</span> <span class="value" id="actionDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Sorted Edge List (by weight)</div>
+      <div class="table-wrapper">
+        <table class="mst-table" id="edgeTable">
+          <thead><tr><th>#</th><th>Edge</th><th>Weight</th><th>Status</th></tr></thead>
+          <tbody id="edgeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Union-Find Parent Array</div>
+      <div class="table-wrapper">
+        <table class="mst-table uf-table" id="ufTable">
+          <thead><tr><th>Vertex</th><th id="ufHeader0">0</th><th id="ufHeader1">1</th><th id="ufHeader2">2</th><th id="ufHeader3">3</th><th id="ufHeader4">4</th><th id="ufHeader5">5</th><th id="ufHeader6">6</th><th id="ufHeader7">7</th></tr></thead>
+          <tbody><tr><th>Parent</th><td id="uf0">0</td><td id="uf1">1</td><td id="uf2">2</td><td id="uf3">3</td><td id="uf4">4</td><td id="uf5">5</td><td id="uf6">6</td><td id="uf7">7</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ MST Complete!</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>🌳 Welcome! Let's learn about Minimum Spanning Trees</h3>
+        <p>This page will teach you <b>Kruskal's algorithm</b> — a famous method for finding a <b>Minimum Spanning Tree (MST)</b> in a graph. Don't worry if those words sound scary — we'll explain everything step by step!</p>
+
+        <h4>🔤 Key Concepts — What Is a Graph?</h4>
+        <div class="concept-box">
+          <p><span class="term">Vertex</span> <span class="defn">(plural: vertices)</span> — a point or a node. In our example: <b>0, 1, 2, 3, 4, 5, 6, 7</b>. Think of them as <b>cities</b> on a map.</p>
+          <p><span class="term">Edge</span> — a connection between two vertices. Think of it as a <b>road</b> between two cities.</p>
+          <p><span class="term">Weight</span> — a number on each edge representing <b>cost</b>. Higher weight = more expensive road (longer distance, more materials, etc.)</p>
+          <p><span class="term">Graph</span> — a collection of vertices connected by edges. Like a <b>road map</b> of cities.</p>
+        </div>
+
+        <h4>🔤 What is a "Spanning Tree"?</h4>
+        <div class="concept-box">
+          <p><span class="term">Tree</span> — a set of edges that connects all vertices <b>without any loops</b> (no cycles). Like a family tree — no one is their own grandparent!</p>
+          <p><span class="term">Spanning</span> — means it "spans" (reaches) <b>every vertex</b> in the graph.</p>
+          <p><span class="term">Spanning Tree</span> — a selection of edges that connects <b>all</b> cities using the <b>fewest possible roads</b> (|V|−1 edges for |V| vertices), with <b>no loops</b>.</p>
+          <p><span class="term">Minimum Spanning Tree (MST)</span> — the spanning tree with the <b>smallest total weight</b>. The cheapest way to connect all cities!</p>
+        </div>
+
+        <div class="analogy">🏙️ <b>Real-world analogy:</b> Imagine you're building a fiber-optic network to connect 8 cities. Laying cable between two cities costs money (the weight). You want to connect <b>all</b> cities for the <b>lowest total cost</b>. You'd build exactly enough cables so every city is connected, with no wasteful loops. That's the MST!</div>
+
+        <h4>🔤 How Kruskal's Algorithm Works</h4>
+        <p>Kruskal's algorithm uses a <b>greedy</b> strategy (take the best option right now, without worrying about the future):</p>
+        <p style="margin-left:8px;"><b>1.</b> List all roads from cheapest to most expensive.</p>
+        <p style="margin-left:8px;"><b>2.</b> Start with each city in its own group.</p>
+        <p style="margin-left:8px;"><b>3.</b> Go through the list from cheapest to most expensive:</p>
+        <p style="margin-left:16px;">• If the two cities are in <b>different groups</b> → build this road (merge the groups)</p>
+        <p style="margin-left:16px;">• If they're already in the <b>same group</b> → skip it (would create a wasteful loop)</p>
+        <p style="margin-left:8px;"><b>4.</b> Stop when all cities are in one group.</p>
+        <span class="formula-line">Greedy rule: pick the cheapest road that connects two separated groups</span>
+        <p class="note">The Union-Find table below shows which group each vertex belongs to. When two vertices have the same <b>root</b> (by following parent pointers), they're in the same group. Press ▶ Play to start!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 8;
+const VLABELS = ['0', '1', '2', '3', '4', '5', '6', '7'];
+const rawEdges = [
+  [0,1,4], [0,2,8], [1,2,11], [1,3,8],
+  [2,4,7], [2,5,1], [3,4,2], [3,6,6],
+  [3,7,4], [4,5,9], [4,6,10], [5,7,2], [6,7,14]
+];
+const nodePos = [
+  {x: 70,  y: 140},  // 0
+  {x: 170, y: 60 },  // 1
+  {x: 170, y: 240},  // 2
+  {x: 290, y: 140},  // 3
+  {x: 390, y: 50 },  // 4
+  {x: 390, y: 230},  // 5
+  {x: 500, y: 70 },  // 6
+  {x: 500, y: 210},  // 7
+];
+
+let sortedEdges = [];
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgCreated = false;
+let parent = [];
+let mstEdges = [];
+let mstTotalWeight = 0;
+let edgeStatus = [];
+
+function precomputeAll() {
+  parent = Array(V).fill(null).map((_, i) => i);
+  mstEdges = [];
+  mstTotalWeight = 0;
+  edgeStatus = Array(rawEdges.length).fill('pending');
+}
+
+function find(x) {
+  while (parent[x] !== x) x = parent[x];
+  return x;
+}
+
+function union(x, y) {
+  let rx = find(x), ry = find(y);
+  if (rx !== ry) parent[ry] = rx;
+}
+
+function getComponents(p) {
+  let groups = {};
+  for (let v = 0; v < V; v++) {
+    let r = p[v];
+    while (r !== p[r]) r = p[r];
+    if (!groups[r]) groups[r] = [];
+    groups[r].push(v);
+  }
+  return Object.values(groups).map(g => g.sort((a,b)=>a-b));
+}
+
+function buildSteps() {
+  steps = [];
+  precomputeAll();
+  sortedEdges = rawEdges.map((e, i) => ({u: e[0], v: e[1], w: e[2], idx: i}))
+    .sort((a, b) => a.w - b.w);
+
+  steps.push({
+    type: 'init',
+    explanation: buildInitExplanation(),
+    parent: [...parent],
+    mstEdges: [],
+    mstWeight: 0,
+    edgeStatus: Array(rawEdges.length).fill('pending'),
+    currentEdgeIdx: -1,
+    components: getComponents(parent),
+    action: 'Edges sorted by weight'
+  });
+
+  for (let si = 0; si < sortedEdges.length; si++) {
+    const e = sortedEdges[si];
+    const ru = find(e.u), rv = find(e.v);
+
+    if (ru !== rv) {
+      edgeStatus[e.idx] = 'added';
+      union(e.u, e.v);
+      mstEdges.push(e);
+      mstTotalWeight += e.w;
+      steps.push({
+        type: 'add',
+        idx: e.idx,
+        u: e.u, v: e.v, w: e.w,
+        ru: ru, rv: rv,
+        explanation: buildAddExplanation(e.u, e.v, e.w, ru, rv, si + 1),
+        parent: [...parent],
+        mstEdges: [...mstEdges],
+        mstWeight: mstTotalWeight,
+        edgeStatus: [...edgeStatus],
+        currentEdgeIdx: e.idx,
+        components: getComponents(parent),
+        action: `ADD edge (${e.u},${e.v}) weight ${e.w}`
+      });
+    } else {
+      edgeStatus[e.idx] = 'skipped';
+      steps.push({
+        type: 'skip',
+        idx: e.idx,
+        u: e.u, v: e.v, w: e.w,
+        ru: ru, rv: rv,
+        explanation: buildSkipExplanation(e.u, e.v, e.w, ru, si + 1),
+        parent: [...parent],
+        mstEdges: [...mstEdges],
+        mstWeight: mstTotalWeight,
+        edgeStatus: [...edgeStatus],
+        currentEdgeIdx: e.idx,
+        components: getComponents(parent),
+        action: `SKIP edge (${e.u},${e.v}) (would create cycle)`
+      });
+    }
+
+    if (mstEdges.length === V - 1) {
+      for (let ri = si + 1; ri < sortedEdges.length; ri++) {
+        const remaining = sortedEdges[ri];
+        edgeStatus[remaining.idx] = 'skipped';
+      }
+      steps.push({
+        type: 'done',
+        explanation: buildDoneExplanation(),
+        parent: [...parent],
+        mstEdges: [...mstEdges],
+        mstWeight: mstTotalWeight,
+        edgeStatus: [...edgeStatus],
+        currentEdgeIdx: -1,
+        components: getComponents(parent),
+        action: 'MST complete'
+      });
+      break;
+    }
+  }
+
+  if (mstEdges.length < V - 1) {
+    steps.push({
+      type: 'done',
+      explanation: buildDoneExplanation(),
+      parent: [...parent],
+      mstEdges: [...mstEdges],
+      mstWeight: mstTotalWeight,
+      edgeStatus: [...edgeStatus],
+      currentEdgeIdx: -1,
+      components: getComponents(parent),
+      action: 'Graph disconnected — no MST exists'
+    });
+  }
+}
+
+function makeCompHtml(comps, highlightVerts) {
+  if (!comps) return '';
+  let html = '<div class="comp-list">';
+  for (let g of comps) {
+    let isHighlighted = highlightVerts && g.some(v => highlightVerts.includes(v));
+    html += '<span class="comp-group' + (isHighlighted ? '' : '') + '">{' + g.join(', ') + '}</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildInitExplanation() {
+  let edgeList = sortedEdges.map(e => `(${e.u},${e.v},w=${e.w})`).join(', ');
+  return `<div class="explain-section active">
+    <h3>📋 Step 1: Getting Ready</h3>
+    <p>Before we start building our MST, we need to prepare two things:</p>
+
+    <h4>📌 Step A: Sort all edges by weight</h4>
+    <p>Kruskal's algorithm is <b>greedy</b> — it always tries the <b>cheapest</b> road first. So we list all roads from <b>lowest cost</b> to <b>highest cost</b>:</p>
+    <span class="formula-line">Sorted edges: ${edgeList}</span>
+    <p>The lightest edge is <span class="dim">(2,5) with weight 1</span> — that'll be the first one we check!</p>
+
+    <h4>📌 Step B: Initialize Union-Find</h4>
+    <p>We need a way to track <b>"which group is each vertex in?"</b> Initially, every vertex is alone in its own group (like 8 separate islands):</p>
+    <span class="formula-line">Parent[0]=0, Parent[1]=1, Parent[2]=2, ..., Parent[7]=7</span>
+    <p><b>What does Parent[i] mean?</b> It's like a "pointer" — to find which group vertex i belongs to, we follow these pointers until we reach a vertex that points to <b>itself</b>. That vertex is the <b>root</b> (the group leader).</p>
+
+    <div class="analogy">🌴 <b>Analogy:</b> Think of each vertex as a person. Initially, everyone is their own "team leader." When two teams merge (via Union), one leader reports to the other. To check if two people are on the same team, we follow the chain of command up to the top leader — if they have the same top leader, they're on the same team!</div>
+
+    <p class="note">Now look at the graph. Each dark-gray <b>circle</b> is a vertex, each gray <b>line</b> is a road, and the <b>number</b> on each line is the cost to build that road. Press ▶ Play to start building!</p>
+  </div>`;
+}
+
+function buildAddExplanation(u, v, w, ru, rv, stepNum) {
+  let comps = getComponents(parent);
+  let foundU = -1, foundV = -1;
+  for (let ci = 0; ci < comps.length; ci++) {
+    if (comps[ci].includes(u)) foundU = ci;
+    if (comps[ci].includes(v)) foundV = ci;
+  }
+  let mergedComp = [...comps[foundU], ...comps[foundV]].sort((a,b)=>a-b);
+  let compsNoMerge = comps.filter((_, i) => i !== foundU && i !== foundV);
+  let allCompsAfter = [...compsNoMerge, mergedComp].sort((a,b)=>a[0]-b[0]);
+
+  let beforeHtml = makeCompHtml(comps, [u, v]);
+  let afterHtml = '<div class="comp-list">';
+  for (let g of allCompsAfter) {
+    let isMerged = g.length === mergedComp.length && g.every((x,i) => x === mergedComp[i]);
+    afterHtml += '<span class="comp-group"' + (isMerged ? ' style="border-color:#ffcc00;color:#ffcc00;"' : '') + '">{' + g.join(', ') + '}</span>';
+  }
+  afterHtml += '</div>';
+
+  let edgeCount = mstEdges.length;
+
+  return `<div class="explain-section active">
+    <h3>✅ Adding Edge (${u},${v}) — Weight ${w} (item #${stepNum})</h3>
+    <p>We're checking the next cheapest road: connecting vertex <span class="dim">${u}</span> and vertex <span class="dim">${v}</span>, costing <span class="dim">${w}</span>.</p>
+
+    <h4>🔍 Step 1: Find their group leaders</h4>
+    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent chain: ${u} → … → root = <span class="split-info">${ru}</span></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent chain: ${v} → … → root = <span class="split-info">${rv}</span></p>
+    <p>The roots are <b>different</b> (${ru} ≠ ${rv})! This means ${u} and ${v} are in <b>different groups</b> right now.</p>
+
+    <h4>📊 Before merging — current groups:</h4>
+    ${beforeHtml}
+    <p>Vertex <span class="dim">${u}</span> is in the <span style="color:#00ff88;">green-highlighted</span> group and vertex <span class="dim">${v}</span> is in a <b>different</b> highlighted group.</p>
+
+    <h4>✅ Step 2: Build the road! (Union operation)</h4>
+    <p>Since ${u} and ${v} are in <b>different groups</b>, adding this road <b>will not create a loop</b> (no cycle). We can safely build it! We merge the two groups by making root ${rv} point to root ${ru}:</p>
+    <span class="formula-line">Union(${ru}, ${rv})  →  Parent[${rv}] = ${ru}</span>
+    <p>Now <b>all</b> vertices in those two groups are connected through this new road.</p>
+
+    <h4>📊 After merging — updated groups:</h4>
+    ${afterHtml}
+    <p>The merged group <span style="color:#ffcc00;">{${mergedComp.join(', ')}}</span> is now one big connected component!</p>
+
+    <div class="analogy">🏙️ <b>Analogy:</b> Two islands are separate. We build a bridge (cost ${w}) connecting them. Now both islands form one bigger island. Future bridges will only be built if they connect <b>different</b> islands (avoiding wasteful bridges within the same island).</div>
+
+    <p><b>MST so far:</b> ${edgeCount} edge${edgeCount > 1 ? 's' : ''}, total weight = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
+    <p class="note">💡 <b>Why is this safe?</b> Since ${u} and ${v} were in different groups, there was <b>no path</b> connecting them yet. Adding this edge CANNOT create a cycle — it's the first connection between these two groups!</p>
+  </div>`;
+}
+
+function buildSkipExplanation(u, v, w, r, stepNum) {
+  let comps = getComponents(parent);
+  let foundComp = comps.find(g => g.includes(u));
+  let pathStr = '';
+  if (foundComp) {
+    let idx = foundComp.indexOf(u);
+    let idx2 = foundComp.indexOf(v);
+    if (idx >= 0 && idx2 >= 0 && foundComp.length > 2) {
+      let sorted = [...foundComp].sort((a,b)=>a-b);
+      pathStr = sorted.join(' → ');
+    } else if (foundComp.length === 2) {
+      let other = foundComp.find(x => x !== u);
+      pathStr = u + ' → ' + v + ' (direct edge)';
+    } else {
+      pathStr = foundComp.join(' → ');
+    }
+  }
+
+  return `<div class="explain-section active">
+    <h3>⏭️ Skipping Edge (${u},${v}) — Weight ${w} (item #${stepNum})</h3>
+    <p>We're checking the next cheapest road: connecting vertex <span class="dim">${u}</span> and vertex <span class="dim">${v}</span>, costing <span class="dim">${w}</span>.</p>
+
+    <h4>🔍 Step 1: Find their group leaders</h4>
+    <p>We ask the Union-Find system: <b>"Which groups do ${u} and ${v} belong to?"</b></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${u}</span>'s parent chain: ${u} → … → root = <span class="split-info">${r}</span></p>
+    <p style="margin-left:8px;">• Follow <span class="dim">${v}</span>'s parent chain: ${v} → … → root = <span class="split-info">${r}</span></p>
+    <p>The roots are the <b>same</b> (${r})! This means ${u} and ${v} are <b>already in the same group</b>.</p>
+
+    <h4>⚠️ What does this mean?</h4>
+    <p>Since ${u} and ${v} are already connected through other roads in the MST, adding this edge would create a <b>cycle</b> (a loop). Let's see why:</p>
+    <p style="margin-left:8px;">• There is already a path connecting ${u} → … → ${v} using MST edges we've already built.</p>
+    <p style="margin-left:8px;">• If we now add the direct edge (${u},${v}), we create <b>two different paths</b> between ${u} and ${v} — that's a cycle!</p>
+    <span class="formula-line">Find(${u}) = Find(${v}) = ${r}  →  Cycle detected! Skip this edge.</span>
+
+    <div class="analogy">🏙️ <b>Analogy:</b> Imagine there's already a road connecting city ${u} to city ${v} (going through other cities). Building this <b>extra</b> direct road would be <b>wasteful</b> — you're spending ${w} more for a connection that already exists! A spanning tree must use the <b>minimum</b> number of roads — exactly |V|−1 = 7 for 8 cities. Any extra road creates a wasteful loop.</div>
+
+    <h4>📊 Current groups (unchanged):</h4>
+    ${makeCompHtml(comps, [u, v])}
+    <p>Both vertices <span class="dim">${u}</span> and <span class="dim">${v}</span> are inside the <span style="color:#00ff88;">same group</span>. No merge needed.</p>
+
+    <p><b>MST unchanged:</b> ${mstEdges.length} edge${mstEdges.length !== 1 ? 's' : ''}, total weight = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
+    <p class="note">💡 <b>Why skip?</b> Every edge we add to the MST must connect two <b>previously unconnected</b> groups. This rule guarantees the final structure has <b>no cycles</b> — a tree! Skipping this heavier edge is exactly why Kruskal's algorithm finds the <b>minimum</b> weight tree.</p>
+  </div>`;
+}
+
+function buildDoneExplanation() {
+  let mstStr = mstEdges.map(e => `(${e.u},${e.v})`).join(' + ');
+  let detailStr = mstEdges.map(e => `(${e.u},${e.v},w=${e.w})`).join(', ');
+  let sumParts = mstEdges.map(e => `${e.w}`).join(' + ');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete! The MST is Built</h3>
+    <p>Kruskal's algorithm has finished. Let's review what we built:</p>
+
+    <h4>📊 Final Result</h4>
+    <p style="margin-left:8px;">• Selected <span class="dim">${mstEdges.length}</span> edges out of ${rawEdges.length} total</p>
+    <p style="margin-left:8px;">• All <span class="dim">${V}</span> vertices are now connected</p>
+    <p style="margin-left:8px;">• Total weight = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
+
+    <h4>🌳 The Minimum Spanning Tree Edges</h4>
+    <span class="formula-line">${detailStr}</span>
+    <p>Sum: ${sumParts} = <span class="result-line" style="display:inline;">${mstTotalWeight}</span></p>
+    <p>These 7 edges connect all 8 vertices with the <b>minimum possible total cost</b> of <b>${mstTotalWeight}</b>.</p>
+
+    <h4>🤔 Why Is This the Minimum?</h4>
+    <p>Kruskal's algorithm follows the <b>cut property</b>: at every step, the cheapest edge crossing between any two separated groups <b>must</b> belong to some MST. By always picking the absolute cheapest edge that connects two different groups, Kruskal's <b>guarantees</b> the result is optimal.</p>
+    <p>Think of it this way: every time we added an edge, it was the <b>cheapest possible way</b> to connect those two groups at that moment. Since we never second-guess past decisions (that's the "greedy" part), we end up with the globally cheapest solution.</p>
+
+    <h4>📈 Algorithm Complexity (How Fast Is It?)</h4>
+    <div class="concept-box">
+      <p><span class="term">Time complexity:</span> <span class="defn"><b>O(E log E)</b> — the sorting step is the slowest part. Sorting ${rawEdges.length} edges takes some work, but then scanning them is fast.</span></p>
+      <p><span class="term">Space complexity:</span> <span class="defn"><b>O(V)</b> — we only need the Union-Find parent array with ${V} entries. Very memory-efficient!</span></p>
+    </div>
+
+    <h4>📝 Summary: Key Takeaways</h4>
+    <p style="margin-left:8px;">• A <b>spanning tree</b> connects all vertices with |V|−1 edges and no cycles</p>
+    <p style="margin-left:8px;">• A <b>minimum</b> spanning tree is the cheapest one</p>
+    <p style="margin-left:8px;">• <b>Kruskal's algorithm</b> sorts edges by weight and greedily adds non-cycle edges</p>
+    <p style="margin-left:8px;">• <b>Union-Find</b> tracks which vertices are connected (same group = same root)</p>
+    <p style="margin-left:8px;">• <b>Find:</b> follow parent pointers to find the group leader (root)</p>
+    <p style="margin-left:8px;">• <b>Union:</b> merge two groups (make one root point to the other)</p>
+    <p style="margin-left:8px;">• Different roots → safe to add; Same root → would create cycle → skip</p>
+    <p class="note">👏 Congratulations! You've learned Kruskal's algorithm for finding Minimum Spanning Trees. Try clicking <b>↺ Reset</b> and stepping through again to reinforce your understanding!</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  return buildDoneExplanation();
+}
+
+function createSvgGraph() {
+  if (svgCreated) return;
+  const svg = document.getElementById('graphSvg');
+
+  for (let e = 0; e < rawEdges.length; e++) {
+    const [u, v, w] = rawEdges[e];
+    const p1 = nodePos[u], p2 = nodePos[v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 20;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = e;
+    svg.appendChild(line);
+
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', mx);
+    label.setAttribute('y', my - 10);
+    label.classList.add('edge-label');
+    label.textContent = w;
+    label.dataset.edgeLabel = e;
+    svg.appendChild(label);
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = nodePos[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '20');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    text.textContent = VLABELS[v];
+    svg.appendChild(text);
+  }
+
+  svgCreated = true;
+}
+
+function setGraphHighlights(currentEdgeIdx, addedEdgeIdxs, skippedEdgeIdxs, consideredNodes) {
+  if (!addedEdgeIdxs) addedEdgeIdxs = [];
+  if (!skippedEdgeIdxs) skippedEdgeIdxs = [];
+
+  document.querySelectorAll('.edge-line').forEach(el => {
+    const e = parseInt(el.dataset.edge);
+    el.classList.remove('current', 'added', 'skipped', 'considered');
+    if (e === currentEdgeIdx) {
+      el.classList.add('current');
+    } else if (addedEdgeIdxs.includes(e)) {
+      el.classList.add('added');
+    } else if (skippedEdgeIdxs.includes(e)) {
+      el.classList.add('skipped');
+    }
+  });
+
+  document.querySelectorAll('.edge-label').forEach(el => {
+    const e = parseInt(el.dataset.edgeLabel);
+    el.classList.remove('current', 'added', 'skipped', 'considered');
+    if (e === currentEdgeIdx) {
+      el.classList.add('current');
+    } else if (addedEdgeIdxs.includes(e)) {
+      el.classList.add('added');
+    } else if (skippedEdgeIdxs.includes(e)) {
+      el.classList.add('skipped');
+    }
+  });
+
+  document.querySelectorAll('.node-circle').forEach(el => {
+    const idx = parseInt(el.dataset.node);
+    el.classList.remove('current', 'considered', 'mst-included');
+    if (consideredNodes && consideredNodes.includes(idx)) {
+      el.classList.add('current');
+    } else if (addedEdgeIdxs.length > 0) {
+      let inMst = false;
+      for (let ae of addedEdgeIdxs) {
+        if (rawEdges[ae][0] === idx || rawEdges[ae][1] === idx) {
+          inMst = true; break;
+        }
+      }
+      if (inMst) el.classList.add('mst-included');
+    }
+  });
+
+  document.querySelectorAll('.node-text').forEach(el => {
+    const idx = parseInt(el.textContent);
+    el.classList.remove('current', 'considered', 'mst-included');
+    if (consideredNodes && consideredNodes.includes(idx)) {
+      el.classList.add('current');
+    } else if (addedEdgeIdxs.length > 0) {
+      let inMst = false;
+      for (let ae of addedEdgeIdxs) {
+        if (rawEdges[ae][0] === idx || rawEdges[ae][1] === idx) {
+          inMst = true; break;
+        }
+      }
+      if (inMst) el.classList.add('mst-included');
+    }
+  });
+}
+
+function getAddedEdgeIndices() {
+  let result = [];
+  for (let i = 0; i < rawEdges.length; i++) {
+    if (edgeStatus[i] === 'added') result.push(i);
+  }
+  return result;
+}
+
+function getSkippedEdgeIndices() {
+  let result = [];
+  for (let i = 0; i < rawEdges.length; i++) {
+    if (edgeStatus[i] === 'skipped') result.push(i);
+  }
+  return result;
+}
+
+function updateEdgeTable(currentEdgeIdx) {
+  const tbody = document.getElementById('edgeTableBody');
+  let html = '';
+  for (let si = 0; si < sortedEdges.length; si++) {
+    const e = sortedEdges[si];
+    const status = edgeStatus[e.idx];
+    let statusText, rowClass = '';
+    if (status === 'added') { statusText = '✅ ADDED'; rowClass = 'added'; }
+    else if (status === 'skipped') { statusText = '⛔ SKIP'; rowClass = 'skipped'; }
+    else { statusText = '⏳ pending'; rowClass = 'pending'; }
+    if (e.idx === currentEdgeIdx) rowClass = 'current-edge';
+    html += `<tr>
+      <td class="${rowClass}">${si + 1}</td>
+      <td class="${rowClass}">(${e.u}, ${e.v})</td>
+      <td class="${rowClass}">${e.w}</td>
+      <td class="${rowClass}">${statusText}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function updateUfTable(currentEdgeIdx, stepParent) {
+  const p = stepParent || parent;
+  for (let v = 0; v < V; v++) {
+    const cell = document.getElementById('uf' + v);
+    cell.textContent = p[v];
+    cell.className = '';
+    cell.style.color = '#aaa';
+    cell.style.background = '#0d0d1a';
+  }
+  if (currentEdgeIdx >= 0) {
+    const e = rawEdges[currentEdgeIdx];
+    [e[0], e[1]].forEach(v => {
+      const cell = document.getElementById('uf' + v);
+      cell.style.color = '#ff6600';
+      cell.style.background = '#1a0a00';
+      cell.style.fontWeight = 'bold';
+    });
+  }
+}
+
+function updateMstDisplay() {
+  const container = document.getElementById('mstEdgeList');
+  if (mstEdges.length === 0) {
+    container.innerHTML = '<span style="color:#555;font-size:0.85em;">MST edges added so far: none</span>';
+  } else {
+    let html = '';
+    for (let e of mstEdges) {
+      html += `<span class="mst-edge-item">(${e.u},${e.v})·${e.w}</span>`;
+    }
+    container.innerHTML = html;
+  }
+  document.getElementById('mstTotalWeight').textContent = mstTotalWeight;
+  document.getElementById('mstEdgeCount').textContent = mstEdges.length;
+}
+
+function initTables() {
+  let html = '';
+  for (let si = 0; si < sortedEdges.length; si++) {
+    const e = sortedEdges[si];
+    html += `<tr>
+      <td class="pending">${si + 1}</td>
+      <td class="pending">(${e.u}, ${e.v})</td>
+      <td class="pending">${e.w}</td>
+      <td class="pending">⏳ pending</td>
+    </tr>`;
+  }
+  document.getElementById('edgeTableBody').innerHTML = html;
+
+  for (let v = 0; v < V; v++) {
+    const cell = document.getElementById('uf' + v);
+    cell.textContent = v;
+    cell.style.color = '#aaa';
+    cell.style.background = '#0d0d1a';
+    cell.style.fontWeight = 'normal';
+  }
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.edge-line').forEach(el => {
+    el.classList.remove('current', 'added', 'skipped', 'considered');
+  });
+  document.querySelectorAll('.edge-label').forEach(el => {
+    el.classList.remove('current', 'added', 'skipped', 'considered');
+  });
+  document.querySelectorAll('.node-circle').forEach(el => {
+    el.className = 'node-circle';
+  });
+  document.querySelectorAll('.node-text').forEach(el => {
+    el.className = 'node-text';
+  });
+}
+
+function applyStep(step) {
+  const stepIdx = currentStep;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${stepIdx + 1} / ${steps.length} — ${step.action}`;
+
+  if (step.explanation) {
+    document.getElementById('explainArea').innerHTML = step.explanation;
+  }
+  document.getElementById('sidebar').scrollTop = 0;
+
+  parent = [...step.parent];
+  mstEdges = [...step.mstEdges];
+  mstTotalWeight = step.mstWeight;
+  edgeStatus = [...step.edgeStatus];
+
+  if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('currentEdgeDisplay').textContent = '—';
+    document.getElementById('actionDisplay').textContent = 'MST complete';
+    setGraphHighlights(-1, getAddedEdgeIndices(), getSkippedEdgeIndices(), []);
+    updateEdgeTable(-1);
+    updateUfTable(-1, step.parent);
+    updateMstDisplay();
+    return;
+  }
+
+  document.getElementById('phaseDisplay').textContent =
+    step.type === 'init' ? 'Initialized' :
+    step.type === 'add' ? 'Adding edge' :
+    step.type === 'skip' ? 'Skipping edge' : '—';
+
+  const curEdge = step.currentEdgeIdx >= 0 ? rawEdges[step.currentEdgeIdx] : null;
+  document.getElementById('currentEdgeDisplay').textContent =
+    curEdge ? `(${curEdge[0]},${curEdge[1]}) w=${curEdge[2]}` : '—';
+  document.getElementById('actionDisplay').textContent = step.action;
+
+  const consideredNodes = curEdge ? [curEdge[0], curEdge[1]] : [];
+  setGraphHighlights(step.currentEdgeIdx, getAddedEdgeIndices(), getSkippedEdgeIndices(), consideredNodes);
+  updateEdgeTable(step.currentEdgeIdx);
+  updateUfTable(step.currentEdgeIdx, step.parent);
+  updateMstDisplay();
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('actionDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML =
+    `<div class="explain-section active">
+      <h3>🌳 Welcome! Let's learn about Minimum Spanning Trees</h3>
+      <p>This page will teach you <b>Kruskal's algorithm</b> — a famous method for finding a <b>Minimum Spanning Tree (MST)</b> in a graph. Don't worry if those words sound scary — we'll explain everything step by step!</p>
+
+      <h4>🔤 Key Concepts — What Is a Graph?</h4>
+      <div class="concept-box">
+        <p><span class="term">Vertex</span> <span class="defn">(plural: vertices)</span> — a point or a node. In our example: <b>0, 1, 2, 3, 4, 5, 6, 7</b>. Think of them as <b>cities</b> on a map.</p>
+        <p><span class="term">Edge</span> — a connection between two vertices. Think of it as a <b>road</b> between two cities.</p>
+        <p><span class="term">Weight</span> — a number on each edge representing <b>cost</b>. Higher weight = more expensive road (longer distance, more materials, etc.)</p>
+        <p><span class="term">Graph</span> — a collection of vertices connected by edges. Like a <b>road map</b> of cities.</p>
+      </div>
+
+      <h4>🔤 What is a "Spanning Tree"?</h4>
+      <div class="concept-box">
+        <p><span class="term">Tree</span> — a set of edges that connects all vertices <b>without any loops</b> (no cycles). Like a family tree — no one is their own grandparent!</p>
+        <p><span class="term">Spanning</span> — means it "spans" (reaches) <b>every vertex</b> in the graph.</p>
+        <p><span class="term">Spanning Tree</span> — a selection of edges that connects <b>all</b> cities using the <b>fewest possible roads</b> (|V|−1 edges for |V| vertices), with <b>no loops</b>.</p>
+        <p><span class="term">Minimum Spanning Tree (MST)</span> — the spanning tree with the <b>smallest total weight</b>. The cheapest way to connect all cities!</p>
+      </div>
+
+      <div class="analogy">🏙️ <b>Real-world analogy:</b> Imagine you're building a fiber-optic network to connect 8 cities. Laying cable between two cities costs money (the weight). You want to connect <b>all</b> cities for the <b>lowest total cost</b>. You'd build exactly enough cables so every city is connected, with no wasteful loops. That's the MST!</div>
+
+      <h4>🔤 How Kruskal's Algorithm Works</h4>
+      <p>Kruskal's algorithm uses a <b>greedy</b> strategy (take the best option right now, without worrying about the future):</p>
+      <p style="margin-left:8px;"><b>1.</b> List all roads from cheapest to most expensive.</p>
+      <p style="margin-left:8px;"><b>2.</b> Start with each city in its own group.</p>
+      <p style="margin-left:8px;"><b>3.</b> Go through the list from cheapest to most expensive:</p>
+      <p style="margin-left:16px;">• If the two cities are in <b>different groups</b> → build this road (merge the groups)</p>
+      <p style="margin-left:16px;">• If they're already in the <b>same group</b> → skip it (would create a wasteful loop)</p>
+      <p style="margin-left:8px;"><b>4.</b> Stop when all cities are in one group.</p>
+      <span class="formula-line">Greedy rule: pick the cheapest road that connects two separated groups</span>
+      <p class="note">The Union-Find table below shows which group each vertex belongs to. When two vertices have the same <b>root</b> (by following parent pointers), they're in the same group. Press ▶ Play to start!</p>
+    </div>`;
+  clearHighlights();
+  buildSteps();
+  initTables();
+  updateMstDisplay();
+  document.getElementById('totalSteps').textContent = steps.length;
+  for (let v = 0; v < V; v++) {
+    const cell = document.getElementById('uf' + v);
+    cell.textContent = v;
+    cell.style.color = '#aaa';
+    cell.style.background = '#0d0d1a';
+    cell.style.fontWeight = 'normal';
+  }
+  setGraphHighlights(-1, [], [], []);
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('actionDisplay').textContent = 'MST complete';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let mstStr = mstEdges.map(e => `(${e.u},${e.v})`).join(', ');
+  document.getElementById('resultContent').innerHTML =
+    `<p>Minimum Spanning Tree found by Kruskal's algorithm:</p>
+    <div class="big-result">Total Weight: ${mstTotalWeight}</div>
+    <p><span class="dim">${mstEdges.length}</span> edges selected from <span class="dim">${rawEdges.length}</span></p>
+    <p style="color:#888;font-size:0.85em;margin-top:8px;">MST edges: ${mstStr}</p>
+    <h3 style="color:#00ccff;margin-top:16px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(E log E) — dominated by sorting the edges</p>
+    <p><span class="dim">Space:</span> O(V) — Union-Find parent array</p>`;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+createSvgGraph();
+clearHighlights();
+buildSteps();
+initTables();
+updateMstDisplay();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

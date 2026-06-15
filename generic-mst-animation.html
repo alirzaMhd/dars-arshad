@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generic-MST Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 440px;
+  min-width: 440px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.84em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 8px 0 4px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 5px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 0.94em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .concept-box {
+  background: #0a0a1a;
+  border: 1px solid #334;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.explain-section .concept-box .term {
+  color: #00ccff;
+  font-weight: bold;
+}
+.explain-section .concept-box .defn {
+  color: #ddd;
+}
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.cut-annotation {
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+}
+.forest-list {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 42px;
+}
+.forest-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #00ff88;
+  font-weight: bold;
+  animation: forestPop 0.3s ease;
+}
+@keyframes forestPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.forest-weight {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.forest-weight .weight-value { color: #00ff88; font-weight: bold; font-size: 1.1em; }
+.table-section { margin: 18px 0; }
+.table-title {
+  font-size: 0.9em;
+  color: #00ccff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; }
+.mst-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 600px;
+}
+.mst-table th, .mst-table td {
+  padding: 7px 10px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.8em;
+  transition: all 0.3s;
+}
+.mst-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.mst-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.mst-table td.pending { color: #888; }
+.mst-table td.crossing { color: #ffff00; background: #1a1a00; font-weight: bold; }
+.mst-table td.light { color: #ff6600; background: #1a0a00; font-weight: bold; border-color: #ff6600; }
+.mst-table td.in-a { color: #00ff88; background: #0a1a12; font-weight: bold; }
+.mst-table td.done { color: #555; }
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2.5;
+  transition: all 0.4s;
+}
+.node-circle.in-s {
+  fill: #00ccff;
+  stroke: #00ccff;
+  stroke-width: 3.5;
+  filter: url(#glowBlue);
+}
+.node-circle.in-vs {
+  fill: #ff6600;
+  stroke: #ff6600;
+  stroke-width: 3.5;
+  filter: url(#glowOrange);
+}
+.node-circle.in-a {
+  stroke: #00ff88;
+  stroke-width: 4;
+  filter: url(#glowGreen);
+}
+.node-text {
+  fill: #aaa;
+  font-size: 15px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  dominant-baseline: central;
+  text-anchor: middle;
+  transition: all 0.4s;
+}
+.node-text.in-s { fill: #0a0a1a; }
+.node-text.in-vs { fill: #0a0a1a; }
+.node-text.in-a { fill: #00ff88; }
+.edge-line {
+  stroke: #444;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.crossing {
+  stroke: #ffff00;
+  stroke-width: 4;
+  filter: url(#glowYellow);
+}
+.edge-line.light {
+  stroke: #ff6600;
+  stroke-width: 5;
+  filter: url(#glowLight);
+}
+.edge-line.in-a {
+  stroke: #00ff88;
+  stroke-width: 4;
+  filter: url(#glowGreen);
+}
+.edge-label {
+  fill: #888;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.edge-label.crossing { fill: #ffff00; }
+.edge-label.light { fill: #ff6600; }
+.edge-label.in-a { fill: #00ff88; }
+.cut-divider {
+  stroke: #ff66ff;
+  stroke-width: 3;
+  stroke-dasharray: 10,8;
+  fill: none;
+  opacity: 0.9;
+}
+.mst-edge-list {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 42px;
+}
+.mst-edge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #00ff88;
+  font-weight: bold;
+  animation: mstPop 0.3s ease;
+}
+@keyframes mstPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.mst-weight-display {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.mst-weight-display .weight-value { color: #00ff88; font-weight: bold; font-size: 1.1em; }
+.set-visual {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+.set-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+.set-group.s-set { background: #0a1a2a; border: 1px solid #00ccff55; color: #00ccff; }
+.set-group.vs-set { background: #2a1a0a; border: 1px solid #ff660055; color: #ff6600; }
+</style>
+</head>
+<body>
+
+<h1>GENERIC-MST</h1>
+<p class="subtitle">Graph Algorithms — Minimum Spanning Tree via the Cut Property</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="640" height="390" viewBox="0 0 640 390"></svg>
+    </div>
+
+    <div class="mst-edge-list" id="mstEdgeList">
+      <span style="color:#555;font-size:0.85em;">Forest A: no edges yet</span>
+    </div>
+
+    <div class="mst-weight-display">
+      <span class="label">Forest Weight:</span> <span class="weight-value" id="forestWeight">0</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edges in A:</span> <span class="weight-value" id="forestCount">0</span> / <span class="weight-value" id="requiredCount">5</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Cut:</span> <span class="value" id="cutDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Light Edge:</span> <span class="value" id="lightDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Edge Status</div>
+      <div class="table-wrapper">
+        <table class="mst-table" id="edgeTable">
+          <thead><tr><th>Edge</th><th>Weight</th><th>Status</th></tr></thead>
+          <tbody id="edgeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10004; MST Complete!</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>&#127891; Welcome to the Generic MST Algorithm</h3>
+        <p>This page explains how <b>Minimum Spanning Trees (MSTs)</b> are built using the fundamental <b>Cut Property</b>. The <b>Generic-MST</b> algorithm is the most general method for growing an MST &mdash; it adds one <b>safe edge</b> at a time until all vertices are connected.</p>
+
+        <h4>&#128220; The Five Key Concepts</h4>
+        <div class="concept-box">
+          <p><span class="term">Cut (S, V&minus;S):</span> <span class="defn">A <b>partition</b> of the vertex set V into two nonempty subsets S and V&minus;S.</span></p>
+          <p><span class="term">Edge crosses a cut:</span> <span class="defn">An edge with <b>one endpoint in S</b> and the <b>other in V&minus;S</b>.</span></p>
+          <p><span class="term">Cut respects A:</span> <span class="defn">A set A of edges. A cut <b>respects A</b> if <b>no edge in A crosses</b> the cut. All edges in A stay entirely within S or entirely within V&minus;S.</span></p>
+          <p><span class="term">Light edge:</span> <span class="defn">An edge crossing a cut whose <b>weight is minimum</b> among all crossing edges.</span></p>
+          <p><span class="term">Safe edge:</span> <span class="defn">An edge (u,v) such that A &cup; {(u,v)} is still a <b>subset of some MST</b>. The Cut Property guarantees that the <b>light edge is always safe</b>.</span></p>
+        </div>
+
+        <div class="concept-box">
+          <p><span class="term">Generic-MST:</span> <span class="defn">Start with A = &empty;. Repeat: find <b>any cut that respects A</b>, pick the <b>light edge</b> crossing it (which is <b>safe</b>), and add it to A. Stop when A has |V|&minus;1 edges.</span></p>
+        </div>
+
+        <h4>&#127913; Graph for This Demo</h4>
+        <p>We use a 6-vertex graph with 9 edges. The MST has 5 edges (|V|&minus;1).</p>
+        <p style="margin-left:8px;"><span class="dim">Vertices:</span> a, b, c, d, e, f</p>
+        <p style="margin-left:8px;"><span class="dim">Edges:</span> a&ndash;b(6), a&ndash;c(5), b&ndash;c(8), b&ndash;d(7), b&ndash;e(4), c&ndash;e(9), c&ndash;f(3), d&ndash;e(2), e&ndash;f(1)</p>
+        <span class="formula-line">Cut Property: For any cut respecting A, the light edge is safe for A.</span>
+        <p class="note">Watch how each step picks a cut, finds crossing edges, identifies the light edge, and adds it to the forest. Press &#9654; Play to start!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 6;
+const VLABELS = ['a', 'b', 'c', 'd', 'e', 'f'];
+const VPOS = [
+  {x: 310, y: 40},   // a - top center
+  {x: 130, y: 170},  // b - left mid
+  {x: 490, y: 170},  // c - right mid
+  {x: 130, y: 330},  // d - bottom left
+  {x: 220, y: 330},  // e - bottom left-center
+  {x: 490, y: 330},  // f - bottom right
+];
+const EDGES = [
+  {u: 0, v: 1, w: 6, label: '(a,b)'},
+  {u: 0, v: 2, w: 5, label: '(a,c)'},
+  {u: 1, v: 2, w: 8, label: '(b,c)'},
+  {u: 1, v: 3, w: 7, label: '(b,d)'},
+  {u: 1, v: 4, w: 4, label: '(b,e)'},
+  {u: 2, v: 4, w: 9, label: '(c,e)'},
+  {u: 2, v: 5, w: 3, label: '(c,f)'},
+  {u: 3, v: 4, w: 2, label: '(d,e)'},
+  {u: 4, v: 5, w: 1, label: '(e,f)'},
+];
+
+const CUT_CYCLES = [
+  {
+    S: [0],
+    V_S: [1,2,3,4,5],
+    crossing: [0, 1],
+    light: 1,
+    divider: 'M 20,105 L 600,105'
+  },
+  {
+    S: [0,2],
+    V_S: [1,3,4,5],
+    crossing: [0,2,5,6],
+    light: 6,
+    divider: 'M 0,80 L 620,210'
+  },
+  {
+    S: [0,2,5],
+    V_S: [1,3,4],
+    crossing: [0,2,5,8],
+    light: 8,
+    divider: 'M 250,0 L 250,380'
+  },
+  {
+    S: [0,2,4,5],
+    V_S: [1,3],
+    crossing: [0,2,4,7],
+    light: 7,
+    divider: 'M 175,0 L 175,380'
+  },
+  {
+    S: [0,2,3,4,5],
+    V_S: [1],
+    crossing: [0,2,4],
+    light: 4,
+    divider: 'M 130,115 A 60,60 0 1,1 130,235 A 60,60 0 1,1 130,115'
+  }
+];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function precomputeAll() {
+  let total = 0;
+  for (let i = 0; i < 5; i++) total += EDGES[CUT_CYCLES[i].light].w;
+  return { mstWeight: total, mstEdges: CUT_CYCLES.map(c => c.light) };
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>&#127891; Understanding the Five Concepts</h3>
+    <p>Before we begin, let's define the five key ideas behind the <b>Generic-MST</b> algorithm:</p>
+    <div class="concept-box">
+      <p><span class="term">Cut (S, V&minus;S):</span> <span class="defn">A partition of all vertices into two nonempty sets.</span></p>
+      <p><span class="term">Edge crosses a cut:</span> <span class="defn">One endpoint in S, the other in V&minus;S.</span></p>
+      <p><span class="term">Cut respects A:</span> <span class="defn">No edge in the current forest A crosses the cut.</span></p>
+      <p><span class="term">Light edge:</span> <span class="defn">The minimum-weight edge crossing a cut.</span></p>
+      <p><span class="term">Safe edge:</span> <span class="defn">An edge that can be added to A while keeping A &sube; some MST.</span></p>
+    </div>
+    <span class="formula-line">Cut Property &#10142; If cut respects A, the light edge is safe for A.</span>
+    <p>We start with <span class="dim">A = &empty;</span> (no edges selected). The forest has <span class="dim">6 components</span> (one per vertex).</p>
+    <p>The algorithm will repeat: pick a cut respecting A, find its light edge, add it to A.</p>
+    <p class="note">After 5 iterations, A will contain the MST with total weight 15.</p>
+  </div>`;
+}
+
+function buildCutExplanation(S, V_S, cycleIdx, comps) {
+  const S_str = S.map(i => VLABELS[i]).join(', ');
+  const VS_str = V_S.map(i => VLABELS[i]).join(', ');
+  const aEdges = comps.map(c => '{' + c.map(i => VLABELS[i]).join(',') + '}').join(', ');
+  const respectful = comps.length > 0 ? 'This cut respects A because all edges in A have both endpoints inside the same component.' : 'This cut respects A trivially since A is empty.';
+  return `<div class="explain-section active">
+    <h3>&#10133; Step 1: Define a Cut that Respects A</h3>
+    <p>We choose a cut <span class="dim">(S, V&minus;S)</span> such that <b>no edge of A crosses it</b>.</p>
+    <div class="set-visual">
+      <span class="set-group s-set">S = {${S_str}}</span>
+      <span class="set-group vs-set">V&minus;S = {${VS_str}}</span>
+    </div>
+    <p><span class="dim">Current components of A:</span> {${aEdges}}</p>
+    <p>${respectful}</p>
+    <span class="formula-line">Cut respects A &#8660; no edge in A has one endpoint in S and the other in V&minus;S.</span>
+    <p>Next, we'll find which edges <b>cross</b> this cut.</p>
+  </div>`;
+}
+
+function buildCrossingExplanation(S, V_S, crossingIdxs) {
+  const S_str = S.map(i => VLABELS[i]).join(', ');
+  const VS_str = V_S.map(i => VLABELS[i]).join(', ');
+  let list = '';
+  for (let idx of crossingIdxs) {
+    const e = EDGES[idx];
+    list += `<p style="margin-left:12px;">&bull; ${e.label} &mdash; weight <span class="dim">${e.w}</span></p>`;
+  }
+  return `<div class="explain-section active">
+    <h3>&#10136; Step 2: Edges Crossing the Cut</h3>
+    <p>Edges with <b>one endpoint in S</b> and the <b>other in V&minus;S</b> <b>cross</b> the cut.</p>
+    <div style="display:flex; gap:8px; margin:6px 0;">
+      <span style="color:#00ccff;font-weight:bold;">S = {${S_str}}</span>
+      <span style="color:#888;">vs</span>
+      <span style="color:#ff6600;font-weight:bold;">V&minus;S = {${VS_str}}</span>
+    </div>
+    <p>Crossing edges (highlighted in <span style="color:#ffff00;">yellow</span>):</p>
+    ${list}
+    <p>Among these, the one with <b>minimum weight</b> is the <span class="dim">light edge</span>.</p>
+  </div>`;
+}
+
+function buildLightExplanation(S, V_S, lightIdx, crossingIdxs) {
+  const e = EDGES[lightIdx];
+  const S_str = S.map(i => VLABELS[i]).join(', ');
+  const VS_str = V_S.map(i => VLABELS[i]).join(', ');
+  let list = '';
+  for (let idx of crossingIdxs) {
+    const ce = EDGES[idx];
+    list += `<p style="margin-left:12px;">&bull; ${ce.label} &mdash; weight ${ce.w}${idx === lightIdx ? ' <span style="color:#ff6600;">&#8592; LIGHT (minimum)</span>' : ''}</p>`;
+  }
+  return `<div class="explain-section active">
+    <h3>&#9888; Step 3: Identify the Light Edge</h3>
+    <p>The <span class="dim">light edge</span> is the crossing edge with the <b>smallest weight</b>.</p>
+    <p>Crossing edges of cut (S={${S_str}}, V&minus;S={${VS_str}}):</p>
+    ${list}
+    <div class="concept-box">
+      <p><span class="term">Light edge:</span> <span class="defn">${e.label} with weight <b>${e.w}</b>.</span></p>
+    </div>
+    <p>By the <b>Cut Property</b>, this edge is <span class="dim">safe</span> to add to A.</p>
+    <span class="formula-line">Cut Property &#10142; Light edge (${e.label}, weight ${e.w}) is safe for A.</span>
+    <p class="note">Adding it keeps A as a subset of some MST.</p>
+  </div>`;
+}
+
+function buildSafeExplanation(lightIdx, curA, weight, cycleIdx) {
+  const e = EDGES[lightIdx];
+  const aList = curA.map(idx => EDGES[idx].label + '(' + EDGES[idx].w + ')').join(', ');
+  return `<div class="explain-section active">
+    <h3>&#9989; Step 4: Add the Safe Edge to A</h3>
+    <p>We add <span class="dim">${e.label}</span> (weight ${e.w}) to the forest A.</p>
+    <div class="concept-box">
+      <p><span class="term">Safe edge:</span> <span class="defn">An edge such that A &cup; {(u,v)} is still a subset of some MST. The Cut Property guarantees the light edge is safe.</span></p>
+    </div>
+    <p><span class="dim">Forest A now has ${curA.length} edge(s):</span> ${aList}</p>
+    <p><span class="dim">Total weight:</span> <span class="result-line">${weight}</span></p>
+    <p>${curA.length < 5 ? 'Now we repeat: pick a new cut that respects the updated A.' : 'All vertices are now connected! The MST is complete.'}</p>
+    <span class="formula-line">A = A &cup; {${e.label}} &#8594; weight = ${weight}, components = ${V - curA.length}</span>
+    <p class="note">The forest now has ${V - curA.length} connected component(s).</p>
+  </div>`;
+}
+
+function buildDoneExplanation(mstEdges, totalWeight) {
+  const list = mstEdges.map(idx => {
+    const e = EDGES[idx];
+    return `<p style="margin-left:12px;">&bull; ${e.label} &mdash; weight <span class="dim">${e.w}</span></p>`;
+  }).join('');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10004; Algorithm Complete!</h3>
+    <p>All <b>6 vertices</b> are connected using <b>5 edges</b> with <b>no cycles</b>. The Minimum Spanning Tree is found!</p>
+    <div class="concept-box">
+      <p style="color:#00ff88;font-size:1.1em;font-weight:bold;">MST Total Weight: ${totalWeight}</p>
+    </div>
+    <h4 style="margin-top:10px;">&#128161; The Five Steps Revisited</h4>
+    <p>At each iteration, we:</p>
+    <p style="margin-left:8px;"><b>1.</b> Picked a <span class="dim">cut</span> respecting A</p>
+    <p style="margin-left:8px;"><b>2.</b> Found edges that <span class="dim">cross</span> the cut</p>
+    <p style="margin-left:8px;"><b>3.</b> Identified the <span class="dim">light edge</span> (minimum weight)</p>
+    <p style="margin-left:8px;"><b>4.</b> Added it as a <span class="dim">safe edge</span> to A</p>
+    <h4 style="margin-top:10px;">MST Edges</h4>
+    ${list}
+    <span class="formula-line">∑ = ${totalWeight}</span>
+    <h4 style="margin-top:10px;">Complexity</h4>
+    <p><span class="dim">Time:</span> O(E &middot; &alpha;(V)) with Union-Find for Kruskal's; O(E + V log V) with Prim's.</p>
+    <p><span class="dim">Space:</span> O(V + E)</p>
+  </div>`;
+}
+
+function makeEdgeStatus(A_edges, crossingIdxs, lightIdx) {
+  const st = Array(EDGES.length).fill('pending');
+  for (let i of A_edges) st[i] = 'in-a';
+  for (let i of crossingIdxs) { if (st[i] === 'pending') st[i] = 'crossing'; }
+  if (lightIdx >= 0) st[lightIdx] = 'light';
+  return st;
+}
+
+function buildSteps() {
+  steps = [];
+  let curA = [];
+  let curWeight = 0;
+
+  steps.push({
+    type: 'init',
+    S: [], V_S: [],
+    A_edges: [],
+    A_weight: 0,
+    edgeStatus: makeEdgeStatus([], [], -1),
+    crossingEdges: [],
+    lightIdx: -1,
+    addedIdx: -1,
+    explanation: buildInitExplanation(),
+    dividerPath: '',
+    phase: 'Ready',
+    cutLabel: '&mdash;',
+    lightLabel: '&mdash;'
+  });
+
+  for (let ci = 0; ci < CUT_CYCLES.length; ci++) {
+    const cycle = CUT_CYCLES[ci];
+
+    steps.push({
+      type: 'cut',
+      S: [...cycle.S],
+      V_S: [...cycle.V_S],
+      A_edges: [...curA],
+      A_weight: curWeight,
+      edgeStatus: makeEdgeStatus(curA, [], -1),
+      crossingEdges: [],
+      lightIdx: -1,
+      addedIdx: -1,
+      explanation: buildCutExplanation(cycle.S, cycle.V_S, ci, getComponents(curA)),
+      dividerPath: cycle.divider,
+      phase: 'Define Cut',
+      cutLabel: 'S={' + cycle.S.map(i => VLABELS[i]).join(',') + '}',
+      lightLabel: '&mdash;'
+    });
+
+    steps.push({
+      type: 'crossing',
+      S: [...cycle.S],
+      V_S: [...cycle.V_S],
+      A_edges: [...curA],
+      A_weight: curWeight,
+      edgeStatus: makeEdgeStatus(curA, cycle.crossing, -1),
+      crossingEdges: [...cycle.crossing],
+      lightIdx: -1,
+      addedIdx: -1,
+      explanation: buildCrossingExplanation(cycle.S, cycle.V_S, cycle.crossing),
+      dividerPath: cycle.divider,
+      phase: 'Crossing Edges',
+      cutLabel: 'S={' + cycle.S.map(i => VLABELS[i]).join(',') + '}',
+      lightLabel: '&mdash;'
+    });
+
+    steps.push({
+      type: 'light',
+      S: [...cycle.S],
+      V_S: [...cycle.V_S],
+      A_edges: [...curA],
+      A_weight: curWeight,
+      edgeStatus: makeEdgeStatus(curA, cycle.crossing, cycle.light),
+      crossingEdges: [...cycle.crossing],
+      lightIdx: cycle.light,
+      addedIdx: -1,
+      explanation: buildLightExplanation(cycle.S, cycle.V_S, cycle.light, cycle.crossing),
+      dividerPath: cycle.divider,
+      phase: 'Light Edge',
+      cutLabel: 'S={' + cycle.S.map(i => VLABELS[i]).join(',') + '}',
+      lightLabel: EDGES[cycle.light].label + ' w=' + EDGES[cycle.light].w
+    });
+
+    curA.push(cycle.light);
+    curWeight += EDGES[cycle.light].w;
+    steps.push({
+      type: 'safe',
+      S: [...cycle.S],
+      V_S: [...cycle.V_S],
+      A_edges: [...curA],
+      A_weight: curWeight,
+      edgeStatus: makeEdgeStatus(curA, [], -1),
+      crossingEdges: [],
+      lightIdx: -1,
+      addedIdx: cycle.light,
+      explanation: buildSafeExplanation(cycle.light, curA, curWeight, ci),
+      dividerPath: cycle.divider,
+      phase: 'Safe Edge Added',
+      cutLabel: 'S={' + cycle.S.map(i => VLABELS[i]).join(',') + '}',
+      lightLabel: EDGES[cycle.light].label + ' w=' + EDGES[cycle.light].w
+    });
+  }
+
+  const finalStatus = makeEdgeStatus(curA, [], -1);
+  for (let i = 0; i < finalStatus.length; i++) {
+    if (finalStatus[i] === 'pending') finalStatus[i] = 'done';
+  }
+  const results = precomputeAll();
+  steps.push({
+    type: 'done',
+    done: true,
+    S: [], V_S: [],
+    A_edges: [...curA],
+    A_weight: curWeight,
+    edgeStatus: finalStatus,
+    crossingEdges: [],
+    lightIdx: -1,
+    addedIdx: -1,
+    explanation: buildDoneExplanation(curA, curWeight),
+    dividerPath: '',
+    phase: 'Complete!',
+    cutLabel: '&mdash;',
+    lightLabel: 'MST weight=' + results.mstWeight
+  });
+}
+
+function getComponents(aEdges) {
+  let parent = Array(V).fill(null).map((_, i) => i);
+  function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  function union(x, y) { parent[find(x)] = find(y); }
+  for (let idx of aEdges) {
+    union(EDGES[idx].u, EDGES[idx].v);
+  }
+  let groups = {};
+  for (let v = 0; v < V; v++) {
+    let r = find(v);
+    if (!groups[r]) groups[r] = [];
+    groups[r].push(v);
+  }
+  return Object.values(groups).map(g => g.sort((a,b) => a - b));
+}
+
+function initTables() {
+  const svg = document.getElementById('graphSvg');
+  let svgContent = '<defs>';
+  svgContent += '<filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>';
+  svgContent += '<filter id="glowOrange" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>';
+  svgContent += '<filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>';
+  svgContent += '<filter id="glowYellow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>';
+  svgContent += '<filter id="glowLight" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>';
+  svgContent += '</defs>';
+
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    const p1 = VPOS[e.u], p2 = VPOS[e.v];
+    svgContent += `<line class="edge-line" data-idx="${i}" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" />`;
+  }
+
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    const p1 = VPOS[e.u], p2 = VPOS[e.v];
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const ox = -dy / len * 12, oy = dx / len * 12;
+    svgContent += `<text class="edge-label" data-idx="${i}" x="${mx + ox}" y="${my + oy}">${e.w}</text>`;
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = VPOS[v];
+    svgContent += `<circle class="node-circle" data-v="${v}" cx="${p.x}" cy="${p.y}" r="22" />`;
+  }
+  for (let v = 0; v < V; v++) {
+    const p = VPOS[v];
+    svgContent += `<text class="node-text" data-v="${v}" x="${p.x}" y="${p.y}">${VLABELS[v]}</text>`;
+  }
+
+  svgContent += `<path class="cut-divider" id="cutDivider" d="" />`;
+  svgContent += `<text class="cut-annotation" id="cutAnnotationS" x="15" y="22" fill="#00ccff" font-weight="bold" opacity="0"></text>`;
+  svgContent += `<text class="cut-annotation" id="cutAnnotationVS" x="15" y="42" fill="#ff6600" font-weight="bold" opacity="0"></text>`;
+
+  svg.innerHTML = svgContent;
+
+  const tbody = document.getElementById('edgeTableBody');
+  let html = '';
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    html += `<tr><td>${e.label}</td><td>${e.w}</td><td class="pending" id="es${i}">Pending</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function setSVGClass(el, cls) {
+  if (el) el.setAttribute('class', cls);
+}
+
+function clearHighlights() {
+  for (let v = 0; v < V; v++) {
+    setSVGClass(document.querySelector(`.node-circle[data-v="${v}"]`), 'node-circle');
+    setSVGClass(document.querySelector(`.node-text[data-v="${v}"]`), 'node-text');
+  }
+  for (let i = 0; i < EDGES.length; i++) {
+    setSVGClass(document.querySelector(`.edge-line[data-idx="${i}"]`), 'edge-line');
+    setSVGClass(document.querySelector(`.edge-label[data-idx="${i}"]`), 'edge-label');
+  }
+  const cd = document.getElementById('cutDivider');
+  if (cd) cd.setAttribute('d', '');
+  const sAnn = document.getElementById('cutAnnotationS');
+  if (sAnn) { sAnn.textContent = ''; sAnn.setAttribute('opacity', '0'); }
+  const vsAnn = document.getElementById('cutAnnotationVS');
+  if (vsAnn) { vsAnn.textContent = ''; vsAnn.setAttribute('opacity', '0'); }
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  for (let v = 0; v < V; v++) {
+    const circle = document.querySelector(`.node-circle[data-v="${v}"]`);
+    const text = document.querySelector(`.node-text[data-v="${v}"]`);
+    let cls = 'node-circle';
+    let tCls = 'node-text';
+    if (step.S && step.S.includes(v)) { cls += ' in-s'; tCls += ' in-s'; }
+    else if (step.V_S && step.V_S.includes(v)) { cls += ' in-vs'; tCls += ' in-vs'; }
+    if (step.A_edges) {
+      for (let idx of step.A_edges) {
+        if (EDGES[idx].u === v || EDGES[idx].v === v) {
+          cls += ' in-a';
+          tCls += ' in-a';
+          break;
+        }
+      }
+    }
+    setSVGClass(circle, cls);
+    setSVGClass(text, tCls);
+  }
+
+  for (let i = 0; i < EDGES.length; i++) {
+    const line = document.querySelector(`.edge-line[data-idx="${i}"]`);
+    const label = document.querySelector(`.edge-label[data-idx="${i}"]`);
+    let lCls = 'edge-line', lblCls = 'edge-label';
+    const st = step.edgeStatus[i];
+    if (st === 'crossing') { lCls += ' crossing'; lblCls += ' crossing'; }
+    else if (st === 'light') { lCls += ' light'; lblCls += ' light'; }
+    else if (st === 'in-a') { lCls += ' in-a'; lblCls += ' in-a'; }
+    setSVGClass(line, lCls);
+    setSVGClass(label, lblCls);
+  }
+
+  const cd = document.getElementById('cutDivider');
+  if (cd) cd.setAttribute('d', step.dividerPath || '');
+
+  if (step.S && step.S.length > 0) {
+    const sText = 'S = {' + step.S.map(i => VLABELS[i]).join(', ') + '}';
+    const vsText = 'V\\S = {' + step.V_S.map(i => VLABELS[i]).join(', ') + '}';
+    const sAnn = document.getElementById('cutAnnotationS');
+    const vsAnn = document.getElementById('cutAnnotationVS');
+    if (sAnn) { sAnn.textContent = sText; sAnn.setAttribute('opacity', '1'); }
+    if (vsAnn) { vsAnn.textContent = vsText; vsAnn.setAttribute('opacity', '1'); }
+  }
+
+  document.getElementById('phaseDisplay').textContent = step.phase || '';
+  document.getElementById('cutDisplay').innerHTML = step.cutLabel || '&mdash;';
+  document.getElementById('lightDisplay').innerHTML = step.lightLabel || '&mdash;';
+  document.getElementById('forestWeight').textContent = step.A_weight || 0;
+  document.getElementById('forestCount').textContent = step.A_edges ? step.A_edges.length : 0;
+
+  for (let i = 0; i < EDGES.length; i++) {
+    const cell = document.getElementById('es' + i);
+    const st = step.edgeStatus[i];
+    cell.className = st || 'pending';
+    const labels = { pending: 'Pending', crossing: 'Crossing', light: 'Light!', 'in-a': 'In A', done: '&mdash;' };
+    cell.innerHTML = labels[st] || st;
+  }
+
+  const mstList = document.getElementById('mstEdgeList');
+  if (step.A_edges && step.A_edges.length > 0) {
+    let html = '';
+    for (let idx of step.A_edges) {
+      const e = EDGES[idx];
+      html += `<span class="mst-edge-item">${e.label} (${e.w})</span>`;
+    }
+    mstList.innerHTML = html;
+  } else {
+    mstList.innerHTML = '<span style="color:#555;font-size:0.85em;">Forest A: no edges yet</span>';
+  }
+
+  if (step.done) {
+    document.getElementById('resultSection').style.display = 'block';
+  } else {
+    document.getElementById('resultSection').style.display = 'none';
+  }
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  const step = steps[currentStep];
+  const phaseLabels = {
+    init: 'Setup',
+    cut: 'Defining Cut',
+    crossing: 'Finding Crossing Edges',
+    light: 'Identifying Light Edge',
+    safe: 'Adding Safe Edge',
+    done: 'Complete'
+  };
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phaseLabels[step.type] || step.type}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  const results = precomputeAll();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('cutDisplay').innerHTML = '&mdash;';
+  document.getElementById('lightDisplay').innerHTML = '&mdash;';
+  document.getElementById('forestWeight').textContent = '0';
+  document.getElementById('forestCount').textContent = '0';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  document.getElementById('mstEdgeList').innerHTML = '<span style="color:#555;font-size:0.85em;">Forest A: no edges yet</span>';
+  for (let i = 0; i < EDGES.length; i++) {
+    const cell = document.getElementById('es' + i);
+    if (cell) { cell.className = 'pending'; cell.textContent = 'Pending'; }
+  }
+}
+
+function finishAnimation() {
+  animating = false;
+  const results = precomputeAll();
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('resultSection').style.display = 'block';
+  let edgeHtml = '';
+  for (let idx of results.mstEdges) {
+    const e = EDGES[idx];
+    edgeHtml += `<p style="margin-left:8px;">• ${e.label} &mdash; weight ${e.w}</p>`;
+  }
+  document.getElementById('resultContent').innerHTML = `
+    <div class="big-result">MST Total Weight: ${results.mstWeight}</div>
+    <p style="text-align:left;display:inline-block;">Edges in MST:<br>${edgeHtml}</p>
+    <p style="margin-top:12px;color:#888;">The Generic-MST algorithm builds the MST one safe edge at a time using the Cut Property.</p>
+  `;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(results.mstEdges, results.mstWeight);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
