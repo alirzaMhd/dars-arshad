@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MST Algorithm Family Comparison</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  padding-bottom: 30px;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 16px;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.75em;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-swatch {
+  width: 18px; height: 4px; border-radius: 2px;
+}
+.legend-swatch.circle { width: 10px; height: 10px; border-radius: 50%; }
+.legend-swatch.dashed { border-top: 3px dashed; height: 0; background: transparent; }
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 16px;
+  flex-wrap: wrap;
+}
+.controls .btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.controls .btn-group-label {
+  font-size: 0.7em;
+  color: #666;
+  margin-right: 4px;
+}
+.btn {
+  padding: 6px 14px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.btn.small { padding: 3px 8px; font-size: 0.7em; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:disabled:hover { border-color: #444; color: #e0e0e0; box-shadow: none; }
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.78em;
+}
+.speed-control input { width: 70px; accent-color: #00ff88; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+.panel {
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 14px;
+  transition: border-color 0.3s;
+}
+.panel.active-panel { border-color: #00ff88; box-shadow: 0 0 20px #00ff8822; }
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.panel-title {
+  color: #ff6600;
+  font-size: 0.95em;
+  font-weight: bold;
+}
+.panel-tag {
+  color: #888;
+  font-size: 0.65em;
+  font-style: italic;
+}
+.panel-step {
+  text-align: right;
+  color: #888;
+  font-size: 0.7em;
+}
+.panel-step .count { color: #ff6600; font-weight: bold; }
+.panel-graph {
+  text-align: center;
+  margin: 4px 0;
+}
+.panel-graph svg {
+  background: #08081a;
+  border-radius: 8px;
+  border: 1px solid #222;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+}
+.panel-action {
+  font-size: 0.72em;
+  color: #00ccff;
+  text-align: center;
+  min-height: 1.5em;
+  margin: 4px 0;
+  line-height: 1.4;
+}
+.panel-mst {
+  font-size: 0.7em;
+  color: #aaa;
+  text-align: center;
+  min-height: 1.2em;
+}
+.panel-mst .green { color: #00ff88; }
+.explanation-bar {
+  max-width: 1600px;
+  margin: 16px auto 0;
+  padding: 0 15px;
+}
+.explanation-box {
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 18px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 0.82em;
+  line-height: 1.7;
+}
+.explanation-box::-webkit-scrollbar { width: 5px; }
+.explanation-box::-webkit-scrollbar-track { background: #111; }
+.explanation-box::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.explanation-box .exp-header {
+  color: #ff6600;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #333;
+}
+.explanation-box .exp-phase {
+  color: #00ccff;
+  font-size: 0.8em;
+  margin-bottom: 6px;
+}
+.explanation-box .exp-body p { margin: 4px 0; color: #ccc; }
+.explanation-box .exp-body .highlight { color: #ffcc00; }
+.explanation-box .exp-body .dim { color: #ff9944; }
+.explanation-box .exp-body .formula { color: #00ccff; background: #0a0a18; padding: 4px 8px; border-radius: 4px; display: inline-block; margin: 3px 0; }
+.explanation-box .exp-body .result { color: #00ff88; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>MST Algorithm Family</h1>
+<p class="subtitle">Four approaches to the Minimum Spanning Tree problem — same graph, different strategies</p>
+
+<div class="legend">
+  <span class="legend-item"><span class="legend-swatch" style="background:#555;"></span> Pending</span>
+  <span class="legend-item"><span class="legend-swatch" style="background:#ff6600;"></span> Current / Active</span>
+  <span class="legend-item"><span class="legend-swatch" style="background:#00ff88;"></span> In MST</span>
+  <span class="legend-item"><span class="legend-swatch" style="background:#ff0044;"></span> Skipped</span>
+  <span class="legend-item"><span class="legend-swatch circle" style="background:#00ccff;"></span> Default vertex</span>
+  <span class="legend-item"><span class="legend-swatch circle" style="background:#00ff88;"></span> In MST</span>
+  <span class="legend-item"><span class="legend-swatch circle" style="background:#ff6600;"></span> Active vertex</span>
+</div>
+
+<div class="controls">
+  <button class="btn primary" onclick="playAll()">▶ Play All</button>
+  <button class="btn" onclick="pauseAll()">⏸ Pause</button>
+  <button class="btn" onclick="stepAll()">⏭ Step All</button>
+  <button class="btn" onclick="resetAll()">↺ Reset</button>
+  <div class="speed-control">
+    <label>Speed:</label>
+    <input type="range" id="speedSlider" min="1" max="10" value="5">
+    <span id="speedLabel">5x</span>
+  </div>
+</div>
+
+<div class="grid" id="panelGrid">
+  <!-- Panel 1: Generic MST -->
+  <div class="panel" id="panel0" onclick="focusPanel(0)">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Generic MST</div>
+        <div class="panel-tag">safe-edge framework — cut property</div>
+      </div>
+      <div class="panel-step"><span class="count" id="step0">0</span> / <span id="total0">0</span></div>
+    </div>
+    <div class="panel-graph"><svg id="svg0" viewBox="0 0 400 250"></svg></div>
+    <div class="panel-action" id="action0">Ready</div>
+    <div class="panel-mst" id="mst0">MST: <span class="green">—</span></div>
+  </div>
+
+  <!-- Panel 2: Kruskal -->
+  <div class="panel" id="panel1" onclick="focusPanel(1)">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Kruskal</div>
+        <div class="panel-tag">forest-growing — global view</div>
+      </div>
+      <div class="panel-step"><span class="count" id="step1">0</span> / <span id="total1">0</span></div>
+    </div>
+    <div class="panel-graph"><svg id="svg1" viewBox="0 0 400 250"></svg></div>
+    <div class="panel-action" id="action1">Ready</div>
+    <div class="panel-mst" id="mst1">MST: <span class="green">—</span></div>
+  </div>
+
+  <!-- Panel 3: Prim -->
+  <div class="panel" id="panel2" onclick="focusPanel(2)">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Prim</div>
+        <div class="panel-tag">tree-growing — local view</div>
+      </div>
+      <div class="panel-step"><span class="count" id="step2">0</span> / <span id="total2">0</span></div>
+    </div>
+    <div class="panel-graph"><svg id="svg2" viewBox="0 0 400 250"></svg></div>
+    <div class="panel-action" id="action2">Ready</div>
+    <div class="panel-mst" id="mst2">MST: <span class="green">—</span></div>
+  </div>
+
+  <!-- Panel 4: Borůvka -->
+  <div class="panel" id="panel3" onclick="focusPanel(3)">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Borůvka</div>
+        <div class="panel-tag">parallel edge contraction — component view</div>
+      </div>
+      <div class="panel-step"><span class="count" id="step3">0</span> / <span id="total3">0</span></div>
+    </div>
+    <div class="panel-graph"><svg id="svg3" viewBox="0 0 400 250"></svg></div>
+    <div class="panel-action" id="action3">Ready</div>
+    <div class="panel-mst" id="mst3">MST: <span class="green">—</span></div>
+  </div>
+</div>
+
+<div class="explanation-bar">
+  <div class="explanation-box" id="explanationBox">
+    <div class="exp-header" id="expHeader">Generic MST — Safe Edge Framework</div>
+    <div class="exp-phase" id="expPhase">Click a panel to see detailed explanation</div>
+    <div class="exp-body" id="expBody">
+      <p>The four MST algorithms all rely on the <span class="highlight">cut property</span>: for any cut, the lightest crossing edge is safe to add.</p>
+      <p><b>Generic</b> explicitly uses cuts. <b>Kruskal</b> grows a forest by considering edges globally. <b>Prim</b> grows a single tree from a root. <b>Borůvka</b> contracts components in parallel.</p>
+      <p class="result" style="margin-top:6px;">Press <b>Play All</b> or <b>Step All</b> to compare them side by side.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SHARED GRAPH =====
+const V = 6;
+const VLABELS = ['a', 'b', 'c', 'd', 'e', 'f'];
+const VPOS = [
+  {x: 100, y: 40},   // a
+  {x: 250, y: 50},   // b
+  {x: 50,  y: 150},  // c
+  {x: 340, y: 170},  // d
+  {x: 200, y: 180},  // e
+  {x: 130, y: 230}   // f
+];
+const EDGES = [
+  {u:0, v:1, w:6},  // 0: a-b
+  {u:0, v:2, w:5},  // 1: a-c
+  {u:1, v:2, w:8},  // 2: b-c
+  {u:1, v:3, w:7},  // 3: b-d
+  {u:1, v:4, w:4},  // 4: b-e
+  {u:2, v:4, w:9},  // 5: c-e
+  {u:2, v:5, w:3},  // 6: c-f
+  {u:3, v:4, w:2},  // 7: d-e
+  {u:4, v:5, w:1}   // 8: e-f
+];
+const NODE_R = 16;
+
+// ===== ALGORITHM DATA =====
+let algoSteps = [[], [], [], []];
+let cur = [0, 0, 0, 0];
+let done = [false, false, false, false];
+let focused = 0;
+let animating = false;
+let animTimer = null;
+let ALGO_NAMES = ['Generic MST', 'Kruskal', 'Prim', 'Borůvka'];
+
+// ===== SVG RENDERING =====
+function buildSVG(containerId, edgeStates, vertexStates, extra) {
+  const svg = document.getElementById(containerId);
+  let html = '';
+  // Edges
+  for (let i = 0; i < EDGES.length; i++) {
+    const e = EDGES[i];
+    const p1 = VPOS[e.u], p2 = VPOS[e.v];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const rx = dx/len * NODE_R, ry = dy/len * NODE_R;
+    const x1 = p1.x + rx, y1 = p1.y + ry;
+    const x2 = p2.x - rx, y2 = p2.y - ry;
+    let color = '#555', width = '2', dash = '';
+    const st = edgeStates[i];
+    if (st === 'current' || st === 'crossing' || st === 'light') {
+      color = '#ff6600'; width = '3';
+    } else if (st === 'in-mst' || st === 'in-a') {
+      color = '#00ff88'; width = '3.5';
+    } else if (st === 'skipped') {
+      color = '#ff0044'; width = '2'; dash = '6,4';
+    } else if (st === 'computing') {
+      color = '#ffff00'; width = '3';
+    }
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" ${dash ? `stroke-dasharray="${dash}"` : ''} opacity="0.85"/>`;
+    // Weight label
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    const perpX = -dy / len * 14, perpY = dx / len * 14;
+    html += `<text x="${mx + perpX}" y="${my + perpY}" fill="${color}" font-size="10" text-anchor="middle" font-weight="bold">${e.w}</text>`;
+  }
+  // Vertices
+  for (let i = 0; i < V; i++) {
+    let fill = '#0d0d20', stroke = '#00ccff', sw = '2.5';
+    const vs = vertexStates[i];
+    if (vs === 'in-tree' || vs === 'in-mst' || vs === 'in-a' || vs === 'chosen') {
+      stroke = '#00ff88'; fill = '#0a1a12';
+    } else if (vs === 'current' || vs === 'extracted' || vs === 'in-s') {
+      stroke = '#ff6600'; fill = '#1a0a00';
+    } else if (vs === 'frontier' || vs === 'in-vs') {
+      stroke = '#ffcc00'; fill = '#1a1a00';
+    } else if (vs === 'component') {
+      stroke = '#ff66ff'; fill = '#1a0030';
+    }
+    html += `<circle cx="${VPOS[i].x}" cy="${VPOS[i].y}" r="${NODE_R}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="0.9"/>`;
+    html += `<text x="${VPOS[i].x}" y="${VPOS[i].y + 1}" fill="#e0e0e0" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="bold">${VLABELS[i]}</text>`;
+  }
+  // Extra: cut divider
+  if (extra && extra.divider) {
+    html += `<line x1="${extra.divider.x1}" y1="${extra.divider.y1}" x2="${extra.divider.x2}" y2="${extra.divider.y2}" stroke="#aa66ff" stroke-width="2" stroke-dasharray="8,6" opacity="0.7"/>`;
+    if (extra.labelS) {
+      html += `<text x="${extra.divider.x1 - 5}" y="${extra.divider.y1 - 8}" fill="#ffcc00" font-size="11" text-anchor="end" font-weight="bold">S</text>`;
+      html += `<text x="${extra.divider.x2 + 5}" y="${extra.divider.y2 - 8}" fill="#ffcc00" font-size="11" text-anchor="start" font-weight="bold">V\\S</text>`;
+    }
+  }
+  // Extra: key labels for Prim
+  if (extra && extra.keys) {
+    for (let i = 0; i < V; i++) {
+      const k = extra.keys[i];
+      if (k === undefined) continue;
+      html += `<text x="${VPOS[i].x}" y="${VPOS[i].y + NODE_R + 14}" fill="${k === Infinity ? '#555' : '#ffcc00'}" font-size="9" text-anchor="middle">${k === Infinity ? '∞' : 'k=' + k}</text>`;
+    }
+  }
+  // Extra: component labels for Borůvka
+  if (extra && extra.components) {
+    for (let i = 0; i < V; i++) {
+      const cid = extra.components[i];
+      html += `<text x="${VPOS[i].x}" y="${VPOS[i].y - NODE_R - 8}" fill="#ff66ff" font-size="9" text-anchor="middle">C${cid}</text>`;
+    }
+  }
+  svg.innerHTML = html;
+}
+
+// ===== GENERIC MST =====
+const CUT_CYCLES = [
+  { S: [0], V_S: [1,2,3,4,5], crossing: [0,1], light: 1,
+    div: {x1:40,y1:0,x2:60,y2:250}, labelS: true },
+  { S: [0,2], V_S: [1,3,4,5], crossing: [0,2,5,6], light: 6,
+    div: {x1:0,y1:60,x2:400,y2:160}, labelS: true },
+  { S: [0,2,5], V_S: [1,3,4], crossing: [0,2,5,8], light: 8,
+    div: {x1:175,y1:0,x2:170,y2:250}, labelS: true },
+  { S: [0,2,4,5], V_S: [1,3], crossing: [0,2,4,7], light: 7,
+    div: {x1:120,y1:0,x2:250,y2:250}, labelS: true },
+  { S: [0,2,3,4,5], V_S: [1], crossing: [0,2,4], light: 4,
+    div: {x1:90,y1:0,x2:270,y2:250}, labelS: true }
+];
+
+function buildGenericSteps() {
+  algoSteps[0] = [];
+  let mst = [];
+  // Init
+  algoSteps[0].push({
+    es: new Array(EDGES.length).fill('pending'),
+    vs: new Array(V).fill('default'),
+    action: 'Initial graph — choose safe edge via cut property',
+    mst: [],
+    extra: {}
+  });
+  for (let r = 0; r < CUT_CYCLES.length; r++) {
+    const cc = CUT_CYCLES[r];
+    // Cut step
+    let vs = new Array(V).fill('default');
+    for (let s of cc.S) vs[s] = 'in-s';
+    for (let s of cc.V_S) vs[s] = 'in-vs';
+    algoSteps[0].push({
+      es: new Array(EDGES.length).fill('pending'),
+      vs: vs,
+      action: `Cut: S={${cc.S.map(i=>VLABELS[i]).join(',')}}, V\\S={${cc.V_S.map(i=>VLABELS[i]).join(',')}}`,
+      mst: [...mst],
+      extra: {divider: cc.div, labelS: cc.labelS}
+    });
+    // Crossing edges
+    let es = new Array(EDGES.length).fill('pending');
+    for (let ci of cc.crossing) es[ci] = 'crossing';
+    algoSteps[0].push({
+      es: es,
+      vs: vs,
+      action: `Crossing edges: ${cc.crossing.map(i=>`${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}(${EDGES[i].w})`).join(', ')}`,
+      mst: [...mst],
+      extra: {divider: cc.div, labelS: cc.labelS}
+    });
+    // Light edge
+    es = new Array(EDGES.length).fill('pending');
+    for (let ci of cc.crossing) es[ci] = 'crossing';
+    es[cc.light] = 'light';
+    algoSteps[0].push({
+      es: es,
+      vs: vs,
+      action: `Light edge: ${VLABELS[EDGES[cc.light].u]}-${VLABELS[EDGES[cc.light].v]}(${EDGES[cc.light].w}) is safe`,
+      mst: [...mst],
+      extra: {divider: cc.div, labelS: cc.labelS}
+    });
+    // Safe edge - add to MST
+    mst.push(cc.light);
+    es = new Array(EDGES.length).fill('pending');
+    for (let mi of mst) es[mi] = 'in-mst';
+    vs = new Array(V).fill('default');
+    let comp = unionFindInSet(mst, V);
+    for (let i = 0; i < V; i++) {
+      if (comp[i] === comp[0]) vs[i] = 'in-s';
+      else vs[i] = 'in-vs';
+    }
+    algoSteps[0].push({
+      es: es,
+      vs: vs,
+      action: `Add safe edge — MST now has ${mst.length} edge${mst.length>1?'s':''}`,
+      mst: [...mst],
+      extra: {}
+    });
+  }
+  // Done
+  let esDone = new Array(EDGES.length).fill('pending');
+  for (let mi of mst) esDone[mi] = 'in-mst';
+  algoSteps[0].push({
+    es: esDone,
+    vs: new Array(V).fill('in-mst'),
+    action: '✓ Complete! MST found via cut property (5 edges)',
+    mst: [...mst],
+    extra: {}
+  });
+}
+
+// ===== KRUSKAL =====
+function buildKruskalSteps() {
+  algoSteps[1] = [];
+  let sorted = EDGES.map((e,i) => ({idx:i, u:e.u, v:e.v, w:e.w}))
+    .sort((a,b) => a.w - b.w);
+  let parent = Array.from({length: V}, (_,i) => i);
+  function find(x) {
+    while (parent[x] !== x) parent[x] = parent[parent[x]], x = parent[x];
+    return x;
+  }
+  function union(x, y) { parent[find(x)] = find(y); }
+  let mst = [];
+  // Init
+  algoSteps[1].push({
+    es: new Array(EDGES.length).fill('pending'),
+    vs: new Array(V).fill('default'),
+    action: `All ${EDGES.length} edges sorted by weight — process globally`,
+    mst: [],
+    sorted: sorted.map(e => `${VLABELS[e.u]}-${VLABELS[e.v]}(${e.w})`),
+    extra: {}
+  });
+  for (let s of sorted) {
+    let es = new Array(EDGES.length).fill('pending');
+    for (let mi of mst) es[mi] = 'in-mst';
+    let ru = find(s.u), rv = find(s.v);
+    es[s.idx] = 'current';
+    let vs = new Array(V).fill('default');
+    for (let i = 0; i < V; i++) {
+      if (mst.length > 0 && find(i) === find(s.u)) vs[i] = 'component';
+    }
+    vs[s.u] = 'current'; vs[s.v] = 'current';
+    if (ru !== rv) {
+      union(s.u, s.v);
+      mst.push(s.idx);
+      algoSteps[1].push({
+        es: es,
+        vs: vs,
+        action: `Edge ${VLABELS[s.u]}-${VLABELS[s.v]}(${s.w}) — add (different components)`,
+        mst: [...mst],
+        extra: {}
+      });
+    } else {
+      es[s.idx] = 'skipped';
+      algoSteps[1].push({
+        es: es,
+        vs: vs,
+        action: `Edge ${VLABELS[s.u]}-${VLABELS[s.v]}(${s.w}) — skip (same component)`,
+        mst: [...mst],
+        extra: {}
+      });
+    }
+    let es2 = new Array(EDGES.length).fill('pending');
+    for (let mi of mst) es2[mi] = 'in-mst';
+    algoSteps[1][algoSteps[1].length-1].es = es2;
+  }
+  let esDone = new Array(EDGES.length).fill('pending');
+  for (let mi of mst) esDone[mi] = 'in-mst';
+  algoSteps[1].push({
+    es: esDone,
+    vs: new Array(V).fill('in-mst'),
+    action: '✓ Complete! MST found via global edge sorting',
+    mst: [...mst],
+    extra: {}
+  });
+}
+
+// ===== PRIM =====
+function buildPrimSteps() {
+  algoSteps[2] = [];
+  let key = new Array(V).fill(Infinity);
+  let pi = new Array(V).fill(null);
+  let inQ = new Array(V).fill(true);
+  let mst = [];
+  const SOURCE = 0;
+  key[SOURCE] = 0;
+  // Init
+  algoSteps[2].push({
+    es: new Array(EDGES.length).fill('pending'),
+    vs: new Array(V).fill('default'),
+    keys: key.map(k => k === Infinity ? Infinity : k),
+    action: `Start from ${VLABELS[SOURCE]}. key[${VLABELS[SOURCE]}]=0, others=∞`,
+    mst: [],
+    extra: {keys: key.map(k => k === Infinity ? Infinity : k)}
+  });
+  function extractMin() {
+    let minV = -1, minKey = Infinity;
+    for (let i = 0; i < V; i++) {
+      if (inQ[i] && key[i] < minKey) { minKey = key[i]; minV = i; }
+    }
+    if (minV >= 0) {
+      inQ[minV] = false;
+      if (pi[minV] !== null && minV !== SOURCE) {
+        for (let eidx = 0; eidx < EDGES.length; eidx++) {
+          const e = EDGES[eidx];
+          if ((e.u === minV && e.v === pi[minV]) || (e.u === pi[minV] && e.v === minV)) {
+            mst.push(eidx);
+            break;
+          }
+        }
+      }
+    }
+    return minV;
+  }
+  while (true) {
+    const u = extractMin();
+    if (u < 0) break;
+    let es = new Array(EDGES.length).fill('pending');
+    for (let mi of mst) es[mi] = 'in-mst';
+    let vs = new Array(V).fill('default');
+    let mstVertices = new Set();
+    for (let mi of mst) { mstVertices.add(EDGES[mi].u); mstVertices.add(EDGES[mi].v); }
+    for (let i = 0; i < V; i++) {
+      if (!inQ[i]) vs[i] = 'in-tree';
+    }
+    vs[u] = 'current';
+    let neighbors = [];
+    for (let eidx = 0; eidx < EDGES.length; eidx++) {
+      const e = EDGES[eidx];
+      if (e.u === u && inQ[e.v]) neighbors.push({v:e.v, w:e.w, idx:eidx});
+      if (e.v === u && inQ[e.u]) neighbors.push({v:e.u, w:e.w, idx:eidx});
+    }
+    neighbors.sort((a,b) => a.v - b.v);
+    // Extract step
+    algoSteps[2].push({
+      es: es,
+      vs: vs,
+      keys: key.map(k => k === Infinity ? Infinity : k),
+      action: `Extract ${VLABELS[u]} (key=${key[u]}). Add edge ${pi[u] !== null ? VLABELS[pi[u]] : '—'}-${VLABELS[u]}`,
+      mst: [...mst],
+      extra: {keys: key.map(k => k === Infinity ? Infinity : k)}
+    });
+    for (let n of neighbors) {
+      let es2 = new Array(EDGES.length).fill('pending');
+      for (let mi of mst) es2[mi] = 'in-mst';
+      es2[n.idx] = 'current';
+      let vs2 = new Array(V).fill('default');
+      for (let i = 0; i < V; i++) {
+        if (!inQ[i] || i === u) vs2[i] = 'in-tree';
+        if (i === n.v) vs2[i] = 'frontier';
+      }
+      if (inQ[n.v] && n.w < key[n.v]) {
+        key[n.v] = n.w;
+        pi[n.v] = u;
+        algoSteps[2].push({
+          es: es2,
+          vs: vs2,
+          keys: key.map(k => k === Infinity ? Infinity : k),
+          action: `Relax: key[${VLABELS[n.v]}] = ${n.w} (via ${VLABELS[u]})`,
+          mst: [...mst],
+          extra: {keys: key.map(k => k === Infinity ? Infinity : k)}
+        });
+      } else {
+        algoSteps[2].push({
+          es: es2,
+          vs: vs2,
+          keys: key.map(k => k === Infinity ? Infinity : k),
+          action: `Skip: key[${VLABELS[n.v]}] = ${key[n.v] === Infinity ? '∞' : key[n.v]} ≤ ${n.w} (via ${VLABELS[u]})`,
+          mst: [...mst],
+          extra: {keys: key.map(k => k === Infinity ? Infinity : k)}
+        });
+      }
+    }
+  }
+  let esDone = new Array(EDGES.length).fill('pending');
+  for (let mi of mst) esDone[mi] = 'in-mst';
+  algoSteps[2].push({
+    es: esDone,
+    vs: new Array(V).fill('in-tree'),
+    keys: key.map(k => k === Infinity ? Infinity : k),
+    action: '✓ Complete! MST found via tree growth',
+    mst: [...mst],
+    extra: {keys: key.map(k => k === Infinity ? Infinity : k)}
+  });
+}
+
+// ===== BORŮVKA =====
+function buildBoruvkaSteps() {
+  algoSteps[3] = [];
+  let mst = [];
+  let comp = Array.from({length: V}, (_, i) => i);
+  function findComp(x) {
+    while (comp[x] !== x) comp[x] = comp[comp[x]], x = comp[x];
+    return x;
+  }
+  function unionComp(x, y) { comp[findComp(x)] = findComp(y); }
+  // Init
+  algoSteps[3].push({
+    es: new Array(EDGES.length).fill('pending'),
+    vs: new Array(V).fill('default'),
+    action: 'Each vertex is its own component — find cheapest outgoing edge per component',
+    mst: [],
+    extra: {components: Array.from({length: V}, (_, i) => i)}
+  });
+  let phase = 0;
+  while (true) {
+    // Find cheapest outgoing edge for each component
+    let comps = new Set();
+    for (let i = 0; i < V; i++) comps.add(findComp(i));
+    let compList = Array.from(comps);
+    if (compList.length <= 1) break;
+    let cheapest = {};
+    for (let c of compList) cheapest[c] = {idx: -1, w: Infinity};
+    let edgeScan = [];
+    for (let eidx = 0; eidx < EDGES.length; eidx++) {
+      const e = EDGES[eidx];
+      let cu = findComp(e.u), cv = findComp(e.v);
+      if (cu === cv) continue;
+      if (e.w < cheapest[cu].w) cheapest[cu] = {idx: eidx, w: e.w};
+      if (e.w < cheapest[cv].w) cheapest[cv] = {idx: eidx, w: e.w};
+      edgeScan.push({eidx, cu, cv});
+    }
+    let selected = new Set();
+    for (let c of compList) {
+      if (cheapest[c].idx >= 0) selected.add(cheapest[c].idx);
+    }
+    let selArr = Array.from(selected);
+    // Show scanning step (list cheapest per component)
+    let vsInit = new Array(V).fill('default');
+    let scanExpl = [];
+    for (let c of compList) {
+      let members = [];
+      for (let i = 0; i < V; i++) if (findComp(i) === c) members.push(VLABELS[i]);
+      if (cheapest[c].idx >= 0) {
+        let e = EDGES[cheapest[c].idx];
+        scanExpl.push(`C${c}{${members.join(',')}}: min = ${VLABELS[e.u]}-${VLABELS[e.v]}(${e.w})`);
+      }
+    }
+    algoSteps[3].push({
+      es: new Array(EDGES.length).fill('pending'),
+      vs: vsInit,
+      action: `Phase ${phase+1}: ` + scanExpl.join('; '),
+      mst: [...mst],
+      extra: {components: comp.map(c => findComp(c))}
+    });
+    // Add each selected edge
+    for (let sIdx of selArr) {
+      let e = EDGES[sIdx];
+      let cu = findComp(e.u), cv = findComp(e.v);
+      if (cu === cv) continue;
+      unionComp(e.u, e.v);
+      mst.push(sIdx);
+      let es = new Array(EDGES.length).fill('pending');
+      for (let mi of mst) es[mi] = 'in-mst';
+      es[sIdx] = 'current';
+      let vs = new Array(V).fill('default');
+      let newComps = comp.map(c => findComp(c));
+      algoSteps[3].push({
+        es: es,
+        vs: vs,
+        action: `Add ${VLABELS[e.u]}-${VLABELS[e.v]}(${e.w}) — contracting components`,
+        mst: [...mst],
+        extra: {components: newComps}
+      });
+    }
+    phase++;
+    // Recompute components after all unions
+    for (let i = 0; i < V; i++) findComp(i);
+  }
+  let esDone = new Array(EDGES.length).fill('pending');
+  for (let mi of mst) esDone[mi] = 'in-mst';
+  algoSteps[3].push({
+    es: esDone,
+    vs: new Array(V).fill('in-mst'),
+    action: `✓ Complete! MST found in ${phase} phase${phase>1?'s':''} via parallel contraction`,
+    mst: [...mst],
+    extra: {components: comp.map(c => findComp(c))}
+  });
+}
+
+// ===== UNION-FIND HELPER =====
+function unionFindInSet(edgeIdxs, n) {
+  let parent = Array.from({length: n}, (_, i) => i);
+  function find(x) {
+    while (parent[x] !== x) parent[x] = parent[parent[x]], x = parent[x];
+    return x;
+  }
+  function union(x, y) { parent[find(x)] = find(y); }
+  for (let ei of edgeIdxs) {
+    const e = EDGES[ei];
+    union(e.u, e.v);
+  }
+  for (let i = 0; i < n; i++) find(i);
+  return parent;
+}
+
+// ===== ANIMATION ENGINE =====
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function renderAll() {
+  for (let a = 0; a < 4; a++) {
+    if (cur[a] >= algoSteps[a].length) continue;
+    const s = algoSteps[a][cur[a]];
+    if (!s) continue;
+    buildSVG('svg' + a, s.es, s.vs, s.extra || {});
+    document.getElementById('step' + a).textContent = cur[a] + 1;
+    document.getElementById('total' + a).textContent = algoSteps[a].length;
+    document.getElementById('action' + a).textContent = s.action;
+    let mstStr = s.mst && s.mst.length > 0
+      ? s.mst.map(i => `${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}`).join(' ')
+      : '—';
+    document.getElementById('mst' + a).innerHTML = 'MST: <span class="green">' + mstStr + '</span>';
+    // Check done
+    if (cur[a] >= algoSteps[a].length - 1) {
+      done[a] = true;
+    }
+  }
+  updateExplanation();
+}
+
+function updateExplanation() {
+  const a = focused;
+  const stepIdx = cur[a];
+  const total = algoSteps[a].length;
+  const s = stepIdx < total ? algoSteps[a][stepIdx] : null;
+  document.getElementById('expHeader').textContent = ALGO_NAMES[a] + (done[a] ? ' — ✓ Complete' : '');
+  document.getElementById('expPhase').textContent = s
+    ? `Step ${stepIdx + 1} / ${total}`
+    : 'Click a panel to see detailed explanation';
+  let bodyHtml = '';
+  if (a === 0 && s) {
+    let mstWeight = s.mst.reduce((sum, i) => sum + EDGES[i].w, 0);
+    const mstStr = s.mst.map(i => `${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}(${EDGES[i].w})`).join(', ');
+    bodyHtml += `<p><b>Cut Property Framework</b> — At each step, choose any cut that does not cross the current forest A, find the lightest crossing edge, and add it. This edge is guaranteed to be <span class="highlight">safe</span>.</p>`;
+    bodyHtml += `<p><span class="dim">Current MST weight:</span> ${mstWeight} &nbsp;|&nbsp; <span class="dim">Edges:</span> ${mstStr || 'none'}</p>`;
+    if (s.action.includes('Cut:')) {
+      bodyHtml += `<p>The current forest A is shown with vertices colored by which side of the cut (S or V\\S) they fall on. The dashed purple line represents the cut.</p>`;
+      bodyHtml += `<p class="result">Light edge found so far will be highlighted orange.</p>`;
+    }
+    if (cur[a] === total - 1) {
+      bodyHtml += `<p class="result" style="margin-top:8px;">MST total weight: <b>${mstWeight}</b> (edges: ${mstStr})</p>`;
+      bodyHtml += `<p><span class="dim">Complexity:</span> Depends on implementation. With optimal data structures, O(E log V).</p>`;
+    }
+  } else if (a === 1 && s) {
+    let mstWeight = s.mst.reduce((sum, i) => sum + EDGES[i].w, 0);
+    const mstStr = s.mst.map(i => `${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}(${EDGES[i].w})`).join(', ');
+    bodyHtml += `<p><b>Kruskal's Algorithm</b> — Sort all edges by weight. Process from smallest to largest. For each edge, if its endpoints are in different components, add it to the MST (otherwise skip). Uses a <span class="highlight">global view</span> of the graph.</p>`;
+    bodyHtml += `<p><span class="dim">MST weight so far:</span> ${mstWeight}</p>`;
+    if (s.action.includes('add')) {
+      bodyHtml += `<p><span class="result">Edge added!</span> The two components are now united.</p>`;
+    } else if (s.action.includes('skip')) {
+      bodyHtml += `<p><span class="highlight">Edge skipped.</span> Its endpoints are already connected — adding it would create a cycle.</p>`;
+    }
+    if (s.sorted) {
+      let orderStr = s.sorted.join(' → ');
+      bodyHtml += `<p><span class="dim">Sorted order:</span> ${orderStr}</p>`;
+    }
+    if (cur[a] === total - 1) {
+      bodyHtml += `<p class="result" style="margin-top:8px;">MST total weight: <b>${mstWeight}</b> (edges: ${mstStr})</p>`;
+      bodyHtml += `<p><span class="dim">Complexity:</span> O(E log E) for sorting + O(E log V) for Union-Find.</p>`;
+    }
+  } else if (a === 2 && s) {
+    let mstWeight = s.mst.reduce((sum, i) => sum + EDGES[i].w, 0);
+    const mstStr = s.mst.map(i => `${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}(${EDGES[i].w})`).join(', ');
+    bodyHtml += `<p><b>Prim's Algorithm</b> — Grow a single tree from the source vertex (${VLABELS[0]}). At each step, add the cheapest edge connecting the tree to a vertex outside it. Uses a <span class="highlight">local view</span> around the growing tree.</p>`;
+    bodyHtml += `<p><span class="dim">MST weight so far:</span> ${mstWeight}</p>`;
+    if (s.extra && s.extra.keys) {
+      let keyStr = s.extra.keys.map((k,i) => `${VLABELS[i]}:${k===Infinity?'∞':k}`).join(', ');
+      bodyHtml += `<p><span class="dim">Keys:</span> ${keyStr}</p>`;
+    }
+    if (s.action.includes('Extract')) {
+      bodyHtml += `<p>A vertex is <span class="highlight">extracted</span> from the priority queue. The edge connecting it to the tree is added to MST.</p>`;
+    } else if (s.action.includes('Relax')) {
+      bodyHtml += `<p>Key updated — a cheaper connection to the tree was found.</p>`;
+    } else if (s.action.includes('Skip')) {
+      bodyHtml += `<p>No update needed — current key is already optimal.</p>`;
+    }
+    if (cur[a] === total - 1) {
+      bodyHtml += `<p class="result" style="margin-top:8px;">MST total weight: <b>${mstWeight}</b> (edges: ${mstStr})</p>`;
+      bodyHtml += `<p><span class="dim">Complexity:</span> O((V+E) log V) with binary heap priority queue.</p>`;
+    }
+  } else if (a === 3 && s) {
+    let mstWeight = s.mst.reduce((sum, i) => sum + EDGES[i].w, 0);
+    const mstStr = s.mst.map(i => `${VLABELS[EDGES[i].u]}-${VLABELS[EDGES[i].v]}(${EDGES[i].w})`).join(', ');
+    bodyHtml += `<p><b>Borůvka's Algorithm</b> — Each component independently finds its cheapest outgoing edge. All selected edges are added in <span class="highlight">parallel</span>. Components then contract and repeat. Best suited for <span class="highlight">distributed</span> computing.</p>`;
+    bodyHtml += `<p><span class="dim">MST weight so far:</span> ${mstWeight} &nbsp;|&nbsp; <span class="dim">Edges:</span> ${mstStr || 'none'}</p>`;
+    if (s.extra && s.extra.components) {
+      let compMap = {};
+      for (let i = 0; i < V; i++) {
+        let cid = s.extra.components[i];
+        if (!compMap[cid]) compMap[cid] = [];
+        compMap[cid].push(VLABELS[i]);
+      }
+      let compStr = Object.entries(compMap).map(([k,v]) => `C${k}{${v.join(',')}}`).join(' ');
+      bodyHtml += `<p><span class="dim">Components:</span> ${compStr}</p>`;
+    }
+    if (s.action.includes('Phase') && !s.action.includes('Complete')) {
+      bodyHtml += `<p>Each component selects its cheapest outgoing edge. Multiple edges may be added in one phase.</p>`;
+    }
+    if (cur[a] === total - 1) {
+      bodyHtml += `<p class="result" style="margin-top:8px;">MST total weight: <b>${mstWeight}</b> (edges: ${mstStr})</p>`;
+      bodyHtml += `<p><span class="dim">Complexity:</span> O(E log V) per phase, with O(log V) phases in parallel.</p>`;
+    }
+  } else if (!s) {
+    bodyHtml += `<p>Select a panel above to see detailed explanation for each algorithm's current step.</p>`;
+  }
+  if (bodyHtml) {
+    document.getElementById('expBody').innerHTML = bodyHtml;
+  }
+  document.getElementById('explanationBox').scrollTop = 0;
+}
+
+function processStep(a) {
+  if (done[a]) return;
+  if (cur[a] >= algoSteps[a].length - 1) { done[a] = true; return; }
+  cur[a]++;
+  renderAll();
+}
+
+function stepAll() {
+  pauseAll();
+  for (let a = 0; a < 4; a++) {
+    if (!done[a] && cur[a] < algoSteps[a].length - 1) {
+      cur[a]++;
+    }
+    if (cur[a] >= algoSteps[a].length - 1) done[a] = true;
+  }
+  renderAll();
+}
+
+function playAll() {
+  if (animating) return;
+  let allDone = done.every(d => d);
+  if (allDone) resetAll();
+  animating = true;
+  animTimer = setInterval(() => {
+    let anyLeft = false;
+    for (let a = 0; a < 4; a++) {
+      if (!done[a] && cur[a] < algoSteps[a].length - 1) {
+        anyLeft = true;
+      }
+    }
+    if (!anyLeft) {
+      clearInterval(animTimer);
+      animating = false;
+      return;
+    }
+    for (let a = 0; a < 4; a++) {
+      if (!done[a] && cur[a] < algoSteps[a].length - 1) {
+        cur[a]++;
+      }
+      if (cur[a] >= algoSteps[a].length - 1) done[a] = true;
+    }
+    renderAll();
+  }, getSpeed());
+}
+
+function pauseAll() {
+  animating = false;
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+}
+
+function resetAll() {
+  pauseAll();
+  cur = [0, 0, 0, 0];
+  done = [false, false, false, false];
+  buildAllSteps();
+  renderAll();
+  document.getElementById('expHeader').textContent = 'MST Algorithm Family';
+  document.getElementById('expPhase').textContent = 'Click a panel to see detailed explanation';
+  document.getElementById('expBody').innerHTML = `
+    <p>The four MST algorithms all rely on the <span class="highlight">cut property</span>: for any cut, the lightest crossing edge is safe to add.</p>
+    <p><b>Generic</b> explicitly uses cuts. <b>Kruskal</b> grows a forest by considering edges globally. <b>Prim</b> grows a single tree from a root. <b>Borůvka</b> contracts components in parallel.</p>
+    <p class="result" style="margin-top:6px;">Press <b>Play All</b> or <b>Step All</b> to compare them side by side.</p>`;
+}
+
+function focusPanel(a) {
+  focused = a;
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('panel' + i).className = 'panel' + (i === a ? ' active-panel' : '');
+  }
+  updateExplanation();
+}
+
+function finishAll() {
+  pauseAll();
+  renderAll();
+}
+
+// ===== BUILD ALL STEPS =====
+function buildAllSteps() {
+  buildGenericSteps();
+  buildKruskalSteps();
+  buildPrimSteps();
+  buildBoruvkaSteps();
+  for (let a = 0; a < 4; a++) {
+    document.getElementById('total' + a).textContent = algoSteps[a].length;
+  }
+}
+
+// ===== SPEED SLIDER =====
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      let anyLeft = false;
+      for (let a = 0; a < 4; a++) {
+        if (!done[a] && cur[a] < algoSteps[a].length - 1) { anyLeft = true; break; }
+      }
+      if (!anyLeft) { clearInterval(animTimer); animating = false; return; }
+      for (let a = 0; a < 4; a++) {
+        if (!done[a] && cur[a] < algoSteps[a].length - 1) cur[a]++;
+        if (cur[a] >= algoSteps[a].length - 1) done[a] = true;
+      }
+      renderAll();
+    }, getSpeed());
+  }
+});
+
+// ===== INIT =====
+buildAllSteps();
+renderAll();
+focusPanel(0);
+</script>
+</body>
+</html>
