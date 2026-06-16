@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DAG Shortest Paths Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 8px 0 4px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.topo-section { margin: 15px 0; }
+.topo-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.topo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  padding: 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.topo-box {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #333;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: bold;
+  background: #0d0d1a;
+  color: #555;
+  transition: all 0.4s;
+}
+.topo-box.pending {
+  border-color: #555;
+  background: #0d0d1a;
+  color: #555;
+}
+.topo-box.current {
+  border-color: #ff6600 !important;
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  box-shadow: 0 0 20px #ff660066;
+  transform: scale(1.1);
+}
+.topo-box.done {
+  border-color: #00ff88;
+  background: #0a1a12;
+  color: #00ff88;
+}
+.topo-arrow {
+  color: #555;
+  font-size: 1.2em;
+  margin: 0 4px;
+  transition: all 0.4s;
+}
+.topo-arrow.done {
+  color: #00ff8866;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 15px 0; }
+.table-title {
+  color: #00ccff;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; }
+.dist-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 550px;
+}
+.dist-table th, .dist-table td {
+  padding: 8px 12px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.82em;
+  transition: all 0.3s;
+}
+.dist-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.dist-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.dist-table td.inf { color: #555; font-style: italic; }
+.dist-table td.finite { color: #ffcc00; font-weight: bold; }
+.dist-table td.settled {
+  color: #00ff88 !important;
+  background: #0a1a12 !important;
+}
+.dist-table td.current-row {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  font-weight: bold;
+}
+.dist-table td.updated {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  font-weight: bold;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.path-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.path-display .pd-box {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.path-display .pd-arrow {
+  color: #00ff8866;
+  font-size: 1.1em;
+  margin: 0 4px;
+}
+.path-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  font-size: 0.8em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 3px;
+  animation: pathPop 0.3s ease;
+}
+@keyframes pathPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.topnote {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0 10px;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+  color: #888;
+}
+.topnote-item { display: flex; align-items: center; gap: 5px; }
+.topnote-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.topnote-swatch.settled { background: #0a1a12; border-color: #00ff88; }
+.topnote-swatch.current { background: #1a0a00; border-color: #ff6600; }
+.topnote-swatch.unvisited { background: #0d0d1a; border-color: #555; }
+.topnote-swatch.relax { background: #1a1a00; border-color: #ffff00; }
+</style>
+</head>
+<body>
+
+<h1>DAG SHORTEST PATHS</h1>
+<p class="subtitle">Graph Algorithms — Shortest Paths on Directed Acyclic Graphs (O(V+E))</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="640" height="420" viewBox="0 0 640 420">
+        <defs>
+          <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+          </marker>
+          <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#00ff88"/>
+          </marker>
+          <marker id="arr-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff6600"/>
+          </marker>
+          <marker id="arr-yellow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ffff00"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="topnote">
+      <span class="topnote-item"><span class="topnote-swatch unvisited"></span> Unprocessed</span>
+      <span class="topnote-item"><span class="topnote-swatch current"></span> Current Vertex</span>
+      <span class="topnote-item"><span class="topnote-swatch relax"></span> Relaxing Edge</span>
+      <span class="topnote-item"><span class="topnote-swatch settled"></span> Processed</span>
+    </div>
+
+    <div class="topo-section">
+      <div class="topo-title">Topological Order <span style="color:#888;font-size:0.85em;">(processing left → right)</span></div>
+      <div id="topoContainer" class="topo-container"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Vertex:</span> <span class="value" id="currentVertexDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Relaxing:</span> <span class="value" id="currentEdgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Weight:</span> <span class="value" id="weightDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Shortest Path Estimates &amp; Predecessors</div>
+      <div class="table-wrapper">
+        <table class="dist-table" id="distTable">
+          <thead><tr><th>Vertex</th><th>d[v]</th><th>&pi; (parent)</th></tr></thead>
+          <tbody id="distTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ DAG Shortest Paths Complete!</h2>
+      <div class="big-result" id="finalCost"></div>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>🎯 DAG Shortest Paths Algorithm</h3>
+        <p>Finds <b>single-source shortest paths</b> in a <b>weighted Directed Acyclic Graph (DAG)</b> in <span class="result-line">O(V+E)</span> time — faster than Dijkstra or Bellman-Ford.</p>
+
+        <h4>📝 How It Works</h4>
+        <p style="margin-left:8px;"><b>1.</b> Topologically sort the DAG — O(V+E).</p>
+        <p style="margin-left:8px;"><b>2.</b> Initialize: <span class="dim">d[s]=0</span>, all others <span class="dim">d[v]=∞</span>.</p>
+        <p style="margin-left:8px;"><b>3.</b> For each vertex <span class="dim">u</span> in <b>topological order</b>:</p>
+        <p style="margin-left:16px;">For each <span class="dim">v</span> in Adj[u]: <b>RELAX</b>(u, v, w)</p>
+
+        <h4>🔑 Key Insight</h4>
+        <p>In a DAG, processing vertices in <b>topological order</b> guarantees that when we process <span class="dim">u</span>, all paths to <span class="dim">u</span> have already been considered — so <span class="dim">d[u]</span> is final.</p>
+
+        <h4>🗺️ This Graph</h4>
+        <p>6 vertices {<span class="dim">s, a, b, c, d, e</span>}, source = <span class="dim">s</span>, 9 directed edges.</p>
+        <p>Topological order: <span class="split-info">s → b → a → d → c → e</span></p>
+        <p class="note">Press ▶ Play or ⏭ Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 6;
+const VLABELS = ['s', 'a', 'b', 'c', 'd', 'e'];
+const LABEL_TOP = 'Current';
+const TOPO_ORDER = [0, 2, 1, 4, 3, 5]; // s, b, a, d, c, e
+
+const VPOS = [
+  {x: 320, y: 45},   // s - top center
+  {x: 520, y: 165},  // a - right
+  {x: 120, y: 165},  // b - left
+  {x: 120, y: 380},  // c - bottom left
+  {x: 320, y: 270},  // d - center
+  {x: 520, y: 380},  // e - bottom right
+];
+
+const EDGES = [
+  {u: 0, v: 1, w: 2},  // s→a
+  {u: 0, v: 2, w: 1},  // s→b
+  {u: 2, v: 1, w: 1},  // b→a
+  {u: 2, v: 4, w: 2},  // b→d
+  {u: 1, v: 3, w: 3},  // a→c
+  {u: 1, v: 4, w: 1},  // a→d
+  {u: 4, v: 3, w: 1},  // d→c
+  {u: 4, v: 5, w: 3},  // d→e
+  {u: 3, v: 5, w: 2},  // c→e
+];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// --- Precompute final results ---
+
+function precomputeAll() {
+  let dist = Array(V).fill(Infinity);
+  let parent = Array(V).fill(null);
+  dist[0] = 0;
+  for (let ti = 0; ti < TOPO_ORDER.length; ti++) {
+    let u = TOPO_ORDER[ti];
+    for (let e of EDGES) {
+      if (e.u === u) {
+        let nd = dist[u] + e.w;
+        if (nd < dist[e.v]) {
+          dist[e.v] = nd;
+          parent[e.v] = u;
+        }
+      }
+    }
+  }
+  return { dist, parent };
+}
+
+const finalResult = precomputeAll();
+
+function getOutEdges(v) {
+  let result = [];
+  for (let i = 0; i < EDGES.length; i++) {
+    if (EDGES[i].u === v) result.push({...EDGES[i], idx: i});
+  }
+  return result;
+}
+
+// --- Explanation builders ---
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initial State</h3>
+<p>Source vertex <span class="dim">s</span> has <span class="result-line">d[s] = 0</span>.</p>
+<p>All other vertices have <span class="dim">d[v] = &infin;</span> (unknown).</p>
+<p>The graph has been <b>topologically sorted</b>: <span class="split-info">s &rarr; b &rarr; a &rarr; d &rarr; c &rarr; e</span></p>
+<h3 style="margin-top:10px;">How DAG Shortest Paths Works</h3>
+<p>Process vertices in <b>topological order</b>. For each vertex <span class="dim">u</span>, relax all outgoing edges <span class="dim">u &rarr; v</span>.</p>
+<p>The key is: when we process <span class="dim">u</span>, <b>all paths to u have already been evaluated</b>, so its distance is final.</p>
+<span class="formula-line">Relax(u, v, w): if d[v] &gt; d[u] + w then d[v] = d[u] + w, &pi;[v] = u</span>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildProcessVertexExplanation(u, ti, d_u) {
+  let dStr = d_u === Infinity ? '&infin;' : d_u;
+  let label = VLABELS[u];
+  return `<div class="explain-section active">
+<h3>▶ Process Vertex ${label} (topo order #${ti+1})</h3>
+<p>Current distance: <span class="result-line">d[${label}] = ${dStr}</span> — this is the <b>final shortest distance</b> to ${label}.</p>
+<p>All paths to ${label} have been considered because vertices are processed in topological order.</p>
+<p>Now relax all <b>outgoing edges</b> from <span class="dim">${label}</span> to update neighbors.</p>
+<p class="note">Topological ordering guarantees correctness without needing a priority queue or multiple passes.</p>
+</div>`;
+}
+
+function buildRelaxExplanation(step) {
+  let u = step.currentEdge.u, v = step.currentEdge.v, w = step.currentEdge.w;
+  let oldDv = step.oldDist, newDv = step.newDist, improved = step.improved;
+  let d_u = step.dist[u];
+  let uLabel = VLABELS[u], vLabel = VLABELS[v];
+  let oldStr = (oldDv === undefined || oldDv === Infinity) ? '&infin;' : oldDv;
+  let newStr = (newDv === undefined || newDv === Infinity) ? '&infin;' : newDv;
+  let dUStr = (d_u === undefined || d_u === Infinity) ? '&infin;' : d_u;
+  let computed = (oldDv === undefined || oldDv === Infinity) ? '&infin;' : oldDv;
+  let candidate = (d_u === undefined || d_u === Infinity) ? '&infin;' : (d_u + w);
+
+  let resultHtml = improved
+    ? `<p>✅ <span class="result-line">Improved!</span> d[${vLabel}] = ${oldStr} &rarr; <span class="result-line">${newStr}</span></p>
+       <p>Set <span class="split-info">&pi;[${vLabel}] = ${uLabel}</span></p>`
+    : `<p>No improvement. <span class="dim">d[${vLabel}]</span> stays <span class="dim">${oldStr}</span>.</p>`;
+
+  return `<div class="explain-section active">
+<h3>🔄 Relax Edge ${uLabel} &rarr; ${vLabel} (w=${w})</h3>
+<p>Current distances: d[${uLabel}] = <span class="dim">${dUStr}</span>, d[${vLabel}] = <span class="dim">${oldStr}</span></p>
+<span class="formula-line">d[${vLabel}] = min(${oldStr}, ${dUStr} + ${w}) = min(${computed}, ${candidate}) = ${newStr}</span>
+${resultHtml}
+<p class="note">Each edge is relaxed exactly once — O(E) total for this phase.</p>
+</div>`;
+}
+
+function buildCompleteExplanation() {
+  let d = finalResult.dist;
+  let p = finalResult.parent;
+  let distStr = '';
+  for (let i = 0; i < V; i++) {
+    let label = VLABELS[i];
+    let ds = d[i] === Infinity ? '&infin;' : d[i];
+    let ps = p[i] !== null ? VLABELS[p[i]] : '—';
+    distStr += `<span class="path-item">${label}: ${ds} (π=${ps})</span> `;
+  }
+
+  let pathHtml = '';
+  for (let tgt = 1; tgt < V; tgt++) {
+    let v = tgt;
+    let path = [];
+    while (v !== null) {
+      path.unshift(v);
+      v = p[v];
+    }
+    if (path.length > 1 && path[0] === 0) {
+      let pStr = '';
+      for (let pi = 0; pi < path.length; pi++) {
+        if (pi > 0) pStr += `<span class="pd-arrow">→</span>`;
+        pStr += `<span class="pd-box">${VLABELS[path[pi]]}</span>`;
+      }
+      pathHtml += `<p style="margin:6px 0;font-size:0.9em;"><span class="dim">${VLABELS[tgt]}:</span> ${pStr}  <span class="result-line">(${d[tgt]})</span></p>`;
+    }
+  }
+
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>All vertices processed in topological order. Every edge was relaxed exactly once.</p>
+<h3 style="margin-top:10px;">Final Distances &amp; Predecessors</h3>
+<p>${distStr}</p>
+<h3 style="margin-top:10px;">Shortest Paths from s</h3>
+${pathHtml}
+<h3 style="margin-top:10px;">Why This Works on DAGs</h3>
+<p>In a DAG, there are <b>no cycles</b>. Processing in topological order guarantees that when we reach vertex <span class="dim">u</span>, all paths from the source to <span class="dim">u</span> have already been explored — because every predecessor of <span class="dim">u</span> appears earlier in the topological order.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> &Theta;(V+E) — topological sort O(V+E) + one relaxation per edge O(E)</p>
+<p><span class="dim">Space:</span> O(V) — distance and predecessor arrays</p>
+</div>`;
+}
+
+// --- Step building ---
+
+function buildSteps() {
+  steps = [];
+  let dist = Array(V).fill(Infinity);
+  let parent = Array(V).fill(null);
+  dist[0] = 0;
+  let topoIdx = 0;
+
+  steps.push({
+    type: 'init', dist: [...dist], parent: [...parent],
+    currentVertex: null, currentEdge: null,
+    improved: false, oldDist: null, newDist: null,
+    topoIndex: -1,
+    phase: 'Initialized — d[s]=0, all others ∞'
+  });
+
+  for (let ti = 0; ti < TOPO_ORDER.length; ti++) {
+    let u = TOPO_ORDER[ti];
+    topoIdx = ti;
+
+    steps.push({
+      type: 'process_vertex', dist: [...dist], parent: [...parent],
+      currentVertex: u, currentEdge: null,
+      improved: false, oldDist: null, newDist: null,
+      topoIndex: ti,
+      phase: `Processing vertex ${VLABELS[u]} (topo #${ti+1})`
+    });
+
+    let outEdges = getOutEdges(u);
+    for (let e of outEdges) {
+      let oldDv = dist[e.v];
+      let nd = dist[u] + e.w;
+      let improved = (dist[u] !== Infinity && nd < oldDv);
+      if (improved) {
+        dist[e.v] = nd;
+        parent[e.v] = u;
+      }
+      steps.push({
+        type: 'relax', dist: [...dist], parent: [...parent],
+        currentVertex: u, currentEdge: e,
+        improved: improved, oldDist: oldDv, newDist: dist[e.v],
+        topoIndex: ti,
+        phase: improved
+          ? `Improved d[${VLABELS[e.v]}] = ${oldDv} → ${dist[e.v]} via ${VLABELS[u]}`
+          : `Relaxed ${VLABELS[u]}→${VLABELS[e.v]} — no improvement`
+      });
+    }
+  }
+
+  steps.push({
+    type: 'complete', dist: [...dist], parent: [...parent],
+    currentVertex: null, currentEdge: null,
+    improved: false, oldDist: null, newDist: null,
+    topoIndex: TOPO_ORDER.length - 1,
+    phase: '✓ Complete!'
+  });
+}
+
+// --- SVG Graph Drawing ---
+
+function drawGraph(step) {
+  const svg = document.getElementById('graphSvg');
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.innerHTML = '';
+
+  const defs = document.createElementNS(ns, 'defs');
+  const markers = [
+    {id:'arr-gray', color:'#555'},
+    {id:'arr-green', color:'#00ff88'},
+    {id:'arr-orange', color:'#ff6600'},
+    {id:'arr-yellow', color:'#ffff00'},
+  ];
+  for (let m of markers) {
+    let marker = document.createElementNS(ns, 'marker');
+    marker.setAttribute('id', m.id);
+    marker.setAttribute('markerWidth', '8');
+    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('refX', '7');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    let poly = document.createElementNS(ns, 'polygon');
+    poly.setAttribute('points', '0 0, 8 3, 0 6');
+    poly.setAttribute('fill', m.color);
+    marker.appendChild(poly);
+    defs.appendChild(marker);
+  }
+  svg.appendChild(defs);
+
+  let settledIndices = [];
+  let currentVertex = step.currentVertex;
+
+  for (let i = 0; i < TOPO_ORDER.length; i++) {
+    let v = TOPO_ORDER[i];
+    if (step.topoIndex >= 0 && i < step.topoIndex && v !== currentVertex) {
+      settledIndices.push(v);
+    }
+    if (v === currentVertex && step.type === 'process_vertex') {
+      for (let j = 0; j < i; j++) settledIndices.push(TOPO_ORDER[j]);
+    }
+  }
+  if (step.type === 'complete' || step.type === 'init') {
+    // Recalculate based on dist
+    for (let i = 0; i < V; i++) {
+      if (step.dist[i] !== undefined && step.dist[i] !== Infinity && step.dist[i] > 0) {
+        if (i !== currentVertex) settledIndices.push(i);
+      }
+    }
+    if (step.type === 'init') settledIndices = [];
+  }
+
+  for (let e of EDGES) {
+    let p1 = VPOS[e.u];
+    let p2 = VPOS[e.v];
+    let isActive = step.currentEdge && step.currentEdge.u === e.u && step.currentEdge.v === e.v;
+    let isSettled = settledIndices.includes(e.u) && settledIndices.includes(e.v);
+    let isOutgoingFromCurrent = currentVertex === e.u && step.type === 'process_vertex';
+
+    let edgeColor = '#555';
+    let lw = 2;
+    let markerId = 'arr-gray';
+
+    if (isActive && step.improved) {
+      edgeColor = '#ffff00';
+      lw = 4;
+      markerId = 'arr-yellow';
+    } else if (isActive) {
+      edgeColor = '#ffcc00';
+      lw = 3.5;
+      markerId = 'arr-orange';
+    } else if (isOutgoingFromCurrent && !isActive) {
+      edgeColor = '#666';
+      lw = 1.5;
+      markerId = 'arr-gray';
+    }
+
+    let line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', p1.x);
+    line.setAttribute('y1', p1.y);
+    line.setAttribute('x2', p2.x);
+    line.setAttribute('y2', p2.y);
+    line.setAttribute('stroke', edgeColor);
+    line.setAttribute('stroke-width', lw);
+    line.setAttribute('marker-end', 'url(#' + markerId + ')');
+    if (isActive) {
+      line.setAttribute('filter', 'url(#glow)');
+    }
+    svg.appendChild(line);
+
+    let mx = (p1.x + p2.x) / 2;
+    let my = (p1.y + p2.y) / 2;
+    let label = document.createElementNS(ns, 'text');
+    label.setAttribute('x', mx);
+    label.setAttribute('y', my - 8);
+    label.setAttribute('fill', edgeColor === '#555' ? '#888' : edgeColor);
+    label.setAttribute('font-size', '13');
+    label.setAttribute('font-weight', 'bold');
+    label.setAttribute('font-family', 'Courier New');
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'central');
+    label.textContent = e.w;
+    svg.appendChild(label);
+  }
+
+  for (let v = 0; v < V; v++) {
+    let pos = VPOS[v];
+    let label = VLABELS[v];
+    let isCurrent = currentVertex === v && (step.type === 'process_vertex' || step.type === 'relax');
+    let isSettled = settledIndices.includes(v);
+    let needsUpdate = false;
+
+    let fillColor = '#0d0d1a';
+    let strokeColor = '#555';
+    let textColor = '#aaa';
+
+    if (v === 0 && step.type === 'init') {
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+    } else if (isCurrent) {
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      fillColor = '#1a0a00';
+    } else if (step.type === 'relax' && step.currentEdge && step.currentEdge.v === v && step.improved) {
+      strokeColor = '#ffff00';
+      textColor = '#ffff00';
+      fillColor = '#1a1a00';
+    } else if (step.type === 'relax' && step.currentEdge && step.currentEdge.v === v) {
+      strokeColor = '#ffcc00';
+      textColor = '#ffcc00';
+      fillColor = '#1a1a00';
+    } else if (isSettled || (step.dist[v] !== undefined && step.dist[v] !== Infinity && step.dist[v] > 0)) {
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      fillColor = '#0a1a12';
+    }
+
+    let circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', pos.x);
+    circle.setAttribute('cy', pos.y);
+    circle.setAttribute('r', '22');
+    circle.setAttribute('fill', fillColor);
+    circle.setAttribute('stroke', strokeColor);
+    circle.setAttribute('stroke-width', isCurrent ? '4' : '2.5');
+    svg.appendChild(circle);
+
+    if (isCurrent) {
+      let glow = document.createElementNS(ns, 'circle');
+      glow.setAttribute('cx', pos.x);
+      glow.setAttribute('cy', pos.y);
+      glow.setAttribute('r', '28');
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', '#ff660044');
+      glow.setAttribute('stroke-width', '2');
+      svg.appendChild(glow);
+    }
+
+    let text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', pos.x);
+    text.setAttribute('y', pos.y);
+    text.setAttribute('fill', textColor);
+    text.setAttribute('font-size', '16');
+    text.setAttribute('font-weight', 'bold');
+    text.setAttribute('font-family', 'Courier New');
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.textContent = label;
+    svg.appendChild(text);
+
+    let dv = step.dist ? step.dist[v] : 0;
+    if (dv !== undefined && dv !== Infinity && dv > 0) {
+      let dt = document.createElementNS(ns, 'text');
+      dt.setAttribute('x', pos.x);
+      dt.setAttribute('y', pos.y + 30);
+      dt.setAttribute('fill', strokeColor);
+      dt.setAttribute('font-size', '10');
+      dt.setAttribute('font-family', 'Courier New');
+      dt.setAttribute('text-anchor', 'middle');
+      dt.setAttribute('dominant-baseline', 'central');
+      dt.textContent = 'd=' + dv;
+      svg.appendChild(dt);
+    } else if (v === 0) {
+      let dt = document.createElementNS(ns, 'text');
+      dt.setAttribute('x', pos.x);
+      dt.setAttribute('y', pos.y + 30);
+      dt.setAttribute('fill', '#00ff88');
+      dt.setAttribute('font-size', '10');
+      dt.setAttribute('font-family', 'Courier New');
+      dt.setAttribute('text-anchor', 'middle');
+      dt.setAttribute('dominant-baseline', 'central');
+      dt.textContent = 'd=0';
+      svg.appendChild(dt);
+    }
+  }
+}
+
+// --- Topo Order Display ---
+
+function initTopoDisplay() {
+  let container = document.getElementById('topoContainer');
+  let html = '';
+  for (let i = 0; i < TOPO_ORDER.length; i++) {
+    if (i > 0) html += `<span class="topo-arrow" id="topoArrow${i}">→</span>`;
+    let v = TOPO_ORDER[i];
+    html += `<div class="topo-box pending" id="topoBox${i}">${VLABELS[v]}</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function renderTopoOrder(step) {
+  for (let i = 0; i < TOPO_ORDER.length; i++) {
+    let box = document.getElementById('topoBox' + i);
+    let arrow = document.getElementById('topoArrow' + i);
+    if (!box) continue;
+
+    let currentVertex = step.currentVertex;
+    let isCurrent = currentVertex === TOPO_ORDER[i];
+    let isDone = false;
+
+    if (step.topoIndex >= 0) {
+      if (i < step.topoIndex) isDone = true;
+      else if (i === step.topoIndex && step.type === 'complete') isDone = true;
+    }
+    if (step.type === 'init') { isDone = false; isCurrent = false; }
+
+    if (isCurrent) {
+      box.className = 'topo-box current';
+    } else if (isDone) {
+      box.className = 'topo-box done';
+    } else {
+      box.className = 'topo-box pending';
+    }
+
+    if (arrow) {
+      arrow.className = isDone ? 'topo-arrow done' : 'topo-arrow';
+    }
+  }
+}
+
+// --- Distance Table ---
+
+function renderDistTable(step) {
+  let tbody = document.getElementById('distTableBody');
+  let html = '';
+  let currentVertex = step.currentVertex;
+  let relaxEdge = step.currentEdge;
+
+  for (let v = 0; v < V; v++) {
+    let label = VLABELS[v];
+    let dv = step.dist ? step.dist[v] : (v === 0 ? 0 : Infinity);
+    let pv = step.parent ? step.parent[v] : null;
+
+    let dStr = (dv === undefined || dv === Infinity) ? '∞' : dv;
+    let pStr = (pv === null || pv === undefined) ? '—' : VLABELS[pv];
+
+    let rowClass = '';
+    let dClass = (dv === undefined || dv === Infinity) ? 'inf' : 'finite';
+
+    let isCurrent = currentVertex === v && (step.type === 'process_vertex' || step.type === 'relax');
+    let isBeingRelaxed = relaxEdge && relaxEdge.v === v;
+    let isSettled = false;
+
+    if (step.topoIndex >= 0 && !isCurrent) {
+      let vTopoPos = TOPO_ORDER.indexOf(v);
+      if (vTopoPos < step.topoIndex || step.type === 'complete') {
+        isSettled = true;
+      }
+    }
+    if (v === 0 && step.type !== 'init') isSettled = true;
+
+    if (isCurrent) rowClass = 'current-row';
+    else if (isBeingRelaxed && step.improved) { rowClass = ''; dClass = 'updated'; }
+    else if (isSettled) rowClass = 'settled';
+
+    let extraStyle = '';
+    if (isBeingRelaxed && step.improved && !isCurrent) {
+      extraStyle = ' style="background:#1a1a00!important;color:#ffff00!important;font-weight:bold;"';
+    } else if (isBeingRelaxed && !step.improved && !isCurrent) {
+      extraStyle = ' style="background:#1a1a00!important;"';
+    }
+
+    html += `<tr class="${rowClass}"><td>${label}</td><td class="${dClass}"${extraStyle}>${dStr}</td><td>${pStr}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+// --- Info panel ---
+
+function updateInfo(step) {
+  document.getElementById('phaseDisplay').textContent = step.phase || '—';
+  let vtx = (step.currentVertex !== null && step.currentVertex !== undefined) ? VLABELS[step.currentVertex] : '—';
+  document.getElementById('currentVertexDisplay').textContent = vtx;
+  if (step.currentEdge) {
+    document.getElementById('currentEdgeDisplay').textContent =
+      `(${VLABELS[step.currentEdge.u]}, ${VLABELS[step.currentEdge.v]})`;
+    document.getElementById('weightDisplay').textContent = step.currentEdge.w;
+  } else {
+    document.getElementById('currentEdgeDisplay').textContent = '—';
+    document.getElementById('weightDisplay').textContent = '—';
+  }
+}
+
+// --- Animation core ---
+
+function applyStep(step) {
+  updateInfo(step);
+  drawGraph(step);
+  renderTopoOrder(step);
+  renderDistTable(step);
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init':
+      explanation = buildInitExplanation();
+      break;
+    case 'process_vertex':
+      explanation = buildProcessVertexExplanation(step.currentVertex, step.topoIndex, step.dist[step.currentVertex]);
+      break;
+    case 'relax':
+      explanation = buildRelaxExplanation(step);
+      break;
+    case 'complete':
+      explanation = buildCompleteExplanation();
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  let idx = steps.indexOf(step);
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('currentVertexDisplay').textContent = '—';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('weightDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let d = finalResult.dist;
+  let p = finalResult.parent;
+
+  let pathToE = [];
+  let v = 5;
+  while (v !== null) {
+    pathToE.unshift(v);
+    v = p[v];
+  }
+  let pathStr = pathToE.map(x => VLABELS[x]).join(' → ');
+  document.getElementById('finalCost').innerHTML = `Shortest path s → e: <span style="color:#fff;">${pathStr}</span> = ${d[5]}`;
+
+  let allPathsHtml = '';
+  for (let tgt = 1; tgt < V; tgt++) {
+    let cv = tgt;
+    let path = [];
+    while (cv !== null) {
+      path.unshift(cv);
+      cv = p[cv];
+    }
+    if (path.length > 1 && path[0] === 0) {
+      let pStr = '';
+      for (let pi = 0; pi < path.length; pi++) {
+        if (pi > 0) pStr += `<span class="pd-arrow">→</span>`;
+        pStr += `<span class="pd-box">${VLABELS[path[pi]]}</span>`;
+      }
+      allPathsHtml += `<p style="margin:6px 0;"><span class="dim">${VLABELS[tgt]}:</span> ${pStr}  <span class="result-line">(${d[tgt]})</span></p>`;
+    }
+  }
+
+  document.getElementById('resultContent').innerHTML =
+    `<p>All shortest distances from <b>s</b>:</p>
+     <div class="path-display">${allPathsHtml}</div>
+     <p style="margin-top:10px;color:#888;font-size:0.85em;">
+       Algorithm: Topological sort O(V+E) + one pass O(V+E) = <b>&Theta;(V+E)</b> total. 
+       Faster than Dijkstra (which requires a priority queue) because DAGs have no cycles.
+     </p>`;
+
+  let lastStep = steps[steps.length - 1];
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('currentVertexDisplay').textContent = '—';
+  document.getElementById('currentEdgeDisplay').textContent = '—';
+  document.getElementById('weightDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+  initTopoDisplay();
+  renderTopoOrder(steps[0]);
+}
+
+function clearHighlights() {}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTopoDisplay();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
