@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All-Pairs Shortest Paths Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .table-section { margin: 20px 0; }
+    .table-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      width: 72px;
+      height: 38px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.78em;
+      transition: all 0.3s;
+    }
+    th {
+      background: #1a1a2e;
+      color: #00ccff;
+      font-weight: bold;
+    }
+    td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    td.current {
+      background: #1a0a00 !important;
+      color: #ff6600 !important;
+      border-color: #ff6600 !important;
+      box-shadow: 0 0 15px #ff660044;
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+    td.computing {
+      background: #1a1a00 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+    }
+    td.path-highlight {
+      background: #1a0030 !important;
+      color: #ff66ff !important;
+      border-color: #ff66ff !important;
+      box-shadow: 0 0 12px #ff66ff55;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .graph-container {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    svg { max-width: 100%; }
+    .complexity-table {
+      width: 100%;
+      margin-top: 15px;
+    }
+    .complexity-table th {
+      padding: 10px;
+      text-align: left;
+    }
+    .complexity-table td {
+      padding: 8px 10px;
+      text-align: left;
+    }
+    .complexity-table tr:hover td {
+      background: #1a1a2e;
+    }
+    .matrix-pair {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .matrix-pair .matrix-box {
+      flex: 1;
+      min-width: 280px;
+      max-width: 350px;
+    }
+    .matrix-box {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .matrix-box h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .highlight-row td { border-top: 2px solid #ff6600 !important; }
+    .highlight-col td, .highlight-col th { border-left: 2px solid #ff6600 !important; }
+    .path-legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 10px 0;
+      font-size: 0.8em;
+    }
+    .path-legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .application-list {
+      list-style: none;
+      padding: 0;
+    }
+    .application-list li {
+      padding: 4px 0;
+      color: #ccc;
+    }
+    .application-list li::before {
+      content: "→ ";
+      color: #ff6600;
+    }
+  </style>
+</head>
+<body>
+  <h1>All-Pairs Shortest Paths</h1>
+  <p class="subtitle">Graph Algorithms — Finding Shortest Paths Between Every Pair of Vertices</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="graph-container" id="graphContainer">
+        <svg id="graphSvg" width="520" height="360" viewBox="0 0 520 360"></svg>
+      </div>
+
+      <div class="path-legend">
+        <span><span class="legend-dot" style="background:#00ccff;"></span> Normal Node</span>
+        <span><span class="legend-dot" style="background:#ff6600;"></span> Current Path</span>
+        <span><span class="legend-dot" style="background:#ff66ff;"></span> Highlighted</span>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="value">APSP Overview</span> &nbsp;|&nbsp;
+        <span class="label">Graph:</span> <span class="value">4 vertices, 7 edges</span> &nbsp;|&nbsp;
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+        <br>
+        <span class="label">Current:</span> <span class="highlight" id="computingDisplay">—</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="matrix-pair" id="matrixArea">
+        <div class="matrix-box" id="weightMatrixBox">
+          <h3>Weight Matrix W (Input)</h3>
+          <div class="table-wrapper">
+            <table id="weightTable"></table>
+          </div>
+        </div>
+        <div class="matrix-box" id="distMatrixBox">
+          <h3>Distance Matrix D (Output)</h3>
+          <div class="table-wrapper">
+            <table id="distTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-section" id="resultSection">
+        <h2>Shortest Paths Found!</h2>
+        <p id="resultDisplay"></p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea"></div>
+    </div>
+  </div>
+
+  <script>
+    const INF = Infinity;
+    const N = 4;
+    const labels = ['1', '2', '3', '4'];
+    const nodePositions = [
+      { x: 260, y: 50 },
+      { x: 460, y: 180 },
+      { x: 260, y: 310 },
+      { x: 60, y: 180 }
+    ];
+    const edges = [
+      { from: 0, to: 1, weight: 3 },
+      { from: 0, to: 2, weight: 8 },
+      { from: 0, to: 3, weight: -4 },
+      { from: 1, to: 3, weight: 7 },
+      { from: 2, to: 1, weight: 4 },
+      { from: 3, to: 0, weight: 2 },
+      { from: 3, to: 2, weight: -5 }
+    ];
+    const W = [
+      [0,   3,   8,  -4],
+      [INF, 0, INF,   7],
+      [INF, 4,   0, INF],
+      [2, INF,  -5,   0]
+    ];
+
+    let D = [];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function precomputeAll() {
+      let dist = [];
+      for (let i = 0; i < N; i++) {
+        dist[i] = [];
+        for (let j = 0; j < N; j++) {
+          dist[i][j] = W[i][j];
+        }
+      }
+      for (let k = 0; k < N; k++) {
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            if (dist[i][k] + dist[k][j] < dist[i][j]) {
+              dist[i][j] = dist[i][k] + dist[k][j];
+            }
+          }
+        }
+      }
+      return dist;
+    }
+
+    const finalD = precomputeAll();
+
+    function buildSteps() {
+      steps = [];
+      steps.push({
+        type: 'show_graph',
+        i: -1, j: -1,
+        explanation: buildGraphExplanation()
+      });
+      steps.push({
+        type: 'show_weight_matrix',
+        i: -1, j: -1,
+        explanation: buildWeightMatrixExplanation()
+      });
+      steps.push({
+        type: 'init_distance',
+        i: -1, j: -1,
+        explanation: buildInitExplanation()
+      });
+      steps.push({
+        type: 'highlight_path',
+        i: 0, j: 2,
+        explanation: buildPathHighlightExplanation(0, 2)
+      });
+      steps.push({
+        type: 'show_final',
+        i: -1, j: -1,
+        explanation: buildFinalMatrixExplanation()
+      });
+      steps.push({
+        type: 'show_applications',
+        i: -1, j: -1,
+        explanation: buildApplicationsExplanation()
+      });
+      steps.push({
+        type: 'show_complexity',
+        i: -1, j: -1,
+        explanation: buildComplexityExplanation()
+      });
+    }
+
+    function buildGraphExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>The APSP Problem</h3>
+          <p>Given a <b>weighted directed graph</b> G=(V,E), find the <b>shortest path weight</b> δ(i,j) for <b>ALL pairs</b> (i,j).</p>
+          <span class="formula-line">δ(i,j) = min { total weight of all paths from i to j }</span>
+          <p>This example graph has:</p>
+          <p>• <span class="dim">4 vertices</span>: {1, 2, 3, 4}</p>
+          <p>• <span class="dim">7 directed edges</span> with weights</p>
+          <p>• <span class="dim">Negative edge weights</span>: 1→4 (-4), 4→3 (-5)</p>
+          <p class="note">Negative weights are allowed in APSP (unlike Dijkstra which requires non-negative edges).</p>
+        </div>
+      `;
+    }
+
+    function buildWeightMatrixExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Input: Weight Matrix W</h3>
+          <p>We represent the graph as a <b>weight matrix W</b> where:</p>
+          <span class="formula-line">w[i][j] = weight of edge (i→j), or ∞ if no edge</span>
+          <p>Reading the matrix:</p>
+          <p>• <span class="dim">w[1][2] = 3</span> — edge 1→2 has weight 3</p>
+          <p>• <span class="dim">w[1][3] = 8</span> — edge 1→3 has weight 8</p>
+          <p>• <span class="dim">w[1][4] = -4</span> — edge 1→4 has weight -4 (negative!)</p>
+          <p>• <span class="dim">w[2][3] = ∞</span> — no direct edge from 2 to 3</p>
+          <p>• Diagonal entries are <span class="dim">0</span> (distance from vertex to itself)</p>
+          <p class="note">The weight matrix W is our INPUT to all APSP algorithms.</p>
+        </div>
+      `;
+    }
+
+    function buildInitExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Step 1: Initialize D⁽⁰⁾ = W</h3>
+          <p>The distance matrix D starts as a <b>copy of the weight matrix W</b>.</p>
+          <span class="formula-line">D⁽⁰⁾[i][j] = W[i][j] for all i, j</span>
+          <p>This is the <b>base case</b>: shortest paths using <span class="dim">0 intermediate vertices</span>.</p>
+          <p>As the algorithm progresses, D will be updated to reflect shortest paths through more intermediate vertices.</p>
+          <p class="note">Floyd-Warshall iterates: D⁽⁰⁾ → D⁽¹⁾ → D⁽²⁾ → D⁽³⁾ → D⁽⁴⁾</p>
+        </div>
+      `;
+    }
+
+    function buildPathHighlightExplanation(i, j) {
+      const pathWeight = finalD[i][j];
+      return `
+        <div class="explain-section active">
+          <h3>Key Result: δ(${i+1},${j+1}) = ${pathWeight}</h3>
+          <p>The shortest path from vertex ${i+1} to vertex ${j+1} has weight <span class="result-line">${pathWeight}</span>.</p>
+          <p>The path is: <span class="dim">1 → 4 → 3</span></p>
+          <span class="formula-line">w(1→4) + w(4→3) = (-4) + (-5) = -9</span>
+          <p>This path uses <b>two negative edges</b> to achieve a very short distance!</p>
+          <p>Compare with the direct edge 1→3 which has weight <span class="dim">8</span>. The indirect path is much shorter.</p>
+          <p class="note">This illustrates why we need to consider all possible paths, not just direct edges.</p>
+        </div>
+      `;
+    }
+
+    function buildFinalMatrixExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Final Distance Matrix D</h3>
+          <p>The completed matrix D contains the <b>shortest path weight</b> for every pair of vertices.</p>
+          <span class="formula-line">D[i][j] = δ(i,j) = shortest path weight from i to j</span>
+          <p>Key observations:</p>
+          <p>• <span class="dim">δ(1,3) = -9</span> via path 1→4→3 (using negative edges)</p>
+          <p>• <span class="dim">δ(1,2) = -5</span> via path 1→4→3→2</p>
+          <p>• <span class="dim">δ(4,2) = -1</span> via path 4→3→2</p>
+          <p>• <span class="dim">δ(4,4) = -2</span> via path 4→1→4 (negative cycle!)</p>
+          <p>• Diagonal is not all 0 — this means there are <span class="dim">negative cycles</span> in the graph!</p>
+          <p class="note">Floyd-Warshall can detect negative cycles by checking if D[i][i] &lt; 0.</p>
+        </div>
+      `;
+    }
+
+    function buildApplicationsExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Applications of APSP</h3>
+          <p>APSP is fundamental in many domains:</p>
+          <ul class="application-list">
+            <li><b>Network Routing:</b> Find shortest paths between all routers in a network (OSPF protocol)</li>
+            <li><b>Logistics:</b> Optimize delivery routes between all warehouses and customers</li>
+            <li><b>Social Networks:</b> Compute "degrees of separation" between all users</li>
+            <li><b>Maps & Navigation:</b> Precompute driving times between all city pairs</li>
+            <li><b>Circuit Design:</b> Minimize signal propagation delay in VLSI chips</li>
+            <li><b>Bioinformatics:</b> Align DNA sequences using edit distance</li>
+          </ul>
+          <p class="note">APSP is used when you need shortest paths between ALL pairs, not just from one source.</p>
+        </div>
+      `;
+    }
+
+    function buildComplexityExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>APSP Approaches & Complexity</h3>
+          <p><b>1. Repeated Dijkstra</b></p>
+          <span class="formula-line">Run Dijkstra from each vertex: O(V·(E + V·lgV))</span>
+          <p>Works for sparse graphs. No negative edges allowed.</p>
+          <p><b>2. Repeated Bellman-Ford</b></p>
+          <span class="formula-line">Run Bellman-Ford from each vertex: O(V²·E)</span>
+          <p>Handles negative edges. Detects negative cycles.</p>
+          <p><b>3. Matrix Multiplication</b></p>
+          <span class="formula-line">Min-plus product: D⁽ᵏ⁾ = D⁽ᵏ⁻¹⁾ ⊗ W</span>
+          <p>Algebraic approach. O(V³·lgV) with fast matrix multiply.</p>
+          <p><b>4. Floyd-Warshall</b></p>
+          <span class="formula-line">DP: D[i][j] = min(D[i][j], D[i][k] + D[k][j])</span>
+          <p><span class="result-line">O(V³)</span> time, O(V²) space. Simple, handles negative weights.</p>
+          <p><b>5. Johnson's Algorithm</b></p>
+          <span class="formula-line">Reweight edges + run Dijkstra from each vertex</span>
+          <p>O(V·E + V²·lgV). Best for sparse graphs with negative edges.</p>
+          <p class="note">Choose based on graph density and edge weight properties!</p>
+        </div>
+      `;
+    }
+
+    function initGraph() {
+      const svg = document.getElementById('graphSvg');
+      let html = '';
+      html += '<defs>';
+      html += '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">';
+      html += '<polygon points="0 0, 10 3.5, 0 7" fill="#555"/>';
+      html += '</marker>';
+      html += '<marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">';
+      html += '<polygon points="0 0, 10 3.5, 0 7" fill="#ff6600"/>';
+      html += '</marker>';
+      html += '<marker id="arrowhead-highlight" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">';
+      html += '<polygon points="0 0, 10 3.5, 0 7" fill="#ff66ff"/>';
+      html += '</marker>';
+      html += '</defs>';
+
+      edges.forEach((e, idx) => {
+        const from = nodePositions[e.from];
+        const to = nodePositions[e.to];
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = dx / len;
+        const ny = dy / len;
+        const sx = from.x + nx * 22;
+        const sy = from.y + ny * 22;
+        const ex = to.x - nx * 22;
+        const ey = to.y - ny * 22;
+        const mx = (sx + ex) / 2;
+        const my = (sy + ey) / 2;
+        const perpX = -ny * 15;
+        const perpY = nx * 15;
+        const weightColor = e.weight < 0 ? '#ff6666' : '#ff9944';
+        html += `<line id="edge-${idx}" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="#555" stroke-width="2" marker-end="url(#arrowhead)"/>`;
+        html += `<text x="${mx + perpX}" y="${my + perpY}" fill="${weightColor}" font-size="13" text-anchor="middle" font-family="Courier New" font-weight="bold">${e.weight}</text>`;
+      });
+
+      nodePositions.forEach((pos, i) => {
+        html += `<circle id="node-${i}" cx="${pos.x}" cy="${pos.y}" r="20" fill="#111" stroke="#00ccff" stroke-width="2"/>`;
+        html += `<text x="${pos.x}" y="${pos.y}" fill="#00ccff" font-size="16" text-anchor="middle" dominant-baseline="central" font-family="Courier New" font-weight="bold">${labels[i]}</text>`;
+      });
+
+      svg.innerHTML = html;
+    }
+
+    function initWeightTable() {
+      const table = document.getElementById('weightTable');
+      let html = '<tr><th></th>';
+      labels.forEach(l => html += `<th>${l}</th>`);
+      html += '</tr>';
+      W.forEach((row, i) => {
+        html += `<tr><th>${labels[i]}</th>`;
+        row.forEach((val, j) => {
+          const display = val === INF ? '∞' : val;
+          const colorClass = val < 0 ? ' style="color:#ff6666;"' : '';
+          html += `<td id="w-${i}-${j}"${colorClass}>${display}</td>`;
+        });
+        html += '</tr>';
+      });
+      table.innerHTML = html;
+    }
+
+    function initDistTable() {
+      const table = document.getElementById('distTable');
+      let html = '<tr><th></th>';
+      labels.forEach(l => html += `<th>${l}</th>`);
+      html += '</tr>';
+      for (let i = 0; i < N; i++) {
+        html += `<tr><th>${labels[i]}</th>`;
+        for (let j = 0; j < N; j++) {
+          html += `<td id="d-${i}-${j}">—</td>`;
+        }
+        html += '</tr>';
+      }
+      table.innerHTML = html;
+    }
+
+    function initTables() {
+      initWeightTable();
+      initDistTable();
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('td').forEach(td => {
+        td.classList.remove('filled', 'current', 'computing', 'path-highlight');
+      });
+      document.querySelectorAll('line').forEach(line => {
+        line.setAttribute('stroke', '#555');
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+      });
+      document.querySelectorAll('circle').forEach(circle => {
+        circle.setAttribute('stroke', '#00ccff');
+      });
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      if (step.type === 'show_graph') {
+        document.getElementById('phaseDisplay').textContent = 'Graph Visualization';
+        document.getElementById('computingDisplay').textContent = 'Viewing the input graph';
+      } else if (step.type === 'show_weight_matrix') {
+        document.getElementById('phaseDisplay').textContent = 'Weight Matrix';
+        document.getElementById('computingDisplay').textContent = 'Reading input matrix W';
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            const td = document.getElementById(`w-${i}-${j}`);
+            if (td) td.classList.add('filled');
+          }
+        }
+      } else if (step.type === 'init_distance') {
+        document.getElementById('phaseDisplay').textContent = 'Initialization';
+        document.getElementById('computingDisplay').textContent = 'D⁽⁰⁾ = W';
+        D = [];
+        for (let i = 0; i < N; i++) {
+          D[i] = [];
+          for (let j = 0; j < N; j++) {
+            D[i][j] = W[i][j];
+            const td = document.getElementById(`d-${i}-${j}`);
+            if (td) {
+              td.textContent = D[i][j] === INF ? '∞' : D[i][j];
+              td.classList.add('filled');
+            }
+          }
+        }
+      } else if (step.type === 'highlight_path') {
+        document.getElementById('phaseDisplay').textContent = 'Shortest Path Highlight';
+        document.getElementById('computingDisplay').textContent = `δ(${step.i+1},${step.j+1}) = ${finalD[step.i][step.j]}`;
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            D[i][j] = finalD[i][j];
+            const td = document.getElementById(`d-${i}-${j}`);
+            if (td) {
+              td.textContent = D[i][j] === INF ? '∞' : D[i][j];
+              td.classList.add('filled');
+            }
+          }
+        }
+        const target = document.getElementById(`d-${step.i}-${step.j}`);
+        if (target) target.classList.add('current');
+        const edgeIdx1 = edges.findIndex(e => e.from === 0 && e.to === 3);
+        if (edgeIdx1 >= 0) {
+          const line = document.getElementById(`edge-${edgeIdx1}`);
+          if (line) {
+            line.setAttribute('stroke', '#ff6600');
+            line.setAttribute('marker-end', 'url(#arrowhead-active)');
+          }
+        }
+        const edgeIdx2 = edges.findIndex(e => e.from === 3 && e.to === 2);
+        if (edgeIdx2 >= 0) {
+          const line = document.getElementById(`edge-${edgeIdx2}`);
+          if (line) {
+            line.setAttribute('stroke', '#ff6600');
+            line.setAttribute('marker-end', 'url(#arrowhead-active)');
+          }
+        }
+        document.getElementById('node-0').setAttribute('stroke', '#ff6600');
+        document.getElementById('node-3').setAttribute('stroke', '#ff6600');
+        document.getElementById('node-2').setAttribute('stroke', '#ff6600');
+      } else if (step.type === 'show_final' || step.type === 'show_applications' || step.type === 'show_complexity') {
+        document.getElementById('phaseDisplay').textContent = step.type === 'show_final' ? 'Complete Matrix' : step.type === 'show_applications' ? 'Applications' : 'Complexity Analysis';
+        document.getElementById('computingDisplay').textContent = step.type === 'show_final' ? 'All shortest paths computed' : step.type === 'show_applications' ? 'Real-world uses' : 'Comparing approaches';
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            D[i][j] = finalD[i][j];
+            const td = document.getElementById(`d-${i}-${j}`);
+            if (td) {
+              td.textContent = D[i][j] === INF ? '∞' : D[i][j];
+              td.classList.add('filled');
+            }
+          }
+        }
+      }
+
+      document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.type.replace(/_/g, ' ')}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      D = [];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+      clearHighlights();
+      initTables();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'All pairs shortest paths computed';
+      document.getElementById('resultSection').style.display = 'block';
+      let resultHTML = '<table style="margin:10px auto;border-collapse:collapse;">';
+      resultHTML += '<tr><th style="padding:5px 10px;background:#1a1a2e;color:#00ccff;border:1px solid #333;">From\\To</th>';
+      labels.forEach(l => resultHTML += `<th style="padding:5px 10px;background:#1a1a2e;color:#00ccff;border:1px solid #333;">→${l}</th>`);
+      resultHTML += '</tr>';
+      finalD.forEach((row, i) => {
+        resultHTML += `<tr><th style="padding:5px 10px;background:#1a1a2e;color:#00ccff;border:1px solid #333;">${labels[i]}→</th>`;
+        row.forEach((val, j) => {
+          const display = val === INF ? '∞' : val;
+          let color = '#00ff88';
+          if (i === j) color = '#ff9944';
+          else if (val < 0) color = '#ff6666';
+          else if (val === INF) color = '#555';
+          resultHTML += `<td style="padding:5px 10px;background:#0d0d1a;color:${color};border:1px solid #333;font-weight:bold;">${display}</td>`;
+        });
+        resultHTML += '</tr>';
+      });
+      resultHTML += '</table>';
+      document.getElementById('resultDisplay').innerHTML = resultHTML;
+      document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildFinalSummary();
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function buildFinalSummary() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Animation Complete!</h3>
+          <p>You've learned the <b>All-Pairs Shortest Paths</b> problem and seen how it works on a 4-vertex graph.</p>
+          <p><b>Key Takeaways:</b></p>
+          <p>• APSP finds shortest paths between <span class="result-line">ALL pairs</span> of vertices</p>
+          <p>• Input: weight matrix W. Output: distance matrix D</p>
+          <p>• Handles negative edge weights (but watch for negative cycles!)</p>
+          <p>• Best algorithm depends on graph density:</p>
+          <p style="margin-left:8px;">• Dense: Floyd-Warshall <span class="dim">O(V³)</span></p>
+          <p style="margin-left:8px;">• Sparse: Johnson's <span class="dim">O(V·E + V²·lgV)</span></p>
+          <p class="note">Try resetting and running again to explore different paths!</p>
+        </div>
+      `;
+    }
+
+    function buildInitialExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>The APSP Problem</h3>
+          <p>Given a <b>weighted directed graph</b> G=(V,E), find the <b>shortest path weight</b> δ(i,j) for <b>ALL pairs</b> (i,j).</p>
+          <span class="formula-line">δ(i,j) = min { total weight of all paths from i to j }</span>
+          <p>This example graph has:</p>
+          <p>• <span class="dim">4 vertices</span>: {1, 2, 3, 4}</p>
+          <p>• <span class="dim">7 directed edges</span> with weights</p>
+          <p>• <span class="dim">Negative edge weights</span>: 1→4 (-4), 4→3 (-5)</p>
+          <p class="note">Negative weights are allowed in APSP (unlike Dijkstra which requires non-negative edges).</p>
+        </div>
+      `;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initGraph();
+    initTables();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+    document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+  </script>
+</body>
+</html>

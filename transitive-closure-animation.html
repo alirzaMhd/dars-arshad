@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transitive Closure Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .graph-container {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    .graph-container svg {
+      max-width: 100%;
+    }
+    .table-section { margin: 20px 0; }
+    .table-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      width: 72px;
+      height: 38px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.78em;
+      transition: all 0.3s;
+    }
+    th {
+      background: #1a1a2e;
+      color: #00ccff;
+      font-weight: bold;
+    }
+    td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    td.current {
+      background: #1a0a00 !important;
+      color: #ff6600 !important;
+      border-color: #ff6600 !important;
+      box-shadow: 0 0 15px #ff660044;
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+    td.computing {
+      background: #1a1a00 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+    }
+    td.intermediate {
+      background: #001a0a !important;
+      color: #00ff88 !important;
+      border-color: #00ff88 !important;
+      box-shadow: 0 0 8px #00ff8833;
+    }
+    td.path-i {
+      background: #0a0a1a !important;
+      color: #00ccff !important;
+      border-color: #00ccff !important;
+    }
+    td.path-j {
+      background: #0a0a1a !important;
+      color: #00ccff !important;
+      border-color: #00ccff !important;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .computation-box {
+      background: #0a0a18;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 0.9em;
+      line-height: 1.8;
+    }
+    .computation-box .op { color: #ff6600; font-weight: bold; }
+    .computation-box .val-true { color: #00ff88; }
+    .computation-box .val-false { color: #ff4444; }
+    .computation-box .var { color: #00ccff; }
+    .node-label { font-size: 14px; font-weight: bold; }
+    .edge-line { stroke: #555; stroke-width: 1.5; }
+    .edge-highlight { stroke: #00ff88; stroke-width: 2.5; }
+    .edge-path { stroke: #ffff00; stroke-width: 2; stroke-dasharray: 6,3; }
+    .node-circle { fill: #111; stroke: #00ccff; stroke-width: 2; }
+    .node-active { fill: #1a0a00; stroke: #ff6600; stroke-width: 2.5; }
+    .node-reached { fill: #0a1a12; stroke: #00ff88; stroke-width: 2; }
+    .matrix-matrix-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .matrix-matrix-container .matrix-box {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .matrix-matrix-container .matrix-label {
+      text-align: center;
+      color: #00ccff;
+      font-size: 0.9em;
+      margin-bottom: 8px;
+    }
+    .op-symbol {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5em;
+      color: #ff6600;
+      font-weight: bold;
+      min-width: 60px;
+      align-self: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>TRANSITIVE CLOSURE</h1>
+  <p class="subtitle">Graph Algorithms — Reachability via Boolean Floyd-Warshall</p>
+
+  <div class="layout">
+    <div class="main-panel">
+
+      <div class="graph-container" id="graphContainer">
+        <svg id="graphSvg" width="500" height="280" viewBox="0 0 500 280">
+          <!-- edges -->
+          <line id="edge-1-2" x1="150" y1="60" x2="350" y2="60" class="edge-line" />
+          <line id="edge-2-3" x1="350" y1="60" x2="350" y2="220" class="edge-line" />
+          <line id="edge-3-4" x1="350" y1="220" x2="150" y2="220" class="edge-line" />
+          <line id="edge-4-1" x1="150" y1="220" x2="150" y2="60" class="edge-line" />
+          <line id="edge-1-3" x1="170" y1="75" x2="330" y2="205" class="edge-line" />
+          <!-- arrowheads will be drawn via marker or manually -->
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#555" />
+            </marker>
+            <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#00ff88" />
+            </marker>
+            <marker id="arrowhead-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#ff6600" />
+            </marker>
+          </defs>
+          <!-- Re-draw edges with arrowheads -->
+          <line id="edge-1-2a" x1="155" y1="60" x2="340" y2="60" class="edge-line" marker-end="url(#arrowhead)" />
+          <line id="edge-2-3a" x1="350" y1="65" x2="350" y2="212" class="edge-line" marker-end="url(#arrowhead)" />
+          <line id="edge-3-4a" x1="345" y1="220" x2="160" y2="220" class="edge-line" marker-end="url(#arrowhead)" />
+          <line id="edge-4-1a" x1="150" y1="215" x2="150" y2="68" class="edge-line" marker-end="url(#arrowhead)" />
+          <line id="edge-1-3a" x1="168" y1="73" x2="332" y2="207" class="edge-line" marker-end="url(#arrowhead)" />
+          <!-- nodes -->
+          <circle id="node1" cx="150" cy="60" r="22" class="node-circle" />
+          <circle id="node2" cx="350" cy="60" r="22" class="node-circle" />
+          <circle id="node3" cx="350" cy="220" r="22" class="node-circle" />
+          <circle id="node4" cx="150" cy="220" r="22" class="node-circle" />
+          <text x="150" y="65" text-anchor="middle" fill="#00ccff" class="node-label">1</text>
+          <text x="350" y="65" text-anchor="middle" fill="#00ccff" class="node-label">2</text>
+          <text x="350" y="225" text-anchor="middle" fill="#00ccff" class="node-label">3</text>
+          <text x="150" y="225" text-anchor="middle" fill="#00ccff" class="node-label">4</text>
+        </svg>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+        <button class="btn" onclick="pauseAnimation()">&#9646;&#9646; Pause</button>
+        <button class="btn" onclick="stepForward()">&#9197; Step</button>
+        <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="value">Transitive Closure (Floyd-Warshall variant)</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+        <span class="label">Intermediate vertex k:</span> <span class="highlight" id="kDisplay">—</span><br>
+        <span class="label">Checking cell:</span> <span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="table-section">
+        <div class="table-title">Reachability Matrix T<sup>(k)</sup></div>
+        <div class="table-wrapper">
+          <table id="matrixTable">
+            <thead>
+              <tr>
+                <th></th><th>1</th><th>2</th><th>3</th><th>4</th>
+              </tr>
+            </thead>
+            <tbody id="matrixBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="computationArea"></div>
+
+      <div class="result-section" id="resultSection">
+        <h2>&#10003; Transitive Closure Complete!</h2>
+        <div id="resultDisplay"></div>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>&#128214; Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea"></div>
+    </div>
+  </div>
+
+  <script>
+    const N = 4;
+    const V = [1,2,3,4];
+    const labels = ['1','2','3','4'];
+
+    // Initial adjacency matrix (with 1s on diagonal)
+    const T0 = [
+      [1,1,1,0],
+      [0,1,1,0],
+      [0,0,1,1],
+      [1,0,0,1]
+    ];
+
+    // Graph edges (for highlighting)
+    const edges = [
+      [0,1],[1,2],[2,3],[3,0],[0,2]
+    ];
+
+    // Current state of T
+    let T = [];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    // Precompute all final states for each k
+    let allStates = [];
+
+    function deepCopy(m) { return m.map(r => [...r]); }
+
+    function precomputeAll() {
+      allStates = [];
+      let cur = deepCopy(T0);
+      allStates.push(deepCopy(cur)); // T^(0)
+      for (let k = 0; k < N; k++) {
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            let newVal = cur[i][j] || (cur[i][k] && cur[k][j]);
+            cur[i][j] = newVal ? 1 : 0;
+          }
+        }
+        allStates.push(deepCopy(cur));
+      }
+      return allStates;
+    }
+
+    function buildSteps() {
+      steps = [];
+      // Step 0: show T^(0)
+      steps.push({
+        type: 'init',
+        explanation: buildInitExplanation()
+      });
+
+      let cur = deepCopy(T0);
+      for (let k = 0; k < N; k++) {
+        // Show k phase start
+        steps.push({
+          type: 'k_start',
+          k: k,
+          explanation: buildKStartExplanation(k)
+        });
+
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            let oldVal = cur[i][j];
+            let viaK = cur[i][k] && cur[k][j];
+            let newVal = oldVal || viaK;
+            let changed = (oldVal !== newVal);
+
+            if (i === k && j === k) continue; // skip diagonal
+            if (i === k || j === k) continue; // skip row/col k (already handled by intermediate)
+
+            steps.push({
+              type: 'check',
+              k: k,
+              i: i,
+              j: j,
+              oldVal: oldVal,
+              viaK: viaK,
+              newVal: newVal,
+              changed: changed,
+              T_before: deepCopy(cur),
+              explanation: buildCheckExplanation(k, i, j, oldVal, viaK, newVal, changed, cur)
+            });
+
+            cur[i][j] = newVal ? 1 : 0;
+          }
+        }
+
+        // Show k phase done
+        steps.push({
+          type: 'k_done',
+          k: k,
+          T_after: deepCopy(cur),
+          explanation: buildKDoneExplanation(k, cur)
+        });
+      }
+
+      // Final
+      steps.push({
+        type: 'done',
+        explanation: buildDoneExplanation(cur)
+      });
+    }
+
+    function buildInitExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>What is Transitive Closure?</h3>
+          <p>The <b>transitive closure</b> of a directed graph answers: <span class="dim">can vertex i reach vertex j?</span></p>
+          <p>The result is a boolean matrix <span class="dim">T[i,j]</span> where:</p>
+          <span class="formula-line">T[i,j] = 1 if there exists a path from i to j, 0 otherwise</span>
+          <p>This is like <b>Floyd-Warshall</b>, but instead of finding shortest distances, we find <span class="dim">reachability</span>.</p>
+          <h3 style="margin-top:10px;">Boolean Operations</h3>
+          <p>Replace <span class="dim">min</span> with <span class="dim">∨ (OR)</span> and <span class="dim">+</span> with <span class="dim">∧ (AND)</span>:</p>
+          <span class="formula-line">T<sup>(k)</sup>[i,j] = T<sup>(k-1)</sup>[i,j] ∨ (T<sup>(k-1)</sup>[i,k] ∧ T<sup>(k-1)</sup>[k,j])</span>
+          <p class="note">Either i can already reach j, OR i can reach k AND k can reach j.</p>
+          <h3 style="margin-top:10px;">Base Case</h3>
+          <p>T<sup>(0)</sup> = adjacency matrix with 1s on the diagonal (each vertex reaches itself).</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+    }
+
+    function buildKStartExplanation(k) {
+      return `
+        <div class="explain-section active">
+          <h3>Phase: k = ${k+1} (Vertex ${k+1} as intermediate)</h3>
+          <p>Now we allow vertex <span class="dim">${k+1}</span> to be used as an intermediate node on paths.</p>
+          <p>For every pair (i,j), we check:</p>
+          <span class="formula-line">T[i,j] = T[i,j] ∨ (T[i,${k+1}] ∧ T[${k+1},j])</span>
+          <p class="note">If i can reach ${k+1} AND ${k+1} can reach j, then i can reach j through ${k+1}.</p>
+        </div>`;
+    }
+
+    function buildCheckExplanation(k, i, j, oldVal, viaK, newVal, changed, cur) {
+      let iv = i+1, jv = j+1, kv = k+1;
+      let tiK = cur[i][k];
+      let tkj = cur[k][j];
+      let changeText = changed ?
+        `<span class="result-line">Changed: ${oldVal} → 1 ✓</span>` :
+        `<p>No change needed.</p>`;
+
+      return `
+        <div class="explain-section active">
+          <h3>Check T[${iv},${jv}] with k=${kv}</h3>
+          <p>Does vertex <span class="dim">${iv}</span> reach vertex <span class="dim">${jv}</span> via <span class="dim">${kv}</span>?</p>
+          <div class="computation-box">
+            <span class="var">T[${iv},${jv}]</span> <span class="op">=</span>
+            <span class="var">T[${iv},${jv}]</span> <span class="op">∨</span> (<span class="var">T[${iv},${kv}]</span> <span class="op">∧</span> <span class="var">T[${kv},${jv}]</span>)
+            <br>
+            <span class="${oldVal ? 'val-true' : 'val-false'}">${oldVal}</span>
+            <span class="op">∨</span> (<span class="${tiK ? 'val-true' : 'val-false'}">${tiK}</span>
+            <span class="op">∧</span> <span class="${tkj ? 'val-true' : 'val-false'}">${tkj}</span>)
+            <span class="op">=</span> <span class="op">∨</span> <span class="${viaK ? 'val-true' : 'val-false'}">${viaK}</span>
+            <span class="op">=</span> <span class="${newVal ? 'val-true' : 'val-false'}">${newVal}</span>
+          </div>
+          ${changeText}
+          <p class="note">${changed ? 'New path discovered through vertex ' + kv + '!' : 'Direct path or no new path via ' + kv + '.'}</p>
+        </div>`;
+    }
+
+    function buildKDoneExplanation(k, cur) {
+      let kv = k+1;
+      let changes = [];
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+          if (T0[i][j] !== cur[i][j] && T0[i][j] === 0 && cur[i][j] === 1) {
+            // check if this change happened in this round
+          }
+        }
+      }
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>Phase k=${kv} Complete</h3>
+          <p>Vertex <span class="dim">${kv}</span> has been considered as an intermediate vertex.</p>
+          <p>The matrix now reflects all paths that use vertices 1 through ${kv} as intermediates.</p>
+          <p class="note">Next: ${k < N-1 ? 'Phase k=' + (kv+1) : 'Algorithm complete!'}</p>
+        </div>`;
+    }
+
+    function buildDoneExplanation(cur) {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>&#10003; Algorithm Complete!</h3>
+          <p>The full reachability matrix has been computed. Every vertex can reach every other vertex — the graph is <span class="result-line" style="display:inline;">strongly connected</span>.</p>
+          <h3 style="margin-top:10px;">Result</h3>
+          <p>All entries in T are 1, meaning every pair of vertices has a directed path between them.</p>
+          <h3 style="margin-top:10px;">Applications</h3>
+          <p>• <span class="dim">Strongly connected components</span> — find groups of mutually reachable vertices</p>
+          <p>• <span class="dim">Reachability queries</span> — answer "can i reach j?" in O(1) after O(V³) preprocessing</p>
+          <p>• <span class="dim">Program analysis</span> — determine which procedures can call which</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(V³) — same as Floyd-Warshall</p>
+          <p><span class="dim">Space:</span> O(V²) — storing the N×N matrix</p>
+        </div>`;
+    }
+
+    function initTables() {
+      T = deepCopy(T0);
+      renderMatrix(T, -1, -1, -1);
+    }
+
+    function renderMatrix(mat, highlightI, highlightJ, k) {
+      let tbody = document.getElementById('matrixBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < N; i++) {
+        let tr = document.createElement('tr');
+        let th = document.createElement('th');
+        th.textContent = labels[i];
+        tr.appendChild(th);
+        for (let j = 0; j < N; j++) {
+          let td = document.createElement('td');
+          td.textContent = mat[i][j];
+          td.id = 'cell-' + i + '-' + j;
+          if (mat[i][j] === 1) td.classList.add('filled');
+          if (i === highlightI && j === highlightJ) td.classList.add('current');
+          if (k >= 0 && i === k && j !== highlightJ && j !== k) td.classList.add('path-i');
+          if (k >= 0 && j === k && i !== highlightI && i !== k) td.classList.add('path-j');
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function highlightGraph(k, i, j) {
+      // Reset all nodes
+      for (let n = 1; n <= N; n++) {
+        let node = document.getElementById('node' + n);
+        node.setAttribute('class', 'node-circle');
+      }
+      // Reset all edges
+      for (let e of ['edge-1-2a','edge-2-3a','edge-3-4a','edge-4-1a','edge-1-3a']) {
+        document.getElementById(e).setAttribute('class', 'edge-line');
+        document.getElementById(e).setAttribute('marker-end', 'url(#arrowhead)');
+      }
+      if (k >= 0) {
+        let kn = document.getElementById('node' + (k+1));
+        kn.setAttribute('class', 'node-active');
+      }
+      if (i >= 0) {
+        let ni = document.getElementById('node' + (i+1));
+        if (i !== k) ni.setAttribute('class', 'node-reached');
+      }
+      if (j >= 0) {
+        let nj = document.getElementById('node' + (j+1));
+        if (j !== k && j !== i) nj.setAttribute('class', 'node-reached');
+      }
+    }
+
+    function applyStep(step) {
+      let phaseEl = document.getElementById('phaseDisplay');
+      let computingEl = document.getElementById('computingDisplay');
+      let kEl = document.getElementById('kDisplay');
+      let compArea = document.getElementById('computationArea');
+
+      clearHighlights();
+      compArea.innerHTML = '';
+
+      if (step.type === 'init') {
+        phaseEl.textContent = 'Base case: T^(0) = adjacency matrix';
+        computingEl.textContent = '—';
+        kEl.textContent = '—';
+        T = deepCopy(T0);
+        renderMatrix(T, -1, -1, -1);
+        highlightGraph(-1, -1, -1);
+      } else if (step.type === 'k_start') {
+        let kv = step.k + 1;
+        phaseEl.textContent = `Phase k=${kv} — Vertex ${kv} as intermediate`;
+        computingEl.textContent = 'Scanning all cells...';
+        kEl.textContent = kv;
+        highlightGraph(step.k, -1, -1);
+      } else if (step.type === 'check') {
+        let kv = step.k + 1;
+        let iv = step.i + 1;
+        let jv = step.j + 1;
+        phaseEl.textContent = `k=${kv}: Checking T[${iv},${jv}]`;
+        computingEl.textContent = `T[${iv},${jv}] = T[${iv},${jv}] ∨ (T[${iv},${kv}] ∧ T[${kv},${jv}])`;
+        kEl.textContent = kv;
+
+        T = deepCopy(step.T_before);
+        T[step.i][step.j] = step.newVal ? 1 : 0;
+        renderMatrix(T, step.i, step.j, step.k);
+        highlightGraph(step.k, step.i, step.j);
+
+        // Computation display
+        let tiK = step.T_before[step.i][step.k];
+        let tkj = step.T_before[step.k][step.j];
+        compArea.innerHTML = `
+          <div class="computation-box">
+            <span class="var">T[${iv},${jv}]</span> <span class="op">=</span>
+            <span class="var">T[${iv},${jv}]</span> <span class="op">∨</span>
+            (<span class="var">T[${iv},${kv}]</span> <span class="op">∧</span>
+            <span class="var">T[${kv},${jv}]</span>)<br>
+            <span class="${step.oldVal ? 'val-true' : 'val-false'}">${step.oldVal}</span>
+            <span class="op">∨</span>
+            (<span class="${tiK ? 'val-true' : 'val-false'}">${tiK}</span>
+            <span class="op">∧</span>
+            <span class="${tkj ? 'val-true' : 'val-false'}">${tkj}</span>)
+            <span class="op">=</span>
+            <span class="op">∨</span> <span class="${step.viaK ? 'val-true' : 'val-false'}">${step.viaK}</span>
+            <span class="op">=</span> <span class="${step.newVal ? 'val-true' : 'val-false'}">${step.newVal}</span>
+            ${step.changed ? '<span style="color:#00ff88;font-weight:bold;margin-left:12px;">&#10003; New path found!</span>' : ''}
+          </div>`;
+      } else if (step.type === 'k_done') {
+        let kv = step.k + 1;
+        phaseEl.textContent = `Phase k=${kv} complete`;
+        computingEl.textContent = '—';
+        kEl.textContent = kv;
+        T = deepCopy(step.T_after);
+        renderMatrix(T, -1, -1, -1);
+        highlightGraph(-1, -1, -1);
+      } else if (step.type === 'done') {
+        phaseEl.textContent = '✓ Complete!';
+        computingEl.textContent = 'All pairs reachable';
+        kEl.textContent = '—';
+        renderMatrix(T, -1, -1, -1);
+        highlightGraph(-1, -1, -1);
+      }
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${step.type.replace('_', ' ')}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('td').forEach(td => {
+        td.classList.remove('current','computing','intermediate','path-i','path-j');
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('kDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('computationArea').innerHTML = '';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildInitExplanation();
+      clearHighlights();
+      buildSteps();
+      initTables();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'All pairs reachable';
+      document.getElementById('resultSection').style.display = 'block';
+
+      let finalT = allStates[allStates.length - 1];
+      let resultHtml = '<table style="margin:10px auto;border-collapse:collapse;">';
+      resultHtml += '<tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th></tr>';
+      for (let i = 0; i < N; i++) {
+        resultHtml += `<tr><th>${i+1}</th>`;
+        for (let j = 0; j < N; j++) {
+          let cls = finalT[i][j] ? 'filled' : '';
+          resultHtml += `<td class="${cls}">${finalT[i][j]}</td>`;
+        }
+        resultHtml += '</tr>';
+      }
+      resultHtml += '</table>';
+      resultHtml += '<p style="color:#ccc;margin-top:10px;">All vertices can reach all others — the graph is strongly connected.</p>';
+      document.getElementById('resultDisplay').innerHTML = resultHtml;
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildDoneExplanation(finalT);
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    // Init
+    precomputeAll();
+    buildSteps();
+    initTables();
+    document.getElementById('totalSteps').textContent = steps.length;
+    document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  </script>
+</body>
+</html>

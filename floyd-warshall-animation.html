@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floyd-Warshall Algorithm Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .table-section { margin: 20px 0; }
+    .table-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      width: 72px;
+      height: 38px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.78em;
+      transition: all 0.3s;
+    }
+    th {
+      background: #1a1a2e;
+      color: #00ccff;
+      font-weight: bold;
+    }
+    td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    td.current {
+      background: #1a0a00 !important;
+      color: #ff6600 !important;
+      border-color: #ff6600 !important;
+      box-shadow: 0 0 15px #ff660044;
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+    td.computing {
+      background: #1a1a00 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+    }
+    td.trace-cell {
+      background: #1a0030 !important;
+      color: #ff99ff !important;
+      border-color: #ff66ff !important;
+      box-shadow: 0 0 12px #ff66ff55;
+      transform: scale(1.08);
+      font-weight: bold;
+    }
+    td.updated {
+      background: #002a1a !important;
+      color: #00ff88 !important;
+      border-color: #00ff88 !important;
+      box-shadow: 0 0 14px #00ff8855;
+    }
+    td.diagonal {
+      color: #555;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .matrix-label {
+      color: #00ccff;
+      font-size: 0.9em;
+      margin: 10px 0 5px;
+      text-align: center;
+    }
+    .legend {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      font-size: 0.75em;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid #444;
+    }
+    .comparison-section {
+      margin-top: 15px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .comparison-section table {
+      font-size: 0.7em;
+    }
+    .comparison-section th, .comparison-section td {
+      width: 60px;
+      height: 30px;
+    }
+    .comparison-label {
+      text-align: center;
+      color: #ffcc00;
+      font-size: 0.85em;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FLOYD-WARSHALL ALGORITHM</h1>
+  <p class="subtitle">Dynamic Programming — All-Pairs Shortest Paths</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="info-panel">
+        <span class="label">Algorithm: </span><span class="value">Floyd-Warshall</span> &nbsp;|&nbsp;
+        <span class="label">Vertices: </span><span class="value">4</span> &nbsp;|&nbsp;
+        <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+        <span class="label">Computing: </span><span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:#0d0d1a;"></div> Default</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#0a1a12;"></div> Filled</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#1a0a00;"></div> Current (i,j)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#1a1a00;"></div> Computing</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#002a1a;"></div> Updated</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#1a0030;"></div> Highlighted</div>
+      </div>
+
+      <div class="table-section">
+        <div class="table-title" id="tableTitle">Distance Matrix D — Initial D⁽⁰⁾ = W</div>
+        <div class="table-wrapper">
+          <table id="distTable">
+            <thead>
+              <tr>
+                <th></th><th>1</th><th>2</th><th>3</th><th>4</th>
+              </tr>
+            </thead>
+            <tbody id="distBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="result-section" id="resultSection">
+        <h2>✅ Algorithm Complete!</h2>
+        <div class="matrix-label">Final Distance Matrix D⁽⁴⁾</div>
+        <div class="table-wrapper">
+          <table id="resultTable">
+            <thead>
+              <tr>
+                <th></th><th>1</th><th>2</th><th>3</th><th>4</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+        <div class="comparison-section" id="comparisonSection"></div>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Find the <b>shortest path</b> between every pair of vertices in a weighted directed graph.</p>
+          <p>Graph has <span class="dim">4 vertices</span> and <span class="dim">6 edges</span>.</p>
+          <h3 style="margin-top:10px;">DP Formulation</h3>
+          <span class="formula-line">D⁽ᵏ⁾[i,j] = shortest path from i to j using intermediates from {1,2,...,k}</span>
+          <h3 style="margin-top:10px;">Recurrence</h3>
+          <span class="formula-line">D⁽ᵏ⁾[i,j] = min(D⁽ᵏ⁻¹⁾[i,j], D⁽ᵏ⁻¹⁾[i,k] + D⁽ᵏ⁻¹⁾[k,j])</span>
+          <p>Either <b>skip</b> vertex k (keep old value), or <b>use</b> k as intermediate (go i→k→j).</p>
+          <h3 style="margin-top:10px;">Base Case</h3>
+          <span class="formula-line">D⁽⁰⁾[i,j] = w(i,j) — direct edge weights</span>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INF = Infinity;
+    const N = 4;
+    const V = [1, 2, 3, 4];
+    const INF_SYM = '∞';
+
+    // Adjacency matrix W = D^(0)
+    const W = [
+      [0,   3,   8,   INF],
+      [INF, 0,   INF, 1  ],
+      [INF, 4,   0,   INF],
+      [2,   INF, -5,  0  ]
+    ];
+
+    let D = [];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function fmt(val) {
+      if (val === INF) return INF_SYM;
+      return String(val);
+    }
+
+    function deepCopy(m) {
+      return m.map(r => [...r]);
+    }
+
+    function precomputeAll() {
+      let result = deepCopy(W);
+      let snapshots = [deepCopy(result)];
+      let updates = [[]];
+
+      for (let k = 1; k <= N; k++) {
+        let changed = [];
+        for (let i = 1; i <= N; i++) {
+          for (let j = 1; j <= N; j++) {
+            let dik = result[i-1][k-1];
+            let dkj = result[k-1][j-1];
+            let dij = result[i-1][j-1];
+            if (dik !== INF && dkj !== INF && dik + dkj < dij) {
+              changed.push({i, j, old: dij, newVal: dik + dkj});
+              result[i-1][j-1] = dik + dkj;
+            }
+          }
+        }
+        snapshots.push(deepCopy(result));
+        updates.push(changed);
+      }
+      return { final: result, snapshots, updates };
+    }
+
+    function buildSteps() {
+      steps = [];
+      const { snapshots, updates } = precomputeAll();
+
+      // Step 0: Show initial matrix
+      steps.push({
+        type: 'init',
+        k: 0,
+        matrix: snapshots[0],
+        highlight: [],
+        explanation: buildInitExplanation()
+      });
+
+      // Steps for each k
+      for (let k = 1; k <= N; k++) {
+        // Announcement step
+        steps.push({
+          type: 'k_start',
+          k: k,
+          matrix: snapshots[k-1],
+          highlight: [],
+          explanation: buildKStartExplanation(k)
+        });
+
+        // Cell-by-cell checks
+        let prevMatrix = snapshots[k-1];
+        let changedInK = updates[k];
+
+        for (let i = 1; i <= N; i++) {
+          for (let j = 1; j <= N; j++) {
+            if (i === j) continue; // skip diagonal
+            let dik = prevMatrix[i-1][k-1];
+            let dkj = prevMatrix[k-1][j-1];
+            let dij = prevMatrix[i-1][j-1];
+            let willUpdate = dik !== INF && dkj !== INF && dik + dkj < dij;
+            let newVal = willUpdate ? dik + dkj : null;
+
+            steps.push({
+              type: 'check',
+              k: k,
+              i: i,
+              j: j,
+              dik: dik,
+              dkj: dkj,
+              dij: dij,
+              willUpdate: willUpdate,
+              newVal: newVal,
+              matrix: prevMatrix,
+              highlight: [{i, j}, {i, k: k, type: 'trace'}, {i: k, j, type: 'trace'}],
+              explanation: buildCheckExplanation(k, i, j, dik, dkj, dij, willUpdate, newVal)
+            });
+
+            if (willUpdate) {
+              // Apply update to working copy
+              prevMatrix[i-1][j-1] = newVal;
+              steps.push({
+                type: 'update',
+                k: k,
+                i: i,
+                j: j,
+                oldVal: dij,
+                newVal: newVal,
+                matrix: deepCopy(prevMatrix),
+                highlight: [{i, j, type: 'updated'}],
+                explanation: buildUpdateExplanation(k, i, j, dij, newVal)
+              });
+            }
+          }
+        }
+
+        // Show completed D^(k)
+        steps.push({
+          type: 'k_done',
+          k: k,
+          matrix: deepCopy(prevMatrix),
+          snapshot: snapshots[k],
+          highlight: updates[k].map(u => ({i: u.i, j: u.j, type: 'updated'})),
+          explanation: buildKDoneExplanation(k, updates[k])
+        });
+      }
+
+      // Final comparison
+      steps.push({
+        type: 'done',
+        k: N,
+        matrix: snapshots[N],
+        explanation: buildFinishedExplanation()
+      });
+    }
+
+    function buildInitExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Initial State — D⁽⁰⁾ = W</h3>
+          <p>The distance matrix starts as the <b>adjacency matrix</b> W:</p>
+          <p>• <span class="dim">D[i,j] = w(i,j)</span> if edge i→j exists</p>
+          <p>• <span class="dim">D[i,j] = ∞</span> if no direct edge</p>
+          <p>• <span class="dim">D[i,i] = 0</span> (distance to self)</p>
+          <span class="formula-line">D⁽⁰⁾[i,j] = w(i,j)</span>
+          <p class="note">This is the base case. Now we'll iteratively allow more intermediate vertices.</p>
+        </div>`;
+    }
+
+    function buildKStartExplanation(k) {
+      let intermediates = V.slice(0, k).join(', ');
+      return `
+        <div class="explain-section active">
+          <h3>Iteration k=${k} — Allow Vertex ${k}</h3>
+          <p>Now allowing vertex <span class="dim">${k}</span> as an intermediate.</p>
+          <p>Allowed intermediates so far: <span class="dim">{${intermediates}}</span></p>
+          <span class="formula-line">D⁽${k}⁾[i,j] = min(D⁽${k-1}⁾[i,j], D⁽${k-1}⁾[i,${k}] + D⁽${k-1}⁾[${k},j])</span>
+          <p>For each pair (i,j), check if going through vertex ${k} gives a shorter path.</p>
+          <p class="note">We check all (i,j) pairs where i≠j.</p>
+        </div>`;
+    }
+
+    function buildCheckExplanation(k, i, j, dik, dkj, dij, willUpdate, newVal) {
+      let dikStr = fmt(dik);
+      let dkjStr = fmt(dkj);
+      let dijStr = fmt(dij);
+      let sumStr = (dik !== INF && dkj !== INF) ? fmt(dik + dkj) : '∞';
+      let verb = willUpdate ? 'UPDATE' : 'no change';
+      let color = willUpdate ? 'color:#00ff88' : 'color:#aaa';
+
+      return `
+        <div class="explain-section active">
+          <h3>Check D[${i},${j}] with k=${k}</h3>
+          <p>Is path through vertex <span class="dim">${k}</span> shorter?</p>
+          <span class="formula-line">D[${i},${j}] = min(D[${i},${j}], D[${i},${k}] + D[${k},${j}])</span>
+          <span class="formula-line">= min(${dijStr}, ${dikStr} + ${dkjStr}) = min(${dijStr}, ${sumStr})</span>
+          <p style="${color}; font-weight:bold;">→ ${verb}${willUpdate ? ' → new value: ' + fmt(newVal) : ''}</p>
+        </div>`;
+    }
+
+    function buildUpdateExplanation(k, i, j, oldVal, newVal) {
+      return `
+        <div class="explain-section active">
+          <h3>Updated D[${i},${j}] = ${fmt(newVal)}</h3>
+          <p>Path from <span class="dim">${i}</span> to <span class="dim">${j}</span> via vertex <span class="dim">${k}</span> is shorter!</p>
+          <span class="formula-line">D[${i},${j}]: ${fmt(oldVal)} → ${fmt(newVal)}</span>
+          <p class="note">We overwrite in-place since D⁽${k}⁾ only depends on D⁽${k-1}⁾.</p>
+        </div>`;
+    }
+
+    function buildKDoneExplanation(k, changed) {
+      let changedStr = changed.length > 0
+        ? changed.map(c => `D[${c.i},${c.j}]=${fmt(c.newVal)}`).join(', ')
+        : 'none';
+      let intermediates = V.slice(0, k).join(', ');
+      return `
+        <div class="explain-section active">
+          <h3>D⁽${k}⁾ Complete</h3>
+          <p>Iteration k=${k} finished. Vertex <span class="dim">${k}</span> is now allowed.</p>
+          <p>Allowed intermediates: <span class="dim">{${intermediates}}</span></p>
+          <p>Cells updated: <span class="result-line">${changedStr}</span></p>
+          <p class="note">Press Step or Play to continue to next iteration.</p>
+        </div>`;
+    }
+
+    function buildFinishedExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>All 4 iterations done. D⁽⁴⁾ contains shortest paths between all pairs.</p>
+          <span class="formula-line">D⁽⁴⁾[i,j] = shortest path from i to j</span>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(V³) — three nested loops (k, i, j)</p>
+          <p><span class="dim">Space:</span> O(V²) — we overwrite D in-place</p>
+          <h3 style="margin-top:10px;">Why It Works</h3>
+          <p>By considering vertices one at a time, we gradually allow more intermediate vertices. After k iterations, D[i,j] uses intermediates from {1,...,k}. After V iterations, all intermediates are allowed.</p>
+          <h3 style="margin-top:10px;">Key Insight</h3>
+          <p>At iteration k, the diagonal D[k,k] remains 0 unless there's a negative cycle reachable from k. In our graph, D[4,4]=0 throughout — no negative cycles.</p>
+          <p class="note">Compare D⁽⁰⁾ vs D⁽⁴⁾ in the result section below.</p>
+        </div>`;
+    }
+
+    function initTables() {
+      const tbody = document.getElementById('distBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < N; i++) {
+        let row = document.createElement('tr');
+        let th = document.createElement('th');
+        th.textContent = i + 1;
+        row.appendChild(th);
+        for (let j = 0; j < N; j++) {
+          let td = document.createElement('td');
+          td.id = `d-${i}-${j}`;
+          td.textContent = fmt(W[i][j]);
+          if (i === j) td.classList.add('diagonal', 'filled');
+          row.appendChild(td);
+        }
+        tbody.appendChild(row);
+      }
+    }
+
+    function renderMatrix(matrix, highlight, tbodyId) {
+      const tbody = document.getElementById(tbodyId || 'distBody');
+      const cells = tbody.querySelectorAll('td');
+      // highlight items use 1-indexed i,j — build hMap with 1-indexed keys
+      let hMap = {};
+      highlight.forEach(h => {
+        hMap[h.i + ',' + h.j] = h.type || 'computing';
+      });
+
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+          let td = document.getElementById(`d-${i}-${j}`);
+          if (!td) continue;
+          td.textContent = fmt(matrix[i][j]);
+          td.className = '';
+          if (i === j) td.classList.add('diagonal');
+          // lookup key is 1-indexed
+          let key = (i+1) + ',' + (j+1);
+          if (hMap[key]) {
+            td.classList.add(hMap[key]);
+          } else if (matrix[i][j] !== W[i][j] && matrix[i][j] !== 0) {
+            td.classList.add('filled');
+          }
+        }
+      }
+    }
+
+    function applyStep(step) {
+      let title = '';
+      let computing = '';
+
+      if (step.type === 'init') {
+        title = 'Distance Matrix D — Initial D⁽⁰⁾ = W';
+        computing = 'Base case';
+        renderMatrix(step.matrix, []);
+      } else if (step.type === 'k_start') {
+        title = `Iteration k=${step.k} — Allowing vertex ${step.k}`;
+        computing = `D⁽${step.k}⁾ computation`;
+        renderMatrix(step.matrix, []);
+      } else if (step.type === 'check') {
+        title = `Iteration k=${step.k} — Checking D[${step.i},${step.j}]`;
+        computing = `D[${step.i},${step.k}]+D[${step.k},${step.j}] vs D[${step.i},${step.j}]`;
+        let hls = step.highlight.map(h => ({i: h.i, j: h.j || h.k, type: h.type || 'computing'}));
+        // also highlight the current cell
+        hls.push({i: step.i, j: step.j, type: 'current'});
+        renderMatrix(step.matrix, hls);
+      } else if (step.type === 'update') {
+        title = `Iteration k=${step.k} — Updated D[${step.i},${step.j}]`;
+        computing = `D[${step.i},${step.j}] = ${fmt(step.newVal)}`;
+        renderMatrix(step.matrix, [{i: step.i, j: step.j, type: 'updated'}]);
+      } else if (step.type === 'k_done') {
+        title = `D⁽${step.k}⁾ Complete`;
+        computing = `Intermediates {${V.slice(0, step.k).join(',')}}`;
+        renderMatrix(step.matrix, step.highlight.map(h => ({i: h.i, j: h.j, type: h.type})));
+      } else if (step.type === 'done') {
+        title = '✅ Complete!';
+        computing = 'Final D⁽⁴⁾';
+        renderMatrix(step.matrix, []);
+        showResults(step.matrix);
+      }
+
+      document.getElementById('tableTitle').textContent = title;
+      document.getElementById('phaseDisplay').textContent = title;
+      document.getElementById('computingDisplay').textContent = computing;
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${title}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function showResults(finalMatrix) {
+      let rs = document.getElementById('resultSection');
+      rs.style.display = 'block';
+
+      let tbody = document.getElementById('resultBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < N; i++) {
+        let row = document.createElement('tr');
+        let th = document.createElement('th');
+        th.textContent = i + 1;
+        row.appendChild(th);
+        for (let j = 0; j < N; j++) {
+          let td = document.createElement('td');
+          td.textContent = fmt(finalMatrix[i][j]);
+          td.classList.add('filled');
+          if (i === j) td.classList.add('diagonal');
+          // Highlight cells that differ from initial
+          if (finalMatrix[i][j] !== W[i][j]) {
+            td.style.color = '#00ff88';
+            td.style.fontWeight = 'bold';
+          }
+          row.appendChild(td);
+        }
+        tbody.appendChild(row);
+      }
+
+      // Build comparison
+      let comp = document.getElementById('comparisonSection');
+      comp.innerHTML = `
+        <div>
+          <div class="comparison-label">D⁽⁰⁾ (Initial)</div>
+          <table><thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>
+          ${buildComparisonRows(W)}
+          </tbody></table>
+        </div>
+        <div>
+          <div class="comparison-label">D⁽⁴⁾ (Final)</div>
+          <table><thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead><tbody>
+          ${buildComparisonRows(finalMatrix)}
+          </tbody></table>
+        </div>`;
+    }
+
+    function buildComparisonRows(m) {
+      let html = '';
+      for (let i = 0; i < N; i++) {
+        html += '<tr><th>' + (i+1) + '</th>';
+        for (let j = 0; j < N; j++) {
+          let cls = '';
+          if (m[i][j] !== W[i][j] && m[i][j] !== 0) cls = ' style="color:#00ff88;font-weight:bold"';
+          if (i === j) cls = ' class="diagonal"';
+          html += `<td${cls}>${fmt(m[i][j])}</td>`;
+        }
+        html += '</tr>';
+      }
+      return html;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('td').forEach(td => {
+        td.className = '';
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('tableTitle').textContent = 'Distance Matrix D — Initial D⁽⁰⁾ = W';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Find the <b>shortest path</b> between every pair of vertices in a weighted directed graph.</p>
+          <p>Graph has <span class="dim">4 vertices</span> and <span class="dim">6 edges</span>.</p>
+          <h3 style="margin-top:10px;">DP Formulation</h3>
+          <span class="formula-line">D⁽ᵏ⁾[i,j] = shortest path from i to j using intermediates from {1,2,...,k}</span>
+          <h3 style="margin-top:10px;">Recurrence</h3>
+          <span class="formula-line">D⁽ᵏ⁾[i,j] = min(D⁽ᵏ⁻¹⁾[i,j], D⁽ᵏ⁻¹⁾[i,k] + D⁽ᵏ⁻¹⁾[k,j])</span>
+          <p>Either <b>skip</b> vertex k (keep old value), or <b>use</b> k as intermediate (go i→k→j).</p>
+          <h3 style="margin-top:10px;">Base Case</h3>
+          <span class="formula-line">D⁽⁰⁾[i,j] = w(i,j) — direct edge weights</span>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+      clearHighlights();
+      initTables();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✅ Complete!';
+      document.getElementById('computingDisplay').textContent = 'D⁽⁴⁾ final distances';
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    initTables();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

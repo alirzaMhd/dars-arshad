@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Johnson's Algorithm Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.graph-container svg {
+  max-width: 100%;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 6px 0 10px;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444;
+}
+.legend-negative { background: #1a0000; border-color: #ff4444; }
+.legend-positive { background: #0d0d1a; border-color: #555; }
+.legend-source { background: #1a1a00; border-color: #ffcc00; }
+.legend-reweighted { background: #002a1a; border-color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.negative {
+  background: #1a0000 !important;
+  color: #ff6666 !important;
+  border-color: #ff4444 !important;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+  display: none;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.phase-label {
+  text-align: center;
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin: 10px 0;
+  padding: 8px;
+  background: #111128;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+</style>
+</head>
+<body>
+
+<h1>JOHNSON'S ALGORITHM</h1>
+<p class="subtitle">Graph Algorithms — All-Pairs Shortest Paths with Negative Edge Weights</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container" id="graphContainer">
+      <svg id="graphSvg" width="600" height="300" viewBox="0 0 600 300"></svg>
+    </div>
+    <div class="legend" id="legend">
+      <div class="legend-item"><div class="legend-swatch legend-positive"></div>Positive edge</div>
+      <div class="legend-item"><div class="legend-swatch legend-negative"></div>Negative edge</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Algorithm:</span> <span class="value">Johnson's APSP</span> &nbsp;|&nbsp;
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span> &nbsp;|&nbsp;
+      <span class="label">Step:</span> <span class="value" id="computingDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <div id="phaseLabel" class="phase-label">Original Graph</div>
+
+    <div class="table-section" id="hTableSection" style="display:none;">
+      <div class="table-title">h(v) — Potentials from Bellman-Ford</div>
+      <div class="table-wrapper">
+        <table id="hTable">
+          <tr><th>Vertex</th><th>h(v)</th></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section" id="reweightTableSection" style="display:none;">
+      <div class="table-title">Reweighted Edges: ŵ(u,v) = w(u,v) + h(u) − h(v)</div>
+      <div class="table-wrapper">
+        <table id="reweightTable">
+          <tr><th>Edge</th><th>w(u,v)</th><th>h(u)</th><th>h(v)</th><th>ŵ(u,v)</th></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section" id="dijkstraTableSection" style="display:none;">
+      <div class="table-title" id="dijkstraTableTitle">Dijkstra on Reweighted Graph</div>
+      <div class="table-wrapper">
+        <table id="dijkstraTable">
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section" id="finalTableSection" style="display:none;">
+      <div class="table-title">Final Distance Matrix: δ(u,v) = d̂(u,v) − h(u) + h(v)</div>
+      <div class="table-wrapper">
+        <table id="finalTable">
+        </table>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection">
+      <h2>Johnson's Algorithm Complete!</h2>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>The Problem with Dijkstra</h3>
+        <p>Dijkstra's algorithm <b>fails</b> with negative edge weights because it assumes that once a vertex is finalized, its distance won't decrease.</p>
+        <p>With negative edges, a later path through a "negative shortcut" can produce a <b>shorter</b> distance than Dijkstra already found.</p>
+        <h3 style="margin-top:10px;">Johnson's Solution</h3>
+        <p><b>Reweight</b> all edges to make them non-negative, run Dijkstra from every vertex, then <b>undo</b> the reweighting.</p>
+        <span class="formula-line">ŵ(u,v) = w(u,v) + h(u) − h(v)</span>
+        <p>Where <span class="dim">h(v)</span> = shortest distance from a new source vertex <span class="dim">s</span> to <span class="dim">v</span>.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  GRAPH DATA
+// ============================================================
+const VERTICES = [1, 2, 3];
+const EDGES = [
+  { from: 1, to: 2, w: 2 },
+  { from: 1, to: 3, w: 7 },
+  { from: 2, to: 3, w: -4 }
+];
+const INF = Infinity;
+
+// Positions for SVG layout (original graph, 3 vertices)
+const POS_ORIG = {
+  1: { x: 150, y: 150 },
+  2: { x: 450, y: 80 },
+  3: { x: 450, y: 220 }
+};
+// Positions with source vertex s added
+const POS_SOURCE = {
+  s: { x: 80, y: 150 },
+  1: { x: 240, y: 80 },
+  2: { x: 420, y: 80 },
+  3: { x: 420, y: 220 }
+};
+// Positions for reweighted graph (no s)
+const POS_REWEIGHT = {
+  1: { x: 150, y: 150 },
+  2: { x: 450, y: 80 },
+  3: { x: 450, y: 220 }
+};
+
+// ============================================================
+//  ALGORITHM DATA
+// ============================================================
+let h = {}; // potentials
+let reweightedEdges = [];
+let dijkstraResults = []; // array of { source, dist: {} }
+let finalMatrix = [];
+
+// ============================================================
+//  STEP SYSTEM
+// ============================================================
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// ============================================================
+//  SVG DRAWING HELPERS
+// ============================================================
+function clearSvg() {
+  document.getElementById('graphSvg').innerHTML = '';
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    el.setAttribute(k, v);
+  }
+  return el;
+}
+
+function drawNode(svg, x, y, label, color, radius) {
+  radius = radius || 22;
+  const circle = svgEl('circle', {
+    cx: x, cy: y, r: radius,
+    fill: '#0d0d1a', stroke: color, 'stroke-width': 2.5
+  });
+  svg.appendChild(circle);
+  const text = svgEl('text', {
+    x: x, y: y + 1,
+    'text-anchor': 'middle', 'dominant-baseline': 'central',
+    fill: color, 'font-family': 'Courier New, monospace',
+    'font-size': '14', 'font-weight': 'bold'
+  });
+  text.textContent = label;
+  svg.appendChild(text);
+}
+
+function drawEdge(svg, x1, y1, x2, y2, weight, color, labelColor, highlight, dashArray) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  const r = 22;
+  const sx = x1 + ux * r;
+  const sy = y1 + uy * r;
+  const ex = x2 - ux * r;
+  const ey = y2 - uy * r;
+
+  // arrow line
+  const lineAttrs = {
+    x1: sx, y1: sy, x2: ex, y2: ey,
+    stroke: color || '#555',
+    'stroke-width': highlight ? 2.5 : 1.8,
+    'marker-end': `url(#arrow${highlight ? 'H' : ''})`
+  };
+  if (dashArray) lineAttrs['stroke-dasharray'] = dashArray;
+  svg.appendChild(svgEl('line', lineAttrs));
+
+  // weight label
+  const mx = (sx + ex) / 2;
+  const my = (sy + ey) / 2;
+  const nx = -uy * 14;
+  const ny = ux * 14;
+  const wt = svgEl('text', {
+    x: mx + nx, y: my + ny,
+    'text-anchor': 'middle', 'dominant-baseline': 'central',
+    fill: labelColor || '#aaa',
+    'font-family': 'Courier New, monospace',
+    'font-size': '13', 'font-weight': 'bold'
+  });
+  wt.textContent = weight;
+  svg.appendChild(wt);
+}
+
+function addArrowDefs(svg) {
+  const defs = svgEl('defs', {});
+  // normal arrow
+  const m1 = svgEl('marker', {
+    id: 'arrow', viewBox: '0 0 10 10', refX: '9', refY: '5',
+    markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse'
+  });
+  m1.appendChild(svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: '#555' }));
+  defs.appendChild(m1);
+  // highlighted arrow
+  const m2 = svgEl('marker', {
+    id: 'arrowH', viewBox: '0 0 10 10', refX: '9', refY: '5',
+    markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse'
+  });
+  m2.appendChild(svgEl('path', { d: 'M 0 0 L 10 5 L 0 10 z', fill: '#ff6600' }));
+  defs.appendChild(m2);
+  svg.appendChild(defs);
+}
+
+function drawOriginalGraph(highlightEdge) {
+  clearSvg();
+  const svg = document.getElementById('graphSvg');
+  addArrowDefs(svg);
+  EDGES.forEach(e => {
+    const p1 = POS_ORIG[e.from];
+    const p2 = POS_ORIG[e.to];
+    const isHighlighted = highlightEdge && highlightEdge.from === e.from && highlightEdge.to === e.to;
+    const isNeg = e.w < 0;
+    const col = isHighlighted ? '#ff4444' : (isNeg ? '#ff6666' : '#555');
+    const lcol = isHighlighted ? '#ff6666' : (isNeg ? '#ff9999' : '#aaa');
+    drawEdge(svg, p1.x, p1.y, p2.x, p2.y, e.w, col, lcol, isHighlighted);
+  });
+  VERTICES.forEach(v => {
+    const p = POS_ORIG[v];
+    drawNode(svg, p.x, p.y, v, '#00ccff');
+  });
+}
+
+function drawGraphWithSource(highlightEdge) {
+  clearSvg();
+  const svg = document.getElementById('graphSvg');
+  addArrowDefs(svg);
+  // edges from s
+  VERTICES.forEach(v => {
+    const p1 = POS_SOURCE.s;
+    const p2 = POS_SOURCE[v];
+    drawEdge(svg, p1.x, p1.y, p2.x, p2.y, 0, '#ffcc00', '#ffcc00', false);
+  });
+  // original edges
+  EDGES.forEach(e => {
+    const p1 = POS_SOURCE[e.from];
+    const p2 = POS_SOURCE[e.to];
+    const isHighlighted = highlightEdge && highlightEdge.from === e.from && highlightEdge.to === e.to;
+    const isNeg = e.w < 0;
+    const col = isHighlighted ? '#ff4444' : (isNeg ? '#ff6666' : '#555');
+    const lcol = isHighlighted ? '#ff6666' : (isNeg ? '#ff9999' : '#aaa');
+    drawEdge(svg, p1.x, p1.y, p2.x, p2.y, e.w, col, lcol, isHighlighted);
+  });
+  // nodes
+  drawNode(svg, POS_SOURCE.s.x, POS_SOURCE.s.y, 's', '#ffcc00');
+  VERTICES.forEach(v => {
+    const p = POS_SOURCE[v];
+    drawNode(svg, p.x, p.y, v, '#00ccff');
+  });
+}
+
+function drawReweightedGraph(highlightEdge, bfsTreeEdges) {
+  clearSvg();
+  const svg = document.getElementById('graphSvg');
+  addArrowDefs(svg);
+  reweightedEdges.forEach(e => {
+    const p1 = POS_REWEIGHT[e.from];
+    const p2 = POS_REWEIGHT[e.to];
+    const isHighlighted = highlightEdge && highlightEdge.from === e.from && highlightEdge.to === e.to;
+    const isTree = bfsTreeEdges && bfsTreeEdges.some(be => be.from === e.from && be.to === e.to);
+    const col = isHighlighted ? '#ff6600' : (isTree ? '#00ff88' : '#555');
+    const lcol = isHighlighted ? '#ffcc00' : (isTree ? '#00ff88' : '#aaa');
+    drawEdge(svg, p1.x, p1.y, p2.x, p2.y, e.wt, col, lcol, isHighlighted);
+  });
+  VERTICES.forEach(v => {
+    const p = POS_REWEIGHT[v];
+    drawNode(svg, p.x, p.y, v, '#00ccff');
+  });
+}
+
+// ============================================================
+//  ALGORITHM COMPUTATION
+// ============================================================
+function computeBellmanFord() {
+  // Add source s with 0-weight edges to all vertices
+  // Vertices: s, 1, 2, 3
+  const allVerts = ['s', ...VERTICES];
+  const allEdges = [
+    ...VERTICES.map(v => ({ from: 's', to: v, w: 0 })),
+    ...EDGES
+  ];
+  const d = {};
+  allVerts.forEach(v => d[v] = v === 's' ? 0 : INF);
+
+  // V-1 rounds (V = 4 vertices including s)
+  for (let round = 0; round < allVerts.length - 1; round++) {
+    allEdges.forEach(e => {
+      if (d[e.from] !== INF && d[e.from] + e.w < d[e.to]) {
+        d[e.to] = d[e.from] + e.w;
+      }
+    });
+  }
+  // Store h values for original vertices only
+  VERTICES.forEach(v => h[v] = d[v]);
+}
+
+function computeReweightedEdges() {
+  reweightedEdges = EDGES.map(e => ({
+    from: e.from,
+    to: e.to,
+    w: e.w,
+    hf: h[e.from],
+    ht: h[e.to],
+    wt: e.w + h[e.from] - h[e.to]
+  }));
+}
+
+function runDijkstra(source) {
+  const dist = {};
+  const visited = {};
+  VERTICES.forEach(v => { dist[v] = INF; visited[v] = false; });
+  dist[source] = 0;
+
+  for (let i = 0; i < VERTICES.length; i++) {
+    // find unvisited vertex with min dist
+    let u = null;
+    let minD = INF;
+    VERTICES.forEach(v => {
+      if (!visited[v] && dist[v] < minD) {
+        minD = dist[v];
+        u = v;
+      }
+    });
+    if (u === null) break;
+    visited[u] = true;
+    // relax edges from u
+    reweightedEdges.forEach(e => {
+      if (e.from === u && !visited[e.to]) {
+        const newDist = dist[u] + e.wt;
+        if (newDist < dist[e.to]) {
+          dist[e.to] = newDist;
+        }
+      }
+    });
+  }
+  return dist;
+}
+
+function computeDijkstraResults() {
+  dijkstraResults = [];
+  VERTICES.forEach(src => {
+    dijkstraResults.push({ source: src, dist: runDijkstra(src) });
+  });
+}
+
+function computeFinalMatrix() {
+  finalMatrix = [];
+  dijkstraResults.forEach(dr => {
+    const row = {};
+    VERTICES.forEach(v => {
+      if (dr.dist[v] === INF) {
+        row[v] = INF;
+      } else {
+        row[v] = dr.dist[v] - h[dr.source] + h[v];
+      }
+    });
+    finalMatrix.push({ source: dr.source, dist: row });
+  });
+}
+
+// ============================================================
+//  TABLE BUILDERS
+// ============================================================
+function initHTable() {
+  const table = document.getElementById('hTable');
+  table.innerHTML = '<tr><th>Vertex</th><th>h(v)</th></tr>';
+  VERTICES.forEach(v => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td id="hV${v}">${v}</td><td id="hVal${v}">—</td>`;
+    table.appendChild(tr);
+  });
+}
+
+function fillHValue(v) {
+  const el = document.getElementById('hVal' + v);
+  if (el) {
+    el.textContent = h[v];
+    el.className = 'filled';
+  }
+}
+
+function initReweightTable() {
+  const table = document.getElementById('reweightTable');
+  table.innerHTML = '<tr><th>Edge</th><th>w(u,v)</th><th>h(u)</th><th>h(v)</th><th>ŵ(u,v)</th></tr>';
+  reweightedEdges.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td id="rwEdge${i}">${e.from}→${e.to}</td>
+      <td id="rwW${i}">${e.w}</td>
+      <td id="rwHu${i}">—</td>
+      <td id="rwHv${i}">—</td>
+      <td id="rwResult${i}">—</td>
+    `;
+    table.appendChild(tr);
+  });
+}
+
+function fillReweightStep(i) {
+  const e = reweightedEdges[i];
+  document.getElementById('rwHu' + i).textContent = e.hf;
+  document.getElementById('rwHu' + i).className = 'filled';
+  document.getElementById('rwHv' + i).textContent = e.ht;
+  document.getElementById('rwHv' + i).className = 'filled';
+  document.getElementById('rwResult' + i).textContent = e.wt;
+  document.getElementById('rwResult' + i).className = e.wt < 0 ? 'negative' : 'filled';
+}
+
+function initDijkstraTable(source) {
+  document.getElementById('dijkstraTableTitle').textContent = `Dijkstra from Vertex ${source} on Reweighted Graph`;
+  const table = document.getElementById('dijkstraTable');
+  table.innerHTML = '<tr><th>Vertex</th><th>d̂(' + source + ',v)</th></tr>';
+  VERTICES.forEach(v => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td id="dkV${source}_${v}">${v}</td><td id="dkVal${source}_${v}">—</td>`;
+    table.appendChild(tr);
+  });
+}
+
+function fillDijkstraValue(source, v, val) {
+  const el = document.getElementById('dkVal' + source + '_' + v);
+  if (el) {
+    el.textContent = val === INF ? '∞' : val;
+    el.className = 'filled';
+  }
+}
+
+function initFinalTable() {
+  const table = document.getElementById('finalTable');
+  let header = '<tr><th>δ(u,v)</th>';
+  VERTICES.forEach(v => header += `<th>${v}</th>`);
+  header += '</tr>';
+  table.innerHTML = header;
+  finalMatrix.forEach(row => {
+    const tr = document.createElement('tr');
+    let html = `<td style="color:#00ccff;font-weight:bold">${row.source}</td>`;
+    VERTICES.forEach(v => {
+      html += `<td id="fm_${row.source}_${v}">—</td>`;
+    });
+    tr.innerHTML = html;
+    table.appendChild(tr);
+  });
+}
+
+function fillFinalCell(source, v) {
+  const el = document.getElementById('fm_' + source + '_' + v);
+  if (el) {
+    const val = finalMatrix.find(r => r.source === source).dist[v];
+    el.textContent = val === INF ? '∞' : val;
+    el.className = val < 0 ? 'negative' : 'filled';
+  }
+}
+
+// ============================================================
+//  BUILD ANIMATION STEPS
+// ============================================================
+function buildSteps() {
+  steps = [];
+
+  // Phase 1: Show original graph
+  steps.push({
+    type: 'show_original',
+    explanation: buildOriginalGraphExplanation(),
+    phase: 'Original Graph',
+    computing: 'Identifying negative edges'
+  });
+
+  // Phase 1b: Highlight negative edge
+  steps.push({
+    type: 'highlight_negative',
+    edge: { from: 2, to: 3 },
+    explanation: buildNegativeEdgeExplanation(),
+    phase: 'Problem Identification',
+    computing: 'Edge 2→3 has weight -4'
+  });
+
+  // Phase 2: Add source vertex s
+  steps.push({
+    type: 'add_source',
+    explanation: buildAddSourceExplanation(),
+    phase: 'Adding Source Vertex',
+    computing: 'Creating artificial source s'
+  });
+
+  // Phase 3: Bellman-Ford rounds
+  // Initialize
+  steps.push({
+    type: 'bf_init',
+    explanation: buildBFInitExplanation(),
+    phase: 'Bellman-Ford — Init',
+    computing: 'd[s]=0, d[others]=∞'
+  });
+
+  // Round 1
+  steps.push({
+    type: 'bf_round',
+    round: 1,
+    afterD: { s: 0, 1: 0, 2: 0, 3: 0 },
+    explanation: buildBFRound1Explanation(),
+    phase: 'Bellman-Ford — Round 1',
+    computing: 'Relaxing s→v edges'
+  });
+
+  steps.push({
+    type: 'bf_round',
+    round: 1,
+    afterD: { s: 0, 1: 0, 2: 0, 3: -4 },
+    highlightEdge: { from: 2, to: 3 },
+    explanation: buildBFRound1NegExplanation(),
+    phase: 'Bellman-Ford — Round 1',
+    computing: 'Edge 2→3 relaxes d[3] to -4'
+  });
+
+  // Round 2
+  steps.push({
+    type: 'bf_round',
+    round: 2,
+    afterD: { s: 0, 1: 0, 2: 0, 3: -4 },
+    explanation: buildBFRound2Explanation(),
+    phase: 'Bellman-Ford — Round 2',
+    computing: 'No changes — converged'
+  });
+
+  // Show h values
+  steps.push({
+    type: 'show_h',
+    explanation: buildShowHExplanation(),
+    phase: 'Potentials Computed',
+    computing: 'h = {1:0, 2:0, 3:-4}'
+  });
+
+  // Phase 4: Reweighting
+  steps.push({
+    type: 'reweight_intro',
+    explanation: buildReweightIntroExplanation(),
+    phase: 'Reweighting',
+    computing: 'ŵ(u,v) = w(u,v) + h(u) − h(v)'
+  });
+
+  // Reweight each edge
+  reweightedEdges.forEach((e, i) => {
+    steps.push({
+      type: 'reweight_edge',
+      edgeIndex: i,
+      explanation: buildReweightEdgeExplanation(e, i),
+      phase: `Reweighting Edge ${e.from}→${e.to}`,
+      computing: `${e.w} + ${e.hf} − (${e.ht}) = ${e.wt}`
+    });
+  });
+
+  // Show reweighted graph
+  steps.push({
+    type: 'show_reweighted',
+    explanation: buildShowReweightedExplanation(),
+    phase: 'Reweighted Graph',
+    computing: 'All edges non-negative!'
+  });
+
+  // Phase 5: Dijkstra from each vertex
+  VERTICES.forEach(src => {
+    steps.push({
+      type: 'dijkstra_start',
+      source: src,
+      explanation: buildDijkstraStartExplanation(src),
+      phase: `Dijkstra from Vertex ${src}`,
+      computing: `Running Dijkstra on reweighted graph`
+    });
+
+    const dr = dijkstraResults.find(d => d.source === src);
+    VERTICES.forEach(v => {
+      steps.push({
+        type: 'dijkstra_result',
+        source: src,
+        target: v,
+        val: dr.dist[v],
+        explanation: buildDijkstraResultExplanation(src, v, dr.dist[v]),
+        phase: `Dijkstra from ${src}`,
+        computing: `d̂(${src},${v}) = ${dr.dist[v] === INF ? '∞' : dr.dist[v]}`
+      });
+    });
+  });
+
+  // Phase 6: Undo reweighting
+  steps.push({
+    type: 'undo_intro',
+    explanation: buildUndoIntroExplanation(),
+    phase: 'Undoing Reweighting',
+    computing: 'δ(u,v) = d̂(u,v) − h(u) + h(v)'
+  });
+
+  finalMatrix.forEach(row => {
+    VERTICES.forEach(v => {
+      steps.push({
+        type: 'undo_cell',
+        source: row.source,
+        target: v,
+        explanation: buildUndoCellExplanation(row.source, v),
+        phase: `Computing δ(${row.source},${v})`,
+        computing: `δ(${row.source},${v}) = ${row.dist[v] === INF ? '∞' : row.dist[v]}`
+      });
+    });
+  });
+
+  // Finish
+  steps.push({
+    type: 'finish',
+    explanation: buildFinishExplanation(),
+    phase: 'Complete!',
+    computing: 'All-pairs shortest paths found'
+  });
+}
+
+// ============================================================
+//  EXPLANATION BUILDERS
+// ============================================================
+function buildOriginalGraphExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Phase 1: Original Graph</h3>
+      <p>We have a directed graph with <b>3 vertices</b> and <b>3 edges</b>:</p>
+      <p style="margin-left:8px;">• 1→2 (weight <span class="dim">2</span>)</p>
+      <p style="margin-left:8px;">• 1→3 (weight <span class="dim">7</span>)</p>
+      <p style="margin-left:8px;">• 2→3 (weight <span class="dim" style="color:#ff6666">-4</span>) ← <b style="color:#ff4444">NEGATIVE!</b></p>
+      <h3 style="margin-top:10px;">Why Dijkstra Fails</h3>
+      <p>Dijkstra's algorithm assumes <b>non-negative edges</b>. With edge 2→3 having weight <span class="dim" style="color:#ff6666">-4</span>, Dijkstra may finalize vertex 3 too early.</p>
+      <span class="formula-line">Shortest path 1→3: 1→2→3 = 2+(-4) = -2 < 7</span>
+      <p class="note">Dijkstra would pick direct edge 1→3 (cost 7), missing the shorter path through the negative edge.</p>
+    </div>`;
+}
+
+function buildNegativeEdgeExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Negative Edge Detected</h3>
+      <p>Edge <span class="dim" style="color:#ff6666">2→3</span> has weight <span class="dim" style="color:#ff6666">-4</span>.</p>
+      <p>This creates a problem: standard Dijkstra <b>cannot handle</b> negative edge weights.</p>
+      <h3 style="margin-top:10px;">Johnson's Idea</h3>
+      <p><b>Transform</b> the graph so all edges become non-negative, run Dijkstra, then <b>reverse</b> the transformation.</p>
+      <span class="formula-line">Reweight: ŵ(u,v) = w(u,v) + h(u) − h(v)</span>
+      <p>Where <span class="dim">h(v)</span> is the shortest distance from a new source vertex <span class="dim">s</span> to vertex <span class="dim">v</span>.</p>
+    </div>`;
+}
+
+function buildAddSourceExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Phase 2: Adding Source Vertex</h3>
+      <p>Add a new vertex <span class="dim" style="color:#ffcc00">s</span> with <b>zero-weight edges</b> to all original vertices:</p>
+      <span class="formula-line">s→1 (0), s→2 (0), s→3 (0)</span>
+      <p>Now run <b>Bellman-Ford</b> from <span class="dim" style="color:#ffcc00">s</span> to compute shortest distances to all vertices.</p>
+      <p>These distances <span class="dim">h(v)</span> will serve as our <b>potentials</b> for reweighting.</p>
+      <p class="note">Bellman-Ford can handle negative edges (unlike Dijkstra).</p>
+    </div>`;
+}
+
+function buildBFInitExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Bellman-Ford: Initialize</h3>
+      <p>Set initial distances:</p>
+      <span class="formula-line">d[s] = 0, d[1] = ∞, d[2] = ∞, d[3] = ∞</span>
+      <p>Relax all edges in each round. With 4 vertices, we need at most <span class="dim">3 rounds</span>.</p>
+      <p class="note">Bellman-Ford relaxes ALL edges (not just outgoing from current vertex).</p>
+    </div>`;
+}
+
+function buildBFRound1Explanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Bellman-Ford: Round 1 — Source Edges</h3>
+      <p>Relax edges from <span class="dim" style="color:#ffcc00">s</span>:</p>
+      <span class="formula-line">s→1: d[1] = min(∞, 0+0) = 0</span>
+      <span class="formula-line">s→2: d[2] = min(∞, 0+0) = 0</span>
+      <span class="formula-line">s→3: d[3] = min(∞, 0+0) = 0</span>
+      <p>All vertices now have distance <span class="result-line" style="display:inline">0</span> from source.</p>
+    </div>`;
+}
+
+function buildBFRound1NegExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Bellman-Ford: Round 1 — Negative Edge</h3>
+      <p>Relax original edges. The critical one:</p>
+      <span class="formula-line">2→3: d[3] = min(0, 0+(-4)) = -4 ✓</span>
+      <p>The negative edge <span class="dim" style="color:#ff6666">2→3</span> improves <span class="dim">d[3]</span> from 0 to <span class="result-line" style="display:inline">-4</span>.</p>
+      <p class="note">This is why we need Bellman-Ford — it correctly propagates negative weights.</p>
+    </div>`;
+}
+
+function buildBFRound2Explanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Bellman-Ford: Round 2</h3>
+      <p>Relax all edges again:</p>
+      <span class="formula-line">1→2: d[2] = min(0, 0+2) = 0 (no change)</span>
+      <span class="formula-line">1→3: d[3] = min(-4, 0+7) = -4 (no change)</span>
+      <span class="formula-line">2→3: d[3] = min(-4, 0+(-4)) = -4 (no change)</span>
+      <p><b>No changes</b> — distances have <span class="result-line" style="display:inline">converged</span>.</p>
+      <p class="note">Algorithm terminates early when no updates occur in a round.</p>
+    </div>`;
+}
+
+function buildShowHExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Potentials Computed!</h3>
+      <p>Bellman-Ford found shortest distances from <span class="dim" style="color:#ffcc00">s</span>:</p>
+      <span class="formula-line">h(1) = 0, h(2) = 0, h(3) = -4</span>
+      <p>These <span class="dim">h(v)</span> values are called <b>potentials</b>.</p>
+      <h3 style="margin-top:10px;">Key Property</h3>
+      <p>For any edge (u,v): <span class="result-line" style="display:inline">h(v) ≤ h(u) + w(u,v)</span></p>
+      <p>This guarantees reweighted edges will be <b>non-negative</b>.</p>
+    </div>`;
+}
+
+function buildReweightIntroExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Phase 3: Reweighting</h3>
+      <p>Transform each edge weight using the formula:</p>
+      <span class="formula-line">ŵ(u,v) = w(u,v) + h(u) − h(v)</span>
+      <p>For edge 2→3: ŵ = <span class="dim">-4</span> + <span class="dim">0</span> − <span class="dim">(-4)</span> = <span class="result-line" style="display:inline">0</span></p>
+      <p>The negative edge becomes <b>non-negative</b>!</p>
+      <p class="note">All reweighted edges will be ≥ 0, so Dijkstra is safe to use.</p>
+    </div>`;
+}
+
+function buildReweightEdgeExplanation(e, i) {
+  const negNote = e.wt < 0 ? ' <b style="color:#ff4444">⚠ NEGATIVE!</b>' : '';
+  return `
+    <div class="explain-section active">
+      <h3>Reweight Edge ${e.from}→${e.to}</h3>
+      <p>Apply the reweighting formula:</p>
+      <span class="formula-line">ŵ(${e.from},${e.to}) = ${e.w} + (${e.hf}) − (${e.ht}) = ${e.wt}</span>
+      <p>Original weight: <span class="dim">${e.w}</span></p>
+      <p>Potentials: h(${e.from})=<span class="dim">${e.hf}</span>, h(${e.to})=<span class="dim">${e.ht}</span></p>
+      <p class="result-line">New weight: ${e.wt}${negNote}</p>
+    </div>`;
+}
+
+function buildShowReweightedExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Reweighted Graph Ready</h3>
+      <p>All edges are now <b style="color:#00ff88">non-negative</b>:</p>
+      <p style="margin-left:8px;">• 1→2: <span class="result-line" style="display:inline">2</span></p>
+      <p style="margin-left:8px;">• 1→3: <span class="result-line" style="display:inline">11</span></p>
+      <p style="margin-left:8px;">• 2→3: <span class="result-line" style="display:inline">0</span></p>
+      <h3 style="margin-top:10px;">Key Insight</h3>
+      <p>The reweighting <b>preserves shortest paths</b> while eliminating negative edges.</p>
+      <span class="formula-line">Shortest path u→v unchanged by reweighting</span>
+      <p class="note">Now safe to run Dijkstra from every vertex!</p>
+    </div>`;
+}
+
+function buildDijkstraStartExplanation(src) {
+  return `
+    <div class="explain-section active">
+      <h3>Dijkstra from Vertex ${src}</h3>
+      <p>Running Dijkstra on the <b>reweighted graph</b> starting from vertex <span class="dim">${src}</span>.</p>
+      <p>All edges are non-negative, so Dijkstra works correctly.</p>
+      <p>Compute <span class="dim">d̂(${src}, v)</span> for all <span class="dim">v</span>.</p>
+      <p class="note">These are distances in the reweighted graph, not the original.</p>
+    </div>`;
+}
+
+function buildDijkstraResultExplanation(src, v, val) {
+  return `
+    <div class="explain-section active">
+      <h3>d̂(${src}, ${v}) = ${val === INF ? '∞' : val}</h3>
+      <p>Shortest distance from <span class="dim">${src}</span> to <span class="dim">${v}</span> in the <b>reweighted</b> graph.</p>
+      ${val === INF ? '<p>Vertex <span class="dim">' + v + '</span> is unreachable from <span class="dim">' + src + '</span>.</p>' : ''}
+      ${val !== INF ? `<span class="formula-line">d̂(${src},${v}) = ${val}</span>` : ''}
+      <p class="note">This is NOT the final answer — we must undo the reweighting.</p>
+    </div>`;
+}
+
+function buildUndoIntroExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Phase 4: Undo Reweighting</h3>
+      <p>To get true shortest paths, reverse the reweighting:</p>
+      <span class="formula-line">δ(u,v) = d̂(u,v) − h(u) + h(v)</span>
+      <p>This converts reweighted distances back to original distances.</p>
+      <p class="note">The reweighting preserved shortest paths, so undoing it gives correct results.</p>
+    </div>`;
+}
+
+function buildUndoCellExplanation(src, v) {
+  const dr = finalMatrix.find(r => r.source === src);
+  const dh = dijkstraResults.find(d => d.source === src);
+  const val = dr.dist[v];
+  if (dh.dist[v] === INF) {
+    return `
+      <div class="explain-section active">
+        <h3>δ(${src}, ${v}) = ∞</h3>
+        <p>Vertex <span class="dim">${v}</span> is unreachable from <span class="dim">${src}</span>.</p>
+        <span class="formula-line">δ(${src},${v}) = ∞ − ${h[src]} + ${h[v]} = ∞</span>
+      </div>`;
+  }
+  return `
+    <div class="explain-section active">
+      <h3>δ(${src}, ${v}) = ${val}</h3>
+      <p>Undo reweighting for pair (${src}, ${v}):</p>
+      <span class="formula-line">δ(${src},${v}) = d̂(${src},${v}) − h(${src}) + h(${v})</span>
+      <span class="formula-line">         = ${dh.dist[v]} − ${h[src]} + ${h[v]}</span>
+      <span class="formula-line">         = ${val}</span>
+      <p class="result-line">True shortest distance: ${val}</p>
+    </div>`;
+}
+
+function buildFinishExplanation() {
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ Algorithm Complete!</h3>
+      <p>The full distance matrix is computed using Johnson's algorithm.</p>
+      <h3 style="margin-top:10px;">How It Works</h3>
+      <p>1. Add source <span class="dim" style="color:#ffcc00">s</span> with 0-weight edges</p>
+      <p>2. Run <span class="dim">Bellman-Ford</span> from <span class="dim">s</span> to get potentials <span class="dim">h(v)</span></p>
+      <p>3. <span class="dim">Reweight</span> edges: ŵ = w + h(u) − h(v)</p>
+      <p>4. Run <span class="dim">Dijkstra</span> from each vertex on reweighted graph</p>
+      <p>5. <span class="dim">Undo</span> reweighting: δ = d̂ − h(u) + h(v)</p>
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Time:</span> <span class="result-line" style="display:inline">O(VE + V²logV)</span></p>
+      <p style="margin-left:8px;">• Bellman-Ford: O(VE) — runs once</p>
+      <p style="margin-left:8px;">• Dijkstra: O(V·V²logV) = O(V²logV) — runs V times</p>
+      <p><span class="dim">Space:</span> O(V²)</p>
+      <h3 style="margin-top:10px;">When to Use</h3>
+      <p>Sparse graphs with <span class="dim">negative edges</span> but <b>no negative cycles</b>.</p>
+      <p class="note">Better than Floyd-Warshall O(V³) when E << V².</p>
+    </div>`;
+}
+
+// ============================================================
+//  ANIMATION CONTROL
+// ============================================================
+function applyStep(step) {
+  document.getElementById('phaseLabel').textContent = step.phase;
+  document.getElementById('computingDisplay').textContent = step.computing;
+  document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  switch (step.type) {
+    case 'show_original':
+      document.getElementById('hTableSection').style.display = 'none';
+      document.getElementById('reweightTableSection').style.display = 'none';
+      document.getElementById('dijkstraTableSection').style.display = 'none';
+      document.getElementById('finalTableSection').style.display = 'none';
+      drawOriginalGraph(null);
+      break;
+
+    case 'highlight_negative':
+      drawOriginalGraph(step.edge);
+      break;
+
+    case 'add_source':
+      drawGraphWithSource(null);
+      break;
+
+    case 'bf_init':
+      document.getElementById('hTableSection').style.display = 'block';
+      initHTable();
+      drawGraphWithSource(null);
+      break;
+
+    case 'bf_round':
+      if (step.afterD) {
+        VERTICES.forEach(v => {
+          const el = document.getElementById('hVal' + v);
+          if (el) {
+            el.textContent = step.afterD[v] === INF ? '∞' : step.afterD[v];
+            el.className = 'filled';
+          }
+        });
+      }
+      drawGraphWithSource(step.highlightEdge || null);
+      break;
+
+    case 'show_h':
+      VERTICES.forEach(v => fillHValue(v));
+      break;
+
+    case 'reweight_intro':
+      document.getElementById('reweightTableSection').style.display = 'block';
+      initReweightTable();
+      break;
+
+    case 'reweight_edge':
+      fillReweightStep(step.edgeIndex);
+      break;
+
+    case 'show_reweighted':
+      reweightedEdges.forEach((e, i) => fillReweightStep(i));
+      drawReweightedGraph(null, null);
+      break;
+
+    case 'dijkstra_start':
+      document.getElementById('dijkstraTableSection').style.display = 'block';
+      initDijkstraTable(step.source);
+      break;
+
+    case 'dijkstra_result':
+      fillDijkstraValue(step.source, step.target, step.val);
+      break;
+
+    case 'undo_intro':
+      document.getElementById('finalTableSection').style.display = 'block';
+      initFinalTable();
+      break;
+
+    case 'undo_cell':
+      fillFinalCell(step.source, step.target);
+      break;
+
+    case 'finish':
+      finishAnimation();
+      break;
+  }
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('phaseLabel').textContent = 'Original Graph';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>The Problem with Dijkstra</h3>
+      <p>Dijkstra's algorithm <b>fails</b> with negative edge weights because it assumes that once a vertex is finalized, its distance won't decrease.</p>
+      <p>With negative edges, a later path through a "negative shortcut" can produce a <b>shorter</b> distance than Dijkstra already found.</p>
+      <h3 style="margin-top:10px;">Johnson's Solution</h3>
+      <p><b>Reweight</b> all edges to make them non-negative, run Dijkstra from every vertex, then <b>undo</b> the reweighting.</p>
+      <span class="formula-line">ŵ(u,v) = w(u,v) + h(u) − h(v)</span>
+      <p>Where <span class="dim">h(v)</span> = shortest distance from a new source vertex <span class="dim">s</span> to <span class="dim">v</span>.</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+  document.getElementById('hTableSection').style.display = 'none';
+  document.getElementById('reweightTableSection').style.display = 'none';
+  document.getElementById('dijkstraTableSection').style.display = 'none';
+  document.getElementById('finalTableSection').style.display = 'none';
+  drawOriginalGraph(null);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'All pairs done';
+  document.getElementById('resultSection').style.display = 'block';
+
+  // Build final matrix display
+  let html = '<table style="margin:10px auto;border-collapse:collapse">';
+  html += '<tr><th style="padding:6px 12px;background:#1a1a2e;color:#00ccff;border:1px solid #333">δ(u,v)</th>';
+  VERTICES.forEach(v => {
+    html += `<th style="padding:6px 12px;background:#1a1a2e;color:#00ccff;border:1px solid #333">${v}</th>`;
+  });
+  html += '</tr>';
+  finalMatrix.forEach(row => {
+    html += `<tr><td style="padding:6px 12px;background:#0d0d1a;color:#00ccff;border:1px solid #333;font-weight:bold">${row.source}</td>`;
+    VERTICES.forEach(v => {
+      const val = row.dist[v];
+      const bg = val < 0 ? '#1a0000' : '#0a1a12';
+      const color = val < 0 ? '#ff6666' : '#00ff88';
+      html += `<td style="padding:6px 12px;background:${bg};color:${color};border:1px solid #333;font-weight:bold">${val === INF ? '∞' : val}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  document.getElementById('resultDisplay').innerHTML = html;
+
+  document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ============================================================
+//  INITIALIZATION
+// ============================================================
+computeBellmanFord();
+computeReweightedEdges();
+computeDijkstraResults();
+computeFinalMatrix();
+buildSteps();
+drawOriginalGraph(null);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

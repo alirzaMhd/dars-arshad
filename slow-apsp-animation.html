@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLOW-APSP Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 20px 0; }
+.table-title { font-size: 1em; color: #00ccff; margin-bottom: 10px; text-align: center; }
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table { border-collapse: collapse; margin: 0 auto; }
+th, td { width: 72px; height: 38px; text-align: center; border: 1px solid #333; font-size: 0.78em; transition: all 0.3s; }
+th { background: #1a1a2e; color: #00ccff; font-weight: bold; }
+td { background: #0d0d1a; color: #aaa; }
+td.filled { background: #0a1a12; color: #00ff88; border-color: #00ff8855; }
+td.current { background: #1a0a00 !important; color: #ff6600 !important; border-color: #ff6600 !important; box-shadow: 0 0 15px #ff660044; transform: scale(1.05); font-weight: bold; }
+td.computing { background: #1a1a00 !important; color: #ffff00 !important; border-color: #ffff00 !important; box-shadow: 0 0 10px #ffff0033; }
+td.changed { background: #002a1a !important; color: #00ff88 !important; border-color: #00ff88 !important; font-weight: bold; }
+td.highlight-row { background: #1a0a0022 !important; }
+td.highlight-col { background: #0a0a1a22 !important; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section p { color: #ccc; font-size: 0.9em; line-height: 1.6; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; line-height: 1.8; }
+.canvas-wrapper { background: #0d0d1a; border: 1px solid #333; border-radius: 10px; padding: 10px; text-align: center; }
+.canvas-wrapper canvas { display: block; margin: 0 auto; max-width: 100%; }
+.iteration-bar { display: flex; justify-content: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.iter-item { padding: 6px 14px; border-radius: 6px; font-size: 0.85em; border: 1px solid #333; background: #111128; color: #888; transition: all 0.3s; }
+.iter-item.active { border-color: #ff6600; color: #ff6600; background: #1a0a00; }
+.iter-item.done { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+.compute-detail { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; min-height: 80px; }
+.compute-detail .k-item { display: inline-block; padding: 3px 8px; margin: 2px; border-radius: 4px; background: #1a1a2e; border: 1px solid #333; color: #aaa; transition: all 0.3s; }
+.compute-detail .k-item.best { background: #002a1a; border-color: #00ff88; color: #00ff88; font-weight: bold; }
+.compute-detail .k-item.worse { background: #1a0000; border-color: #555; color: #555; }
+.changes-bar { display: flex; justify-content: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.changes-bar .change-chip { padding: 4px 10px; border-radius: 4px; font-size: 0.8em; background: #002a1a; border: 1px solid #00ff88; color: #00ff88; }
+.changes-bar .no-change { background: #111128; border-color: #444; color: #888; }
+.legend { display: flex; justify-content: center; gap: 14px; margin: 6px 0 10px; font-size: 0.78em; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444; }
+.legend-cell-default { background: #0d0d1a; border-color: #555; }
+.legend-cell-current { background: #1a0a00; border-color: #ff6600; }
+.legend-cell-changed { background: #002a1a; border-color: #00ff88; }
+.legend-cell-computing { background: #1a1a00; border-color: #ffff00; }
+</style>
+</head>
+<body>
+
+<h1>SLOW-APSP ALGORITHM</h1>
+<p class="subtitle">Graph Algorithms &mdash; All-Pairs Shortest Paths via Repeated Min-Plus Multiplication</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="600" height="340"></canvas>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-cell-default"></span> Default</span>
+      <span class="legend-item"><span class="legend-swatch legend-cell-current"></span> Computing</span>
+      <span class="legend-item"><span class="legend-swatch legend-cell-changed"></span> Changed</span>
+      <span class="legend-item"><span class="legend-swatch legend-cell-computing"></span> Best k</span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+    <div class="info-panel">
+      <span class="label">Iteration:</span> <span class="value" id="iterDisplay">r = 1 (L&#8309; = W)</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Cell:</span> <span class="value" id="cellDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Value:</span> <span class="value" id="valueDisplay">&mdash;</span>
+    </div>
+    <div class="iteration-bar" id="iterBar">
+      <span class="iter-item active" id="iter1">r=1: L&#8309;</span>
+      <span class="iter-item" id="iter2">r=2: L&#8314;</span>
+      <span class="iter-item" id="iter3">r=3: L&#8315;</span>
+    </div>
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+    <div class="compute-detail" id="computeDetail">
+      <span style="color:#888;">Compute detail will appear here during computation...</span>
+    </div>
+    <div class="table-section">
+      <div class="table-title" id="tableTitle">Weight Matrix W = L&#8309;</div>
+      <div class="table-wrapper">
+        <table id="matrixTable">
+          <thead id="matrixHead"></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="changes-bar" id="changesBar"></div>
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10003; SLOW-APSP Complete!</h2>
+      <div id="resultDisplay"></div>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+var N = 4;
+var VNames = ['1','2','3','4'];
+
+var W = [
+  [0,   2,   5,   Infinity],
+  [Infinity, 0,   1,   6],
+  [Infinity, Infinity, 0,   2],
+  [-3,  Infinity, Infinity, 0]
+];
+
+var L1 = [
+  [0,   2,   5,   Infinity],
+  [Infinity, 0,   1,   6],
+  [Infinity, Infinity, 0,   2],
+  [-3,  Infinity, Infinity, 0]
+];
+
+var L2 = [
+  [0,   2,   3,   7],
+  [3,   0,   1,   3],
+  [-1,  Infinity, 0,   2],
+  [-3,  -1,  2,   0]
+];
+
+var L3 = [
+  [0,   2,   3,   5],
+  [0,   0,   1,   3],
+  [-1,  1,   0,   2],
+  [-3,  -1,  0,   0]
+];
+
+var LFinal = L3;
+
+var nodePos = [
+  {x: 300, y: 50},
+  {x: 80,  y: 200},
+  {x: 520, y: 200},
+  {x: 300, y: 310}
+];
+var nodeR = 22;
+
+var edgeData = [
+  {u:0, v:1, w:2},
+  {u:0, v:2, w:5},
+  {u:1, v:2, w:1},
+  {u:1, v:3, w:6},
+  {u:2, v:3, w:2},
+  {u:3, v:0, w:-3}
+];
+
+var steps = [];
+var currentStep = 0;
+var animating = false;
+var animTimer = null;
+var curMatrix = [];
+
+function initMatrix() {
+  curMatrix = [];
+  for (var i = 0; i < N; i++) {
+    curMatrix.push([]);
+    for (var j = 0; j < N; j++) {
+      curMatrix[i].push(W[i][j]);
+    }
+  }
+}
+
+function vs(v) { return v === Infinity ? '\u221E' : String(v); }
+
+function buildInitHtml() {
+  return '<div class="explain-section active">' +
+    '<h3>SLOW-APSP: The Idea</h3>' +
+    '<p>Finds <b>all-pairs shortest paths</b> using <span class="dim">repeated min-plus matrix multiplication</span>.</p>' +
+    '<h3 style="margin-top:10px;">Core Formula</h3>' +
+    '<span class="formula-line">L\u2081 = W</span>' +
+    '<span class="formula-line">L\u2081r = L\u2081(r-1) \u2297 W  for r = 2, ..., n-1</span>' +
+    '<p>Where <span class="dim">(A \u2297 B)[i,j] = min\u2080(A[i,k] + B[k,j])</span></p>' +
+    '<h3 style="margin-top:10px;">What Each L\u2081r Means</h3>' +
+    '<p><span class="result-line">L\u2081r[i,j]</span> = shortest path from i to j using <b>at most r edges</b></p>' +
+    '<h3 style="margin-top:10px;">Why n-1 Iterations?</h3>' +
+    '<p>In a graph with n vertices, the shortest simple path uses at most <span class="dim">n-1 edges</span>. So L\u2081(n-1) = L* (the true shortest path matrix).</p>' +
+    '<h3 style="margin-top:10px;">This Graph</h3>' +
+    '<p>4 vertices {<span class="dim">1, 2, 3, 4</span>}, 6 directed edges. Includes a <span class="dim">negative edge</span> (4\u21921, weight -3) but <b>no negative cycles</b>.</p>' +
+    '<p class="note">Press Play or Step to begin.</p>' +
+    '</div>';
+}
+
+function buildL1Html() {
+  return '<div class="explain-section active">' +
+    '<h3>L\u2081 = W &mdash; The Weight Matrix</h3>' +
+    '<p><span class="result-line">L\u2081[i,j] = W[i,j]</span></p>' +
+    '<p>This is the base case: shortest paths using <b>at most 1 edge</b> are just the direct edge weights.</p>' +
+    '<h3 style="margin-top:10px;">Reading the Matrix</h3>' +
+    '<p>\u2022 <span class="dim">W[i,j]</span> = weight of edge i\u2192j (or \u221E if no edge)</p>' +
+    '<p>\u2022 <span class="dim">W[i,i] = 0</span> for all i (zero-cost self-loop)</p>' +
+    '<p>\u2022 Negative entries like <span class="dim">W[4,1] = -3</span> mean negative edge weights</p>' +
+    '<h3 style="margin-top:10px;">Key Values to Watch</h3>' +
+    '<p>\u2022 <span class="dim">L\u2081[1,3] = 5</span> &mdash; direct edge 1\u21923</p>' +
+    '<p>\u2022 <span class="dim">L\u2081[2,4] = 6</span> &mdash; direct edge 2\u21924</p>' +
+    '<p>\u2022 <span class="dim">L\u2081[4,1] = -3</span> &mdash; negative edge 4\u21921</p>' +
+    '<p class="note">Now we compute L\u2081\u00B2 = L\u2081 \u2297 W to find paths with \u2264 2 edges.</p>' +
+    '</div>';
+}
+
+function buildComputeHtml(r, i, j, kValues, bestK, bestVal, changed) {
+  var prevLabel = r === 2 ? '1' : '2';
+  var rLabel = r === 2 ? '2' : '3';
+  var Lprev = r === 2 ? L1 : L2;
+
+  var kHtml = '';
+  for (var idx = 0; idx < kValues.length; idx++) {
+    var kv = kValues[idx];
+    var cls = kv.k === bestK ? 'best' : (kv.val === Infinity || (bestVal !== Infinity && kv.val > bestVal) ? 'worse' : '');
+    var lbl = kv.k === bestK ? ' \u2190 best' : '';
+    var a = Lprev[i][kv.k];
+    var b = W[kv.k][j];
+    var aStr = a === Infinity ? '\u221E' : a;
+    var bStr = b === Infinity ? '\u221E' : b;
+    kHtml += '<span class="k-item ' + cls + '">k=' + (kv.k+1) + ': L\u2081' + prevLabel + '[' + (i+1) + ',' + (kv.k+1) + ']+W[' + (kv.k+1) + ',' + (j+1) + '] = ' + aStr + '+' + bStr + '=' + vs(kv.val) + lbl + '</span> ';
+  }
+
+  var changeText = changed
+    ? '<p class="result-line">\u2713 Path improved! L\u2081' + rLabel + '[' + (i+1) + ',' + (j+1) + '] = ' + vs(bestVal) + '</p>'
+    : '<p>No improvement &mdash; L\u2081' + rLabel + '[' + (i+1) + ',' + (j+1) + '] = ' + vs(bestVal) + ' (same as before)</p>';
+
+  var pathNote = '';
+  if (changed && bestK >= 0) {
+    pathNote = '<p class="note">Best path through intermediate ' + (bestK+1) + ': ' + (i+1) + ' \u2192 ' + (bestK+1) + ' \u2192 ' + (j+1) + '</p>';
+  }
+
+  return '<div class="explain-section active">' +
+    '<h3>L\u2081' + rLabel + ': Computing cell [' + (i+1) + ',' + (j+1) + ']</h3>' +
+    '<p>Using <span class="dim">min-plus multiplication</span>:</p>' +
+    '<span class="formula-line">L\u2081' + rLabel + '[' + (i+1) + ',' + (j+1) + '] = min\u2080( L\u2081' + prevLabel + '[' + (i+1) + ',k+1] + W[k+1,' + (j+1) + '] )</span>' +
+    '<p>Trying each intermediate vertex k:</p>' +
+    kHtml + changeText + pathNote +
+    '</div>';
+}
+
+function buildShowL2Html(changes) {
+  var changeList = '';
+  for (var ci = 0; ci < changes.length; ci++) {
+    var c = changes[ci];
+    var pnote = '';
+    if (c.i === 0 && c.j === 2) pnote = ' via 1\u21922\u21923 (2+1=3)';
+    else if (c.i === 0 && c.j === 3) pnote = ' via 1\u21922\u21923\u21924 (2+1+2=5)';
+    else if (c.i === 1 && c.j === 0) pnote = ' via 2\u21923\u21924\u21921 (1+2+(-3)=0... actually 2\u21924\u21921=6-3=3)';
+    else if (c.i === 1 && c.j === 3) pnote = ' via 2\u21923\u21924 (1+2=3)';
+    else if (c.i === 2 && c.j === 0) pnote = ' via 3\u21924\u21921 (2+(-3)=-1)';
+    else if (c.i === 3 && c.j === 1) pnote = ' via 4\u21921\u21922 (-3+2=-1)';
+    else if (c.i === 3 && c.j === 2) pnote = ' via 4\u21921\u21923 (-3+5=2)';
+    changeList += '<p style="margin-left:8px;">\u2022 [' + (c.i+1) + ',' + (c.j+1) + ']: ' + vs(c.old) + ' \u2192 <span class="result-line">' + vs(c.new) + '</span>' + pnote + '</p>';
+  }
+
+  return '<div class="explain-section active">' +
+    '<h3>L\u2081\u00B2 = L\u2081 \u2297 W &mdash; Paths with \u2264 2 Edges</h3>' +
+    '<p>After min-plus multiplication, <span class="result-line">' + changes.length + ' cells improved</span>:</p>' +
+    changeList +
+    '<h3 style="margin-top:10px;">Key Insight</h3>' +
+    '<p>L\u2081\u00B2[i,j] finds the shortest path from i to j using <b>at most 2 edges</b>. The improvement comes from trying every intermediate vertex k.</p>' +
+    '<p class="note">For example, L\u2081\u00B2[1,3] = 3: path 1\u21922\u21923 (weights 2+1=3) is shorter than direct edge 1\u21923 (weight 5).</p>' +
+    '<p class="note">Now computing L\u2081\u00B3 to find paths with \u2264 3 edges.</p>' +
+    '</div>';
+}
+
+function buildShowL3Html(changes) {
+  if (changes.length === 0) {
+    return '<div class="explain-section active">' +
+      '<h3>L\u2081\u00B3 = L\u2081\u00B2 \u2297 W &mdash; Convergence!</h3>' +
+      '<p><span class="result-line">L\u2081\u00B3 = L\u2081\u00B2 &mdash; no changes!</span></p>' +
+      '<p>The matrix has <b>converged</b>. Since L\u2081\u00B3 = L\u2081\u00B2, we know L\u2081\u2074 would also be the same, so we can stop.</p>' +
+      '<h3 style="margin-top:10px;">Why Converge at r = 3?</h3>' +
+      '<p>In a 4-vertex graph, shortest paths use at most <span class="dim">3 edges</span> (n-1 = 3). Once we\'ve considered paths up to length 3, no shorter path can exist.</p>' +
+      '<p class="note">This is the "slow" APSP algorithm &mdash; it does n-1 matrix multiplications, each O(n\u00B3), giving O(n\u2074) total.</p>' +
+      '</div>';
+  }
+  var changeList = '';
+  for (var ci = 0; ci < changes.length; ci++) {
+    var c = changes[ci];
+    changeList += '<p style="margin-left:8px;">\u2022 [' + (c.i+1) + ',' + (c.j+1) + ']: ' + vs(c.old) + ' \u2192 <span class="result-line">' + vs(c.new) + '</span></p>';
+  }
+  return '<div class="explain-section active">' +
+    '<h3>L\u2081\u00B3 = L\u2081\u00B2 \u2297 W &mdash; Paths with \u2264 3 Edges</h3>' +
+    '<p><span class="result-line">' + changes.length + ' cells improved</span>:</p>' +
+    changeList +
+    '<p class="note">In a 4-vertex graph, this should converge since n-1 = 3.</p>' +
+    '</div>';
+}
+
+function buildDoneHtml() {
+  var pathHtml = '';
+  for (var i = 0; i < N; i++) {
+    for (var j = 0; j < N; j++) {
+      if (i === j) continue;
+      var val = LFinal[i][j];
+      if (val === Infinity) continue;
+      pathHtml += '<p style="margin:3px 0;"><span class="dim">' + (i+1) + '\u2192' + (j+1) + ':</span> <span class="result-line">' + val + '</span></p>';
+    }
+  }
+  return '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+    '<h3>\u2713 Algorithm Complete!</h3>' +
+    '<p>The final shortest path matrix <span class="result-line">L* = L\u2081\u00B3</span> has been computed.</p>' +
+    '<h3 style="margin-top:10px;">All-Pairs Shortest Paths</h3>' +
+    pathHtml +
+    '<h3 style="margin-top:10px;">Why "Slow"?</h3>' +
+    '<p><span class="dim">Each min-plus multiplication</span> is O(n\u00B3) &mdash; we try all n\u00B3 combinations of (i,k,j).</p>' +
+    '<p><span class="dim">We do n-1 multiplications</span> &mdash; one for each possible path length.</p>' +
+    '<p><span class="dim">Total: O(n\u2074)</span> &mdash; much slower than Floyd-Warshall\'s O(n\u00B3).</p>' +
+    '<h3 style="margin-top:10px;">Comparison</h3>' +
+    '<p>\u2022 <span class="dim">Floyd-Warshall:</span> O(n\u00B3) &mdash; dynamic programming approach, much faster</p>' +
+    '<p>\u2022 <span class="dim">SLOW-APSP:</span> O(n\u2074) &mdash; matrix multiplication approach, cleaner but slower</p>' +
+    '<p>\u2022 <span class="dim">FAST-APSP:</span> O(n\u00B3 log n) &mdash; uses repeated squaring with fast matrix multiplication</p>' +
+    '<h3 style="margin-top:10px;">Complexity</h3>' +
+    '<p><span class="dim">Time:</span> O(n\u2074) &mdash; (n-1) matrix multiplications, each O(n\u00B3)</p>' +
+    '<p><span class="dim">Space:</span> O(n\u00B2) &mdash; storing the matrices</p>' +
+    '<p class="note">The SLOW-APSP is conceptually clean but impractical for large graphs. Floyd-Warshall is preferred.</p>' +
+    '</div>';
+}
+
+function buildSteps() {
+  steps = [];
+  initMatrix();
+
+  steps.push({
+    type: 'init', iteration: 1,
+    matrix: JSON.parse(JSON.stringify(curMatrix)),
+    explanation: buildL1Html(),
+    phase: 'L\u2081 = W \u2014 Base case'
+  });
+
+  for (var r = 2; r <= 3; r++) {
+    var Lprev = r === 2 ? L1 : L2;
+    var nextMat = [];
+    for (var i = 0; i < N; i++) {
+      nextMat.push([]);
+      for (var j = 0; j < N; j++) {
+        nextMat[i].push(Lprev[i][j]);
+      }
+    }
+
+    for (var i = 0; i < N; i++) {
+      for (var j = 0; j < N; j++) {
+        var kValues = [];
+        var bestVal = Infinity;
+        var bestK = 0;
+        for (var k = 0; k < N; k++) {
+          var a = Lprev[i][k];
+          var b = W[k][j];
+          var val = (a === Infinity || b === Infinity) ? Infinity : a + b;
+          kValues.push({k: k, val: val});
+          if (val < bestVal) { bestVal = val; bestK = k; }
+        }
+        var changed = (bestVal !== Lprev[i][j]);
+        nextMat[i][j] = bestVal;
+
+        steps.push({
+          type: 'compute', iteration: r,
+          i: i, j: j, k: bestK,
+          kValues: kValues,
+          bestVal: bestVal, bestK: bestK,
+          changed: changed, prevVal: Lprev[i][j],
+          matrix: JSON.parse(JSON.stringify(nextMat)),
+          explanation: buildComputeHtml(r, i, j, kValues, bestK, bestVal, changed),
+          phase: 'L\u2081' + r + ': Computing [' + (i+1) + ',' + (j+1) + ']'
+        });
+      }
+    }
+
+    var changes = [];
+    for (var i = 0; i < N; i++) {
+      for (var j = 0; j < N; j++) {
+        if (nextMat[i][j] !== Lprev[i][j]) {
+          changes.push({i: i, j: j, old: Lprev[i][j], new: nextMat[i][j]});
+        }
+      }
+    }
+
+    steps.push({
+      type: 'show_result', iteration: r,
+      changes: changes,
+      matrix: JSON.parse(JSON.stringify(nextMat)),
+      explanation: r === 2 ? buildShowL2Html(changes) : buildShowL3Html(changes),
+      phase: 'L\u2081' + r + ' complete \u2014 ' + changes.length + ' changes'
+    });
+
+    if (r === 2) {
+      for (var i = 0; i < N; i++) {
+        for (var j = 0; j < N; j++) {
+          curMatrix[i][j] = nextMat[i][j];
+        }
+      }
+    }
+  }
+
+  steps.push({
+    type: 'done', iteration: 3,
+    matrix: JSON.parse(JSON.stringify(LFinal)),
+    explanation: buildDoneHtml(),
+    phase: '\u2713 Complete \u2014 L* = L\u2081\u00B3'
+  });
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, col, lw, glow) {
+  var dx = x2 - x1, dy = y2 - y1;
+  var d = Math.sqrt(dx*dx + dy*dy);
+  if (d < 1) return;
+  var nx = dx/d, ny = dy/d;
+  var sx = x1 + nx*(nodeR+2), sy = y1 + ny*(nodeR+2);
+  var ex = x2 - nx*(nodeR+4), ey = y2 - ny*(nodeR+4);
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 16; }
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.stroke(); ctx.shadowBlur = 0;
+  var ax = ex - nx*12, ay = ey - ny*12;
+  ctx.beginPath(); ctx.moveTo(ex, ey);
+  ctx.lineTo(ax - ny*3, ay + nx*3); ctx.lineTo(ax + ny*3, ay - nx*3); ctx.closePath();
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 12; }
+  ctx.fillStyle = col; ctx.fill(); ctx.shadowBlur = 0;
+}
+
+function drawEdgeLbl(ctx, x1, y1, x2, y2, lbl, col) {
+  var mx = (x1+x2)/2, my = (y1+y2)/2;
+  var dx = x2-x1, dy = y2-y1, d = Math.sqrt(dx*dx+dy*dy);
+  if (d < 1) return;
+  var nx = -dy/d, ny = dx/d;
+  ctx.fillStyle = col || '#888'; ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(lbl, mx + nx*16, my + ny*16);
+}
+
+function drawGraph(step) {
+  var canvas = document.getElementById('graphCanvas');
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  var ai = -1, aj = -1, ak = -1;
+  if (step.type === 'compute') { ai = step.i; aj = step.j; ak = step.bestK; }
+
+  for (var ei = 0; ei < edgeData.length; ei++) {
+    var e = edgeData[ei];
+    var p1 = nodePos[e.u], p2 = nodePos[e.v];
+    var isActive = (step.type === 'compute') && (e.u === ak || (e.u === ai && e.v === ak) || (e.u === ak && e.v === aj));
+    var isImproved = (step.type === 'compute' && step.changed && e.u === ai && e.v === aj);
+    var col = '#444', lw = 1.5, glow = null;
+    if (isImproved) { col = '#00ff88'; lw = 3.5; glow = '#00ff88'; }
+    else if (isActive) { col = '#ffcc00'; lw = 3; glow = '#ffcc00'; }
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, col, lw, glow);
+    drawEdgeLbl(ctx, p1.x, p1.y, p2.x, p2.y, e.w.toString(), isImproved ? '#00ff88' : (isActive ? '#ffcc00' : '#666'));
+  }
+
+  for (var vi = 0; vi < N; vi++) {
+    var pos = nodePos[vi];
+    var fc = '#0d0d1a', sc = '#555', tc = '#888', lw = 2;
+    if (vi === ai && step.type === 'compute') { fc = '#1a0a00'; sc = '#ff6600'; tc = '#ff6600'; lw = 3; }
+    else if (vi === aj && step.type === 'compute') { fc = '#002a1a'; sc = '#00ff88'; tc = '#00ff88'; lw = 3; }
+    else if (vi === ak && step.type === 'compute') { fc = '#1a1a00'; sc = '#ffff00'; tc = '#ffff00'; lw = 3; }
+    else if (step.type === 'done') { fc = '#0a1a12'; sc = '#00ff88'; tc = '#00ff88'; }
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, nodeR, 0, Math.PI*2);
+    ctx.fillStyle = fc; ctx.fill(); ctx.strokeStyle = sc; ctx.lineWidth = lw; ctx.stroke();
+    ctx.fillStyle = tc; ctx.font = 'bold 16px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(VNames[vi], pos.x, pos.y);
+  }
+
+  if (step.type === 'compute') {
+    ctx.fillStyle = '#ff6600'; ctx.font = '11px Courier New'; ctx.textAlign = 'left';
+    ctx.fillText('Source: ' + (ai+1) + ' (orange)  \u2192  Dest: ' + (aj+1) + ' (green)  via k=' + (ak+1) + ' (yellow)', 10, 15);
+  }
+}
+
+function initTable() {
+  var head = '<tr><th></th>';
+  for (var j = 0; j < N; j++) head += '<th>' + (j+1) + '</th>';
+  head += '</tr>';
+  document.getElementById('matrixHead').innerHTML = head;
+  var body = '';
+  for (var i = 0; i < N; i++) {
+    body += '<tr><th>' + (i+1) + '</th>';
+    for (var j = 0; j < N; j++) {
+      body += '<td id="c_' + i + '_' + j + '">' + vs(W[i][j]) + '</td>';
+    }
+    body += '</tr>';
+  }
+  document.getElementById('matrixBody').innerHTML = body;
+}
+
+function renderMat(step) {
+  var mat = step.matrix;
+  for (var i = 0; i < N; i++) {
+    for (var j = 0; j < N; j++) {
+      var cell = document.getElementById('c_' + i + '_' + j);
+      if (!cell) continue;
+      cell.textContent = vs(mat[i][j]);
+      cell.className = '';
+    }
+  }
+  if (step.type === 'compute') {
+    for (var k = 0; k < N; k++) {
+      var rc = document.getElementById('c_' + step.i + '_' + k);
+      if (rc && k !== step.j) rc.className = 'highlight-row';
+      var cc = document.getElementById('c_' + k + '_' + step.j);
+      if (cc && k !== step.i) cc.className = 'highlight-col';
+    }
+    var cur = document.getElementById('c_' + step.i + '_' + step.j);
+    if (cur) cur.className = 'current';
+  }
+  if (step.type === 'show_result' && step.iteration === 2) {
+    for (var ci = 0; ci < step.changes.length; ci++) {
+      var cell = document.getElementById('c_' + step.changes[ci].i + '_' + step.changes[ci].j);
+      if (cell) cell.className = 'changed';
+    }
+  }
+  if ((step.type === 'show_result' && step.iteration === 3 && step.changes.length === 0) || step.type === 'done') {
+    for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
+      var cell = document.getElementById('c_' + i + '_' + j);
+      if (cell) cell.className = 'filled';
+    }
+  }
+}
+
+function renderIterBar(step) {
+  var i1 = document.getElementById('iter1'), i2 = document.getElementById('iter2'), i3 = document.getElementById('iter3');
+  if (step.type === 'init') { i1.className = 'iter-item active'; i2.className = 'iter-item'; i3.className = 'iter-item'; }
+  else if (step.type === 'compute' && step.iteration === 2) { i1.className = 'iter-item done'; i2.className = 'iter-item active'; i3.className = 'iter-item'; }
+  else if (step.type === 'show_result' && step.iteration === 2) { i1.className = 'iter-item done'; i2.className = 'iter-item done'; i3.className = 'iter-item'; }
+  else if (step.type === 'compute' && step.iteration === 3) { i1.className = 'iter-item done'; i2.className = 'iter-item done'; i3.className = 'iter-item active'; }
+  else if ((step.type === 'show_result' && step.iteration === 3) || step.type === 'done') { i1.className = 'iter-item done'; i2.className = 'iter-item done'; i3.className = 'iter-item done'; }
+}
+
+function renderDetail(step) {
+  var el = document.getElementById('computeDetail');
+  if (step.type === 'init') { el.innerHTML = '<span style="color:#888;">L\u2081 = W &mdash; base case initialized. No computation needed.</span>'; return; }
+  if (step.type === 'done') { el.innerHTML = '<span style="color:#00ff88;">\u2713 Algorithm complete! L* = L\u2081\u00B3</span>'; return; }
+  if (step.type === 'show_result') {
+    el.innerHTML = step.changes.length === 0
+      ? '<span style="color:#00ff88;">\u2713 No changes &mdash; matrix has converged!</span>'
+      : '<span style="color:#00ff88;">' + step.changes.length + ' cells changed in this iteration.</span>';
+    return;
+  }
+  var Lprev = step.iteration === 2 ? L1 : L2;
+  var prevL = step.iteration === 2 ? '1' : '2';
+  var rL = step.iteration === 2 ? '2' : '3';
+  var kHtml = '';
+  for (var idx = 0; idx < step.kValues.length; idx++) {
+    var kv = step.kValues[idx];
+    var cls = kv.k === step.bestK ? 'best' : (kv.val === Infinity || (step.bestVal !== Infinity && kv.val > step.bestVal) ? 'worse' : '');
+    var a = Lprev[step.i][kv.k], b = W[kv.k][step.j];
+    var aStr = a === Infinity ? '\u221E' : a, bStr = b === Infinity ? '\u221E' : b;
+    kHtml += '<span class="k-item ' + cls + '">k=' + (kv.k+1) + ': ' + aStr + '+' + bStr + '=' + vs(kv.val) + '</span> ';
+  }
+  el.innerHTML = '<div style="margin-bottom:6px;color:#00ccff;">L\u2081' + rL + '[' + (step.i+1) + ',' + (step.j+1) + '] = min\u2080( L\u2081' + prevL + '[' + (step.i+1) + ',k+1] + W[k+1,' + (step.j+1) + '] )</div>' +
+    '<div style="margin-bottom:6px;">' + kHtml + '</div>' +
+    '<div style="color:' + (step.changed ? '#00ff88' : '#888') + ';">Result: ' + vs(step.bestVal) + (step.changed ? ' (improved!)' : ' (no change)') + '</div>';
+}
+
+function renderChanges(step) {
+  var bar = document.getElementById('changesBar');
+  if (step.type === 'show_result' && step.iteration === 2) {
+    bar.innerHTML = step.changes.length === 0 ? '<span class="change-chip no-change">No changes</span>'
+      : step.changes.map(function(c) { return '<span class="change-chip">[' + (c.i+1) + ',' + (c.j+1) + ']: ' + vs(c.old) + ' \u2192 ' + vs(c.new) + '</span>'; }).join('');
+  } else if (step.type === 'show_result' && step.iteration === 3 && step.changes.length === 0) {
+    bar.innerHTML = '<span class="change-chip no-change">Converged &mdash; L\u2081\u00B3 = L\u2081\u00B2</span>';
+  } else {
+    bar.innerHTML = '';
+  }
+}
+
+function applyStep(step) {
+  var idx = steps.indexOf(step);
+  document.getElementById('sidebarPhase').textContent = 'Step ' + (idx+1) + ' / ' + steps.length + ' \u2014 ' + step.phase;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+  var iter = step.iteration || 1;
+  document.getElementById('iterDisplay').textContent = 'r = ' + iter + ' (L\u2081' + iter + (iter === 1 ? ' = W' : '') + ')';
+  if (step.type === 'compute') {
+    document.getElementById('cellDisplay').textContent = '[' + (step.i+1) + ', ' + (step.j+1) + ']';
+    document.getElementById('valueDisplay').textContent = vs(step.bestVal);
+  } else if (step.type === 'init') {
+    document.getElementById('cellDisplay').textContent = '\u2014';
+    document.getElementById('valueDisplay').textContent = '\u2014';
+  } else if (step.type === 'done') {
+    document.getElementById('cellDisplay').textContent = '\u2014';
+    document.getElementById('valueDisplay').textContent = '\u2713';
+  } else {
+    document.getElementById('cellDisplay').textContent = '\u2014';
+    document.getElementById('valueDisplay').textContent = '\u2014';
+  }
+  document.getElementById('tableTitle').textContent =
+    step.type === 'init' ? 'Weight Matrix W = L\u2081' :
+    step.type === 'done' ? 'Final Shortest Path Matrix L*' :
+    'Computing L\u2081' + iter;
+  renderIterBar(step);
+  renderDetail(step);
+  renderMat(step);
+  renderChanges(step);
+  drawGraph(step);
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(function() {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('iterDisplay').textContent = 'r = 1 (L\u2081 = W)';
+  document.getElementById('cellDisplay').textContent = '\u2014';
+  document.getElementById('valueDisplay').textContent = '\u2014';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle \u2014 press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitHtml();
+  document.getElementById('tableTitle').textContent = 'Weight Matrix W = L\u2081';
+  initTable();
+  buildSteps();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('iterDisplay').textContent = '\u2713 Complete \u2014 L* = L\u2081\u00B3';
+  document.getElementById('cellDisplay').textContent = '\u2014';
+  document.getElementById('valueDisplay').textContent = '\u2713';
+  var rd = document.getElementById('resultSection');
+  rd.style.display = 'block';
+  var html = '<div class="big-result">All-Pairs Shortest Path Matrix L*</div>';
+  html += '<div class="table-wrapper"><table style="margin:10px auto;"><thead><tr><th></th>';
+  for (var j = 0; j < N; j++) html += '<th>' + (j+1) + '</th>';
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < N; i++) {
+    html += '<tr><th>' + (i+1) + '</th>';
+    for (var j = 0; j < N; j++) html += '<td class="filled">' + vs(LFinal[i][j]) + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  html += '<h3 style="margin-top:16px;color:#00ccff;font-size:1em;">Key Shortest Paths</h3>';
+  var paths = [
+    {f:1,t:3,c:3,p:'1\u21922\u21923 (2+1)'},
+    {f:1,t:4,c:5,p:'1\u21922\u21923\u21924 (2+1+2)'},
+    {f:2,t:1,c:3,p:'2\u21923\u21924\u21921 (1+2+(-3))'},
+    {f:2,t:4,c:3,p:'2\u21923\u21924 (1+2)'},
+    {f:3,t:1,c:-1,p:'3\u21924\u21921 (2+(-3))'},
+    {f:3,t:2,c:1,p:'3\u21924\u21921\u21922 (2+(-3)+2)'},
+    {f:4,t:2,c:-1,p:'4\u21921\u21922 ((-3)+2)'},
+    {f:4,t:3,c:0,p:'4\u21921\u21922\u21923 ((-3)+2+1)'}
+  ];
+  for (var pi = 0; pi < paths.length; pi++) {
+    var p = paths[pi];
+    html += '<p><span class="dim">' + p.f + '\u2192' + p.t + ':</span> <span class="result-line">' + p.c + '</span> via ' + p.p + '</p>';
+  }
+  html += '<h3 style="margin-top:16px;color:#00ccff;font-size:1em;">Complexity</h3>';
+  html += '<p><span class="dim">Time:</span> O(n\u2074) &mdash; (n-1) min-plus multiplications, each O(n\u00B3)</p>';
+  html += '<p><span class="dim">Space:</span> O(n\u00B2) &mdash; storing the matrices</p>';
+  rd.innerHTML = '<h2>\u2713 SLOW-APSP Complete!</h2>' + html;
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' \u2014 \u2713 Complete';
+  document.getElementById('explainArea').innerHTML = buildDoneHtml();
+  document.getElementById('sidebar').scrollTop = 0;
+  drawGraph(steps[steps.length - 1]);
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(function() {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initTable();
+buildSteps();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXTEND-Shortest-Paths Animation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;}
+h1{text-align:center;font-size:1.6em;color:#00ff88;margin:20px 0 5px;text-shadow:0 0 20px #00ff8855;letter-spacing:2px;}
+.subtitle{text-align:center;color:#888;font-size:0.9em;margin-bottom:20px;}
+.layout{display:flex;gap:0;max-width:1600px;margin:0 auto;padding:0 15px 30px;}
+.main-panel{flex:1;min-width:0;padding-right:15px;}
+.sidebar{width:420px;min-width:420px;max-height:calc(100vh - 100px);overflow-y:auto;position:sticky;top:10px;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;padding:20px;}
+.sidebar::-webkit-scrollbar{width:5px;}
+.sidebar::-webkit-scrollbar-track{background:#111;}
+.sidebar::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
+@media(max-width:1100px){.layout{flex-direction:column;}.sidebar{width:100%;min-width:unset;max-height:none;position:static;margin-top:20px;}}
+.sidebar h2{color:#ff6600;font-size:1.05em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #333;}
+.sidebar .step-phase{color:#00ccff;font-size:0.85em;margin-bottom:10px;}
+.explain-section{margin-bottom:18px;padding:12px;background:#111128;border-radius:8px;border-left:3px solid #444;font-size:0.85em;line-height:1.7;}
+.explain-section.active{border-left-color:#ff6600;background:#1a1020;}
+.explain-section h3{color:#ffcc00;font-size:0.95em;margin-bottom:6px;}
+.explain-section p{color:#ccc;margin:4px 0;}
+.explain-section .formula-line{color:#00ccff;background:#0a0a18;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:0.95em;display:block;overflow-x:auto;white-space:nowrap;}
+.explain-section .result-line{color:#00ff88;font-weight:bold;margin:6px 0;}
+.explain-section .note{color:#aaa;font-style:italic;font-size:0.9em;margin-top:4px;}
+.explain-section .dim{color:#ff9944;}
+.explain-section .split-info{color:#ffcc00;margin-top:4px;}
+.info-panel{background:#111;border:1px solid #333;border-radius:10px;padding:15px;margin:15px 0;font-size:0.85em;line-height:1.8;}
+.info-panel .label{color:#888;}
+.info-panel .value{color:#ffcc00;font-weight:bold;}
+.info-panel .highlight{color:#00ff88;}
+.step-counter{text-align:center;color:#888;font-size:0.85em;margin:8px 0;}
+.step-counter .count{color:#ff6600;font-weight:bold;}
+.matrices-row{display:flex;gap:20px;margin:20px 0;flex-wrap:wrap;justify-content:center;}
+.matrix-box{background:#111;border:1px solid #333;border-radius:10px;padding:15px;min-width:180px;}
+.matrix-box h3{text-align:center;margin-bottom:10px;font-size:0.95em;}
+.table-section{margin:20px 0;}
+.table-title{font-size:1em;color:#00ccff;margin-bottom:10px;}
+.table-wrapper{overflow-x:auto;padding:5px;}
+table{border-collapse:collapse;margin:0 auto;}
+th,td{width:72px;height:38px;text-align:center;border:1px solid #333;font-size:0.78em;transition:all 0.3s;}
+th{background:#1a1a2e;color:#00ccff;font-weight:bold;}
+td{background:#0d0d1a;color:#aaa;}
+td.filled{background:#0a1a12;color:#00ff88;border-color:#00ff8855;}
+td.current{background:#1a0a00 !important;color:#ff6600 !important;border-color:#ff6600 !important;box-shadow:0 0 15px #ff660044;transform:scale(1.05);font-weight:bold;}
+td.computing{background:#1a1a00 !important;color:#ffff00 !important;border-color:#ffff00 !important;box-shadow:0 0 10px #ffff0033;}
+td.highlight-row{background:#0d1a2a !important;color:#00ccff !important;border-color:#00ccff55 !important;}
+td.highlight-col{background:#1a0d2a !important;color:#cc88ff !important;border-color:#cc88ff55 !important;}
+.controls{display:flex;justify-content:center;gap:10px;margin:18px 0;flex-wrap:wrap;}
+.btn{padding:8px 18px;border:2px solid #444;background:#1a1a2e;color:#e0e0e0;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;font-size:0.85em;transition:all 0.3s;}
+.btn:hover{border-color:#00ff88;color:#00ff88;box-shadow:0 0 15px #00ff8833;}
+.btn:active{transform:scale(0.95);}
+.btn.primary{background:#002a1a;border-color:#00ff88;color:#00ff88;}
+.speed-control{display:flex;align-items:center;gap:6px;color:#888;font-size:0.85em;}
+.speed-control input{width:80px;accent-color:#00ff88;}
+.result-section{background:#0a1a12;border:2px solid #00ff88;border-radius:12px;padding:20px;margin:25px 0;text-align:center;display:none;}
+.result-section h2{color:#00ff88;font-size:1.2em;margin-bottom:12px;}
+.result-table{margin:0 auto;}
+.result-table th{background:#1a1a2e;color:#00ff88;}
+.result-table td{background:#0a1a12;color:#00ff88;border-color:#00ff8855;font-weight:bold;}
+.computation-display{background:#111;border:1px solid #333;border-radius:8px;padding:12px;margin:15px 0;font-size:0.85em;min-height:40px;line-height:1.8;}
+.computation-display .formula-line{color:#00ccff;background:#0a0a18;padding:4px 8px;border-radius:4px;margin:3px 0;display:inline-block;}
+.min-line{color:#00ff88;font-weight:bold;}
+.computation-display .dim{color:#ff9944;}
+</style>
+</head>
+<body>
+
+<h1>EXTEND-SHORTEST-PATHS</h1>
+<p class="subtitle">Graph Algorithms — Min-Plus Matrix Multiplication Analogue</p>
+
+<div class="layout">
+<div class="main-panel">
+
+<div class="info-panel">
+  <span class="label">Algorithm:</span> <span class="value">EXTEND-Shortest-Paths(L, W)</span><br>
+  <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+  <span class="label">Current Computation:</span> <span class="highlight" id="computingDisplay">—</span>
+</div>
+
+<div class="step-counter">
+  Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+</div>
+
+<div class="controls">
+  <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+  <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+  <button class="btn" onclick="stepForward()">&#9197; Step</button>
+  <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+  <div class="speed-control">
+    <label>Speed:</label>
+    <input type="range" id="speedSlider" min="1" max="10" value="5">
+    <span id="speedLabel">5x</span>
+  </div>
+</div>
+
+<div class="matrices-row">
+  <div class="matrix-box">
+    <h3 style="color:#00ccff;">L (Input)</h3>
+    <div class="table-wrapper">
+      <table id="lTable">
+        <tr><th></th><th>j=1</th><th>j=2</th><th>j=3</th></tr>
+        <tr><th>i=1</th><td id="l-0-0">0</td><td id="l-0-1">3</td><td id="l-0-2">8</td></tr>
+        <tr><th>i=2</th><td id="l-1-0">&infin;</td><td id="l-1-1">0</td><td id="l-1-2">&infin;</td></tr>
+        <tr><th>i=3</th><td id="l-2-0">&infin;</td><td id="l-2-1">4</td><td id="l-2-2">0</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="matrix-box">
+    <h3 style="color:#ff6600;">W (Weights)</h3>
+    <div class="table-wrapper">
+      <table id="wTable">
+        <tr><th></th><th>j=1</th><th>j=2</th><th>j=3</th></tr>
+        <tr><th>i=1</th><td id="w-0-0">0</td><td id="w-0-1">3</td><td id="w-0-2">&infin;</td></tr>
+        <tr><th>i=2</th><td id="w-1-0">&infin;</td><td id="w-1-1">0</td><td id="w-1-2">&infin;</td></tr>
+        <tr><th>i=3</th><td id="w-2-0">&infin;</td><td id="w-2-1">4</td><td id="w-2-2">0</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="computation-display" id="computationDisplay">
+  <span class="note">Select a cell to see its computation...</span>
+</div>
+
+<div class="table-section">
+  <div class="table-title">Result Matrix L'</div>
+  <div class="table-wrapper">
+    <table id="lpTable">
+      <tr><th></th><th>j=1</th><th>j=2</th><th>j=3</th></tr>
+      <tr><th>i=1</th><td id="lp-0-0">&mdash;</td><td id="lp-0-1">&mdash;</td><td id="lp-0-2">&mdash;</td></tr>
+      <tr><th>i=2</th><td id="lp-1-0">&mdash;</td><td id="lp-1-1">&mdash;</td><td id="lp-1-2">&mdash;</td></tr>
+      <tr><th>i=3</th><td id="lp-2-0">&mdash;</td><td id="lp-2-1">&mdash;</td><td id="lp-2-2">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="result-section" id="resultSection">
+  <h2>&#10003; Computation Complete!</h2>
+  <p style="color:#ccc;margin-bottom:12px;">The min-plus product L' = L &otimes; W has been computed.</p>
+  <div class="table-wrapper">
+    <table class="result-table" id="resultTable">
+      <tr><th></th><th>j=1</th><th>j=2</th><th>j=3</th></tr>
+      <tr><th>i=1</th><td>0</td><td>3</td><td>8</td></tr>
+      <tr><th>i=2</th><td>&infin;</td><td>0</td><td>&infin;</td></tr>
+      <tr><th>i=3</th><td>&infin;</td><td>4</td><td>0</td></tr>
+    </table>
+  </div>
+  <p style="color:#aaa;margin-top:12px;font-size:0.9em;">L' represents shortest paths using at most 2 edges (given L uses at most 1 edge).</p>
+</div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>&#128214; Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea"></div>
+</div>
+</div>
+
+<script>
+const INF = Infinity;
+const L = [[0,3,8],[INF,0,INF],[INF,4,0]];
+const W = [[0,3,INF],[INF,0,INF],[INF,4,0]];
+const Lp = [[INF,INF,INF],[INF,INF,INF],[INF,INF,INF]];
+const N = 3;
+let steps=[], currentStep=0, animating=false, animTimer=null;
+
+function fmt(v){ return v===INF ? '&infin;' : v; }
+
+function getInitialExplanation(){
+  return `<div class="explain-section active">
+  <h3>Standard vs Min-Plus Multiplication</h3>
+  <p><b>Standard matrix multiplication:</b></p>
+  <span class="formula-line">C[i,j] = &Sigma;<sub>k</sub> A[i,k] &times; B[k,j]</span>
+  <p class="note">Multiply pairs, then sum all products.</p>
+  <p style="margin-top:8px;"><b>Min-plus (tropical) multiplication:</b></p>
+  <span class="formula-line">C[i,j] = min<sub>k</sub> ( A[i,k] + B[k,j] )</span>
+  <p class="note">Add pairs, then take the minimum.</p>
+  <h3 style="margin-top:10px;">EXTEND-Shortest-Paths</h3>
+  <p>Takes distance matrix <span class="dim">L</span> (shortest paths with &le; r edges) and weight matrix <span class="dim">W</span> (single-edge weights), and produces <span class="result-line" style="display:inline;">L'</span> where:</p>
+  <span class="formula-line">L'[i,j] = min<sub>k</sub> ( L[i,k] + W[k,j] )</span>
+  <p>L'[i,j] gives the shortest path from i to j using at most <span class="dim">r+1</span> edges.</p>
+  <h3 style="margin-top:10px;">The Key Insight</h3>
+  <p>For each pair (i,j), we try every intermediate vertex k. Going i &rarr; k (using &le; r edges) then k &rarr; j (using 1 edge) might be shorter than the old best path from i to j.</p>
+  <p class="note">Press Play or Step to begin the computation.</p>
+  </div>`;
+}
+
+function buildSteps(){
+  steps=[];
+  for(let i=0;i<N;i++){
+    for(let j=0;j<N;j++){
+      let minVal=INF;
+      let formulaParts=[];
+      for(let k=0;k<N;k++){
+        let a=L[i][k], b=W[k][j], sum=a===INF||b===INF?INF:a+b;
+        if(sum<minVal) minVal=sum;
+        formulaParts.push(`L[${i+1},${k+1}]+W[${k+1},${j+1}] = ${fmt(a)}+${fmt(b)} = ${fmt(sum)}`);
+      }
+      steps.push({type:'compute',i,j,minVal,formulaParts,
+        explanation:buildComputeExplanation(i,j,formulaParts,minVal)});
+    }
+  }
+}
+
+function buildComputeExplanation(i,j,parts,minVal){
+  let h=`<div class="explain-section active">
+  <h3>Computing L'[${i+1},${j+1}]</h3>
+  <p>Highlight <span class="dim">row ${i+1}</span> of L and <span class="dim">column ${j+1}</span> of W.</p>
+  <p>For each intermediate vertex k, compute <span class="dim">L[${i+1},k] + W[k,${j+1}]</span>:</p>`;
+  for(let k=0;k<N;k++){
+    h+=`<span class="formula-line">${parts[k]}</span>`;
+  }
+  h+=`<span class="formula-line min-line">min = ${fmt(minVal)}</span>
+  <p class="result-line">L'[${i+1},${j+1}] = ${fmt(minVal)}</p>
+  <p class="note">We check every possible intermediate vertex k to find the shortest path from ${i+1} to ${j+1}.</p>
+  </div>`;
+  return h;
+}
+
+function buildFinishedExplanation(){
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>&#10003; Algorithm Complete!</h3>
+  <p>The full min-plus product <span class="result-line" style="display:inline;">L' = L &otimes; W</span> has been computed.</p>
+  <h3 style="margin-top:10px;">What This Means</h3>
+  <p>If <span class="dim">L[i,j]</span> is the shortest path from i to j using at most r edges, then <span class="result-line" style="display:inline;">L'[i,j]</span> is the shortest path using at most r+1 edges.</p>
+  <p>This is because we check whether going through any intermediate vertex k (using &le; r edges to reach k, then 1 edge from k to j) gives a shorter path.</p>
+  <h3 style="margin-top:10px;">Analogy to Standard Multiplication</h3>
+  <p><span class="dim">Standard:</span> multiply then sum</p>
+  <p><span class="dim">Min-plus:</span> add then take min</p>
+  <p class="note">This is sometimes called "tropical matrix multiplication" and appears in algebraic path problems.</p>
+  <h3 style="margin-top:10px;">Complexity</h3>
+  <p><span class="dim">Time:</span> O(n&sup3;) — three nested loops over n&times;n matrices</p>
+  <p><span class="dim">Space:</span> O(n&sup2;) — storing the result matrix</p>
+  </div>`;
+}
+
+function initTables(){
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    let c=document.getElementById(`lp-${i}-${j}`);
+    c.innerHTML='&mdash;'; c.className='';
+  }
+}
+
+function clearHighlights(){
+  document.querySelectorAll('td').forEach(td=>{
+    td.classList.remove('current','computing','highlight-row','highlight-col');
+  });
+}
+
+function applyStep(step){
+  clearHighlights();
+  let{type,i,j,minVal,formulaParts}=step;
+  document.getElementById('phaseDisplay').textContent=`Computing L'[${i+1},${j+1}]`;
+  document.getElementById('computingDisplay').textContent=`min over k=1..3 of L[${i+1},k]+W[k,${j+1}]`;
+  for(let r=0;r<N;r++) document.getElementById(`l-${r}-${j}`).classList.add('highlight-col');
+  for(let c=0;c<N;c++) document.getElementById(`w-${i}-${c}`).classList.add('highlight-row');
+  let compDisp=document.getElementById('computationDisplay');
+  let html=`<p style="color:#ffcc00;font-size:0.9em;margin-bottom:6px;">L'[${i+1},${j+1}] = min<sub>k</sub>( L[${i+1},k] + W[k,${j+1}] )</p>`;
+  for(let k=0;k<N;k++){
+    let a=L[i][k], b=W[k][j], sum=a===INF||b===INF?INF:a+b;
+    let cls=sum===minVal&&minVal!==INF?'min-line':'';
+    html+=`<span class="formula-line ${cls}">k=${k+1}: ${fmt(a)} + ${fmt(b)} = ${fmt(sum)}</span> `;
+  }
+  html+=`<span class="formula-line min-line">min = ${fmt(minVal)}</span>`;
+  compDisp.innerHTML=html;
+  let cell=document.getElementById(`lp-${i}-${j}`);
+  cell.classList.add('current');
+  cell.textContent=fmt(minVal);
+  Lp[i][j]=minVal;
+  document.getElementById('sidebarPhase').textContent=`Step ${currentStep+1} / ${steps.length} — Computing L'[${i+1},${j+1}]`;
+  document.getElementById('explainArea').innerHTML=step.explanation;
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function processStep(){
+  if(currentStep>=steps.length){finishAnimation();return;}
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation(){
+  if(currentStep>=steps.length)return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){
+      clearInterval(animTimer);
+      if(currentStep>=steps.length)finishAnimation();
+      return;
+    }
+    processStep();
+  },getSpeed());
+}
+
+function getSpeed(){return 1200-parseInt(document.getElementById('speedSlider').value)*100;}
+
+function pauseAnimation(){animating=false;clearInterval(animTimer);}
+
+function stepForward(){pauseAnimation();processStep();}
+
+function resetAnimation(){
+  pauseAnimation();
+  currentStep=0;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++) Lp[i][j]=INF;
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('phaseDisplay').textContent='Ready — Press Play';
+  document.getElementById('computingDisplay').textContent='—';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=getInitialExplanation();
+  document.getElementById('computationDisplay').innerHTML='<span class="note">Select a cell to see its computation...</span>';
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent=steps.length;
+}
+
+function finishAnimation(){
+  animating=false;
+  document.getElementById('phaseDisplay').textContent='\u2713 Complete!';
+  document.getElementById('computingDisplay').textContent="L' = L \u2297 W (min-plus product)";
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('sidebarPhase').textContent=`Step ${steps.length} / ${steps.length} \u2014 \u2713 Complete`;
+  document.getElementById('explainArea').innerHTML=buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop=0;
+  clearHighlights();
+}
+
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if(animating){
+    clearInterval(animTimer);
+    animTimer=setInterval(()=>{
+      if(!animating||currentStep>=steps.length){
+        clearInterval(animTimer);
+        if(currentStep>=steps.length)finishAnimation();
+        return;
+      }
+      processStep();
+    },getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent=steps.length;
+document.getElementById('explainArea').innerHTML=getInitialExplanation();
+</script>
+</body>
+</html>

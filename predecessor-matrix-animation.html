@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predecessor Matrix Π Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 15px;
+}
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.active-edge {
+  stroke: #ff6600;
+  stroke-width: 3;
+}
+.edge-line.path-edge {
+  stroke: #00ff88;
+  stroke-width: 3;
+}
+.edge-arrow {
+  fill: #555;
+  transition: all 0.4s;
+}
+.edge-arrow.active-arrow {
+  fill: #ff6600;
+}
+.edge-arrow.path-arrow {
+  fill: #00ff88;
+}
+.edge-weight {
+  fill: #ffcc00;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2;
+  transition: all 0.4s;
+}
+.node-circle.active-node {
+  stroke: #ff6600;
+  stroke-width: 3;
+}
+.node-circle.path-node {
+  stroke: #00ff88;
+  stroke-width: 3;
+}
+.node-text {
+  fill: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  transition: all 0.4s;
+  dominant-baseline: central;
+  text-anchor: middle;
+}
+.node-text.active-text {
+  fill: #ff6600;
+}
+.node-text.path-text {
+  fill: #00ff88;
+}
+.matrix-container {
+  display: flex;
+  gap: 20px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.matrix-box {
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 15px;
+  flex: 1;
+  min-width: 280px;
+  max-width: 400px;
+}
+.matrix-box h3 {
+  color: #00ccff;
+  font-size: 0.95em;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.matrix-table th, .matrix-table td {
+  width: 50px;
+  height: 32px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.75em;
+  transition: all 0.3s;
+}
+.matrix-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.matrix-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.matrix-table td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+.matrix-table td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  font-weight: bold;
+}
+.matrix-table td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+.matrix-table td.negative {
+  color: #ff6666;
+}
+.matrix-table td.nil {
+  color: #555;
+  font-style: italic;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.path-reconstruction {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+}
+.path-reconstruction h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 10px;
+}
+.path-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.path-node {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 50%;
+  color: #00ff88;
+  font-weight: bold;
+  background: #0a1a12;
+  animation: pathPop 0.3s ease;
+}
+@keyframes pathPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.path-arrow {
+  color: #00ff8866;
+  font-size: 1.2em;
+}
+</style>
+</head>
+<body>
+
+<h1>PREDECESSOR MATRIX Π</h1>
+<p class="subtitle">All-Pairs Shortest Paths — Floyd-Warshall Algorithm</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="480" height="300" viewBox="0 0 480 300"></svg>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">k:</span> <span class="value" id="kDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">i,j:</span> <span class="value" id="ijDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Update:</span> <span class="value" id="updateDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="matrix-container">
+      <div class="matrix-box">
+        <h3>Distance Matrix D</h3>
+        <div id="dMatrix"></div>
+      </div>
+      <div class="matrix-box">
+        <h3>Predecessor Matrix Π</h3>
+        <div id="piMatrix"></div>
+      </div>
+    </div>
+
+    <div id="pathReconstruction" class="path-reconstruction" style="display:none;">
+      <h3>Path Reconstruction Example</h3>
+      <div id="pathDisplay"></div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Floyd-Warshall Complete</h2>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>What is the Predecessor Matrix Π?</h3>
+        <p>The <b>predecessor matrix Π</b> stores <span class="result-line">the predecessor of vertex j</span> on the shortest path from vertex i.</p>
+        <p>Together with the distance matrix D, Π lets us <b>reconstruct the actual shortest path</b> between any pair of vertices.</p>
+        <h3 style="margin-top:10px;">Key Formula</h3>
+        <span class="formula-line">π[i][j] = predecessor of j on shortest path i→...→j</span>
+        <span class="formula-line">π[i][j] = NIL if no path exists or i=j</span>
+        <p class="note">D gives you <i>how long</i> the shortest path is. Π tells you <i>which path</i> to take.</p>
+        <h3 style="margin-top:10px;">This Graph</h3>
+        <p>4 vertices {<span class="dim">1, 2, 3, 4</span>}, 7 directed edges with weights.</p>
+        <p>We run Floyd-Warshall to compute both D and Π simultaneously.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const V = 4;
+const vertexNames = ['1', '2', '3', '4'];
+
+const nodePositions = [
+  {x: 240, y: 40},
+  {x: 80, y: 180},
+  {x: 400, y: 180},
+  {x: 240, y: 270}
+];
+
+const edgeData = [
+  {u:0, v:1, w:3},
+  {u:0, v:2, w:8},
+  {u:0, v:3, w:-4},
+  {u:1, v:3, w:7},
+  {u:2, v:1, w:4},
+  {u:3, v:0, w:2},
+  {u:3, v:2, w:-5}
+];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let svgElementsCreated = false;
+
+let finalD = [];
+let finalPi = [];
+
+function precomputeAll() {
+  const INF = Infinity;
+  finalD = [
+    [0, 1, -3, -4],
+    [INF, 0, -2, 3],
+    [INF, 4, 0, -1],
+    [2, -1, -5, 0]
+  ];
+
+  finalPi = [
+    [null, 2, 3, null],
+    [null, null, 3, null],
+    [null, 2, null, 1],
+    [0, 2, 3, null]
+  ];
+
+  let d = Array.from({length: V}, () => Array(V).fill(INF));
+  let pi = Array.from({length: V}, () => Array(V).fill(null));
+
+  for (let i = 0; i < V; i++) d[i][i] = 0;
+
+  for (let e of edgeData) {
+    d[e.u][e.v] = e.w;
+    pi[e.u][e.v] = e.u;
+  }
+
+  for (let k = 0; k < V; k++) {
+    for (let i = 0; i < V; i++) {
+      for (let j = 0; j < V; j++) {
+        if (d[i][k] + d[k][j] < d[i][j]) {
+          d[i][j] = d[i][k] + d[k][j];
+          pi[i][j] = pi[k][j];
+        }
+      }
+    }
+  }
+
+  return {d, pi};
+}
+
+function initPiMatrix() {
+  const INF = Infinity;
+  let pi = Array.from({length: V}, () => Array(V).fill(null));
+  for (let i = 0; i < V; i++) pi[i][i] = null;
+
+  for (let e of edgeData) {
+    pi[e.u][e.v] = e.u;
+  }
+  return pi;
+}
+
+function initDMatrix() {
+  const INF = Infinity;
+  let d = Array.from({length: V}, () => Array(V).fill(INF));
+  for (let i = 0; i < V; i++) d[i][i] = 0;
+  for (let e of edgeData) {
+    d[e.u][e.v] = e.w;
+  }
+  return d;
+}
+
+function buildSteps() {
+  steps = [];
+  const INF = Infinity;
+  let d = initDMatrix();
+  let pi = initPiMatrix();
+
+  steps.push({
+    type: 'init',
+    d: d.map(r => [...r]),
+    pi: pi.map(r => [...r]),
+    k: -1, i: -1, j: -1,
+    explanation: buildInitExplanation()
+  });
+
+  for (let k = 0; k < V; k++) {
+    for (let i = 0; i < V; i++) {
+      for (let j = 0; j < V; j++) {
+        let oldD = d[i][j];
+        let oldPi = pi[i][j];
+        let updated = false;
+
+        if (d[i][k] !== INF && d[k][j] !== INF && d[i][k] + d[k][j] < d[i][j]) {
+          d[i][j] = d[i][k] + d[k][j];
+          pi[i][j] = pi[k][j];
+          updated = true;
+        }
+
+        steps.push({
+          type: updated ? 'update' : 'check',
+          d: d.map(r => [...r]),
+          pi: pi.map(r => [...r]),
+          k: k, i: i, j: j,
+          oldD: oldD,
+          newD: d[i][j],
+          oldPi: oldPi,
+          newPi: pi[i][j],
+          updated: updated,
+          explanation: updated ?
+            buildUpdateExplanation(k, i, j, oldD, d[i][j], oldPi, pi[i][j]) :
+            buildCheckExplanation(k, i, j, oldD, d[i][j])
+        });
+      }
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    d: d.map(r => [...r]),
+    pi: pi.map(r => [...r]),
+    k: -1, i: -1, j: -1,
+    explanation: buildDoneExplanation(d, pi)
+  });
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Initialization — Π⁽⁰⁾</h3>
+<p>The <b>initial predecessor matrix</b> is built from the graph's direct edges.</p>
+<span class="formula-line">π[i][j] = i  if edge (i,j) exists</span>
+<span class="formula-line">π[i][j] = NIL  if no direct edge</span>
+<span class="formula-line">π[i][i] = NIL  (diagonal)</span>
+<p>This tells us the <b>immediate predecessor</b> of j on the direct path from i to j.</p>
+<h3 style="margin-top:10px;">The Floyd-Warshall Update Rule</h3>
+<span class="formula-line">if d[i][k] + d[k][j] < d[i][j]:</span>
+<span class="formula-line">  d[i][j] = d[i][k] + d[k][j]</span>
+<span class="formula-line">  π[i][j] = π[k][j]  ← key!</span>
+<p>When a shorter path through vertex k is found, we set <span class="dim">π[i][j] = π[k][j]</span> because the last step before j on the path through k is the same as on k's path to j.</p>
+<p class="note">Press Play or Step to begin the Floyd-Warshall algorithm.</p>
+</div>`;
+}
+
+function buildUpdateExplanation(k, i, j, oldD, newD, oldPi, newPi) {
+  let oldDStr = oldD === Infinity ? '∞' : oldD;
+  let newDStr = newD;
+  let oldPiStr = oldPi === null ? 'NIL' : vertexNames[oldPi];
+  let newPiStr = newPi === null ? 'NIL' : vertexNames[newPi];
+
+  return `<div class="explain-section active">
+<h3>Update: k=${vertexNames[k]}, i=${vertexNames[i]}, j=${vertexNames[j]}</h3>
+<p><b>Shorter path found!</b> Going through vertex <span class="dim">${vertexNames[k]}</span> improves the path from ${vertexNames[i]} to ${vertexNames[j]}.</p>
+<span class="formula-line">d[${vertexNames[i]}][${vertexNames[j]}] = min(${oldDStr}, d[${vertexNames[i]}][${vertexNames[k]}] + d[${vertexNames[k]}][${vertexNames[j]}]) = ${newDStr}</span>
+<h3 style="margin-top:10px;">Π Update — The Key Insight</h3>
+<p>The predecessor of <span class="dim">${vertexNames[j]}</span> on the new path through <span class="dim">${vertexNames[k]}</span> is the same as the predecessor of <span class="dim">${vertexNames[j]}</span> on <span class="dim">${vertexNames[k]}</span>'s path to <span class="dim">${vertexNames[j]}</span>.</p>
+<span class="formula-line">π[${vertexNames[i]}][${vertexNames[j]}] = π[${vertexNames[k]}][${vertexNames[j]}] = ${newPiStr}</span>
+<p>Changed from <span class="dim">${oldPiStr}</span> to <span class="result-line">${newPiStr}</span></p>
+<p class="note">The new path is: ${vertexNames[i]} → ... → ${vertexNames[k]} → ... → ${vertexNames[j]}</p>
+</div>`;
+}
+
+function buildCheckExplanation(k, i, j, oldD, newD) {
+  let oldDStr = oldD === Infinity ? '∞' : oldD;
+  let newDStr = newD === Infinity ? '∞' : newD;
+
+  return `<div class="explain-section active">
+<h3>Check: k=${vertexNames[k]}, i=${vertexNames[i]}, j=${vertexNames[j]}</h3>
+<p><b>No improvement.</b> Going through vertex <span class="dim">${vertexNames[k]}</span> does not shorten the path from ${vertexNames[i]} to ${vertexNames[j]}.</p>
+<span class="formula-line">d[${vertexNames[i]}][${vertexNames[j]}] = ${oldDStr} ≤ d[${vertexNames[i]}][${vertexNames[k]}] + d[${vertexNames[k]}][${vertexNames[j]}]</span>
+<p>The current distance <span class="result-line">${oldDStr}</span> is already optimal.</p>
+<p class="note">Π remains unchanged at π[${vertexNames[i]}][${vertexNames[j]}].</p>
+</div>`;
+}
+
+function buildDoneExplanation(d, pi) {
+  let pathHtml = '';
+  let pathSteps = [
+    {from: 0, to: 2, path: [0, 3, 2], dist: d[0][2]},
+  ];
+
+  for (let p of pathSteps) {
+    let pathStr = p.path.map((v, idx) => {
+      let seg = vertexNames[v];
+      if (idx < p.path.length - 1) {
+        let nextV = p.path[idx + 1];
+        let w = null;
+        for (let e of edgeData) {
+          if (e.u === v && e.v === nextV) { w = e.w; break; }
+        }
+        if (w === null) {
+          for (let k2 = 0; k2 < V; k2++) {
+            if (k2 !== v && k2 !== nextV) {
+              let w1 = null, w2 = null;
+              for (let e of edgeData) {
+                if (e.u === v && e.v === k2) w1 = e.w;
+                if (e.u === k2 && e.v === nextV) w2 = e.w;
+              }
+              if (w1 !== null && w2 !== null) { w = w1 + w2; break; }
+            }
+          }
+        }
+        seg += `<span style="color:#ffcc00;font-size:0.8em;">(${w !== null ? w : '?'})</span>`;
+      }
+      return seg;
+    }).join(' <span style="color:#00ff8866;">→</span> ');
+
+    pathHtml += `<p style="margin:8px 0;"><span class="dim">${vertexNames[p.from]} → ${vertexNames[p.to]}:</span> ${pathStr} = <span class="result-line">${p.dist}</span></p>`;
+  }
+
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>Both <b>D</b> and <b>Π</b> matrices are fully computed. All shortest paths are found.</p>
+<h3 style="margin-top:10px;">Path Reconstruction Technique</h3>
+<p>To find the shortest path from <span class="dim">i</span> to <span class="dim">j</span>:</p>
+<span class="formula-line">1. Check π[i][j] — if NIL, no path exists</span>
+<span class="formula-line">2. If π[i][j] = k, then the path goes i→...→k→j</span>
+<span class="formula-line">3. Recurse: find path from i to k, then append j</span>
+<h3 style="margin-top:10px;">Example: Path from 1 to 3</h3>
+<p>π[1][3] = 4, so predecessor of 3 is <span class="dim">4</span></p>
+<p>π[1][4] = 1, so predecessor of 4 is <span class="dim">1</span></p>
+<p class="result-line">Path: 1 → 4 → 3</p>
+<p class="note">Distance: d[1][3] = -4 + (-5) = -9</p>
+${pathHtml}
+<h3 style="margin-top:10px;">Relationship to D</h3>
+<p><span class="dim">D</span> gives <b>how long</b> the shortest path is (distance).</p>
+<p><span class="dim">Π</span> gives <b>which path</b> to take (predecessors).</p>
+<p>Together they give complete shortest path information for <b>all pairs</b>.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Preprocessing:</span> O(V³) — Floyd-Warshall fills both D and Π</p>
+<p><span class="dim">Path query:</span> O(V) per path reconstruction</p>
+<p><span class="dim">Space:</span> O(V²) for D and Π matrices</p>
+<p class="note">After O(V³) preprocessing, we can answer any shortest path query in O(V) time.</p>
+</div>`;
+}
+
+function createSvgElements() {
+  if (svgElementsCreated) return;
+  const svg = document.getElementById('graphSvg');
+
+  for (let e = 0; e < edgeData.length; e++) {
+    const edge = edgeData[e];
+    const p1 = nodePositions[edge.u];
+    const p2 = nodePositions[edge.v];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const r = 22;
+    const sx = p1.x + (dx/len) * r;
+    const sy = p1.y + (dy/len) * r;
+    const ex = p2.x - (dx/len) * r;
+    const ey = p2.y - (dy/len) * r;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', sx);
+    line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex);
+    line.setAttribute('y2', ey);
+    line.classList.add('edge-line');
+    line.dataset.edge = e;
+    svg.appendChild(line);
+
+    const angle = Math.atan2(dy, dx);
+    const as = 10;
+    const a1x = ex - as * Math.cos(angle - 0.45);
+    const a1y = ey - as * Math.sin(angle - 0.45);
+    const a2x = ex - as * Math.cos(angle + 0.45);
+    const a2y = ey - as * Math.sin(angle + 0.45);
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('points', `${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`);
+    arrow.classList.add('edge-arrow');
+    arrow.dataset.edge = e;
+    svg.appendChild(arrow);
+
+    const midX = (sx + ex) / 2;
+    const midY = (sy + ey) / 2;
+    const perpX = -dy / len * 14;
+    const perpY = dx / len * 14;
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', midX + perpX);
+    text.setAttribute('y', midY + perpY);
+    text.classList.add('edge-weight');
+    text.textContent = edge.w;
+    text.dataset.edge = e;
+    svg.appendChild(text);
+  }
+
+  for (let v = 0; v < V; v++) {
+    const p = nodePositions[v];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', p.x);
+    circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '22');
+    circle.classList.add('node-circle');
+    circle.dataset.node = v;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', p.x);
+    text.setAttribute('y', p.y + 1);
+    text.classList.add('node-text');
+    text.textContent = vertexNames[v];
+    text.dataset.node = v;
+    svg.appendChild(text);
+  }
+
+  svgElementsCreated = true;
+}
+
+function setSvgHighlights(step) {
+  document.querySelectorAll('.edge-line').forEach(el => el.classList.remove('active-edge', 'path-edge'));
+  document.querySelectorAll('.edge-arrow').forEach(el => el.classList.remove('active-arrow', 'path-arrow'));
+  document.querySelectorAll('.node-circle').forEach(el => el.classList.remove('active-node', 'path-node'));
+  document.querySelectorAll('.node-text').forEach(el => el.classList.remove('active-text', 'path-text'));
+
+  if (step.type === 'init') return;
+
+  if (step.type === 'done') {
+    let pathNodes = [0, 3, 2];
+    let pathEdges = [];
+    for (let p = 0; p < pathNodes.length - 1; p++) {
+      let from = pathNodes[p], to = pathNodes[p+1];
+      for (let e = 0; e < edgeData.length; e++) {
+        if (edgeData[e].u === from && edgeData[e].v === to) {
+          pathEdges.push(e);
+          break;
+        }
+      }
+    }
+
+    pathEdges.forEach(e => {
+      document.querySelector(`.edge-line[data-edge="${e}"]`)?.classList.add('path-edge');
+      document.querySelector(`.edge-arrow[data-edge="${e}"]`)?.classList.add('path-arrow');
+    });
+
+    pathNodes.forEach(v => {
+      document.querySelector(`.node-circle[data-node="${v}"]`)?.classList.add('path-node');
+      document.querySelector(`.node-text[data-node="${v}"]`)?.classList.add('path-text');
+    });
+    return;
+  }
+
+  if (step.i >= 0 && step.j >= 0) {
+    document.querySelector(`.node-circle[data-node="${step.i}"]`)?.classList.add('active-node');
+    document.querySelector(`.node-text[data-node="${step.i}"]`)?.classList.add('active-text');
+    document.querySelector(`.node-circle[data-node="${step.j}"]`)?.classList.add('active-node');
+    document.querySelector(`.node-text[data-node="${step.j}"]`)?.classList.add('active-text');
+  }
+  if (step.k >= 0) {
+    document.querySelector(`.node-circle[data-node="${step.k}"]`)?.classList.add('active-node');
+    document.querySelector(`.node-text[data-node="${step.k}"]`)?.classList.add('active-text');
+  }
+}
+
+function buildMatrixHTML(type, matrix, highlightI, highlightJ, currentK) {
+  let html = '<table class="matrix-table">';
+  html += '<tr><th></th>';
+  for (let j = 0; j < V; j++) html += `<th>${vertexNames[j]}</th>`;
+  html += '</tr>';
+
+  for (let i = 0; i < V; i++) {
+    html += `<tr><th>${vertexNames[i]}</th>`;
+    for (let j = 0; j < V; j++) {
+      let cls = '';
+      if (i === highlightI && j === highlightJ) {
+        cls = 'current';
+      }
+      let val = matrix[i][j];
+      let display = '';
+      if (type === 'd') {
+        if (val === Infinity) {
+          display = '∞';
+          cls += ' nil';
+        } else {
+          display = val;
+          if (val < 0) cls += ' negative';
+          if (cls === '' && val !== Infinity) cls = ' filled';
+        }
+      } else {
+        if (val === null) {
+          display = 'NIL';
+          cls += ' nil';
+        } else {
+          display = vertexNames[val];
+          if (cls === '') cls = ' filled';
+        }
+      }
+      html += `<td class="${cls}">${display}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
+function applyStep(step) {
+  createSvgElements();
+  setSvgHighlights(step);
+
+  let dHtml, piHtml;
+  if (step.type === 'init' || step.type === 'done') {
+    dHtml = buildMatrixHTML('d', step.d, -1, -1, -1);
+    piHtml = buildMatrixHTML('pi', step.pi, -1, -1, -1);
+  } else {
+    dHtml = buildMatrixHTML('d', step.d, step.i, step.j, step.k);
+    piHtml = buildMatrixHTML('pi', step.pi, step.i, step.j, step.k);
+  }
+
+  document.getElementById('dMatrix').innerHTML = dHtml;
+  document.getElementById('piMatrix').innerHTML = piHtml;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'init' ? 'Initialization' : step.type === 'done' ? 'Complete' : `k=${vertexNames[step.k]}, i=${vertexNames[step.i]}, j=${vertexNames[step.j]}`}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  if (step.type === 'init') {
+    document.getElementById('phaseDisplay').textContent = 'Initialization';
+    document.getElementById('kDisplay').textContent = '—';
+    document.getElementById('ijDisplay').textContent = '—';
+    document.getElementById('updateDisplay').textContent = '—';
+  } else if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('kDisplay').textContent = '—';
+    document.getElementById('ijDisplay').textContent = '—';
+    document.getElementById('updateDisplay').textContent = '—';
+    showPathReconstruction();
+  } else {
+    document.getElementById('phaseDisplay').textContent = `Floyd-Warshall — k=${vertexNames[step.k]}`;
+    document.getElementById('kDisplay').textContent = vertexNames[step.k];
+    document.getElementById('ijDisplay').textContent = `(${vertexNames[step.i]}, ${vertexNames[step.j]})`;
+    document.getElementById('updateDisplay').textContent = step.updated ?
+      `${step.oldD === Infinity ? '∞' : step.oldD} → ${step.newD}` : 'No change';
+  }
+}
+
+function showPathReconstruction() {
+  const container = document.getElementById('pathReconstruction');
+  container.style.display = 'block';
+
+  let pathHtml = '<div class="path-display">';
+  let pathSteps = [
+    {node: 1, label: 'Start'},
+    {node: 4, label: 'π[1][3]=4'},
+    {node: 3, label: 'Destination'}
+  ];
+
+  for (let i = 0; i < pathSteps.length; i++) {
+    pathHtml += `<div class="path-node">${pathSteps[i].node}</div>`;
+    if (i < pathSteps.length - 1) {
+      pathHtml += '<span class="path-arrow">→</span>';
+    }
+  }
+  pathHtml += '</div>';
+  pathHtml += '<p style="color:#aaa;font-size:0.85em;margin-top:10px;">';
+  pathHtml += 'π[1][3] = 4 → π[1][4] = 1 (source) → Path: 1 → 4 → 3</p>';
+
+  document.getElementById('pathDisplay').innerHTML = pathHtml;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) {
+    finishAnimation();
+    return;
+  }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('pathReconstruction').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('kDisplay').textContent = '—';
+  document.getElementById('ijDisplay').textContent = '—';
+  document.getElementById('updateDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  document.getElementById('dMatrix').innerHTML = '';
+  document.getElementById('piMatrix').innerHTML = '';
+  createSvgElements();
+  document.querySelectorAll('.edge-line').forEach(el => el.classList.remove('active-edge', 'path-edge'));
+  document.querySelectorAll('.edge-arrow').forEach(el => el.classList.remove('active-arrow', 'path-arrow'));
+  document.querySelectorAll('.node-circle').forEach(el => el.classList.remove('active-node', 'path-node'));
+  document.querySelectorAll('.node-text').forEach(el => el.classList.remove('active-text', 'path-text'));
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  applyStep(steps[0]);
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('resultSection').style.display = 'block';
+
+  let result = precomputeAll();
+  let dHtml = '<div style="text-align:left;">';
+  dHtml += '<p><span class="label">Distance Matrix D:</span></p>';
+  for (let i = 0; i < V; i++) {
+    let row = result.d[i].map(v => v === Infinity ? '∞' : v).join('  ');
+    dHtml += `<p style="margin:2px 0;"><span class="dim">${vertexNames[i]}:</span> ${row}</p>`;
+  }
+  dHtml += '</div>';
+
+  dHtml += '<div style="text-align:left;margin-top:10px;">';
+  dHtml += '<p><span class="label">Predecessor Matrix Π:</span></p>';
+  for (let i = 0; i < V; i++) {
+    let row = result.pi[i].map(v => v === null ? 'NIL' : vertexNames[v]).join('  ');
+    dHtml += `<p style="margin:2px 0;"><span class="dim">${vertexNames[i]}:</span> ${row}</p>`;
+  }
+  dHtml += '</div>';
+
+  document.getElementById('resultDisplay').innerHTML = dHtml;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(result.d, result.pi);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+
+function initTables() {
+  createSvgElements();
+  applyStep(steps[0]);
+}
+</script>
+</body>
+</html>

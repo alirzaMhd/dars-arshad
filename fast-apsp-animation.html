@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FASTER-APSP Animation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh}
+h1{text-align:center;font-size:1.6em;color:#00ff88;margin:20px 0 5px;text-shadow:0 0 20px #00ff8855;letter-spacing:2px}
+.subtitle{text-align:center;color:#888;font-size:0.9em;margin-bottom:20px}
+.layout{display:flex;gap:0;max-width:1600px;margin:0 auto;padding:0 15px 30px}
+.main-panel{flex:1;min-width:0;padding-right:15px}
+.sidebar{width:420px;min-width:420px;max-height:calc(100vh - 100px);overflow-y:auto;position:sticky;top:10px;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;padding:20px}
+.sidebar::-webkit-scrollbar{width:5px}
+.sidebar::-webkit-scrollbar-track{background:#111}
+.sidebar::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+@media(max-width:1100px){.layout{flex-direction:column}.sidebar{width:100%;min-width:unset;max-height:none;position:static;margin-top:20px}}
+.sidebar h2{color:#ff6600;font-size:1.05em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #333}
+.sidebar .step-phase{color:#00ccff;font-size:0.85em;margin-bottom:10px}
+.explain-section{margin-bottom:18px;padding:12px;background:#111128;border-radius:8px;border-left:3px solid #444;font-size:0.85em;line-height:1.7}
+.explain-section.active{border-left-color:#ff6600;background:#1a1020}
+.explain-section h3{color:#ffcc00;font-size:0.95em;margin-bottom:6px}
+.explain-section p{color:#ccc;margin:4px 0}
+.explain-section .formula-line{color:#00ccff;background:#0a0a18;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:0.95em;display:block;overflow-x:auto;white-space:nowrap}
+.explain-section .result-line{color:#00ff88;font-weight:bold;margin:6px 0}
+.explain-section .note{color:#aaa;font-style:italic;font-size:0.9em;margin-top:4px}
+.explain-section .dim{color:#ff9944}
+.info-panel{background:#111;border:1px solid #333;border-radius:10px;padding:15px;margin:15px 0;font-size:0.85em;line-height:1.8}
+.info-panel .label{color:#888}
+.info-panel .value{color:#ffcc00;font-weight:bold}
+.info-panel .highlight{color:#00ff88}
+.table-section{margin:20px 0}
+.table-title{font-size:1em;color:#00ccff;margin-bottom:10px}
+.table-wrapper{overflow-x:auto;padding:5px}
+table{border-collapse:collapse;margin:0 auto}
+th,td{width:72px;height:38px;text-align:center;border:1px solid #333;font-size:0.78em;transition:all 0.3s}
+th{background:#1a1a2e;color:#00ccff;font-weight:bold}
+td{background:#0d0d1a;color:#aaa}
+td.filled{background:#0a1a12;color:#00ff88;border-color:#00ff8855}
+td.current{background:#1a0a00!important;color:#ff6600!important;border-color:#ff6600!important;box-shadow:0 0 15px #ff660044;transform:scale(1.05);font-weight:bold}
+td.computing{background:#1a1a00!important;color:#ffff00!important;border-color:#ffff00!important;box-shadow:0 0 10px #ffff0033}
+td.improved{background:#0a1a12!important;color:#00ff88!important;border-color:#00ff8855}
+.controls{display:flex;justify-content:center;gap:10px;margin:18px 0;flex-wrap:wrap}
+.btn{padding:8px 18px;border:2px solid #444;background:#1a1a2e;color:#e0e0e0;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;font-size:0.85em;transition:all 0.3s}
+.btn:hover{border-color:#00ff88;color:#00ff88;box-shadow:0 0 15px #00ff8833}
+.btn:active{transform:scale(0.95)}
+.btn.primary{background:#002a1a;border-color:#00ff88;color:#00ff88}
+.speed-control{display:flex;align-items:center;gap:6px;color:#888;font-size:0.85em}
+.speed-control input{width:80px;accent-color:#00ff88}
+.step-counter{text-align:center;color:#888;font-size:0.85em;margin:8px 0}
+.step-counter .count{color:#ff6600;font-weight:bold}
+.result-section{background:#0a1a12;border:2px solid #00ff88;border-radius:12px;padding:20px;margin:25px 0;text-align:center;display:none}
+.result-section h2{color:#00ff88;font-size:1.2em;margin-bottom:12px}
+.multiplication-display{text-align:center;margin:12px 0;padding:10px;background:#111;border:1px solid #333;border-radius:8px;color:#00ccff;font-size:0.9em}
+.comparison-table td{font-size:0.72em;width:68px;height:34px}
+.comparison-table th{font-size:0.75em}
+</style>
+</head>
+<body>
+
+<h1>FASTER-APSP</h1>
+<p class="subtitle">All-Pairs Shortest Paths — Repeated Squaring</p>
+
+<div class="layout">
+<div class="main-panel">
+  <div class="info-panel">
+    <span class="label">Algorithm:</span> <span class="highlight">FASTER-APSP</span> (Repeated Squaring)<br>
+    <span class="label">Vertices:</span> <span class="value" id="vertexCount">4</span> &nbsp;
+    <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+    <span class="label">Computing:</span> <span id="computingDisplay">—</span>
+  </div>
+  <div class="controls">
+    <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+    <button class="btn" onclick="pauseAnimation()">&#9646;&#9646; Pause</button>
+    <button class="btn" onclick="stepForward()">&#9197; Step</button>
+    <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+    <div class="speed-control">
+      <label>Speed:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span id="speedLabel">5x</span>
+    </div>
+  </div>
+  <div class="step-counter">
+    Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+  </div>
+  <div id="matrixArea"></div>
+  <div class="result-section" id="resultSection">
+    <h2>&#10003; All-Pairs Shortest Paths Complete</h2>
+    <div id="finalResult"></div>
+  </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>&#128214; Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea">
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>Find the <b>shortest path</b> between every pair of vertices in a weighted directed graph.</p>
+      <p>Input graph: <span class="dim">4 vertices</span>, edges with weights (including negative).</p>
+      <h3 style="margin-top:10px;">Key Insight: Repeated Squaring</h3>
+      <p>SLOW-APSP computes L<sup>(1)</sup>, L<sup>(2)</sup>, L<sup>(3)</sup> one by one — that's <b>n-1 matrix multiplications</b>.</p>
+      <p><b>FASTER-APSP</b> uses <span class="dim">repeated squaring</span> (like fast exponentiation):</p>
+      <span class="formula-line">L^(2^p) = L^(2^(p-1)) &otimes; L^(2^(p-1))</span>
+      <p>After <span class="dim">⌈lg(n-1)⌉</span> squarings, we have paths using up to n-1 edges.</p>
+      <p>For n=4: only <span class="dim">2 squarings</span> (vs 3 multiplications for SLOW).</p>
+      <h3 style="margin-top:10px;">Example Graph</h3>
+      <span class="formula-line">1&rarr;2 (3), 1&rarr;3 (8), 1&rarr;4 (-4), 2&rarr;4 (7), 3&rarr;2 (4), 4&rarr;1 (2), 4&rarr;3 (-5)</span>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const INF = Infinity;
+const n = 4;
+const V = ['1','2','3','4'];
+let W = [
+  [0,3,8,-4],
+  [INF,0,INF,7],
+  [INF,4,0,INF],
+  [2,INF,-5,0]
+];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let prevMatrix = null;
+let matrices = [];
+
+function minPlusMult(A,B){
+  const C=Array.from({length:n},()=>Array(n).fill(INF));
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) for(let k=0;k<n;k++)
+    if(A[i][k]!==INF&&B[k][j]!==INF) C[i][j]=Math.min(C[i][j],A[i][k]+B[k][j]);
+  return C;
+}
+
+function precomputeAll(){
+  matrices = [{label:'L^(1)',matrix:W.map(r=>[...r])}];
+  let cur = W.map(r=>[...r]);
+  for(let p=1; (1<<(p-1))<n-1; p++){
+    cur = minPlusMult(cur,cur);
+    matrices.push({label:'L^('+(1<<p)+')',matrix:cur.map(r=>[...r])});
+  }
+  return matrices;
+}
+
+function differs(a,b,i,j){
+  if(a===null) return false;
+  return a[i][j]!==b[i][j];
+}
+
+function buildSteps(){
+  steps=[];
+  steps.push({type:'init',explanation:buildInitExplanation()});
+  for(let p=0;p<matrices.length-1;p++){
+    const prev=matrices[p].matrix, prevLabel=matrices[p].label;
+    const res=matrices[p+1].matrix, resLabel=matrices[p+1].label;
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++)
+      steps.push({type:'cell',p:p,i:i,j:j,prev:prev,res:res,explanation:buildCellExplanation(p,i,j,prev,res)});
+    steps.push({type:'show',p:p,matrix:res,label:resLabel,explanation:buildShowExplanation(p)});
+  }
+  steps.push({type:'compare',explanation:buildCompareExplanation()});
+  steps.push({type:'done',explanation:buildDoneExplanation()});
+}
+
+function buildInitExplanation(){
+  return `<div class="explain-section active">
+    <h3>Base Case: L<sup>(1)</sup></h3>
+    <p>L<sup>(1)</sup> is the <b>weight matrix W</b>: shortest paths using <span class="dim">at most 1 edge</span>.</p>
+    <span class="formula-line">L^(1)[i][j] = w(i,j) if edge exists, else ∞</span>
+    <p>Diagonal entries are 0 (path from a vertex to itself).</p>
+    <p>This is our starting point for repeated squaring.</p>
+  </div>`;
+}
+
+function buildCellExplanation(p,i,j,prev,res){
+  const prevL=matrices[p].label, resL=matrices[p+1].label;
+  const prevVal=prev[i][j], resVal=res[i][j];
+  let desc;
+  if(resVal===INF) desc='No path exists with &le;'+(1<<(p+1))+' edges.';
+  else if(prevVal===INF) desc='A <b>new path</b> is found!';
+  else if(resVal<prevVal) desc='Shorter path found than with &le;'+(1<<p)+' edges.';
+  else desc='Direct edge (or existing path) is still optimal.';
+  const changed=differs(prevMatrix,res,i,j);
+  return `<div class="explain-section active">
+    <h3>Computing ${resL}[${V[i]}][${V[j]}]</h3>
+    <p>Min-plus product: row ${V[i]} of ${prevL} &otimes; column ${V[j]} of ${prevL}</p>
+    <span class="formula-line">${resL}[${V[i]}][${V[j]}] = min_k { ${prevL}[${V[i]}][k] + ${prevL}[k][${V[j]}] }</span>
+    <p>Result: <span class="${changed?'result-line':'dim'}">${resVal===INF?'∞':resVal}</span>${prevVal===INF?'':' (was '+prevVal+')'}</p>
+    <p>${desc}</p>
+    <p class="note">${changed?'&#9679; Cell changed — highlighted in green':'No change this step'}</p>
+  </div>`;
+}
+
+function buildShowExplanation(p){
+  const label=matrices[p+1].label, edges=1<<(p+1);
+  let count=0;
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(matrices[p+1].matrix[i][j]!==(prevMatrix?prevMatrix[i][j]:matrices[p].matrix[i][j])) count++;
+  return `<div class="explain-section active">
+    <h3>${label} Complete!</h3>
+    <p>This matrix gives shortest paths using <span class="dim">at most ${edges} edges</span>.</p>
+    <p>Formula: <span class="formula-line">${label} = ${matrices[p].label} &otimes; ${matrices[p].label}</span></p>
+    <p>Each entry is the min-plus product of corresponding row and column from ${matrices[p].label}.</p>
+    <p class="note">For n=4, paths need at most 3 edges. With ${label} covering ${edges} edges, we have the answer!</p>
+  </div>`;
+}
+
+function buildCompareExplanation(){
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#128202; Comparison: FASTER vs SLOW</h3>
+    <p><span class="dim">SLOW-APSP:</span> L<sup>(1)</sup>&rarr;L<sup>(2)</sup>&rarr;L<sup>(3)</sup> — 3 matrix multiplications</p>
+    <p><span class="dim">FASTER-APSP:</span> L<sup>(1)</sup>&rarr;L<sup>(2)</sup>&rarr;L<sup>(4)</sup> — 2 matrix multiplications</p>
+    <p>For large n: SLOW does <span class="dim">n-1</span> mults, FASTER does <span class="dim">⌈lg(n-1)⌉</span> squarings.</p>
+    <p class="result-line">O(n³ lg n) vs O(n⁴) — much faster!</p>
+    <p class="note">Both produce the same final answer. Repeated squaring just gets there faster.</p>
+  </div>`;
+}
+
+function buildDoneExplanation(){
+  const m=matrices[matrices.length-1].matrix;
+  let rows='';
+  for(let i=0;i<n;i++){
+    let cells='';
+    for(let j=0;j<n;j++) cells+=`<td style="background:#0a1a12;color:#00ff88;border:1px solid #333;padding:4px 8px">${m[i][j]===INF?'∞':m[i][j]}</td>`;
+    rows+=`<tr><th style="background:#1a1a2e;color:#00ccff;padding:4px 8px">${V[i]}</th>${cells}</tr>`;
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10003; Algorithm Complete!</h3>
+    <p>The final matrix contains shortest paths between all vertex pairs.</p>
+    <h3 style="margin-top:10px;">Result Matrix</h3>
+    <table class="comparison-table" style="margin:8px auto">${'<tr><th style="background:#1a1a2e;color:#00ccff">↓from \\to→</th>'+V.map(v=>'<th style="background:#1a1a2e;color:#00ccff">'+v+'</th>').join('')+'</tr>'}${rows}</table>
+    <h3 style="margin-top:10px;">Why Fewer Multiplications Matter</h3>
+    <p>Each matrix multiplication costs <span class="dim">O(n³)</span>.</p>
+    <p>SLOW-APSP: <span class="dim">n-1</span> multiplications = O(n³ · n) = <span class="result-line">O(n⁴)</span></p>
+    <p>FASTER-APSP: <span class="dim">⌈lg(n-1)⌉</span> squarings = O(n³ · lg n) = <span class="result-line">O(n³ lg n)</span></p>
+    <p class="note">For n=1000: SLOW ≈ 10⁹ ops, FASTER ≈ 10⁷ ops — <b>100x faster</b>!</p>
+  </div>`;
+}
+
+function initTables(){
+  const area=document.getElementById('matrixArea');
+  let html='<div class="table-section"><div class="table-title" id="tableTitle">Current Matrix</div><div class="table-wrapper"><table id="dataTable"><tr><th></th>';
+  for(let j=0;j<n;j++) html+=`<th>${V[j]}</th>`;
+  html+='</tr>';
+  for(let i=0;i<n;i++){
+    html+=`<tr><th>${V[i]}</th>`;
+    for(let j=0;j<n;j++) html+=`<td id="cell-${i}-${j}">∞</td>`;
+    html+='</tr>';
+  }
+  html+='</table></div></div>';
+  area.innerHTML=html;
+  prevMatrix=null;
+}
+
+function showMatrix(matrix,mode){
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    const c=document.getElementById(`cell-${i}-${j}`);
+    c.className='';
+    c.textContent=matrix[i][j]===INF?'∞':matrix[i][j];
+    if(mode==='filled') c.classList.add('filled');
+  }
+}
+
+function clearHighlights(){
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    const c=document.getElementById(`cell-${i}-${j}`);
+    c.classList.remove('current','computing','filled','improved');
+  }
+}
+
+function applyStep(step){
+  clearHighlights();
+  document.getElementById('resultSection').style.display='none';
+  switch(step.type){
+    case 'init':
+      document.getElementById('phaseDisplay').textContent='Base Case — L^(1)';
+      document.getElementById('computingDisplay').textContent='Weight matrix W';
+      document.getElementById('tableTitle').textContent='L^(1) = W — Shortest paths with ≤1 edge';
+      showMatrix(matrices[0].matrix,'filled');
+      prevMatrix=null;
+      break;
+    case 'cell':
+      document.getElementById('phaseDisplay').textContent=`Computing L^(${1<<(step.p+1)})`;
+      document.getElementById('computingDisplay').textContent=`L^(${1<<(step.p+1)})[${V[step.i]}][${V[step.j]}]`;
+      document.getElementById('tableTitle').textContent=`Computing L^(${1<<(step.p+1)}) from L^(${1<<step.p}) ⊗ L^(${1<<step.p})`;
+      showMatrix(step.prev,'filled');
+      document.getElementById(`cell-${step.i}-${step.j}`).className='computing';
+      prevMatrix=step.prev;
+      break;
+    case 'show':
+      document.getElementById('phaseDisplay').textContent=`${step.label} Complete`;
+      document.getElementById('computingDisplay').textContent=`${step.label} — paths with ≤${1<<(step.p+1)} edges`;
+      document.getElementById('tableTitle').textContent=`${step.label} — Shortest paths with ≤${1<<(step.p+1)} edges`;
+      showMatrix(step.matrix,'filled');
+      let changed=0;
+      if(prevMatrix) for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(step.matrix[i][j]!==prevMatrix[i][j]) changed++;
+      if(changed>0){
+        for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(step.matrix[i][j]!==prevMatrix[i][j])
+          document.getElementById(`cell-${i}-${j}`).classList.add('improved');
+      }
+      prevMatrix=step.matrix.map(r=>[...r]);
+      break;
+    case 'compare': {
+      document.getElementById('phaseDisplay').textContent='Comparison — FASTER vs SLOW';
+      document.getElementById('computingDisplay').textContent='Same result, fewer multiplications!';
+      document.getElementById('tableTitle').textContent='Final Shortest Path Matrix';
+      const m=matrices[matrices.length-1].matrix;
+      showMatrix(m,'filled');
+      let html='<div class="table-section" style="margin-top:20px"><div class="table-title">Matrix Evolution Comparison</div><div class="table-wrapper"><table class="comparison-table"><tr><th>Stage</th>';
+      for(let j=0;j<n;j++) for(let k=0;k<n;k++) html+=`<th>${V[j]}→${V[k]}</th>`;
+      html+='</tr>';
+      const colors=['#ff9944','#00ccff','#00ff88'];
+      const labels=['L^(1) ≤1 edge','L^(2) ≤2 edges','L^(4) ≤4 edges'];
+      for(let p=0;p<matrices.length;p++){
+        html+=`<tr><td style="color:${colors[p]};font-weight:bold">${labels[p]}</td>`;
+        const mat=matrices[p].matrix;
+        for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+          const cls=p===matrices.length-1?'improved':'filled';
+          html+=`<td class="${cls}">${mat[i][j]===INF?'∞':mat[i][j]}</td>`;
+        }
+        html+='</tr>';
+      }
+      html+='</table></div></div>';
+      document.getElementById('matrixArea').innerHTML+=html;
+      break;
+    }
+    case 'done':
+      document.getElementById('phaseDisplay').textContent='✓ Complete!';
+      document.getElementById('computingDisplay').textContent='All-pairs shortest paths computed';
+      const fm=matrices[matrices.length-1].matrix;
+      showMatrix(fm,'filled');
+      document.getElementById('resultSection').style.display='block';
+      let resHTML='<div class="table-wrapper"><table style="margin:0 auto"><tr><th></th>';
+      for(let j=0;j<n;j++) resHTML+=`<th>${V[j]}</th>`;
+      resHTML+='</tr>';
+      for(let i=0;i<n;i++){
+        resHTML+=`<tr><th>${V[i]}</th>`;
+        for(let j=0;j<n;j++) resHTML+=`<td class="filled">${fm[i][j]===INF?'∞':fm[i][j]}</td>`;
+        resHTML+='</tr>';
+      }
+      resHTML+='</table></div>';
+      document.getElementById('finalResult').innerHTML=resHTML;
+      break;
+  }
+  document.getElementById('sidebarPhase').textContent=`Step ${currentStep+1} / ${steps.length} — ${step.type==='done'?'✅ Complete':document.getElementById('phaseDisplay').textContent}`;
+  document.getElementById('explainArea').innerHTML=step.explanation;
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function processStep(){
+  if(currentStep>=steps.length){finishAnimation();return;}
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation(){
+  if(currentStep>=steps.length)return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){
+      clearInterval(animTimer);
+      if(currentStep>=steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  },getSpeed());
+}
+
+function getSpeed(){return 1200-parseInt(document.getElementById('speedSlider').value)*100;}
+
+function pauseAnimation(){animating=false;clearInterval(animTimer);}
+
+function stepForward(){pauseAnimation();processStep();}
+
+function finishAnimation(){
+  animating=false;
+  document.getElementById('phaseDisplay').textContent='✓ Complete!';
+  document.getElementById('computingDisplay').textContent='All-pairs shortest paths computed';
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('sidebarPhase').textContent=`Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML=buildDoneExplanation();
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function resetAnimation(){
+  pauseAnimation();
+  currentStep=0;
+  prevMatrix=null;
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('phaseDisplay').textContent='Ready — Press Play';
+  document.getElementById('computingDisplay').textContent='—';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=`<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>Find the <b>shortest path</b> between every pair of vertices in a weighted directed graph.</p>
+    <p>Input graph: <span class="dim">4 vertices</span>, edges with weights (including negative).</p>
+    <h3 style="margin-top:10px;">Key Insight: Repeated Squaring</h3>
+    <p>SLOW-APSP computes L<sup>(1)</sup>, L<sup>(2)</sup>, L<sup>(3)</sup> one by one — that's <b>n-1 matrix multiplications</b>.</p>
+    <p><b>FASTER-APSP</b> uses <span class="dim">repeated squaring</span> (like fast exponentiation):</p>
+    <span class="formula-line">L^(2^p) = L^(2^(p-1)) &otimes; L^(2^(p-1))</span>
+    <p>After <span class="dim">⌈lg(n-1)⌉</span> squarings, we have paths using up to n-1 edges.</p>
+    <p>For n=4: only <span class="dim">2 squarings</span> (vs 3 multiplications for SLOW).</p>
+    <h3 style="margin-top:10px;">Example Graph</h3>
+    <span class="formula-line">1&rarr;2 (3), 1&rarr;3 (8), 1&rarr;4 (-4), 2&rarr;4 (7), 3&rarr;2 (4), 4&rarr;1 (2), 4&rarr;3 (-5)</span>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+  clearHighlights();
+  // remove comparison table if present
+  const area=document.getElementById('matrixArea');
+  const existing=area.querySelector('.table-section:last-child');
+  if(existing && existing.querySelector('.comparison-table')) existing.remove();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent=steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if(animating){clearInterval(animTimer);animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){clearInterval(animTimer);if(currentStep>=steps.length)finishAnimation();return;}
+    processStep();
+  },getSpeed());}
+});
+
+precomputeAll();
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent=steps.length;
+</script>
+</body>
+</html>
