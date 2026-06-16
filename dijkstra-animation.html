@@ -739,14 +739,19 @@ function buildExtractExplanation(u) {
   let isSource = u === SOURCE;
   return `<div class="explain-section active">
     <h3>⬆ Extract Vertex ${VLABELS[u]} from Q</h3>
-    <p>${isSource ? 'The source vertex' : 'Vertex'} <span class="dim">${VLABELS[u]}</span> has the <b>smallest distance</b> (${dStr}) in Q. We extract it and <b>settle</b> it into S.</p>
-    <p style="margin-left:8px;">• <span class="dim">${VLABELS[u]}</span>.d = <span class="split-info">${dStr}</span></p>
+    <h4>Why This Vertex?</h4>
+    <p>${isSource ? 'The source vertex' : 'Vertex'} <span class="dim">${VLABELS[u]}</span> has the <b>smallest distance</b> (<span class="split-info">${dStr}</span>) among all vertices still in Q. <b>Dijkstra is a greedy algorithm</b> — it always settles the <b>closest</b> unsettled vertex.</p>
+    <div class="concept-box">
+      <p><span class="term">Why is this safe?</span> <span class="defn">Because all edge weights are <b>non-negative</b>. Any alternative path to ${VLABELS[u]} that goes through another unsettled vertex would have distance at least d[that vertex] + positive weight &#x2265; d[${VLABELS[u]}]. So d[${VLABELS[u]}] is truly the <b>shortest possible</b>.</span></p>
+    </div>
+    <p style="margin-left:8px;">• <span class="dim">${VLABELS[u]}</span>.d = <span class="split-info">${dStr}</span> (<b>finalized — added to S</b>)</p>
     <p style="margin-left:8px;">• <span class="dim">${VLABELS[u]}</span>.&pi; = <span class="split-info">${piStr}</span></p>
     ${!isSource && pi[u] !== null ? `<p style="margin-left:8px;">• Shortest path to ${VLABELS[u]}: ${computePath(u).map(v => VLABELS[v]).join(' → ')} = ${dStr}</p>` : ''}
-    <p>Now we examine all outgoing neighbors of <span class="dim">${VLABELS[u]}</span>:</p>
+    <h4>What Happens Next?</h4>
+    <p>Now we <b>relax all outgoing edges</b> from <span class="dim">${VLABELS[u]}</span>. For each neighbor v, we ask: <b>"Can we reach v faster by going through ${VLABELS[u]}?"</b></p>
     <p style="margin-left:8px;">Outgoing neighbors: <span class="dim">[${neighborStr}]</span></p>
     <span class="formula-line">For each v &isin; Adj[${VLABELS[u]}]: RELAX(${VLABELS[u]}, v, w) &rarr; d[v] = min(d[v], d[${VLABELS[u]}] + w)</span>
-    <p class="note">Since d[${VLABELS[u]}] = ${dStr} is finalized, any path through ${VLABELS[u]} has total weight at least ${dStr}. We check if using ${VLABELS[u]} gives shorter paths to its neighbors.</p>
+    <p class="note">This is the <b>greedy choice property</b> of Dijkstra: extracting the minimum-distance vertex from Q is always correct because any path through a different vertex would have larger total weight (all edges are non-negative).</p>
   </div>`;
 }
 
@@ -756,16 +761,21 @@ function buildRelaxExplanation(u, v, w, oldDv, newDv) {
   let duStr = distStr(dist[u]);
   return `<div class="explain-section active">
     <h3>⚡ Relax Edge (${uName} → ${vName}) — <span class="result-line">Improved!</span></h3>
-    <p>Examining neighbor <span class="dim">${vName}</span> via edge (${uName} → ${vName}) with weight <span class="dim">${w}</span>.</p>
+    <h4>Why This Edge?</h4>
+    <p>After settling <span class="dim">${uName}</span>, we examine its outgoing edge to <span class="dim">${vName}</span> (weight <span class="dim">${w}</span>). <b>Now that d[${uName}] = ${duStr} is finalized</b>, this is our chance to see if going through ${uName} gives a shorter path to ${vName}.</p>
+    <h4>What Are We Checking?</h4>
+    <p>The <b>relaxation condition</b>: is the path <span class="dim">s → ... → ${uName} → ${vName}</span> better than the current best to ${vName}?</p>
     <div class="concept-box">
-      <p><span class="term">Check:</span> <span class="defn">Is d[${vName}] &gt; d[${uName}] + w? ${oldStr} &gt; ${duStr} + ${w} = ${newStr}? <b>Yes</b>.</span></p>
+      <p><span class="term">Condition:</span> <span class="defn">Is d[${vName}] &gt; d[${uName}] + w?<br>${oldStr} &gt; ${duStr} + ${w} = ${newStr}? <b>Yes!</b></span></p>
     </div>
-    <p><b>Relaxation!</b> Found a shorter path to ${vName} via ${uName}:</p>
-    <p style="margin-left:8px;">• <span class="dim">${vName}</span>.d = ${newStr} (was ${oldStr})</p>
-    <p style="margin-left:8px;">• <span class="dim">${vName}</span>.&pi; = ${uName} (was ${pi[v] === null ? 'NIL' : VLABELS[pi[v]]})</p>
+    <p><b>Relaxation succeeds!</b> We found a shorter path to ${vName} via ${uName}:</p>
+    <p style="margin-left:8px;">• <span class="dim">${vName}</span>.d = ${newStr} (was ${oldStr}) — <span class="result-line">improved!</span></p>
+    <p style="margin-left:8px;">• <span class="dim">${vName}</span>.&pi; = ${uName} (was ${pi[v] === null ? 'NIL' : VLABELS[pi[v]]}) — predecessor updated</p>
     <span class="formula-line">d[${vName}] = min(d[${vName}], d[${uName}] + w) = min(${oldStr}, ${duStr} + ${w}) = ${newStr}</span>
-    <p>${vName} still in Q — performing <span class="split-info">DECREASE-KEY</span> to update its priority.</p>
-    <p class="note">Edge (${uName}→${vName}) is now the best known way to reach ${vName}, with path cost ${newStr}.</p>
+    <h4>Why Update the Predecessor?</h4>
+    <p>Setting <span class="split-info">&pi;[${vName}] = ${uName}</span> records that the best known path to ${vName} now goes through ${uName}. Later, when we need the actual shortest path, we can trace back through these predecessors.</p>
+    <p>Since ${vName} is still in Q, we perform a <span class="split-info">DECREASE-KEY</span> operation to update its priority (distance key) in the min-priority queue, so it can be extracted earlier.</p>
+    <p class="note">Dijkstra's correctness relies on the fact that once a vertex is settled, its distance is never updated again — non-negative weights guarantee this.</p>
   </div>`;
 }
 
@@ -774,16 +784,21 @@ function buildSkipExplanation(u, v, w, reason) {
   let oldStr = distStr(dist[v]);
   let duStr = distStr(dist[u]);
   let candStr = distStr(dist[u] + w);
-  let reasonText = reason === 'not-in-q'
-    ? `${vName} is no longer in Q (already settled in S, distance finalized)`
-    : `d[${vName}] = ${oldStr} ≤ d[${uName}] + w = ${duStr} + ${w} = ${candStr} (not an improvement)`;
+  let isSettled = reason === 'not-in-q';
+  let reasonText = isSettled
+    ? `${vName} has already been <b>settled</b> (removed from Q and added to S). Its distance d[${vName}] = ${oldStr} is <b>finalized</b> — Dijkstra never revisits settled vertices.`
+    : `d[${vName}] = ${oldStr} ≤ d[${uName}] + w = ${duStr} + ${w} = ${candStr}. The existing path to ${vName} is already <b>at least as short</b> as going through ${uName}.`;
   return `<div class="explain-section active">
     <h3>⏭ Skip Edge (${uName} → ${vName})</h3>
-    <p>Examining neighbor <span class="dim">${vName}</span> via edge (${uName} → ${vName}) with weight <span class="dim">${w}</span>.</p>
-    <p><b>No relaxation needed:</b> ${reasonText}.</p>
-    <span class="formula-line">Skip: v &notin; Q &there4; d[v] is finalized; or d[v] &le; d[u] + w</span>
-    <p>We move on to the next neighbor.</p>
-    <p class="note">Once a vertex is settled in S, its distance is optimal and Dijkstra never revisits it.</p>
+    <h4>Why Are We Checking This Edge?</h4>
+    <p>Edge (<span class="dim">${uName} → ${vName}</span>, w=${w}) is outgoing from the just-settled vertex ${uName}. We examine it to see if it improves the path to ${vName}.</p>
+    <h4>Why Skip?</h4>
+    <p><b>No relaxation needed</b> because:</p>
+    <p style="margin-left:8px;">${isSettled ? '🔒' : '➡'} ${reasonText}</p>
+    ${isSettled ? `<div class="concept-box"><p><span class="term">Key Dijkstra invariant:</span> <span class="defn">Once a vertex is added to S (settled), its distance is the true shortest path. We never need to update it again because any future path would have to go through another vertex with distance ≥ current d (due to non-negative weights).</span></p></div>`
+    : `<span class="formula-line">${duStr} + ${w} = ${candStr} ≥ ${oldStr} → No improvement</span>`}
+    <p>We skip this edge and move to the next neighbor.</p>
+    <p class="note">This skipping is what makes Dijkstra efficient — each outgoing edge is examined at most once, and only relaxed when improvement is possible.</p>
   </div>`;
 }
 
@@ -809,10 +824,14 @@ function buildDoneExplanation() {
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
     <h3>✅ Algorithm Complete!</h3>
     <p>All vertices reachable from source <span class="dim">s</span> have been settled. Shortest paths are finalized!</p>
-    <h4 style="margin-top:10px;">🔑 Why Dijkstra Works</h4>
-    <p><b>Greedy choice property:</b> When u is extracted from Q, d[u] is the true shortest distance. This holds because all edge weights are <span class="dim">non-negative</span> — any alternative path must have weight at least d[u].</p>
+    <h4 style="margin-top:10px;">🔑 Why Dijkstra Works (Proof Sketch)</h4>
+    <p><b>Greedy choice property:</b> When vertex u is extracted from Q with the minimum d[u], d[u] is the <b>true shortest distance</b> from s to u.</p>
+    <p><b>Proof:</b> Suppose there were a shorter path s → ... → u. Let x be the first vertex on this path that is not yet settled. Since all edge weights are <span class="dim">non-negative</span>, the path segment from x to u has weight ≥ 0, so the total path weight ≥ d[x] ≥ d[u] (since u was the minimum in Q). Contradiction — d[u] really is the shortest.</p>
+    <p><b>Therefore</b>, Dijkstra's greedy rule of always extracting the minimum-distance vertex from Q is <b>provably correct</b>.</p>
     <h4 style="margin-top:10px;">🗺️ Shortest Paths from s</h4>
     ${pathHtml}
+    <h4 style="margin-top:10px;">Summary of Edge Selections</h4>
+    <p>Each edge was examined exactly <b>once</b> (when its source vertex was settled). Edges to already-settled vertices were skipped (their distances were final). Edges to unsettled vertices were relaxed — about half resulted in improvements.</p>
     <h4 style="margin-top:10px;">Complexity</h4>
     <p><span class="dim">Time:</span> O(V²) with array-based Q | O(E lg V) with binary heap | O(V lg V + E) with Fibonacci heap</p>
     <p><span class="dim">Space:</span> O(V) for distance and parent arrays + O(V) for Q</p>

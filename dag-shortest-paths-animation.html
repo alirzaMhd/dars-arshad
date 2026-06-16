@@ -570,25 +570,36 @@ function buildInitExplanation() {
   return `<div class="explain-section active">
 <h3>Initial State</h3>
 <p>Source vertex <span class="dim">s</span> has <span class="result-line">d[s] = 0</span>.</p>
-<p>All other vertices have <span class="dim">d[v] = &infin;</span> (unknown).</p>
+<p>All other vertices have <span class="dim">d[v] = &infin;</span> (unknown — no path found yet).</p>
 <p>The graph has been <b>topologically sorted</b>: <span class="split-info">s &rarr; b &rarr; a &rarr; d &rarr; c &rarr; e</span></p>
 <h3 style="margin-top:10px;">How DAG Shortest Paths Works</h3>
 <p>Process vertices in <b>topological order</b>. For each vertex <span class="dim">u</span>, relax all outgoing edges <span class="dim">u &rarr; v</span>.</p>
-<p>The key is: when we process <span class="dim">u</span>, <b>all paths to u have already been evaluated</b>, so its distance is final.</p>
+<p>The key is: when we process <span class="dim">u</span>, <b>all paths to u have already been evaluated</b>, so its distance is final. No need for a priority queue (Dijkstra) or multiple passes (Bellman-Ford).</p>
 <span class="formula-line">Relax(u, v, w): if d[v] &gt; d[u] + w then d[v] = d[u] + w, &pi;[v] = u</span>
-<p class="note">Press Play or Step to begin.</p>
+<h3 style="margin-top:10px;">Why Topological Order?</h3>
+<p>In a DAG, edges only go forward in topological order. So every path from <span class="dim">s</span> to <span class="dim">u</span> consists of vertices that come <b>before</b> <span class="dim">u</span> in the order. Processing in topological order means when we reach <span class="dim">u</span>, <span class="dim">we have already considered all possible paths to u</span> and d[u] is finalized.</p>
+<p class="note">This is the only shortest-path algorithm that achieves &Theta;(V+E) — each edge is relaxed exactly once.</p>
 </div>`;
 }
 
 function buildProcessVertexExplanation(u, ti, d_u) {
   let dStr = d_u === Infinity ? '&infin;' : d_u;
   let label = VLABELS[u];
+  let outEdges = getOutEdges(u);
+  let outStr = outEdges.length > 0
+    ? outEdges.map(e => `${VLABELS[e.v]}(w=${e.w})`).join(', ')
+    : 'none (no outgoing edges)';
   return `<div class="explain-section active">
 <h3>▶ Process Vertex ${label} (topo order #${ti+1})</h3>
 <p>Current distance: <span class="result-line">d[${label}] = ${dStr}</span> — this is the <b>final shortest distance</b> to ${label}.</p>
-<p>All paths to ${label} have been considered because vertices are processed in topological order.</p>
-<p>Now relax all <b>outgoing edges</b> from <span class="dim">${label}</span> to update neighbors.</p>
-<p class="note">Topological ordering guarantees correctness without needing a priority queue or multiple passes.</p>
+<h4>Why is d[${label}] Final?</h4>
+<p>In topological order <span class="dim">all predecessors of ${label} come before it</span>. Every path from <span class="dim">s</span> to ${label} must go through vertices earlier in the order. Since we have already processed all of them and relaxed their outgoing edges, <b>every possible path to ${label} has been examined</b>. The current d[${label}] is the minimum of all candidates.</p>
+<h4>What Happens Next?</h4>
+<p>Now we relax all <b>outgoing edges</b> from <span class="dim">${label}</span> to propagate the shortest path to its neighbors:</p>
+<p style="margin-left:8px;">Outgoing edges: <span class="dim">[${outStr}]</span></p>
+<p>For each neighbor <span class="dim">v</span>, we check: <span class="formula-line">d[v] = min(d[v], d[${label}] + w(${label}, v))</span></p>
+<p>This is the <b>edge relaxation</b> step. It asks: "Can we reach v <b>faster</b> by going through ${label}?"</p>
+<p class="note">Since d[${label}] is final, this relaxation gives the true optimal distance to each neighbor reachable directly from ${label}.</p>
 </div>`;
 }
 
@@ -602,18 +613,26 @@ function buildRelaxExplanation(step) {
   let dUStr = (d_u === undefined || d_u === Infinity) ? '&infin;' : d_u;
   let computed = (oldDv === undefined || oldDv === Infinity) ? '&infin;' : oldDv;
   let candidate = (d_u === undefined || d_u === Infinity) ? '&infin;' : (d_u + w);
+  let uPred = step.parent ? step.parent[u] : null;
+  let uPath = uPred !== null ? `s → ... → ${uLabel}` : `s → ${uLabel}`;
 
   let resultHtml = improved
     ? `<p>✅ <span class="result-line">Improved!</span> d[${vLabel}] = ${oldStr} &rarr; <span class="result-line">${newStr}</span></p>
        <p>Set <span class="split-info">&pi;[${vLabel}] = ${uLabel}</span></p>`
-    : `<p>No improvement. <span class="dim">d[${vLabel}]</span> stays <span class="dim">${oldStr}</span>.</p>`;
+    : `<p>No improvement. <span class="dim">d[${vLabel}]</span> stays <span class="dim">${oldStr}</span>. The existing path to ${vLabel} is already at least as good as going through ${uLabel}.</p>`;
 
   return `<div class="explain-section active">
 <h3>🔄 Relax Edge ${uLabel} &rarr; ${vLabel} (w=${w})</h3>
-<p>Current distances: d[${uLabel}] = <span class="dim">${dUStr}</span>, d[${vLabel}] = <span class="dim">${oldStr}</span></p>
-<span class="formula-line">d[${vLabel}] = min(${oldStr}, ${dUStr} + ${w}) = min(${computed}, ${candidate}) = ${newStr}</span>
+<h4>Why This Edge?</h4>
+<p>Vertex <span class="dim">${uLabel}</span> is the current vertex being processed. Its distance <span class="result-line">d[${uLabel}] = ${dUStr}</span> is <b>final</b> (topological order guarantee). We examine edge (<span class="dim">${uLabel} &rarr; ${vLabel}</span>) because it is <b>outgoing from ${uLabel}</b> — this is our chance to propagate the shortest path from ${uLabel} to its neighbor ${vLabel}.</p>
+<h4>What Are We Checking?</h4>
+<p>We ask: <b>"Is the path ${uPath} &rarr; ${vLabel} shorter than the best known path to ${vLabel}?"</b></p>
+<span class="formula-line">Current best: d[${vLabel}] = ${oldStr}   vs   Path via ${uLabel}: d[${uLabel}] + w = ${dUStr} + ${w} = ${candidate}</span>
+<p>The formula <span class="split-info">d[v] = min(d[v], d[u] + w)</span> is called <b>relaxation</b>. It's like trying to improve a tightrope — we check if there's a tighter (shorter) way.</p>
+<h4>The Intuition</h4>
+<p>Since d[${uLabel}] = ${dUStr} is the true shortest distance to ${uLabel}, and edge (${uLabel} &rarr; ${vLabel}) has weight ${w = step.currentEdge.w}, the shortest path to ${vLabel} that goes through ${uLabel} would have total cost <span class="dim">${dUStr} + ${w} = ${candidate}</span>. If this is less than the current d[${vLabel}] = ${oldStr}, we update.</p>
 ${resultHtml}
-<p class="note">Each edge is relaxed exactly once — O(E) total for this phase.</p>
+<p class="note">Each edge is relaxed exactly once — O(E) total. This efficiency is unique to DAG shortest paths.</p>
 </div>`;
 }
 

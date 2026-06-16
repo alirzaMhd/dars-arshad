@@ -568,10 +568,13 @@ function buildInitExplanation() {
   return `<div class="explain-section active">
 <h3>Bellman-Ford Algorithm</h3>
 <p>Finds <b>single-source shortest paths</b> in a <b>weighted directed graph</b>, even with <span class="dim">negative edge weights</span>.</p>
-<h3 style="margin-top:10px;">Why Bellman-Ford</h3>
+<h3 style="margin-top:10px;">Why Bellman-Ford?</h3>
 <p>• Handles <span class="split-info">negative edge weights</span> (unlike Dijkstra)</p>
 <p>• <span class="result-line">Detects negative cycles</span> reachable from the source</p>
-<p>• Uses <b>V−1 passes</b> over all edges: each pass propagates distance information one edge further along shortest paths</p>
+<p>• Uses <b>V−1 passes</b> over all edges — more general than DAG shortest paths, faster than exhaustive search</p>
+<h3 style="margin-top:10px;">The Key Insight: Why V−1 Passes?</h3>
+<p>A <b>shortest path</b> in a graph with V vertices can have at most <span class="dim">|V|−1 edges</span> (otherwise it would repeat a vertex and be a cycle).</p>
+<p>After <b>k passes</b> of relaxing all edges, d[v] is guaranteed to be at most the weight of the <b>shortest path from s to v using ≤ k edges</b>. So after |V|−1 passes, we've considered all possible path lengths.</p>
 <h3 style="margin-top:10px;">Algorithm</h3>
 <span class="formula-line">1. INIT-SINGLE-SOURCE(G, s) — d[s]=0, d[v]=∞</span>
 <span class="formula-line">2. For i = 1 to |V|−1: for each edge (u,v): RELAX(u,v,w)</span>
@@ -592,19 +595,31 @@ function buildRelaxExplanation(u, v, w, su, sv, oldDist, candidate, updated, pas
   if (updated) {
     return `<div class="explain-section active">
 <h3>Pass ${pass}: ✓ RELAX(${uName}, ${vName}) — <span class="result-line">Improved!</span></h3>
-<p>Relaxing edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>) with weight <span class="dim">${w}</span>.</p>
+<h4>Why This Edge?</h4>
+<p>We are in <b>Pass ${pass}/${NUM_PASSES}</b>. In each pass, we iterate over <b>all edges</b> in the graph and try to relax them. Edge (<span class="dim">${uName} → ${vName}</span>, w=${w}) is the current edge in this pass.</p>
+<h4>The Goal of Pass ${pass}</h4>
+<p>After <b>k passes</b>, every vertex knows the shortest path from s using at most <b>k edges</b>. In Pass ${pass}, we're propagating paths of length up to <b>${pass} edges</b>.</p>
+<h4>What's Happening Now?</h4>
+<p>We relax edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>) with weight <span class="dim">${w}</span>.</p>
 <span class="formula-line">d[${vName}] = min(d[${vName}], d[${uName}] + w) = min(${oldStr}, ${suStr} + ${w}) = ${candStr}</span>
-<p>New distance to <span class="dim">${vName}</span>: <span class="result-line">d[${vName}] = ${candStr}</span></p>
-<p>Parent of <span class="dim">${vName}</span> set to <span class="split-info">π[${vName}] = ${uName}</span></p>
-<p class="note">Found a shorter path from source to ${vName} via ${uName}.</p>
+<p><b>Improvement found!</b> The current d[${uName}] = ${suStr} is finite, so the path <span class="dim">s → ... → ${uName} → ${vName}</span> gives a shorter way to reach ${vName}.</p>
+<p style="margin-left:8px;">• New distance to <span class="dim">${vName}</span>: <span class="result-line">d[${vName}] = ${candStr}</span> (was ${oldStr})</p>
+<p style="margin-left:8px;">• Predecessor set to <span class="split-info">π[${vName}] = ${uName}</span></p>
+<p class="note">Each pass propagates distance information one edge further. If the shortest path to ${vName} has ${pass} edges, this pass will find it.</p>
 </div>`;
   } else {
+    let reason = (su === Infinity)
+      ? `d[${uName}] = ∞ — we haven't found a path to ${uName} yet, so we can't improve paths through it.`
+      : `d[${vName}] = ${oldStr} ≤ d[${uName}] + w = ${suStr} + ${w} = ${candStr}. The existing path to ${vName} is already at least as good.`;
     return `<div class="explain-section active">
 <h3>Pass ${pass}: RELAX(${uName}, ${vName}) — No Improvement</h3>
-<p>Relaxing edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>) with weight <span class="dim">${w}</span>.</p>
-<span class="formula-line">d[${vName}] = min(d[${vName}], d[${uName}] + w) = min(${oldStr}, ${suStr} + ${w}) = ${svStr}</span>
-<p>Current distance <span class="result-line">d[${vName}] = ${svStr}</span> is already optimal.</p>
-<p class="note">The existing shortest path to ${vName} is at least as good as going through ${uName}.</p>
+<h4>Why This Edge?</h4>
+<p>Edge (<span class="dim">${uName} → ${vName}</span>, w=${w}) is the current edge being processed in Pass ${pass}. We must check <b>every edge</b> in every pass to ensure completeness.</p>
+<h4>Why No Improvement?</h4>
+<p>${reason}</p>
+<span class="formula-line">d[${vName}] = min(${oldStr}, ${suStr} + ${w}) = ${svStr} → unchanged</span>
+<p>No update needed. This is normal — not every edge will improve distances in every pass.</p>
+<p class="note">Even "no improvement" steps are meaningful: they confirm that the current distances are already optimal for paths with ≤ ${pass} edges. In later passes, this edge might still improve if d[${uName}] decreases.</p>
 </div>`;
   }
 }
@@ -616,16 +631,27 @@ function buildCheckExplanation(u, v, w, du, dv, candidate, canImprove) {
   if (canImprove) {
     return `<div class="explain-section active" style="border-left-color:#ff6600;">
 <h3>⚠ Negative Cycle Check — <span style="color:#ff6600;">Can Still Relax!</span></h3>
-<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>): <span class="formula-line" style="display:inline;">d[${vName}] = ${dvStr} &gt; d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span></p>
-<p>This edge can <b>still be relaxed</b> after |V|−1 passes → <span class="split-info">negative cycle detected!</span></p>
-<p>Algorithm would return <span class="dim">FALSE</span>.</p>
+<h4>Why This Check?</h4>
+<p>After completing |V|−1 = ${NUM_PASSES} passes over all edges, we should have found all shortest paths. If an edge <b>can still be relaxed</b>, it means there is a <b>negative cycle</b> reachable from s that can decrease distances indefinitely.</p>
+<h4>What's Happening?</h4>
+<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>, w=${w}):</p>
+<span class="formula-line">d[${vName}] = ${dvStr} &gt; d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span>
+<p>This is <span style="color:#ff6600;font-weight:bold;">impossible</span> in a graph with no negative cycles! After ${NUM_PASSES} passes, all distances should be final.</p>
+<p style="margin-left:8px;">• <b>Conclusion:</b> <span class="split-info">Negative cycle detected!</span></p>
+<p style="margin-left:8px;">• Algorithm returns <span class="dim">FALSE</span> — no valid shortest paths exist.</p>
+<p class="note">A negative cycle allows infinitely short paths (we can loop around it forever to make the cost arbitrarily low). Shortest paths are undefined in this case.</p>
 </div>`;
   } else {
     return `<div class="explain-section active">
 <h3>✓ Negative Cycle Check — Stable</h3>
-<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>): <span class="formula-line" style="display:inline;">d[${vName}] = ${dvStr} ≤ d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span></p>
-<p>No further improvement possible. Edge is <span class="result-line">stable</span>.</p>
-<p class="note">Since no edge can be relaxed after |V|−1 passes, there is no negative cycle.</p>
+<h4>Why This Check?</h4>
+<p>After ${NUM_PASSES} complete passes, we verify that <b>no edge can be relaxed further</b>. This confirms there is no negative cycle.</p>
+<h4>What's Happening?</h4>
+<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>, w=${w}):</p>
+<span class="formula-line">d[${vName}] = ${dvStr} ≤ d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span>
+<p>This edge is <b>stable</b> — the relaxation condition fails, meaning d[${vName}] is already as short as it can be via ${uName}.</p>
+<p style="margin-left:8px;">• <b>Conclusion:</b> <span class="result-line">No negative cycle involving this edge.</span></p>
+<p class="note">If ALL edges are stable after |V|−1 passes, the shortest paths are valid and the algorithm returns TRUE. This edge-by-edge check is O(E) and proves global correctness.</p>
 </div>`;
   }
 }
@@ -648,14 +674,19 @@ function buildCompleteExplanation() {
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
 <h3>✅ Algorithm Complete!</h3>
 <p><span class="result-line">No negative cycle detected.</span> All shortest paths are correct and stable.</p>
-<h3 style="margin-top:10px;">How Bellman-Ford Works</h3>
-<p>After <b>k passes</b>, d[v] is at most the weight of the <b>shortest path from s to v using ≤ k edges</b>. Since the shortest path in a graph with <span class="dim">|V|</span> vertices has at most <b>|V|−1</b> edges, <span class="dim">|V|−1</span> passes suffice.</p>
+<h3 style="margin-top:10px;">How Bellman-Ford Works — The Big Picture</h3>
+<p><b>Why V−1 passes?</b> The shortest path from s to any vertex in a graph with V vertices can contain at most <span class="dim">V−1 edges</span> — any path with V or more edges must repeat a vertex, creating a cycle. Removing cycles can only make paths shorter (assuming no negative cycles).</p>
+<p><b>How information propagates:</b> In each pass, the algorithm relaxes <b>all edges</b>. Pass 1 finds shortest paths using ≤1 edge, Pass 2 finds those using ≤2 edges, and so on. Like a wave spreading from the source, distance information propagates <b>one edge further</b> with each pass.</p>
+<p><b>Why the check phase?</b> After V−1 passes, if any edge can still be relaxed, there must be a <b>negative cycle</b> — a cycle where the sum of edge weights is negative. Such cycles allow infinitely short paths (loop forever to decrease cost), making shortest paths undefined.</p>
 <h3 style="margin-top:10px;">Shortest Paths from Source s</h3>
 ${pathHtml}
+<h3 style="margin-top:10px;">Comparison to Other Algorithms</h3>
+<p><span class="dim">Vs Dijkstra:</span> Bellman-Ford is slower (O(VE) vs O((V+E)lg V)) but handles negative edges and detects negative cycles.</p>
+<p><span class="dim">Vs DAG Shortest Paths:</span> DAG shortest paths is faster (&Theta;(V+E)) but requires a DAG. Bellman-Ford works on any graph.</p>
 <h3 style="margin-top:10px;">Complexity</h3>
 <p><span class="dim">Time:</span> O(VE) = O(5·8) = 40 relaxations + O(E) check = O(VE)</p>
 <p><span class="dim">Space:</span> O(V) for distance and parent arrays</p>
-<p class="note">Bellman-Ford is slower than Dijkstra (O((V+E) log V)) but handles negative edge weights and detects negative cycles.</p>
+<p class="note">Bellman-Ford is more general than Dijkstra and DAG shortest paths, but the &Theta;(VE) cost makes it slower for large graphs.</p>
 </div>`;
 }
 
