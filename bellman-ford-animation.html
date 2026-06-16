@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bellman-Ford Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.canvas-wrapper {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.canvas-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 6px 0 10px;
+  font-size: 0.78em;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch {
+  width: 14px; height: 14px; border-radius: 3px; border: 1px solid #444;
+}
+.legend-unvisited { background: #0d0d1a; border-color: #555; }
+.legend-active { background: #1a0a00; border-color: #ff6600; }
+.legend-updated { background: #002a1a; border-color: #00ff88; }
+.legend-target { background: #1a1a00; border-color: #ffff00; }
+.legend-edge-active { background: transparent; border-color: #ff6600; }
+.legend-edge-done { background: transparent; border-color: #00ff88; }
+.legend-edge-check { background: transparent; border-color: #00ccff; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.relax-bar {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+}
+.relax-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: all 0.4s;
+}
+.relax-item.relaxing {
+  background: #1a1a00;
+  color: #ffff00;
+  border: 1px solid #ffff00;
+}
+.relax-item.updated {
+  background: #002a1a;
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+.relax-item.nochange {
+  background: #111128;
+  color: #aaa;
+  border: 1px solid #444;
+}
+.relax-item.stable {
+  background: #0a1a12;
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+.relax-item.danger {
+  background: #1a0000;
+  color: #ff6600;
+  border: 1px solid #ff6600;
+}
+.relax-arrow { color: #555; font-size: 1.2em; }
+.relax-formula {
+  color: #00ccff;
+  font-size: 0.85em;
+}
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper { overflow-x: auto; padding: 5px; }
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  padding: 8px 12px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.82em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.current-vertex {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  font-weight: bold;
+}
+td.relaxing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  font-weight: bold;
+}
+td.updated {
+  background: #002a1a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  font-weight: bold;
+}
+td.finalized {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+  border-color: #00ff8855 !important;
+}
+td.inf { color: #555; font-style: italic; }
+td.filled-pass {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+  border-color: #00ff8855 !important;
+}
+td.current-pass {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 10px #ff660044;
+  font-weight: bold;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.result-section .big-result {
+  font-size: 1.4em;
+  color: #00ff88;
+  font-weight: bold;
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.path-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.path-display .pd-box {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: bold;
+  color: #00ff88;
+  background: #0a1a12;
+}
+.path-display .pd-arrow {
+  color: #00ff8866;
+  font-size: 1.2em;
+  margin: 0 5px;
+}
+.path-display .pd-cost {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 0 8px;
+}
+</style>
+</head>
+<body>
+
+<h1>BELLMAN-FORD ALGORITHM</h1>
+<p class="subtitle">Graph Algorithms — Single-Source Shortest Paths with Negative Edge Weights</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="canvas-wrapper">
+      <canvas id="graphCanvas" width="700" height="420"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch legend-unvisited"></span> ∞ (unreached)</span>
+      <span class="legend-item"><span class="legend-swatch legend-active"></span> Source</span>
+      <span class="legend-item"><span class="legend-swatch legend-target"></span> Target</span>
+      <span class="legend-item"><span class="legend-swatch legend-updated"></span> Updated</span>
+      <span style="color:#333;">|</span>
+      <span class="legend-item"><span class="legend-swatch legend-edge-active"></span> Relaxing</span>
+      <span class="legend-item"><span class="legend-swatch legend-edge-done"></span> Improved</span>
+      <span class="legend-item"><span class="legend-swatch legend-edge-check"></span> Checked</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Pass:</span> <span class="value" id="passDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Edge:</span> <span class="value" id="edgeDisplay">—</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Dist:</span> <span class="value" id="distDisplay">—</span>
+    </div>
+
+    <div class="relax-bar" id="relaxBar">
+      <span style="color:#888;">Relax status: —</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Current Distances &amp; Parents</div>
+      <div class="table-wrapper">
+        <table id="distTable">
+          <thead><tr><th>Vertex</th><th>d[v]</th><th>π[v]</th></tr></thead>
+          <tbody id="distBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Pass History — d[v] After Each Pass</div>
+      <div class="table-wrapper">
+        <table id="passHistory">
+          <thead>
+            <tr><th>Vertex</th><th>Init</th><th>Pass 1</th><th>Pass 2</th><th>Pass 3</th><th>Pass 4</th></tr>
+          </thead>
+          <tbody id="passBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ Bellman-Ford Complete</h2>
+      <div id="resultDisplay"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Bellman-Ford Algorithm</h3>
+        <p>Finds <b>single-source shortest paths</b> in a <b>weighted directed graph</b>, even with <span class="dim">negative edge weights</span>.</p>
+        <h3 style="margin-top:10px;">Why Bellman-Ford</h3>
+        <p>• Handles <span class="split-info">negative edge weights</span> (unlike Dijkstra)</p>
+        <p>• <span class="result-line">Detects negative cycles</span> reachable from the source</p>
+        <p>• Uses <b>V−1 passes</b> over all edges: each pass propagates distance information one edge further along shortest paths</p>
+        <h3 style="margin-top:10px;">Algorithm</h3>
+        <span class="formula-line">1. INIT-SINGLE-SOURCE(G, s) — d[s]=0, d[v]=∞</span>
+        <span class="formula-line">2. For i = 1 to |V|−1: for each edge (u,v): RELAX(u,v,w)</span>
+        <span class="formula-line">3. For each edge (u,v): if v.d > u.d + w(u,v): return FALSE</span>
+        <span class="formula-line">4. Return TRUE (no negative cycle)</span>
+        <h3 style="margin-top:10px;">This Graph</h3>
+        <p>5 vertices {<span class="dim">s, a, b, c, d</span>}, source = <span class="dim">s (0)</span>, 8 weighted edges.</p>
+        <p>4 passes over all edges (|V|−1 = 4).</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const vertexNames = ['s', 'a', 'b', 'c', 'd'];
+const V = 5;
+const SOURCE = 0;
+const NUM_PASSES = 4;
+
+const nodePositions = [
+  {x: 350, y: 50},   // s
+  {x: 100, y: 200},  // a
+  {x: 600, y: 200},  // b
+  {x: 250, y: 340},  // c
+  {x: 500, y: 340}   // d
+];
+const nodeRadius = 22;
+
+const edgeData = [
+  {u:0, v:1, w:1},   // 0: s→a
+  {u:0, v:2, w:8},   // 1: s→b
+  {u:0, v:3, w:10},  // 2: s→c
+  {u:1, v:2, w:1},   // 3: a→b
+  {u:1, v:4, w:5},   // 4: a→d
+  {u:2, v:3, w:1},   // 5: b→c
+  {u:2, v:4, w:3},   // 6: b→d
+  {u:3, v:4, w:1}    // 7: c→d
+];
+const E = edgeData.length;
+
+const algEdgeOrder = [2, 7, 0, 1, 3, 5, 6, 4];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function precomputeAll() {
+  let dist = [0, Infinity, Infinity, Infinity, Infinity];
+  let parent = [null, null, null, null, null];
+  for (let pass = 0; pass < NUM_PASSES; pass++) {
+    for (let ei = 0; ei < E; ei++) {
+      let eidx = algEdgeOrder[ei];
+      let e = edgeData[eidx];
+      if (dist[e.u] + e.w < dist[e.v]) {
+        dist[e.v] = dist[e.u] + e.w;
+        parent[e.v] = e.u;
+      }
+    }
+  }
+  let hasNegativeCycle = false;
+  for (let ei = 0; ei < E; ei++) {
+    let e = edgeData[ei];
+    if (dist[e.u] + e.w < dist[e.v]) { hasNegativeCycle = true; break; }
+  }
+  return { dist, parent, hasNegativeCycle };
+}
+
+const precomputed = precomputeAll();
+
+function distStr(d) { return d === Infinity ? '∞' : d; }
+
+function edgeWeight(u, v) {
+  for (let e of edgeData) { if (e.u === u && e.v === v) return e.w; }
+  return Infinity;
+}
+
+function computePath(target) {
+  let path = [];
+  let v = target;
+  while (v !== null) { path.unshift(v); v = precomputed.parent[v]; }
+  return path;
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+<h3>Bellman-Ford Algorithm</h3>
+<p>Finds <b>single-source shortest paths</b> in a <b>weighted directed graph</b>, even with <span class="dim">negative edge weights</span>.</p>
+<h3 style="margin-top:10px;">Why Bellman-Ford</h3>
+<p>• Handles <span class="split-info">negative edge weights</span> (unlike Dijkstra)</p>
+<p>• <span class="result-line">Detects negative cycles</span> reachable from the source</p>
+<p>• Uses <b>V−1 passes</b> over all edges: each pass propagates distance information one edge further along shortest paths</p>
+<h3 style="margin-top:10px;">Algorithm</h3>
+<span class="formula-line">1. INIT-SINGLE-SOURCE(G, s) — d[s]=0, d[v]=∞</span>
+<span class="formula-line">2. For i = 1 to |V|−1: for each edge (u,v): RELAX(u,v,w)</span>
+<span class="formula-line">3. For each edge (u,v): if v.d > u.d + w(u,v): return FALSE</span>
+<span class="formula-line">4. Return TRUE (no negative cycle)</span>
+<h3 style="margin-top:10px;">This Graph</h3>
+<p>5 vertices {<span class="dim">s, a, b, c, d</span>}, source = <span class="dim">s (0)</span>, 8 weighted edges.</p>
+<p>4 passes over all edges (|V|−1 = 4).</p>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildRelaxExplanation(u, v, w, su, sv, oldDist, candidate, updated, pass) {
+  let uName = vertexNames[u], vName = vertexNames[v];
+  let suStr = distStr(su), svStr = distStr(sv);
+  let oldStr = distStr(oldDist);
+  let candStr = distStr(candidate);
+  if (updated) {
+    return `<div class="explain-section active">
+<h3>Pass ${pass}: ✓ RELAX(${uName}, ${vName}) — <span class="result-line">Improved!</span></h3>
+<p>Relaxing edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>) with weight <span class="dim">${w}</span>.</p>
+<span class="formula-line">d[${vName}] = min(d[${vName}], d[${uName}] + w) = min(${oldStr}, ${suStr} + ${w}) = ${candStr}</span>
+<p>New distance to <span class="dim">${vName}</span>: <span class="result-line">d[${vName}] = ${candStr}</span></p>
+<p>Parent of <span class="dim">${vName}</span> set to <span class="split-info">π[${vName}] = ${uName}</span></p>
+<p class="note">Found a shorter path from source to ${vName} via ${uName}.</p>
+</div>`;
+  } else {
+    return `<div class="explain-section active">
+<h3>Pass ${pass}: RELAX(${uName}, ${vName}) — No Improvement</h3>
+<p>Relaxing edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>) with weight <span class="dim">${w}</span>.</p>
+<span class="formula-line">d[${vName}] = min(d[${vName}], d[${uName}] + w) = min(${oldStr}, ${suStr} + ${w}) = ${svStr}</span>
+<p>Current distance <span class="result-line">d[${vName}] = ${svStr}</span> is already optimal.</p>
+<p class="note">The existing shortest path to ${vName} is at least as good as going through ${uName}.</p>
+</div>`;
+  }
+}
+
+function buildCheckExplanation(u, v, w, du, dv, candidate, canImprove) {
+  let uName = vertexNames[u], vName = vertexNames[v];
+  let duStr = distStr(du), dvStr = distStr(dv);
+  let candStr = distStr(candidate);
+  if (canImprove) {
+    return `<div class="explain-section active" style="border-left-color:#ff6600;">
+<h3>⚠ Negative Cycle Check — <span style="color:#ff6600;">Can Still Relax!</span></h3>
+<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>): <span class="formula-line" style="display:inline;">d[${vName}] = ${dvStr} &gt; d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span></p>
+<p>This edge can <b>still be relaxed</b> after |V|−1 passes → <span class="split-info">negative cycle detected!</span></p>
+<p>Algorithm would return <span class="dim">FALSE</span>.</p>
+</div>`;
+  } else {
+    return `<div class="explain-section active">
+<h3>✓ Negative Cycle Check — Stable</h3>
+<p>Edge (<span class="dim">${uName}</span> → <span class="dim">${vName}</span>): <span class="formula-line" style="display:inline;">d[${vName}] = ${dvStr} ≤ d[${uName}] + w = ${duStr} + ${w} = ${candStr}</span></p>
+<p>No further improvement possible. Edge is <span class="result-line">stable</span>.</p>
+<p class="note">Since no edge can be relaxed after |V|−1 passes, there is no negative cycle.</p>
+</div>`;
+  }
+}
+
+function buildCompleteExplanation() {
+  let pathHtml = '';
+  for (let target = 1; target < V; target++) {
+    let path = computePath(target);
+    let cost = precomputed.dist[target];
+    let pStr = path.map((v, i) => {
+      let seg = vertexNames[v];
+      if (i < path.length - 1) {
+        let w = edgeWeight(path[i], path[i+1]);
+        seg += `<span style="color:#ffcc00;font-size:0.8em;">(${w})</span>`;
+      }
+      return seg;
+    }).join(' <span style="color:#00ff8866;font-size:1.1em;">→</span> ');
+    pathHtml += `<p style="margin:6px 0;"><span class="dim">s → ${vertexNames[target]}:</span> ${pStr} = <span class="result-line">${cost}</span></p>`;
+  }
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p><span class="result-line">No negative cycle detected.</span> All shortest paths are correct and stable.</p>
+<h3 style="margin-top:10px;">How Bellman-Ford Works</h3>
+<p>After <b>k passes</b>, d[v] is at most the weight of the <b>shortest path from s to v using ≤ k edges</b>. Since the shortest path in a graph with <span class="dim">|V|</span> vertices has at most <b>|V|−1</b> edges, <span class="dim">|V|−1</span> passes suffice.</p>
+<h3 style="margin-top:10px;">Shortest Paths from Source s</h3>
+${pathHtml}
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(VE) = O(5·8) = 40 relaxations + O(E) check = O(VE)</p>
+<p><span class="dim">Space:</span> O(V) for distance and parent arrays</p>
+<p class="note">Bellman-Ford is slower than Dijkstra (O((V+E) log V)) but handles negative edge weights and detects negative cycles.</p>
+</div>`;
+}
+
+function buildSteps() {
+  steps = [];
+  let dist = [0, Infinity, Infinity, Infinity, Infinity];
+  let parent = [null, null, null, null, null];
+
+  steps.push({
+    type: 'init',
+    pass: 0, edgeIdx: -1,
+    u: -1, v: -1, w: 0,
+    oldDist: Infinity, newDist: Infinity, candidate: Infinity,
+    updated: false,
+    dist: [...dist], parent: [...parent],
+    phase: 'INIT-SINGLE-SOURCE: d[s]=0, all others ∞'
+  });
+
+  for (let pass = 1; pass <= NUM_PASSES; pass++) {
+    for (let ei = 0; ei < E; ei++) {
+      let eidx = algEdgeOrder[ei];
+      let e = edgeData[eidx];
+      let u = e.u, v = e.v, w = e.w;
+      let oldDist = dist[v];
+      let candidate = dist[u] === Infinity ? Infinity : dist[u] + w;
+      let updated = candidate < dist[v];
+
+      if (updated) {
+        dist[v] = candidate;
+        parent[v] = u;
+      }
+
+      steps.push({
+        type: 'relax',
+        pass: pass, edgeIdx: eidx,
+        u: u, v: v, w: w,
+        oldDist: oldDist, newDist: dist[v], candidate: candidate,
+        updated: updated,
+        dist: [...dist], parent: [...parent],
+        isLastInPass: (ei === E - 1),
+        phase: `Pass ${pass}: RELAX(${vertexNames[u]},${vertexNames[v]}) = ${w}`
+      });
+    }
+  }
+
+  for (let ei = 0; ei < E; ei++) {
+    let eidx = algEdgeOrder[ei];
+    let e = edgeData[eidx];
+    let u = e.u, v = e.v, w = e.w;
+    let candidate = dist[u] === Infinity ? Infinity : dist[u] + w;
+    let canImprove = candidate < dist[v];
+
+    steps.push({
+      type: 'check',
+      pass: NUM_PASSES + 1, edgeIdx: eidx,
+      u: u, v: v, w: w,
+      oldDist: dist[v], newDist: dist[v], candidate: candidate,
+      canImprove: canImprove,
+      dist: [...dist], parent: [...parent],
+      isLastCheck: (ei === E - 1),
+      phase: `Check: ${vertexNames[u]}→${vertexNames[v]} (w=${w})`
+    });
+  }
+
+  steps.push({
+    type: 'done',
+    pass: NUM_PASSES + 1, edgeIdx: -1,
+    u: -1, v: -1, w: 0,
+    oldDist: Infinity, newDist: Infinity, candidate: Infinity,
+    updated: false,
+    dist: [...dist], parent: [...parent],
+    phase: '✓ Complete! — No negative cycle'
+  });
+}
+
+function drawArrow(ctx, fromX, fromY, toX, toY, colorVal, lineWidth, glowColor) {
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  let dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) return;
+  let nx = dx / dist;
+  let ny = dy / dist;
+  let startX = fromX + nx * (nodeRadius + 2);
+  let startY = fromY + ny * (nodeRadius + 2);
+  let endX = toX - nx * (nodeRadius + 4);
+  let endY = toY - ny * (nodeRadius + 4);
+
+  if (glowColor) {
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 16;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.strokeStyle = colorVal;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  let arrLen = 12;
+  let arrW = 6;
+  let ax = endX - nx * arrLen;
+  let ay = endY - ny * arrLen;
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(ax - ny * arrW * 0.5, ay + nx * arrW * 0.5);
+  ctx.lineTo(ax + ny * arrW * 0.5, ay - nx * arrW * 0.5);
+  ctx.closePath();
+  if (glowColor) {
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 12;
+  }
+  ctx.fillStyle = colorVal;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawEdgeLabel(ctx, fromX, fromY, toX, toY, label, colorVal) {
+  let mx = (fromX + toX) / 2;
+  let my = (fromY + toY) / 2;
+  let dx = toX - fromX;
+  let dy = toY - fromY;
+  let d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 1) return;
+  let nx = -dy / d;
+  let ny = dx / d;
+  let ox = nx * 16;
+  let oy = ny * 16;
+  ctx.fillStyle = colorVal || '#888';
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, mx + ox, my + oy);
+}
+
+function drawGraph(step) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let d = step.dist || [];
+  let curEdgeIdx = step.edgeIdx;
+  let stepType = step.type;
+
+  let relaxedEdges = {};
+  let checkEdges = {};
+  let improvedEdges = {};
+  for (let si = 0; si < steps.length && steps[si] !== step; si++) {
+    let s = steps[si];
+    if (s.type === 'relax' && s.updated) {
+      improvedEdges[s.edgeIdx] = true;
+    }
+    if (s.type === 'relax') {
+      relaxedEdges[s.edgeIdx] = true;
+    }
+    if (s.type === 'check') {
+      checkEdges[s.edgeIdx] = true;
+    }
+  }
+
+  for (let ei = 0; ei < E; ei++) {
+    let e = edgeData[ei];
+    let p1 = nodePositions[e.u];
+    let p2 = nodePositions[e.v];
+    let isActive = (ei === curEdgeIdx && (stepType === 'relax' || stepType === 'check'));
+    let isImproved = improvedEdges[ei];
+    let isRelaxed = relaxedEdges[ei] && !isImproved;
+    let isChecked = checkEdges[ei] && stepType === 'check';
+
+    let finalColor, lw, glow = null;
+    if (isActive && stepType === 'relax' && step.updated) {
+      finalColor = '#00ff88';
+      lw = 4;
+      glow = '#00ff88';
+    } else if (isActive && stepType === 'relax') {
+      finalColor = '#ff6600';
+      lw = 3.5;
+      glow = '#ff6600';
+    } else if (isActive && stepType === 'check') {
+      finalColor = step.canImprove ? '#ff6600' : '#00ccff';
+      lw = 3.5;
+      glow = step.canImprove ? '#ff6600' : '#00ccff';
+    } else if (isImproved) {
+      finalColor = '#00ff88';
+      lw = 2.5;
+    } else if (isChecked) {
+      finalColor = '#00ccff66';
+      lw = 2;
+    } else if (isRelaxed) {
+      finalColor = '#00ff8866';
+      lw = 2;
+    } else {
+      finalColor = '#444';
+      lw = 1.5;
+    }
+
+    drawArrow(ctx, p1.x, p1.y, p2.x, p2.y, finalColor, lw, glow);
+    let labelColor = isActive ? '#ffff00' : (isImproved ? '#00ff88' : (isRelaxed ? '#00ff88' : (isChecked ? '#00ccff' : '#666')));
+    drawEdgeLabel(ctx, p1.x, p1.y, p2.x, p2.y, e.w.toString(), labelColor);
+  }
+
+  let processedVertices = {};
+  let updatedVertices = {};
+  for (let si = 0; si < steps.length && steps[si] !== step; si++) {
+    let s = steps[si];
+    if (s.type === 'relax' && s.updated) {
+      updatedVertices[s.v] = true;
+    }
+    if (s.type === 'relax') {
+      processedVertices[s.u] = true;
+      processedVertices[s.v] = true;
+    }
+  }
+
+  for (let vi = 0; vi < V; vi++) {
+    let pos = nodePositions[vi];
+    let dv = d[vi];
+    let isSource = (vi === SOURCE);
+    let isActiveSrc = (vi === step.u && (stepType === 'relax' || stepType === 'check'));
+    let isActiveTgt = (vi === step.v && (stepType === 'relax' || stepType === 'check'));
+    let isUpdating = isActiveTgt && stepType === 'relax' && step.updated;
+    let isUpdated = updatedVertices[vi];
+
+    let fillColor, strokeColor, textColor, distColor, glow = null;
+    let lw = 2;
+
+    if (isActiveSrc && stepType === 'relax') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      distColor = '#ffcc00';
+      lw = 3.5;
+      glow = '#ff660044';
+    } else if (isActiveTgt && isUpdating) {
+      fillColor = '#002a1a';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      distColor = '#00ff88';
+      lw = 3.5;
+      glow = '#00ff8844';
+    } else if (isActiveTgt && stepType === 'relax') {
+      fillColor = '#1a1a00';
+      strokeColor = '#ffff00';
+      textColor = '#ffff00';
+      distColor = '#ffff00';
+      lw = 3.5;
+      glow = '#ffff0044';
+    } else if (isActiveTgt && stepType === 'check') {
+      fillColor = '#1a0030';
+      strokeColor = '#00ccff';
+      textColor = '#00ccff';
+      distColor = '#00ccff';
+      lw = 3.5;
+      glow = '#00ccff44';
+    } else if (isActiveSrc && stepType === 'check') {
+      fillColor = '#1a0a00';
+      strokeColor = '#ff6600';
+      textColor = '#ff6600';
+      distColor = '#ffcc00';
+      lw = 3.5;
+      glow = '#ff660044';
+    } else if (stepType === 'done' || stepType === 'check') {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      distColor = '#00ff88';
+    } else if (isUpdated) {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      distColor = '#00ff88';
+    } else if (isSource && dv === 0) {
+      fillColor = '#0a1a12';
+      strokeColor = '#00ff88';
+      textColor = '#00ff88';
+      distColor = '#00ff88';
+    } else {
+      fillColor = '#0d0d1a';
+      strokeColor = '#555';
+      textColor = '#888';
+      distColor = '#555';
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = lw;
+    ctx.stroke();
+
+    if (glow) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, nodeRadius + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = glow;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 16px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(vertexNames[vi], pos.x, pos.y - 6);
+
+    ctx.font = '10px Courier New';
+    ctx.textBaseline = 'top';
+    let dStr = dv === Infinity ? '∞' : dv;
+    ctx.fillStyle = distColor;
+    ctx.fillText('d=' + dStr, pos.x, pos.y + nodeRadius - 2);
+  }
+
+  if (stepType === 'init') {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('All distances ∞ except source s (d=0). Press Play.', 10, 15);
+  }
+}
+
+function initTables() {
+  let distBody = document.getElementById('distBody');
+  let html = '';
+  for (let vi = 0; vi < V; vi++) {
+    let dStr = vi === SOURCE ? '0' : '<span class="inf">∞</span>';
+    let pStr = '<span class="inf">—</span>';
+    html += `<tr><td>${vertexNames[vi]}</td><td>${dStr}</td><td>${pStr}</td></tr>`;
+  }
+  distBody.innerHTML = html;
+
+  let passBody = document.getElementById('passBody');
+  html = '';
+  for (let vi = 0; vi < V; vi++) {
+    html += '<tr>';
+    html += `<th>${vertexNames[vi]}</th>`;
+    for (let p = 0; p <= NUM_PASSES; p++) {
+      if (p === 0) {
+        let val = vi === SOURCE ? '0' : '<span class="inf">∞</span>';
+        html += `<td class="filled-pass">${val}</td>`;
+      } else {
+        html += `<td id="ph_${vi}_${p}"><span class="inf">—</span></td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  passBody.innerHTML = html;
+}
+
+function renderDistTable(step) {
+  let tbody = document.getElementById('distBody');
+  let d = step.dist || [];
+  let p = step.parent || [];
+  let curU = step.u;
+  let curV = step.v;
+  let isRelax = (step.type === 'relax');
+  let isCheck = (step.type === 'check');
+  let isDone = (step.type === 'done');
+
+  let updatesThisStep = {};
+  if ((isRelax || isCheck) && curV >= 0) {
+    updatesThisStep[curV] = step.updated ? 'updated' : (isCheck ? (step.canImprove ? 'relaxing' : 'updated') : 'relaxing');
+  }
+
+  let html = '';
+  for (let vi = 0; vi < V; vi++) {
+    let dv = d[vi];
+    let pv = p[vi];
+    let dStr = dv === Infinity ? '<span class="inf">∞</span>' : dv;
+    let pStr = (pv !== null) ? vertexNames[pv] : '<span class="inf">—</span>';
+
+    let rowClass = '';
+    if (isDone) {
+      rowClass = ' class="finalized"';
+    } else if (updatesThisStep[vi] === 'updated') {
+      rowClass = ' class="updated"';
+    } else if (updatesThisStep[vi] === 'relaxing') {
+      rowClass = ' class="relaxing"';
+    } else if (vi === curU && (isRelax || isCheck)) {
+      rowClass = ' class="current-vertex"';
+    }
+
+    html += `<tr${rowClass}><td>${vertexNames[vi]}</td><td>${dStr}</td><td>${pStr}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function renderPassHistory(step) {
+  let d = step.dist || [];
+
+  if (step.type === 'relax' && step.isLastInPass) {
+    let pass = step.pass;
+    for (let vi = 0; vi < V; vi++) {
+      let cell = document.getElementById(`ph_${vi}_${pass}`);
+      if (cell) {
+        let val = d[vi] === Infinity ? '<span class="inf">∞</span>' : d[vi];
+        cell.innerHTML = val;
+        cell.className = 'filled-pass';
+      }
+    }
+  }
+
+  if (step.type === 'done') {
+    for (let vi = 0; vi < V; vi++) {
+      for (let p = 1; p <= NUM_PASSES; p++) {
+        let cell = document.getElementById(`ph_${vi}_${p}`);
+        if (cell && !cell.className.includes('filled-pass')) {
+          let val = d[vi] === Infinity ? '<span class="inf">∞</span>' : d[vi];
+          cell.innerHTML = val;
+          cell.className = 'filled-pass';
+        }
+      }
+    }
+  }
+}
+
+function updateInfo(step) {
+  let phase = step.phase;
+  if (step.type === 'init') phase = 'Initialized';
+  else if (step.type === 'done') phase = '✓ Complete!';
+  else if (step.type === 'check' && step.pass === NUM_PASSES + 1) phase = 'Check Phase';
+  else if (step.type === 'relax') phase = `Pass ${step.pass} of ${NUM_PASSES}`;
+  document.getElementById('phaseDisplay').textContent = phase;
+
+  document.getElementById('passDisplay').textContent =
+    step.pass >= 1 && step.pass <= NUM_PASSES ? `Pass ${step.pass}` :
+    step.pass === NUM_PASSES + 1 ? 'Check' : 'Init';
+
+  if (step.edgeIdx >= 0) {
+    let e = edgeData[step.edgeIdx];
+    document.getElementById('edgeDisplay').textContent =
+      `${vertexNames[e.u]} → ${vertexNames[e.v]} (w=${e.w})`;
+  } else {
+    document.getElementById('edgeDisplay').textContent = '—';
+  }
+
+  if (step.type === 'relax' || step.type === 'check') {
+    let dv = step.candidate === Infinity ? '∞' : step.candidate;
+    document.getElementById('distDisplay').textContent = dv;
+  } else if (step.type === 'init') {
+    document.getElementById('distDisplay').textContent = '∞';
+  } else if (step.type === 'done') {
+    document.getElementById('distDisplay').textContent = '✓';
+  } else {
+    document.getElementById('distDisplay').textContent = '—';
+  }
+}
+
+function updateRelaxBar(step) {
+  let bar = document.getElementById('relaxBar');
+  if (step.type !== 'relax' && step.type !== 'check') {
+    if (step.type === 'init') {
+      bar.innerHTML = `<span style="color:#888;">d[s]=0, all others ∞</span>`;
+    } else if (step.type === 'done') {
+      bar.innerHTML = `<span style="color:#00ff88;">✓ Algorithm complete — no negative cycle</span>`;
+    } else {
+      bar.innerHTML = `<span style="color:#888;">Relax status: —</span>`;
+    }
+    return;
+  }
+
+  let uName = vertexNames[step.u];
+  let vName = vertexNames[step.v];
+  let du = step.dist[step.u];
+  let dv = step.dist[step.v];
+  let duStr = distStr(du);
+  let dvStr = distStr(dv);
+  let candStr = distStr(step.candidate);
+  let oldStr = distStr(step.oldDist);
+  let w = step.w;
+
+  if (step.type === 'relax') {
+    let cls = step.updated ? 'updated' : 'nochange';
+    let label = step.updated ? '✓ Improved!' : 'No change';
+    bar.innerHTML = `
+      <span class="relax-item relaxing">d[${uName}] = ${duStr}</span>
+      <span class="relax-arrow">→</span>
+      <span class="relax-item relaxing">w = ${w}</span>
+      <span class="relax-arrow">→</span>
+      <span class="relax-item ${cls}">${label}: d[${vName}] = ${dvStr}</span>
+      <span class="relax-formula">d[${vName}] = min(${oldStr}, ${duStr} + ${w})</span>
+    `;
+  } else {
+    let cls = step.canImprove ? 'danger' : 'stable';
+    let label = step.canImprove ? '⚠ Can improve!' : '✓ Stable';
+    bar.innerHTML = `
+      <span class="relax-item relaxing">d[${uName}] = ${duStr}</span>
+      <span class="relax-arrow">→</span>
+      <span class="relax-item relaxing">w = ${w}</span>
+      <span class="relax-arrow">→</span>
+      <span class="relax-item ${cls}">${label}: d[${vName}] = ${dvStr}</span>
+      <span class="relax-formula">d[${vName}] = min(${dvStr}, ${duStr} + ${w}) = ${candStr}</span>
+    `;
+  }
+}
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${idx + 1} / ${steps.length} — ${step.phase}`;
+
+  let explanation = '';
+  switch (step.type) {
+    case 'init': explanation = buildInitExplanation(); break;
+    case 'relax':
+      explanation = buildRelaxExplanation(step.u, step.v, step.w,
+        step.dist[step.u], step.dist[step.v],
+        step.oldDist, step.candidate, step.updated, step.pass);
+      break;
+    case 'check':
+      explanation = buildCheckExplanation(step.u, step.v, step.w,
+        step.dist[step.u], step.dist[step.v],
+        step.candidate, step.canImprove);
+      break;
+    case 'done':
+      explanation = buildCompleteExplanation();
+      break;
+    default:
+      explanation = '<div class="explain-section active"><p>Processing...</p></div>';
+  }
+  document.getElementById('explainArea').innerHTML = explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  updateInfo(step);
+  updateRelaxBar(step);
+  drawGraph(step);
+  renderDistTable(step);
+  renderPassHistory(step);
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('passDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('distDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  document.getElementById('relaxBar').innerHTML = '<span style="color:#888;">Relax status: —</span>';
+  buildSteps();
+  initTables();
+  if (steps.length > 0) applyStep(steps[0]);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('passDisplay').textContent = '—';
+  document.getElementById('edgeDisplay').textContent = '—';
+  document.getElementById('distDisplay').textContent = '✓';
+
+  let resultDiv = document.getElementById('resultSection');
+  resultDiv.style.display = 'block';
+
+  let html = '<div class="big-result">Shortest Paths from Source s</div>';
+  let pathDisplay = '';
+  for (let target = 1; target < V; target++) {
+    let path = computePath(target);
+    let cost = precomputed.dist[target];
+    let pStr = path.map(v => vertexNames[v]).join(' <span class="pd-arrow">→</span> ');
+    pathDisplay += `<p><span class="dim">s → ${vertexNames[target]}:</span> <span class="pd-box" style="display:inline-flex;width:auto;height:auto;padding:4px 10px;font-size:0.9em;">${pStr}</span> <span class="pd-cost">= ${cost}</span></p>`;
+  }
+  html += pathDisplay;
+
+  let allCosts = '';
+  for (let target = 1; target < V; target++) {
+    allCosts += `<span style="margin:0 8px;"><span class="dim">${vertexNames[target]}:</span> ${precomputed.dist[target]}</span>`;
+  }
+  html += `<h3 style="margin-top:16px;color:#00ccff;font-size:1em;">Final Distances</h3><p>${allCosts}</p>`;
+  html += `<h3 style="margin-top:16px;color:#00ccff;font-size:1em;">Verdict</h3><p><span class="result-line">No negative cycle detected</span> — algorithm returns TRUE.</p>`;
+
+  resultDiv.innerHTML = `<h2>✅ Bellman-Ford Complete!</h2>` + html;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+if (steps.length > 0) applyStep(steps[0]);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
