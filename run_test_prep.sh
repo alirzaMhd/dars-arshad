@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Run the Test Prep App with Flask + cloudflared tunnel."""
+import subprocess
+import sys
+import os
+import time
+import signal
+import re
+import atexit
+import socket
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_DIR = os.path.join(BASE_DIR, 'test_prep_app')
+os.chdir(APP_DIR)
+
+processes = []
+
+def cleanup():
+    for p in processes:
+        try:
+            p.terminate()
+            p.wait(timeout=3)
+        except:
+            try:
+                p.kill()
+            except:
+                pass
+
+atexit.register(cleanup)
+signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
+signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+
+print("=" * 60)
+print("Test Prep App")
+print("=" * 60)
+
+flask_log = os.path.join(APP_DIR, 'flask.log')
+flask_log_fp = open(flask_log, 'w')
+flask_proc = subprocess.Popen(
+    [sys.executable, 'app.py'],
+    stdout=flask_log_fp, stderr=subprocess.STDOUT, text=True
+)
+processes.append(flask_proc)
+
+print("Waiting for Flask server...", end='', flush=True)
+start = time.time()
+ready = False
+while time.time() - start < 60:
+    if flask_proc.poll() is not None:
+        break
+    try:
+        s = socket.socket()
+        s.settimeout(1)
+        s.connect(('localhost', 8082))
+        s.close()
+        ready = True
+        break
+    except:
+        print('.', end='', flush=True)
+        time.sleep(0.5)
+
+if not ready:
+    print("\nServer failed to start.")
+    print(f"Flask log: {flask_log}")
+    print("-" * 60)
+    flask_log_fp.flush()
+    with open(flask_log, 'r') as f:
+        print(f.read())
+    print("-" * 60)
+    sys.exit(1)
+
+print(" READY")
+
+cloudflared_proc = subprocess.Popen(
+    ['cloudflared', 'tunnel', '--url', 'http://localhost:8082'],
+    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+)
+processes.append(cloudflared_proc)
+
+url = None
+start = time.time()
+while url is None and time.time() - start < 30:
+    line = cloudflared_proc.stdout.readline()
+    if line:
+        m = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', line)
+        if m:
+            url = m.group(0)
+            break
+
+if url:
+    print("\n" + "=" * 60)
+    print(f"READY: Open this URL in your browser:")
+    print(f"   {url}")
+    print("=" * 60)
+    print("* Create a new lesson or resume a saved one")
+    print("* Enter chapter data and get recommendations")
+    print("* Generate answer sheets with interactive ovals")
+    print("* Print answer sheets for exam prep\n")
+else:
+    print("Failed to get cloudflared URL. Check logs.")
+    print("Make sure cloudflared is installed:")
+    print("  dpkg -i /content/cloudflared-linux-amd64.deb")
+    sys.exit(1)
+
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print("\nShutting down...")
