@@ -1,6 +1,7 @@
 import os
 import json
-from flask import Flask, render_template
+import uuid
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -36,6 +37,81 @@ def delete_lesson(lesson_id):
     path = os.path.join(DATA_DIR, f"{lesson_id}.json")
     if os.path.exists(path):
         os.remove(path)
+
+@app.route('/api/lessons')
+def api_list_lessons():
+    lessons = list_lessons()
+    summaries = [
+        {
+            'id': l['id'],
+            'name': l['name'],
+            'chapter_count': len(l.get('chapters', [])),
+            'created_at': l.get('created_at'),
+            'updated_at': l.get('updated_at')
+        }
+        for l in lessons
+    ]
+    return jsonify({'lessons': summaries})
+
+@app.route('/api/lessons', methods=['POST'])
+def api_create_lesson():
+    data = request.get_json()
+    name = data.get('name', 'Untitled')
+    chapters_count = data.get('chapters_count', 0)
+    lesson_id = f"{name.lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}"
+    chapters = []
+    for i in range(chapters_count):
+        chapters.append({
+            'number': i + 1,
+            'name': f'Chapter {i + 1}',
+            'questions_in_book': 0,
+            'questions_in_exams': 0,
+            'recommended': 5,
+            'selected_count': 5,
+            'selected_distribution': 'center',
+            'question_numbers': [],
+            'answers': {}
+        })
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    lesson = {
+        'id': lesson_id,
+        'name': name,
+        'chapters': chapters,
+        'created_at': now,
+        'updated_at': now
+    }
+    save_lesson(lesson)
+    return jsonify({'lesson': lesson}), 201
+
+@app.route('/api/lessons/<lesson_id>')
+def api_get_lesson(lesson_id):
+    lesson = load_lesson(lesson_id)
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
+    return jsonify({'lesson': lesson})
+
+@app.route('/api/lessons/<lesson_id>', methods=['PUT'])
+def api_update_lesson(lesson_id):
+    lesson = load_lesson(lesson_id)
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
+    data = request.get_json()
+    from datetime import datetime
+    for key in ('name', 'chapters'):
+        if key in data:
+            lesson[key] = data[key]
+    lesson['updated_at'] = datetime.now().isoformat()
+    save_lesson(lesson)
+    return jsonify({'lesson': lesson})
+
+@app.route('/api/lessons/<lesson_id>', methods=['DELETE'])
+def api_delete_lesson(lesson_id):
+    lesson = load_lesson(lesson_id)
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
+    delete_lesson(lesson_id)
+    return jsonify({'ok': True})
 
 @app.route('/')
 def index():
