@@ -339,87 +339,188 @@ function buildSteps(){
 
 function buildInitExplanation(){
   return `<div class="explain-section active">
-<h3>Why Residual Networks?</h3>
-<p>When we push flow through a network, we need to know <b>what additional flow is possible</b>.</p>
-<p>The <span class="dim">residual network</span> shows all possible flow adjustments — both forward (push more) and backward (cancel existing flow).</p>
-<h3 style="margin-top:10px;">Key Definitions</h3>
-<span class="formula-line"><span style="color:#00ff88">Forward edge:</span> c_f(u,v) = c(u,v) − f(u,v)</span>
-<span class="formula-line"><span style="color:#ff6600">Backward edge:</span> c_f(v,u) = f(u,v)</span>
-<p class="note">Press Play or Step to begin.</p>
+<h3>Why Do We Need Residual Networks?</h3>
+<p>Imagine you're managing a water pipe network. Some pipes have flow, others don't. You want to know: <b>"How much more water can I push through?"</b></p>
+<p>The <span class="dim">residual network</span> answers this question. It shows:</p>
+<p>• <span style="color:#00ff88"><b>Forward edges:</b></span> Where we can push MORE flow (remaining capacity)</p>
+<p>• <span style="color:#ff6600"><b>Backward edges:</b></span> Where we can REDUCE existing flow (cancel it)</p>
+
+<h3 style="margin-top:10px;">The Big Idea</h3>
+<p>When we push flow through an edge (u,v), two things happen:</p>
+<p>1. The <b>remaining capacity</b> on (u,v) decreases — we can push less forward</p>
+<p>2. A <b>reverse capacity</b> appears on (v,u) — we can cancel flow by pushing back</p>
+
+<h3 style="margin-top:10px;">Key Formulas</h3>
+<span class="formula-line"><span style="color:#00ff88">Forward edge:</span> c<sub>f</sub>(u,v) = c(u,v) − f(u,v)</span>
+<p>Example: Edge with capacity 10, flow 3 → residual = 7 (we can push 7 more)</p>
+
+<span class="formula-line"><span style="color:#ff6600">Backward edge:</span> c<sub>f</sub>(v,u) = f(v,u)</span>
+<p>Example: Edge with flow 3 → reverse residual = 3 (we can cancel 3 units)</p>
+
+<h3 style="margin-top:10px;">Why Backward Edges?</h3>
+<p>Backward edges let us <b>undo</b> previous decisions. If we pushed flow through the wrong path, we can cancel it by pushing back.</p>
+
+<p class="note">Press Play or Step to see the residual network construction in action.</p>
 </div>`;
 }
 
 function buildShowNetworkExplanation(){
   return `<div class="explain-section active">
-<h3>Original Network</h3>
-<p>We start with network <b>G(V,E)</b> with <span class="dim">zero flow</span> on all edges.</p>
-<p>Nodes: <span class="split-info">s, a, b, t</span></p>
-<p>Edges with capacities:</p>
-<span class="formula-line">s→a: 10, s→b: 10, a→b: 2, a→t: 10, b→t: 10</span>
-<p>The <span style="color:#00ff88">source</span> is <b>s</b>, the <span style="color:#ff6600">sink</span> is <b>t</b>.</p>
-<p class="note">All flows start at zero. Now we build the residual network.</p>
+<h3>The Original Network</h3>
+<p>We start with a flow network <b>G(V,E)</b> — a directed graph where each edge has a <span class="dim">capacity</span> (maximum flow it can carry).</p>
+
+<h3 style="margin-top:10px;">Our Network</h3>
+<p>Nodes: <span class="split-info">s</span> (source), <span class="split-info">a, b</span> (intermediate), <span class="split-info">t</span> (sink)</p>
+<span class="formula-line">Edges: s→a(10), s→b(10), a→b(2), a→t(10), b→t(10)</span>
+
+<h3 style="margin-top:10px;">Initial State</h3>
+<p>All flows start at <span class="dim">zero</span>. This means:</p>
+<p>• Every edge has <b>full capacity</b> available</p>
+<p>• The residual network is identical to the original network</p>
+<p>• We can push flow through any edge up to its capacity</p>
+
+<h3 style="margin-top:10px;">Two Views</h3>
+<p><b>Left:</b> Original network G — shows the physical network with capacities</p>
+<p><b>Right:</b> Residual network G<sub>f</sub> — shows what flow adjustments are possible</p>
+
+<p class="note">Initially, both networks look the same. They diverge as we push flow.</p>
 </div>`;
 }
 
 function buildFindPathExplanation(path,bn,pathStr){
   let edgeList=path.map(e=>{
-    return `${e.from}→${e.to} (c_f=${e.cap}, ${e.type})`;
-  }).join(', ');
+    const typeLabel=e.type==='forward'?'<span style="color:#00ff88">forward</span>':'<span style="color:#ff6600">backward</span>';
+    return `<span class="formula-line" style="margin-left:12px">${e.from}→${e.to}: c<sub>f</sub>=${e.cap} (${typeLabel})</span>`;
+  }).join('');
   return `<div class="explain-section active">
-<h3>Finding Augmenting Path</h3>
-<p>An <span class="dim">augmenting path</span> is a simple path from <b>s</b> to <b>t</b> in the residual network.</p>
-<p>We found path: <span class="result-line" style="display:inline">${pathStr}</span></p>
+<h3>Finding an Augmenting Path</h3>
+<p>An <span class="dim">augmenting path</span> is a simple path from <b>s</b> to <b>t</b> in the residual network G<sub>f</sub>.</p>
+<p>Think of it as a "route" where we can push more flow from source to sink.</p>
+
+<h3 style="margin-top:10px;">How We Find It</h3>
+<p>We use <b>BFS (Breadth-First Search)</b> starting from s:</p>
+<p>1. Start at s, explore all neighbors in G<sub>f</sub></p>
+<p>2. Continue level by level until we reach t</p>
+<p>3. Reconstruct the path using parent pointers</p>
+
+<h3 style="margin-top:10px;">Path Found</h3>
+<span class="result-line">${pathStr}</span>
+
 <h3 style="margin-top:10px;">Residual Capacities Along Path</h3>
-<span class="formula-line">${edgeList}</span>
+${edgeList}
+
 <h3 style="margin-top:10px;">Bottleneck Capacity</h3>
-<span class="formula-line">c_f(p) = min{${path.map(e=>e.cap).join(', ')}} = <span style="color:#ffcc00">${bn}</span></span>
-<p class="note">The bottleneck limits how much flow we can push through this path.</p>
+<p>The <b>bottleneck</b> is the minimum residual capacity along the path:</p>
+<span class="formula-line">c<sub>f</sub>(p) = min{${path.map(e=>e.cap).join(', ')}} = <span style="color:#ffcc00">${bn}</span></span>
+<p>We can push at most <span class="result-line" style="display:inline">${bn}</span> units through this path.</p>
+
+<p class="note">The bottleneck limits the flow — like the narrowest pipe in a series of pipes.</p>
 </div>`;
 }
 
 function buildPushFlowExplanation(path,bn,pathStr){
   let details=path.map(e=>{
     if(e.type==='forward'){
-      return `<span class="formula-line" style="margin-left:12px"><span style="color:#00ff88">Forward:</span> f(${e.from},${e.to}) += ${bn} → f = ${getFlow(e.from,e.to)+bn}</span>`;
+      const currentFlow=getFlow(e.from,e.to);
+      const newFlow=currentFlow+bn;
+      return `<div style="margin-left:12px;margin:6px 0;padding:8px;background:#0a1a12;border-radius:4px;border-left:3px solid #00ff88">
+        <span style="color:#00ff88"><b>Forward edge:</b> ${e.from}→${e.to}</span><br>
+        <span style="color:#ccc">Current flow: ${currentFlow}, pushing ${bn} more</span><br>
+        <span class="formula-line" style="margin:4px 0">f(${e.from},${e.to}) = ${currentFlow} + ${bn} = ${newFlow}</span>
+        <span style="color:#aaa;font-size:0.9em">Remaining capacity: ${getCap(e.from,e.to)} - ${newFlow} = ${getCap(e.from,e.to)-newFlow}</span>
+      </div>`;
     }else{
-      return `<span class="formula-line" style="margin-left:12px"><span style="color:#ff6600">Backward:</span> f(${e.to},${e.from}) -= ${bn} → f = ${getFlow(e.to,e.from)-bn}</span>`;
+      const currentFlow=getFlow(e.to,e.from);
+      const newFlow=currentFlow-bn;
+      return `<div style="margin-left:12px;margin:6px 0;padding:8px;background:#1a0a00;border-radius:4px;border-left:3px solid #ff6600">
+        <span style="color:#ff6600"><b>Backward edge:</b> ${e.from}→${e.to} (cancels flow on ${e.to}→${e.from})</span><br>
+        <span style="color:#ccc">Current flow on ${e.to}→${e.from}: ${currentFlow}, canceling ${bn}</span><br>
+        <span class="formula-line" style="margin:4px 0">f(${e.to},${e.from}) = ${currentFlow} - ${bn} = ${newFlow}</span>
+        <span style="color:#aaa;font-size:0.9em">We're reducing flow on the original edge</span>
+      </div>`;
     }
   }).join('');
   return `<div class="explain-section active">
-<h3>Pushing Flow</h3>
-<p>We push <span class="dim">${bn}</span> units of flow along path <span class="result-line" style="display:inline">${pathStr}</span>.</p>
-<h3 style="margin-top:10px;">Edge Updates</h3>
+<h3>Pushing Flow Along the Path</h3>
+<p>We push <span class="result-line" style="display:inline">${bn}</span> units of flow along path <span class="dim">${pathStr}</span>.</p>
+
+<h3 style="margin-top:10px;">What Happens to Each Edge</h3>
 ${details}
-<p class="note">The path is highlighted in <span style="color:#ff66ff">magenta</span>.</p>
+
+<h3 style="margin-top:10px;">Key Insight</h3>
+<p><b>Forward edges:</b> Increase flow — we're sending more through the pipe</p>
+<p><b>Backward edges:</b> Decrease flow — we're canceling previous flow (like a U-turn)</p>
+
+<h3 style="margin-top:10px;">Effect on Residual Network</h3>
+<p>After this push:</p>
+<p>• Forward edges on the path have <b>less</b> residual capacity</p>
+<p>• Backward edges on the path have <b>more</b> residual capacity</p>
+<p>• New edges may appear, old edges may disappear</p>
+
+<p class="note">The path is highlighted in <span style="color:#ff66ff">magenta</span> in the residual network.</p>
 </div>`;
 }
 
 function buildUpdateResidualExplanation(path,bn,pathStr){
   const re=getResidualEdges();
-  let edgeList=re.slice(0,10).map(e=>{
-    const typeCol=e.type==='forward'?'#00ff88':'#ff6600';
-    return `<span class="formula-line" style="margin-left:12px"><span style="color:${typeCol}">${e.type}</span>: ${e.from}→${e.to} (c_f=${e.cap})</span>`;
+  let forwardEdges=re.filter(e=>e.type==='forward').slice(0,6).map(e=>{
+    return `<span class="formula-line" style="margin-left:12px"><span style="color:#00ff88">Forward:</span> ${e.from}→${e.to} (c<sub>f</sub>=${e.cap})</span>`;
+  }).join('');
+  let backwardEdges=re.filter(e=>e.type==='backward').slice(0,6).map(e=>{
+    return `<span class="formula-line" style="margin-left:12px"><span style="color:#ff6600">Backward:</span> ${e.from}→${e.to} (c<sub>f</sub>=${e.cap})</span>`;
   }).join('');
   return `<div class="explain-section active">
 <h3>Updated Residual Network</h3>
-<p>After pushing flow, the residual network <b>G<sub>f</sub></b> is updated.</p>
-<p>Current residual edges:</p>
-${edgeList}
-<p>We now search for <b>another augmenting path</b> in the updated residual network.</p>
+<p>After pushing flow, the residual network G<sub>f</sub> has changed. Let's see what happened:</p>
+
+<h3 style="margin-top:10px;">What Changed</h3>
+<p>The edges we used in the augmenting path now have different residual capacities:</p>
+<p>• Forward edges on path: residual <b>decreased</b> by ${bn}</p>
+<p>• Backward edges on path: residual <b>increased</b> by ${bn}</p>
+
+<h3 style="margin-top:10px;">Current Residual Edges</h3>
+<p><span style="color:#00ff88"><b>Forward edges</b></span> (can push more flow):</p>
+${forwardEdges || '<span class="formula-line" style="margin-left:12px">None remaining</span>'}
+<p><span style="color:#ff6600"><b>Backward edges</b></span> (can cancel flow):</p>
+${backwardEdges || '<span class="formula-line" style="margin-left:12px">None</span>'}
+
+<h3 style="margin-top:10px;">Current Flow</h3>
+<p>Total flow from s to t: <span class="result-line" style="display:inline">${getTotalFlow()}</span></p>
+
+<h3 style="margin-top:10px;">What's Next?</h3>
+<p>We search for <b>another augmenting path</b> in the updated residual network.</p>
+<p>If we find one, we can push more flow. If not, we've reached maximum flow.</p>
+
+<p class="note">Each iteration pushes at least 1 more unit of flow (if capacities are integers).</p>
 </div>`;
 }
 
 function buildNoAugPathExplanation(){
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
 <h3>✅ No Augmenting Path Found!</h3>
-<p>The residual network has <b>no path from s to t</b>.</p>
-<p>By the <span class="dim">Max-Flow Min-Cut Theorem</span>:</p>
-<span class="formula-line">max flow = min cut</span>
-<p>The current flow is <span class="result-line" style="display:inline">maximum</span>.</p>
+<p>The BFS searched the entire residual network but found <b>no path from s to t</b>.</p>
+
+<h3 style="margin-top:10px;">What This Means</h3>
+<p>The residual network is "blocked" — there's no way to push more flow from source to sink.</p>
+<p>By the <span class="dim">Max-Flow Min-Cut Theorem</span>, this means:</p>
+<span class="formula-line">No augmenting path ⟺ Flow is maximum</span>
+
+<h3 style="margin-top:10px;">Why Does This Work?</h3>
+<p>When no augmenting path exists:</p>
+<p>1. Let S = all nodes reachable from s in G<sub>f</sub></p>
+<p>2. Let T = all other nodes (including t)</p>
+<p>3. The cut (S,T) has capacity exactly equal to our flow</p>
+<p>4. Therefore, no more flow is possible</p>
+
+<h3 style="margin-top:10px;">Our Result</h3>
+<p>Maximum flow from s to t: <span class="result-line" style="display:inline">${getTotalFlow()}</span></p>
+
 <h3 style="margin-top:10px;">Complexity</h3>
-<p><span class="dim">Time:</span> O(V · E²) for Ford-Fulkerson with BFS (Edmonds-Karp)</p>
-<p><span class="dim">Space:</span> O(V + E) for residual graph</p>
-<p class="note">Each augmentation increases flow by at least 1, and max flow ≤ V·E.</p>
+<p><span class="dim">Time:</span> O(V · E²) — Edmonds-Karp (BFS-based Ford-Fulkerson)</p>
+<p><span class="dim">Why:</span> Each of O(VE) augmentations takes O(E) for BFS</p>
+<p><span class="dim">Space:</span> O(V + E) — storing the residual graph</p>
+
+<p class="note">This is polynomial in the number of vertices, regardless of capacity values — much better than basic Ford-Fulkerson which can be O(E|f|).</p>
 </div>`;
 }
 
@@ -428,16 +529,37 @@ function buildFinishedExplanation(){
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
 <h3>✅ Algorithm Complete!</h3>
 <p>The maximum flow from <b>s</b> to <b>t</b> is <span class="result-line" style="display:inline">${totalFlow}</span>.</p>
+
 <h3 style="margin-top:10px;">Flow Summary</h3>
 ${EDGES.filter(e=>e.to==='t').map(e=>
-  `<span class="formula-line">${e.from}→t: f=${getFlow(e.from,e.to)}</span>`
+  `<span class="formula-line">${e.from}→t: f=${getFlow(e.from,e.to)} / c=${e.cap}</span>`
 ).join('')}
+<p style="margin-top:8px">Total flow into sink: <span class="result-line" style="display:inline">${totalFlow}</span></p>
+
+<h3 style="margin-top:10px;">How We Got Here</h3>
+<p>We started with zero flow and repeatedly:</p>
+<p>1. Built the residual network G<sub>f</sub></p>
+<p>2. Found augmenting paths using BFS</p>
+<p>3. Pushed flow through each path</p>
+<p>4. Updated the residual network</p>
+<p>5. Stopped when no more augmenting paths existed</p>
+
 <h3 style="margin-top:10px;">Why This Works</h3>
 <p>The residual network has no augmenting path ⟺ flow is maximum.</p>
 <span class="formula-line">Max-Flow Min-Cut Theorem: max|f| = min cut capacity</span>
+
+<h3 style="margin-top:10px;">Applications</h3>
+<p>• <span class="dim">Network routing:</span> Maximize data throughput</p>
+<p>• <span class="dim">Transportation:</span> Maximize cargo flow</p>
+<p>• <span class="dim">Bipartite matching:</span> Match workers to jobs</p>
+<p>• <span class="dim">Image segmentation:</span> Separate foreground/background</p>
+
 <h3 style="margin-top:10px;">Complexity</h3>
 <p><span class="dim">Time:</span> O(V · E²) — each BFS is O(E), at most O(V·E) augmentations</p>
 <p><span class="dim">Space:</span> O(V + E) — residual graph storage</p>
+<p><span class="dim">Integrality:</span> If capacities are integers, flow is integer</p>
+
+<p class="note">Understanding residual networks is key to mastering max-flow algorithms and many other graph algorithms.</p>
 </div>`;
 }
 
