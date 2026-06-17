@@ -117,9 +117,13 @@ function renderChapterTable() {
 
             if (field === 'questions_in_book' || field === 'questions_in_exams') {
                 const ch = currentLesson.chapters[idx];
+                const prevRecommended = ch.recommended;
+                const wasOverridden = ch.selected_count !== prevRecommended;
                 ch.recommended = calculateRecommended(ch.questions_in_book, ch.questions_in_exams);
-                ch.selected_count = ch.recommended;
-                tbody.querySelector(`input[data-field="selected_count"][data-index="${idx}"]`).value = ch.recommended;
+                if (!wasOverridden) {
+                    ch.selected_count = ch.recommended;
+                    tbody.querySelector(`input[data-field="selected_count"][data-index="${idx}"]`).value = ch.recommended;
+                }
             }
         });
     });
