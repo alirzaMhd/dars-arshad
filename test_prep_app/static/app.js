@@ -82,3 +82,67 @@ async function saveLesson() {
         body: JSON.stringify({chapters: currentLesson.chapters})
     });
 }
+
+function computeDistribution(n, k, type) {
+    if (k >= n) return Array.from({length: n}, (_, i) => i + 1);
+    if (k <= 0) return [];
+
+    switch (type) {
+        case 'center': return distributionCenter(n, k);
+        case 'spaced_start': return distributionSpacedStart(n, k);
+        case 'spaced_end': return distributionSpacedEnd(n, k);
+        case 'normal': return distributionNormal(n, k);
+        default: return distributionCenter(n, k);
+    }
+}
+
+function distributionCenter(n, k) {
+    const groupSize = n / k;
+    const positions = [];
+    for (let i = 0; i < k; i++) {
+        const pos = Math.round(i * groupSize + groupSize / 2);
+        positions.push(Math.min(Math.max(1, pos), n));
+    }
+    return [...new Set(positions)].sort((a, b) => a - b);
+}
+
+function distributionSpacedStart(n, k) {
+    const step = Math.round(n / k);
+    const positions = [];
+    for (let i = 0; i < k; i++) {
+        positions.push(1 + i * step);
+    }
+    return [...new Set(positions)].filter(p => p >= 1 && p <= n).sort((a, b) => a - b);
+}
+
+function distributionSpacedEnd(n, k) {
+    const step = Math.round(n / k);
+    const positions = [];
+    for (let i = 0; i < k; i++) {
+        positions.push(n - (k - 1 - i) * step);
+    }
+    return [...new Set(positions)].filter(p => p >= 1 && p <= n).sort((a, b) => a - b);
+}
+
+function distributionNormal(n, k) {
+    const mean = n / 2;
+    const stddev = n / 6;
+    const positions = [];
+    for (let i = 0; i < k; i++) {
+        const p = (i + 0.5) / k;
+        const z = normalInverse(p);
+        const pos = Math.round(mean + z * stddev);
+        positions.push(Math.min(Math.max(1, pos), n));
+    }
+    return [...new Set(positions)].sort((a, b) => a - b);
+}
+
+function normalInverse(p) {
+    if (p <= 0) return -4;
+    if (p >= 1) return 4;
+    if (p < 0.5) return -normalInverse(1 - p);
+    const t = Math.sqrt(-2 * Math.log(1 - p));
+    const c0 = 2.515517, c1 = 0.802853, c2 = 0.010328;
+    const d1 = 1.432788, d2 = 0.189269, d3 = 0.001308;
+    return t - (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t);
+}
