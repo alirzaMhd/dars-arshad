@@ -247,7 +247,12 @@ document.getElementById('backToStep2').addEventListener('click', async () => {
 });
 
 document.getElementById('printSheet').addEventListener('click', () => {
+    const ch = currentLesson.chapters[activeChapterIdx];
+    document.getElementById('printLessonName').textContent = currentLesson.name;
+    document.getElementById('printChapterName').textContent = ch.name;
+    document.querySelector('.print-header').style.display = 'block';
     window.print();
+    document.querySelector('.print-header').style.display = 'none';
 });
 
 // Keyboard navigation
