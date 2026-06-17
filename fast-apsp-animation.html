@@ -30,6 +30,9 @@ h1{text-align:center;font-size:1.6em;color:#00ff88;margin:20px 0 5px;text-shadow
 .info-panel .label{color:#888}
 .info-panel .value{color:#ffcc00;font-weight:bold}
 .info-panel .highlight{color:#00ff88}
+.graph-container{background:#0d0d1a;border:1px solid #333;border-radius:10px;padding:10px;text-align:center;margin:15px 0;display:flex;align-items:center;justify-content:center;min-height:330px}
+.graph-container svg{max-width:100%;display:block}
+.graph-container .graph-label{color:#888;font-size:0.8em;margin-top:6px}
 .table-section{margin:20px 0}
 .table-title{font-size:1em;color:#00ccff;margin-bottom:10px}
 .table-wrapper{overflow-x:auto;padding:5px}
@@ -69,6 +72,21 @@ td.improved{background:#0a1a12!important;color:#00ff88!important;border-color:#0
     <span class="label">Vertices:</span> <span class="value" id="vertexCount">4</span> &nbsp;
     <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
     <span class="label">Computing:</span> <span id="computingDisplay">—</span>
+  </div>
+  <div class="graph-container">
+    <svg id="graphSvg" width="600" height="320" viewBox="0 0 600 320">
+      <defs>
+        <marker id="arrow-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+        </marker>
+        <marker id="arrow-pos" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#00ccff"/>
+        </marker>
+        <marker id="arrow-neg" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#ff6666"/>
+        </marker>
+      </defs>
+    </svg>
   </div>
   <div class="controls">
     <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
@@ -420,6 +438,70 @@ function resetAnimation(){
   document.getElementById('totalSteps').textContent=steps.length;
 }
 
+// --- Graph SVG ---
+const nodePos = [
+  {x:300, y:45},
+  {x:100, y:200},
+  {x:500, y:200},
+  {x:300, y:290}
+];
+
+const graphEdges = [
+  {u:0, v:1, w:3},
+  {u:0, v:2, w:8},
+  {u:0, v:3, w:-4},
+  {u:1, v:3, w:7},
+  {u:2, v:1, w:4},
+  {u:3, v:0, w:2},
+  {u:3, v:2, w:-5}
+];
+
+function drawGraph(){
+  const svg=document.getElementById('graphSvg');
+  graphEdges.forEach(e=>{
+    const p1=nodePos[e.u],p2=nodePos[e.v];
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.sqrt(dx*dx+dy*dy),r=22;
+    const sx=p1.x+dx/len*r,sy=p1.y+dy/len*r,ex=p2.x-dx/len*r,ey=p2.y-dy/len*r;
+    const isNeg=e.w<0;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',sx);line.setAttribute('y1',sy);
+    line.setAttribute('x2',ex);line.setAttribute('y2',ey);
+    line.setAttribute('stroke',isNeg?'#ff6666':'#555');
+    line.setAttribute('stroke-width','2');
+    line.setAttribute('marker-end','url(#'+(isNeg?'arrow-neg':'arrow-gray')+')');
+    svg.appendChild(line);
+    const mx=(sx+ex)/2,my=(sy+ey)/2;
+    const nx=-dy/len*14,ny=dx/len*14;
+    const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x',mx+nx);label.setAttribute('y',my+ny);
+    label.setAttribute('fill',isNeg?'#ff9999':'#aaa');
+    label.setAttribute('font-size','13');
+    label.setAttribute('font-family',"'Courier New',monospace");
+    label.setAttribute('font-weight','bold');
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('dominant-baseline','central');
+    label.textContent=e.w;
+    svg.appendChild(label);
+  });
+  nodePos.forEach((p,i)=>{
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);
+    circle.setAttribute('r','22');
+    circle.setAttribute('fill','#0d0d1a');circle.setAttribute('stroke','#555');
+    circle.setAttribute('stroke-width','2.5');
+    svg.appendChild(circle);
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',p.x);text.setAttribute('y',p.y+1);
+    text.setAttribute('fill','#aaa');text.setAttribute('font-size','14');
+    text.setAttribute('font-family',"'Courier New',monospace");
+    text.setAttribute('font-weight','bold');
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('dominant-baseline','central');
+    text.textContent=V[i];
+    svg.appendChild(text);
+  });
+}
+
 document.getElementById('speedSlider').addEventListener('input',function(){
   document.getElementById('speedLabel').textContent=this.value+'x';
   if(animating){clearInterval(animTimer);animTimer=setInterval(()=>{
@@ -431,6 +513,7 @@ document.getElementById('speedSlider').addEventListener('input',function(){
 precomputeAll();
 buildSteps();
 initTables();
+drawGraph();
 document.getElementById('totalSteps').textContent=steps.length;
 </script>
 </body>
