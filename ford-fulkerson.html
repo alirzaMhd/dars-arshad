@@ -614,23 +614,65 @@ function buildSteps() {
 
 function buildInitExplanation() {
   return `<div class="explain-section active">
-    <h3>Initialization</h3>
-    <p>Set <b>all flows to 0</b>. The residual network initially equals the original network.</p>
-    <span class="formula-line">f(s,u) = 0,  f(s,v) = 0
-f(u,v) = 0,  f(u,t) = 0
-f(v,t) = 0</span>
-    <p>Residual capacities equal original capacities since no flow has been pushed yet.</p>
+    <h3>What is Ford-Fulkerson?</h3>
+    <p><b>Ford-Fulkerson</b> is the foundational algorithm for finding <span class="dim">maximum flow</span> in a flow network.</p>
+    <p>Think of it like this: You have a network of pipes with different widths (capacities). Water flows from source <span class="dim">s</span> to sink <span class="dim">t</span>. Ford-Fulkerson finds the maximum amount of water that can flow from s to t.</p>
+    
+    <h3 style="margin-top:10px;">The Big Idea</h3>
+    <p>Repeatedly find an <b>augmenting path</b> — a path from s to t where we can push more flow — then push as much flow as possible along it.</p>
+    <p>When no more augmenting paths exist, we have the maximum flow.</p>
+    
+    <h3 style="margin-top:10px;">Network Definition</h3>
+    <p><span class="dim">Nodes:</span> V = {s, u, v, t}</p>
+    <p><span class="dim">Edges &amp; Capacities:</span></p>
+    <span class="formula-line">s → u : 10    s → v : 10
+u → v : 5     u → t : 10
+v → t : 10</span>
+    
+    <h3 style="margin-top:10px;">The Algorithm</h3>
+    <span class="formula-line">Ford-Fulkerson(G, s, t):
+  1. Initialize f(u,v) = 0 for all edges
+  2. While exists augmenting path p in G_f:
+     - c_f(p) = min{c_f(u,v) : (u,v) in p}
+     - For each (u,v) in p:
+       - if (u,v) in E: f(u,v) += c_f(p)
+       - else: f(v,u) -= c_f(p)
+  3. Return f</span>
+    
+    <h3 style="margin-top:10px;">Key Concepts</h3>
+    <p>• <span class="dim">Residual network G<sub>f</sub>:</span> Shows remaining capacity on each edge</p>
+    <p>• <span class="dim">Augmenting path:</b> Path from s to t in G<sub>f</sub> with positive residual capacity</p>
+    <p>• <span class="dim">Bottleneck:</span> Minimum residual capacity along the path</p>
+    
     <p class="note">Press Play or Step to find the first augmenting path.</p>
   </div>`;
 }
 
 function buildFindPathExplanation(path, iter) {
   const pathStr = path.map(e => e.from).join(' &rarr; ') + ' &rarr; ' + path[path.length-1].to;
+  const edgeDetails = path.map(e => {
+    const r = residual[e.from+'->'+e.to];
+    const type = e.isForward ? 'forward' : 'backward';
+    return `<span class="formula-line" style="margin-left:12px">${e.from}→${e.to}: c<sub>f</sub>=${r} (${type})</span>`;
+  }).join('');
   return `<div class="explain-section active">
     <h3>Iteration ${iter}: Finding Augmenting Path</h3>
-    <p>Search for a <b>simple path</b> from s to t in the residual network G<sub>f</sub> using BFS.</p>
-    <p><span class="dim">Path found:</span> <b>${pathStr}</b></p>
-    <p>An <b>augmenting path</b> is any path from s to t where every edge has <span class="dim">positive residual capacity</span>.</p>
+    <p>We use <b>BFS (Breadth-First Search)</b> to find a path from s to t in the residual network G<sub>f</sub>.</p>
+    
+    <h3 style="margin-top:10px;">What is an Augmenting Path?</h3>
+    <p>An <b>augmenting path</b> is a simple path from s to t where every edge has <span class="dim">positive residual capacity</span>.</p>
+    <p>Think of it as a "route" where we can push more water from source to sink.</p>
+    
+    <h3 style="margin-top:10px;">Path Found</h3>
+    <span class="result-line">${pathStr}</span>
+    
+    <h3 style="margin-top:10px;">Edge Details</h3>
+    ${edgeDetails}
+    
+    <h3 style="margin-top:10px;">Forward vs Backward Edges</h3>
+    <p><span style="color:#00ff88"><b>Forward edges:</b></span> Original edges where we can push MORE flow</p>
+    <p><span style="color:#ff6600"><b>Backward edges:</b></span> Reverse edges where we can REDUCE existing flow</p>
+    
     <p class="note">The path alternates between forward edges (unused capacity) and backward edges (can reduce flow).</p>
   </div>`;
 }
@@ -643,10 +685,20 @@ function buildBottleneckExplanation(path, bn, iter) {
   }).join(', ');
   return `<div class="explain-section active">
     <h3>Iteration ${iter}: Bottleneck Capacity</h3>
-    <p>The <b>bottleneck</b> is the minimum residual capacity along the path.</p>
+    <p>The <b>bottleneck</b> is the minimum residual capacity along the path. It limits how much flow we can push.</p>
+    
+    <h3 style="margin-top:10px;">Why a Bottleneck?</h3>
+    <p>Imagine a series of pipes with different widths. Water flow is limited by the <b>narrowest pipe</b>. Similarly, flow through a path is limited by the edge with the smallest residual capacity.</p>
+    
+    <h3 style="margin-top:10px;">Calculation</h3>
     <span class="formula-line">c_f(p) = min{${edgeDetails}}
-       = ${bn}</span>
-    <p>We can push at most <span class="split-info">${bn} units</span> of flow through this path.</p>
+       = <span style="color:#ffcc00">${bn}</span></span>
+    
+    <h3 style="margin-top:10px;">What This Means</h3>
+    <p>We can push at most <span class="result-line" style="display:inline">${bn} units</span> of flow through this path.</p>
+    <p>After pushing, at least one edge will become <span style="color:#ff3333">saturated</span> (residual = 0).</p>
+    
+    <p class="note">The bottleneck determines how much we increase the total flow.</p>
   </div>`;
 }
 
@@ -655,35 +707,71 @@ function buildAugmentExplanation(path, bn, totalFlow, iter) {
   const updates = path.map(e => {
     if (e.isForward) {
       const key = e.from+'->'+e.to;
-      return `f(${e.from},${e.to}) += ${bn} = ${flow[key]}`;
+      const oldFlow = flow[key] - bn;
+      return `<div style="margin:4px 0;padding:6px;background:#0a1a12;border-radius:4px;border-left:3px solid #00ff88">
+        <span style="color:#00ff88"><b>Forward:</b> ${e.from}→${e.to}</span><br>
+        <span style="color:#ccc">f(${e.from},${e.to}) = ${oldFlow} + ${bn} = ${flow[key]}</span>
+      </div>`;
     } else {
       const key = e.to+'->'+e.from;
-      return `f(${e.to},${e.from}) -= ${bn} = ${flow[key]}`;
+      const oldFlow = flow[key] + bn;
+      return `<div style="margin:4px 0;padding:6px;background:#1a0a00;border-radius:4px;border-left:3px solid #ff6600">
+        <span style="color:#ff6600"><b>Backward:</b> ${e.to}→${e.from} (cancel flow)</span><br>
+        <span style="color:#ccc">f(${e.to},${e.from}) = ${oldFlow} - ${bn} = ${flow[key]}</span>
+      </div>`;
     }
-  }).join('\n');
+  }).join('');
   return `<div class="explain-section active">
-    <h3>Iteration ${iter}: Augment Flow</h3>
-    <p>Push <span class="split-info">${bn} units</span> along <b>${pathStr}</b>.</p>
-    <span class="formula-line">${updates}</span>
+    <h3>Iteration ${iter}: Augment Flow = ${bn}</h3>
+    <p>Push <span class="result-line" style="display:inline">${bn} units</span> along <b>${pathStr}</b>.</p>
+    
+    <h3 style="margin-top:10px;">Edge Updates</h3>
+    ${updates}
+    
+    <h3 style="margin-top:10px;">What Happened</h3>
+    <p><b>Forward edges:</b> Flow increased — we pushed more through the pipe</p>
+    <p><b>Backward edges:</b> Flow decreased — we canceled previous flow (like a U-turn)</p>
+    
+    <h3 style="margin-top:10px;">Current Total Flow</h3>
     <p><span class="dim">Total flow:</span> <span class="result-line" style="display:inline;">|f| = ${totalFlow}</span></p>
-    <p class="note">Forward edges gain capacity, backward edges lose capacity (reducing existing flow).</p>
+    <p>The residual network has been updated. We'll search for another augmenting path.</p>
+    
+    <p class="note">Each iteration increases the total flow by at least 1 unit (if capacities are integers).</p>
   </div>`;
 }
 
 function buildDoneExplanation(totalFlow) {
   return `<div class="explain-section active" style="border-left-color:#00ff88;">
     <h3>&#10003; Algorithm Complete!</h3>
-    <p>No more augmenting paths exist in the residual network.</p>
+    <p>The BFS searched the entire residual network but found <b>no path from s to t</b>.</p>
+    <p>By the <span class="dim">Max-Flow Min-Cut Theorem</span>, this means the current flow is <span class="result-line" style="display:inline">maximum</span>.</p>
+    
+    <h3 style="margin-top:10px;">Result</h3>
     <p><span class="dim">Maximum Flow:</span> <span class="result-line" style="display:inline;">|f*| = ${totalFlow}</span></p>
+    
     <h3 style="margin-top:10px;">Min-Cut Max-Flow Theorem</h3>
-    <p>The max flow equals the min cut capacity.</p>
+    <p>The max flow equals the min cut capacity:</p>
+    <span class="formula-line">|f*| = c(S,T) for some cut (S,T)</span>
     <p><span class="dim">S</span> = nodes reachable from s in G<sub>f</sub></p>
-    <p><span class="dim">T</span> = remaining nodes</p>
+    <p><span class="dim">T</span> = remaining nodes (including t)</p>
     <p><span class="dim">Cut capacity:</span> c(S,T) = sum of capacities from S to T</p>
+    
     <h3 style="margin-top:10px;">Complexity</h3>
     <p><span class="dim">Time:</span> O(E &middot; |f|) where |f| is the max flow value</p>
-    <p><span class="dim">Note:</span> Each augmentation increases flow by at least 1</p>
-    <p><span class="dim">Integrality:</span> If all capacities are integers, the flow is integer-valued</p>
+    <p><span class="dim">Why:</span> Each augmentation increases flow by at least 1, and we do O(E) work per augmentation</p>
+    <p><span class="dim">Warning:</span> If capacities are irrational, algorithm may not terminate!</p>
+    
+    <h3 style="margin-top:10px;">Integrality Theorem</h3>
+    <p>If all capacities are <b>integers</b>, Ford-Fulkerson produces <b>integer flow</b>.</p>
+    <p>This is because each augmentation pushes an integer amount (minimum of integers).</p>
+    
+    <h3 style="margin-top:10px;">Applications</h3>
+    <p>• <span class="dim">Network routing:</span> Maximize data throughput</p>
+    <p>• <span class="dim">Transportation:</span> Maximize cargo flow</p>
+    <p>• <span class="dim">Bipartite matching:</span> Match workers to jobs</p>
+    <p>• <span class="dim">Image segmentation:</span> Separate foreground/background</p>
+    
+    <p class="note">For better complexity, use Edmonds-Karp (BFS-based) which guarantees O(VE²).</p>
   </div>`;
 }
 
