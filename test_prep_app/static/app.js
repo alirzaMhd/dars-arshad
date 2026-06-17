@@ -1,6 +1,15 @@
 let currentLesson = null;
 let currentChapterIndex = 0;
 
+// Ensure question_numbers are recomputed when loading a saved lesson
+if (currentLesson) {
+    currentLesson.chapters.forEach(ch => {
+        if (!ch.question_numbers || ch.question_numbers.length === 0) {
+            ch.question_numbers = computeDistribution(ch.questions_in_book, ch.selected_count, ch.selected_distribution);
+        }
+    });
+}
+
 async function loadLessons() {
     const resp = await fetch('/api/lessons');
     const data = await resp.json();
