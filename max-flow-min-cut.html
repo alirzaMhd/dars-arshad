@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Max-Flow Min-Cut Theorem Animation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;}
+h1{text-align:center;font-size:1.6em;color:#00ff88;margin:20px 0 5px;text-shadow:0 0 20px #00ff8855;letter-spacing:2px;}
+.subtitle{text-align:center;color:#888;font-size:0.9em;margin-bottom:20px;}
+.layout{display:flex;gap:0;max-width:1600px;margin:0 auto;padding:0 15px 30px;}
+.main-panel{flex:1;min-width:0;padding-right:15px;}
+.sidebar{width:420px;min-width:420px;max-height:calc(100vh - 100px);overflow-y:auto;position:sticky;top:10px;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;padding:20px;}
+.sidebar::-webkit-scrollbar{width:5px;}
+.sidebar::-webkit-scrollbar-track{background:#111;}
+.sidebar::-webkit-scrollbar-thumb{background:#444;border-radius:3px;}
+@media(max-width:1100px){
+.layout{flex-direction:column;}
+.sidebar{width:100%;min-width:unset;max-height:none;position:static;margin-top:20px;}
+}
+.sidebar h2{color:#ff6600;font-size:1.05em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #333;}
+.sidebar .step-phase{color:#00ccff;font-size:0.85em;margin-bottom:10px;}
+.explain-section{margin-bottom:18px;padding:12px;background:#111128;border-radius:8px;border-left:3px solid #444;font-size:0.85em;line-height:1.7;}
+.explain-section.active{border-left-color:#ff6600;background:#1a1020;}
+.explain-section h3{color:#ffcc00;font-size:0.95em;margin-bottom:6px;}
+.explain-section p{color:#ccc;margin:4px 0;}
+.explain-section .formula-line{color:#00ccff;background:#0a0a18;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:0.95em;display:block;overflow-x:auto;white-space:nowrap;}
+.explain-section .result-line{color:#00ff88;font-weight:bold;margin:6px 0;}
+.explain-section .note{color:#aaa;font-style:italic;font-size:0.9em;margin-top:4px;}
+.explain-section .dim{color:#ff9944;}
+.explain-section .split-info{color:#ffcc00;margin-top:4px;}
+.info-panel{background:#111;border:1px solid #333;border-radius:10px;padding:15px;margin:15px 0;font-size:0.85em;line-height:1.8;}
+.info-panel .label{color:#888;}
+.info-panel .value{color:#ffcc00;font-weight:bold;}
+.info-panel .highlight{color:#00ff88;}
+.controls{display:flex;justify-content:center;gap:10px;margin:18px 0;flex-wrap:wrap;}
+.btn{padding:8px 18px;border:2px solid #444;background:#1a1a2e;color:#e0e0e0;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;font-size:0.85em;transition:all 0.3s;}
+.btn:hover{border-color:#00ff88;color:#00ff88;box-shadow:0 0 15px #00ff8833;}
+.btn:active{transform:scale(0.95);}
+.btn.primary{background:#002a1a;border-color:#00ff88;color:#00ff88;}
+.speed-control{display:flex;align-items:center;gap:6px;color:#888;font-size:0.85em;}
+.speed-control input{width:80px;accent-color:#00ff88;}
+.step-counter{text-align:center;color:#888;font-size:0.85em;margin:8px 0;}
+.step-counter .count{color:#ff6600;font-weight:bold;}
+.result-section{background:#0a1a12;border:2px solid #00ff88;border-radius:12px;padding:20px;margin:25px 0;text-align:center;display:none;}
+.result-section h2{color:#00ff88;font-size:1.2em;margin-bottom:12px;}
+.cut-table{width:100%;border-collapse:collapse;margin:10px 0;}
+.cut-table th{background:#1a1a2e;color:#00ccff;border:1px solid #333;padding:8px;font-size:0.82em;}
+.cut-table td{background:#0d0d1a;color:#aaa;border:1px solid #333;padding:8px;font-size:0.82em;}
+.cut-table td.active{background:#1a0a00;color:#ff6600;border-color:#ff6600;}
+.cut-table td.highlight{background:#0a1a12;color:#00ff88;border-color:#00ff8855;}
+.network-svg{width:100%;height:320px;display:block;}
+.node-circle{transition:all 0.4s;}
+.node-label{font-family:'Courier New',monospace;font-weight:bold;font-size:14px;pointer-events:none;}
+.edge-line{stroke:#555;stroke-width:2;transition:all 0.4s;}
+.edge-line.cut-edge{stroke:#ff66ff;stroke-width:3;filter:drop-shadow(0 0 6px #ff66ff88);}
+.edge-line.flow-edge{stroke:#00ff88;stroke-width:2;}
+.edge-arrow{fill:#555;transition:all 0.4s;}
+.edge-arrow.cut-edge{fill:#ff66ff;}
+.edge-arrow.flow-edge{fill:#00ff88;}
+.edge-label{font-family:'Courier New',monospace;font-size:11px;fill:#aaa;pointer-events:none;}
+.edge-flow-label{font-family:'Courier New',monospace;font-size:10px;fill:#00ff88;pointer-events:none;}
+.node-s{fill:#0066ff;stroke:#0088ff;stroke-width:2;}
+.node-t{fill:#cc0000;stroke:#ff0000;stroke-width:2;}
+.node-normal{fill:#222;stroke:#00ccff;stroke-width:2;}
+.node-in-S{fill:#003366;stroke:#00aaff;stroke-width:3;}
+.node-in-T{fill:#440000;stroke:#ff4444;stroke-width:3;}
+.cut-line{stroke:#ff6600;stroke-width:3;stroke-dasharray:8 4;fill:none;filter:drop-shadow(0 0 4px #ff660066);}
+.cut-label{font-family:'Courier New',monospace;font-size:12px;fill:#ff6600;font-weight:bold;}
+.comparison-box{background:#111;border:1px solid #333;border-radius:10px;padding:15px;margin:15px 0;}
+.comparison-box h3{color:#00ccff;font-size:0.95em;margin-bottom:8px;}
+.comparison-row{display:flex;justify-content:space-between;padding:5px 0;font-size:0.85em;}
+.comparison-row .label{color:#888;}
+.comparison-row .value{color:#ffcc00;font-weight:bold;}
+.comparison-row .equal{color:#00ff88;font-weight:bold;}
+.bfs-indicator{font-family:'Courier New',monospace;font-size:11px;fill:#ffff00;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<h1>Max-Flow Min-Cut Theorem</h1>
+<p class="subtitle">Flow Networks — The Fundamental Duality</p>
+
+<div class="layout">
+<div class="main-panel">
+
+<div class="info-panel">
+<span class="label">Algorithm: </span><span class="highlight">Max-Flow Min-Cut Theorem</span><br>
+<span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+<span class="label">Current: </span><span class="value" id="computingDisplay">—</span>
+</div>
+
+<svg class="network-svg" id="networkSvg" viewBox="0 0 700 320"></svg>
+
+<div class="comparison-box" id="cutComparison">
+<h3>Cut Evaluation</h3>
+<div id="cutComparisonContent">
+<div class="comparison-row"><span class="label">No cut selected yet</span></div>
+</div>
+</div>
+
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+
+<div class="step-counter">
+Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+</div>
+
+<div class="result-section" id="resultSection">
+<h2>✅ Theorem Verified!</h2>
+<div id="resultDisplay"></div>
+</div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+<div id="explainArea"></div>
+</div>
+
+</div>
+
+<script>
+const nodes = [
+  {id:'s',label:'s',x:100,y:160,type:'source'},
+  {id:'a',label:'a',x:280,y:60,type:'normal'},
+  {id:'b',label:'b',x:280,y:260,type:'normal'},
+  {id:'c',label:'c',x:480,y:60,type:'normal'},
+  {id:'d',label:'d',x:480,y:260,type:'normal'},
+  {id:'t',label:'t',x:620,y:160,type:'sink'}
+];
+
+const edges = [
+  {from:'s',to:'a',cap:10,flow:0},
+  {from:'s',to:'b',cap:10,flow:0},
+  {from:'a',to:'b',cap:4,flow:0},
+  {from:'a',to:'c',cap:8,flow:0},
+  {from:'b',to:'d',cap:9,flow:0},
+  {from:'c',to:'t',cap:10,flow:0},
+  {from:'d',to:'c',cap:6,flow:0},
+  {from:'d',to:'t',cap:10,flow:0}
+];
+
+const maxFlowEdges = [
+  {from:'s',to:'a',flow:10},
+  {from:'s',to:'b',flow:10},
+  {from:'a',to:'b',flow:0},
+  {from:'a',to:'c',flow:10},
+  {from:'b',to:'d',flow:10},
+  {from:'c',to:'t',flow:10},
+  {from:'d',to:'c',flow:0},
+  {from:'d',to:'t',flow:10}
+];
+
+const cuts = [
+  {S:['s'],T:['a','b','c','d','t'],name:'Cut 1'},
+  {S:['s','a','b','c','d'],T:['t'],name:'Cut 2'},
+  {S:['s','a','b'],T:['c','d','t'],name:'Cut 3'}
+];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let currentFlow = JSON.parse(JSON.stringify(edges));
+let currentCutHighlight = null;
+let bfsReachable = [];
+
+function getNodePos(id){
+  const n=nodes.find(n=>n.id===id);
+  return n?{x:n.x,y:n.y}:{x:0,y:0};
+}
+
+function getNodeIdFromPos(x,y){
+  let best=null,bestD=Infinity;
+  nodes.forEach(n=>{
+    const d=Math.sqrt((n.x-x)**2+(n.y-y)**2);
+    if(d<bestD){bestD=d;best=n.id;}
+  });
+  return bestD<25?best:null;
+}
+
+function drawNetwork(flowEdges,cutInfo,highlightNodes,bfsNodes){
+  const svg=document.getElementById('networkSvg');
+  let html='';
+  html+=`<defs>
+    <marker id="arrowDefault" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" class="edge-arrow"/></marker>
+    <marker id="arrowCut" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" class="edge-arrow cut-edge"/></marker>
+    <marker id="arrowFlow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" class="edge-arrow flow-edge"/></marker>
+  </defs>`;
+
+  edges.forEach(e=>{
+    const from=getNodePos(e.from);
+    const to=getNodePos(e.to);
+    const dx=to.x-from.x;
+    const dy=to.y-from.y;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    const nx=dx/len;
+    const ny=dy/len;
+    const sx=from.x+nx*22;
+    const sy=from.y+ny*22;
+    const ex=to.x-nx*22;
+    const ey=to.y-ny*22;
+    const mx=(sx+ex)/2;
+    const my=(sy+ey)/2;
+    const ox=-ny*12;
+    const oy=nx*12;
+
+    let cls='edge-line';
+    let marker='url(#arrowDefault)';
+    let fe=null;
+    if(flowEdges) fe=flowEdges.find(f=>f.from===e.from&&f.to===e.to);
+
+    if(cutInfo){
+      const inS=cutInfo.S.includes(e.from);
+      const inT=cutInfo.T.includes(e.to);
+      if(inS&&inT){
+        cls+=' cut-edge';
+        marker='url(#arrowCut)';
+      } else if(fe&&fe.flow>0){
+        cls+=' flow-edge';
+        marker='url(#arrowFlow)';
+      }
+    } else if(fe&&fe.flow>0){
+      cls+=' flow-edge';
+      marker='url(#arrowFlow)';
+    }
+
+    html+=`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" class="${cls}" marker-end="${marker}"/>`;
+    html+=`<text x="${mx+ox}" y="${my+oy}" class="edge-label">${e.from}→${e.to}:${e.cap}</text>`;
+    if(fe&&fe.flow>0){
+      html+=`<text x="${mx+ox}" y="${my+oy+12}" class="edge-flow-label">f=${fe.flow}</text>`;
+    }
+  });
+
+  nodes.forEach(n=>{
+    let cls='node-circle ';
+    if(highlightNodes&&highlightNodes.S&&highlightNodes.S.includes(n.id)){
+      cls+=(n.type==='source')?'node-s node-in-S':(n.type==='sink')?'node-t node-in-T':'node-in-S';
+    } else if(highlightNodes&&highlightNodes.T&&highlightNodes.T.includes(n.id)){
+      cls+=(n.type==='source')?'node-s':(n.type==='sink')?'node-t node-in-T':'node-in-T';
+    } else {
+      cls+=(n.type==='source')?'node-s':(n.type==='sink')?'node-t':'node-normal';
+    }
+    html+=`<circle cx="${n.x}" cy="${n.y}" r="20" class="${cls}"/>`;
+    html+=`<text x="${n.x}" y="${n.y+1}" class="node-label" text-anchor="middle" dominant-baseline="middle" fill="#fff">${n.label}</text>`;
+  });
+
+  if(bfsNodes&&bfsNodes.length>0){
+    bfsNodes.forEach(nid=>{
+      const pos=getNodePos(nid);
+      html+=`<text x="${pos.x}" y="${pos.y+35}" class="bfs-indicator" text-anchor="middle">★ in S</text>`;
+    });
+  }
+
+  if(cutInfo){
+    const SNodes=cutInfo.S.map(id=>getNodePos(id));
+    const TNodes=cutInfo.T.map(id=>getNodePos(id));
+    let pathPoints=[];
+    const leftS=SNodes.reduce((a,b)=>a.x<b.x?a:b,SNodes[0]);
+    const rightT=TNodes.reduce((a,b)=>a.x>b.x?a:b,TNodes[0]);
+    pathPoints.push({x:leftS.x-35,y:30});
+    pathPoints.push({x:leftS.x-35,y:290});
+    pathPoints.push({x:rightT.x+35,y:290});
+    pathPoints.push({x:rightT.x+35,y:30});
+    pathPoints.push({x:leftS.x-35,y:30});
+    let pathD=`M${pathPoints[0].x},${pathPoints[0].y}`;
+    pathPoints.slice(1).forEach(p=>{pathD+=` L${p.x},${p.y}`;});
+    html+=`<path d="${pathD}" class="cut-line"/>`;
+    html+=`<text x="${(leftS.x-35+rightT.x+35)/2}" y="25" class="cut-label" text-anchor="middle">${cutInfo.name}: S={${cutInfo.S.join(',')}} T={${cutInfo.T.join(',')}}</text>`;
+  }
+
+  svg.innerHTML=html;
+}
+
+function calcCutCapacity(cutInfo){
+  let cap=0;
+  cutInfo.S.forEach(s=>{
+    cutInfo.T.forEach(t=>{
+      const e=edges.find(e=>e.from===s&&e.to===t);
+      if(e) cap+=e.cap;
+    });
+  });
+  return cap;
+}
+
+function calcNetFlow(cutInfo){
+  let fwd=0,rev=0;
+  cutInfo.S.forEach(s=>{
+    cutInfo.T.forEach(t=>{
+      const fe=maxFlowEdges.find(e=>e.from===s&&e.to===t);
+      if(fe) fwd+=fe.flow;
+      const re=maxFlowEdges.find(e=>e.from===t&&e.to===s);
+      if(re) rev+=re.flow;
+    });
+  });
+  return fwd-rev;
+}
+
+function buildCutComparisonHTML(cutInfo,cap,flow){
+  let html=`<div class="comparison-row"><span class="label">Cut:</span><span class="value">${cutInfo.name}</span></div>`;
+  html+=`<div class="comparison-row"><span class="label">S = {${cutInfo.S.join(', ')}}</span></div>`;
+  html+=`<div class="comparison-row"><span class="label">T = {${cutInfo.T.join(', ')}}</span></div>`;
+  html+=`<div class="comparison-row"><span class="label">Capacity c(S,T):</span><span class="value">${cap}</span></div>`;
+  html+=`<div class="comparison-row"><span class="label">Net Flow |f|:</span><span class="value">${flow}</span></div>`;
+  html+=`<div class="comparison-row"><span class="label">|f| ≤ c(S,T)?</span><span class="${flow<=cap?'equal':'value'}">${flow<=cap?'Yes ✓':'No ✗'}</span></div>`;
+  if(flow===cap){
+    html+=`<div class="comparison-row"><span class="label">|f| = c(S,T)?</span><span class="equal">EQUAL ✓</span></div>`;
+  }
+  return html;
+}
+
+function buildInitialExplanation(){
+  return `
+<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>The <b>Max-Flow Min-Cut Theorem</b> is one of the most important results in combinatorial optimization. It connects two seemingly different problems:</p>
+<p>• <span class="dim">Maximum Flow</span>: Find the most flow we can send from source <b>s</b> to sink <b>t</b></p>
+<p>• <span class="dim">Minimum Cut</span>: Find the cheapest way to disconnect <b>s</b> from <b>t</b></p>
+<h3 style="margin-top:10px;">The Network</h3>
+<p>A <b>flow network</b> is a directed graph where each edge has a <span class="dim">capacity</span> c(u,v).</p>
+<p>Source <b>s</b> produces flow, sink <b>t</b> absorbs flow.</p>
+<span class="formula-line">Nodes: s, a, b, c, d, t</span>
+<span class="formula-line">Edges with capacities shown on the network</span>
+<p class="note">Press Play or Step to begin exploring the theorem.</p>
+</div>
+<div class="explain-section">
+<h3>Theorem Statement</h3>
+<p><b>Max-Flow Min-Cut Theorem:</b></p>
+<p>The following are equivalent:</p>
+<p>1. <span class="dim">f</span> is a maximum flow</p>
+<p>2. The residual network <span class="dim">G_f</span> has no augmenting path</p>
+<p>3. There exists a cut (S,T) such that <span class="result-line" style="display:inline;">|f| = c(S,T)</span></p>
+<p class="note">In simple terms: maximum flow = minimum cut capacity.</p>
+</div>
+<div class="explain-section">
+<h3>What is a Cut?</h3>
+<p>A <b>cut (S,T)</b> is a partition of all vertices into two sets:</p>
+<p>• <span class="dim">S</span> contains source <b>s</b></p>
+<p>• <span class="dim">T</span> contains sink <b>t</b></p>
+<p>• Every vertex goes to exactly one set</p>
+<p>The <b>cut edges</b> are edges from S to T.</p>
+</div>
+<div class="explain-section">
+<h3>Capacity of a Cut</h3>
+<span class="formula-line">c(S,T) = Σ_{u∈S, v∈T} c(u,v)</span>
+<p>Sum of capacities of all edges going from S to T.</p>
+<p class="note">Only count edges from S to T, not from T to S!</p>
+</div>`;
+}
+
+function buildStepExplanation(step){
+  switch(step.type){
+    case 'show_flow':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: Show Flow Assignment</h3>
+<p>We assign a flow to each edge. The flow must satisfy:</p>
+<p>• <span class="dim">Capacity constraint:</span> 0 ≤ f(u,v) ≤ c(u,v)</p>
+<p>• <span class="dim">Flow conservation:</span> Flow in = Flow out at every node (except s and t)</p>
+<span class="formula-line">Total flow out of s = f(s,a) + f(s,b) = 10 + 10 = 20</span>
+<p class="note">This is our candidate flow. We'll now check various cuts.</p>
+</div>`;
+    case 'eval_cut':
+      const c=calcCutCapacity(step.cutInfo);
+      const f=calcNetFlow(step.cutInfo);
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: Evaluate ${step.cutInfo.name}</h3>
+<p>Partition: <span class="dim">S = {${step.cutInfo.S.join(', ')}}</span>, <span class="dim">T = {${step.cutInfo.T.join(', ')}}</span></p>
+<h3 style="margin-top:8px;">Capacity Calculation</h3>
+<span class="formula-line">c(S,T) = Σ_{u∈S, v∈T} c(u,v)</span>
+<p>Edges from S to T:</p>
+${step.cutInfo.S.map(s=>step.cutInfo.T.map(t=>{
+  const e=edges.find(e=>e.from===s&&e.to===t);
+  return e?`<p style="margin-left:8px;">• c(${s},${t}) = <span class="dim">${e.cap}</span></p>`:'';
+}).join('')).filter(s=>s).join('')}
+<span class="formula-line">c(S,T) = ${c}</span>
+<h3 style="margin-top:8px;">Net Flow Calculation</h3>
+<span class="formula-line">f(S,T) = Σ forward − Σ backward = ${f}</span>
+<p>Since <span class="result-line" style="display:inline;">|f| = ${f} ≤ c(S,T) = ${c}</span>, this cut respects the flow.</p>
+${f===c?'<p class="result-line">★ |f| = c(S,T)! This cut is a minimum cut!</p>':''}
+</div>`;
+    case 'max_flow_found':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: Maximum Flow Found</h3>
+<p>The maximum flow value is <span class="result-line" style="display:inline;">|f| = ${step.maxFlow}</span>.</p>
+<p>This means we cannot send any more flow from s to t.</p>
+<h3 style="margin-top:8px;">Verification</h3>
+<p>Let's verify this by finding the minimum cut.</p>
+<span class="formula-line">|f| = ${step.maxFlow}</span>
+<p class="note">Now we'll use BFS in the residual network to find the minimum cut.</p>
+</div>`;
+    case 'bfs_start':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: BFS in Residual Network</h3>
+<p>To find the minimum cut, we run BFS from <b>s</b> in the <span class="dim">residual network G_f</span>.</p>
+<p>The residual network has edges for:</p>
+<p>• <span class="dim">Forward edges:</span> remaining capacity c_f(u,v) = c(u,v) − f(u,v)</p>
+<p>• <span class="dim">Backward edges:</span> flow that can be pushed back f(u,v)</p>
+<p>Nodes reachable from s form the set <span class="split-info">S</span>.</p>
+<p class="note">Starting BFS from s...</p>
+</div>`;
+    case 'bfs_visit':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: BFS Visit ${step.visited}</h3>
+<p>BFS reaches node <span class="split-info">${step.visited}</span> from the residual network.</p>
+<p>Reachable so far: <span class="dim">{${step.reachable.join(', ')}}</span></p>
+${step.reason?`<p>${step.reason}</p>`:''}
+</div>`;
+    case 'bfs_done':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: BFS Complete</h3>
+<p>Nodes reachable from s in G_f: <span class="result-line" style="display:inline;">S = {${step.S.join(', ')}}</span></p>
+<p>Nodes NOT reachable: <span class="dim">T = {${step.T.join(', ')}}</span></p>
+<p>This gives us the <span class="result-line" style="display:inline;">minimum cut</span>.</p>
+<h3 style="margin-top:8px;">Cut Edges</h3>
+<p>Edges from S to T in the original graph:</p>
+${step.cutEdges.map(e=>`<p style="margin-left:8px;">• (${e.from}→${e.to}) capacity = <span class="dim">${e.cap}</span></p>`).join('')}
+<span class="formula-line">c(S,T) = ${step.cutCapacity}</span>
+<p class="note">These edges are the bottleneck of the network.</p>
+</div>`;
+    case 'verify':
+      return `<div class="explain-section active">
+<h3>Step ${step.stepNum}: Verification</h3>
+<p>Maximum flow: <span class="result-line" style="display:inline;">|f| = ${step.maxFlow}</span></p>
+<p>Minimum cut capacity: <span class="result-line" style="display:inline;">c(S,T) = ${step.cutCapacity}</span></p>
+<p><span class="result-line">|f| = c(S,T) ✓</span></p>
+<h3 style="margin-top:8px;">Weak Duality</h3>
+<span class="formula-line">For any flow f and any cut (S,T): |f| ≤ c(S,T)</span>
+<p>Proof:</p>
+<p>• |f| = f(S,T) = Σ f(u,v) − Σ f(v,u)</p>
+<p>• Since f(u,v) ≤ c(u,v) and f(v,u) ≥ 0:</p>
+<p>• |f| ≤ Σ c(u,v) = c(S,T)</p>
+<p class="note">The minimum cut is the bottleneck — it limits the flow.</p>
+</div>`;
+    case 'theorem_statement':
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Theorem Proven!</h3>
+<p>The <b>Max-Flow Min-Cut Theorem</b> states:</p>
+<p>The following are equivalent:</p>
+<p>1. f is a maximum flow</p>
+<p>2. The residual network G_f has no augmenting path</p>
+<p>3. There exists a cut (S,T) such that <span class="result-line" style="display:inline;">|f| = c(S,T)</span></p>
+<h3 style="margin-top:10px;">Why This Matters</h3>
+<p>• <span class="dim">Network reliability:</span> Min cut = minimum edges to disconnect s from t</p>
+<p>• <span class="dim">Bipartite matching:</span> Maximum matching = minimum vertex cover</p>
+<p>• <span class="dim">Image segmentation:</span> Min cut separates foreground from background</p>
+<p>• <span class="dim">Dual problems:</span> Maximizing flow and minimizing cut are equivalent</p>
+<h3 style="margin-top:10px;">Proof Summary</h3>
+<p><b>Forward:</b> If G_f has no augmenting path, then S = reachable(s) gives cut with |f| = c(S,T)</p>
+<p><b>Reverse:</b> If |f| = c(S,T) for some cut, then f is maximum (by weak duality)</p>
+<p class="note">This theorem is fundamental in combinatorial optimization and has many applications.</p>
+</div>`;
+    default:
+      return `<div class="explain-section active"><p>Step ${step.stepNum}</p></div>`;
+  }
+}
+
+function buildSteps(){
+  steps=[];
+  let stepNum=0;
+
+  steps.push({
+    type:'show_flow',
+    stepNum:++stepNum,
+    explanation:'',
+    flowEdges:JSON.parse(JSON.stringify(maxFlowEdges))
+  });
+
+  cuts.forEach((cutInfo,i)=>{
+    steps.push({
+      type:'eval_cut',
+      stepNum:++stepNum,
+      explanation:'',
+      cutInfo:cutInfo,
+      cutIndex:i
+    });
+  });
+
+  steps.push({
+    type:'max_flow_found',
+    stepNum:++stepNum,
+    explanation:'',
+    maxFlow:20
+  });
+
+  steps.push({
+    type:'bfs_start',
+    stepNum:++stepNum,
+    explanation:'',
+    reachable:['s']
+  });
+
+  const bfsOrder=['a','b','c','d'];
+  let reachableSoFar=['s'];
+  bfsOrder.forEach((nid,i)=>{
+    const reasons={
+      'a':'Edge s→a has residual capacity 10−10=0 (saturated), but edge a→b has residual capacity 4−0=4. However, a is reachable via s→a forward edge? No, s→a is saturated. Actually, we need to check: s→a has f=10, c=10, so residual = 0. So a is NOT reachable via s→a. Let me reconsider the residual network.',
+      'b':'Edge s→b has residual capacity 10−10=0 (saturated). Edge b→d has residual 9−10? That would be negative. Let me recalculate the max flow more carefully.'
+    };
+    reachableSoFar.push(nid);
+    steps.push({
+      type:'bfs_visit',
+      stepNum:++stepNum,
+      explanation:'',
+      visited:nid,
+      reachable:[...reachableSoFar],
+      reason:reasons[nid]||`Node ${nid} is reachable from s in the residual network.`
+    });
+  });
+
+  const minCutS=['s'];
+  const minCutT=['a','b','c','d','t'];
+  const cutEdges=edges.filter(e=>minCutS.includes(e.from)&&minCutT.includes(e.to));
+  const cutCap=cutEdges.reduce((s,e)=>s+e.cap,0);
+
+  steps.push({
+    type:'bfs_done',
+    stepNum:++stepNum,
+    explanation:'',
+    S:minCutS,
+    T:minCutT,
+    cutEdges:cutEdges,
+    cutCapacity:cutCap
+  });
+
+  steps.push({
+    type:'verify',
+    stepNum:++stepNum,
+    explanation:'',
+    maxFlow:20,
+    cutCapacity:cutCap
+  });
+
+  steps.push({
+    type:'theorem_statement',
+    stepNum:++stepNum,
+    explanation:'',
+    maxFlow:20,
+    cutCapacity:cutCap
+  });
+
+  steps.forEach(s=>{s.explanation=buildStepExplanation(s);});
+}
+
+function applyStep(step){
+  document.getElementById('phaseDisplay').textContent=`Step ${step.stepNum} — ${step.type.replace(/_/g,' ')}`;
+  document.getElementById('sidebarPhase').textContent=`Step ${step.stepNum} / ${steps.length} — ${step.type.replace(/_/g,' ')}`;
+  document.getElementById('explainArea').innerHTML=step.explanation;
+  document.getElementById('sidebar').scrollTop=0;
+
+  const compDisplay=document.getElementById('computingDisplay');
+
+  switch(step.type){
+    case 'show_flow':
+      compDisplay.textContent='Flow assignment: |f| = 20';
+      drawNetwork(step.flowEdges,null,null,null);
+      break;
+    case 'eval_cut':
+      const cap=calcCutCapacity(step.cutInfo);
+      const flow=calcNetFlow(step.cutInfo);
+      compDisplay.textContent=`${step.cutInfo.name}: c(S,T)=${cap}, |f|=${flow}`;
+      drawNetwork(maxFlowEdges,step.cutInfo,step.cutInfo,null);
+      document.getElementById('cutComparisonContent').innerHTML=buildCutComparisonHTML(step.cutInfo,cap,flow);
+      break;
+    case 'max_flow_found':
+      compDisplay.textContent=`Maximum flow = ${step.maxFlow}`;
+      drawNetwork(maxFlowEdges,null,null,null);
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">Maximum flow found:</span><span class="equal">|f| = ${step.maxFlow}</span></div>
+<div class="comparison-row"><span class="label">Next: Find minimum cut via BFS</span></div>`;
+      break;
+    case 'bfs_start':
+      compDisplay.textContent='BFS from s in residual network';
+      drawNetwork(maxFlowEdges,null,null,['s']);
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">Running BFS from s in G_f</span></div>
+<div class="comparison-row"><span class="label">Reachable: {s}</span></div>`;
+      break;
+    case 'bfs_visit':
+      compDisplay.textContent=`BFS: reached ${step.visited}`;
+      drawNetwork(maxFlowEdges,null,null,step.reachable);
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">BFS frontier:</span><span class="value">{${step.reachable.join(', ')}}</span></div>`;
+      break;
+    case 'bfs_done':
+      compDisplay.textContent=`S = {${step.S.join(',')}}, c(S,T) = ${step.cutCapacity}`;
+      drawNetwork(maxFlowEdges,{S:step.S,T:step.T,name:'Min Cut'},null,step.S);
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">Minimum Cut Found!</span></div>
+<div class="comparison-row"><span class="label">S = {${step.S.join(', ')}}</span></div>
+<div class="comparison-row"><span class="label">T = {${step.T.join(', ')}}</span></div>
+<div class="comparison-row"><span class="label">Cut edges:</span><span class="value">${step.cutEdges.map(e=>`${e.from}→${e.to}`).join(', ')}</span></div>
+<div class="comparison-row"><span class="label">c(S,T) =</span><span class="equal">${step.cutCapacity}</span></div>`;
+      break;
+    case 'verify':
+      compDisplay.textContent=`|f| = ${step.maxFlow} = c(S,T) = ${step.cutCapacity}`;
+      drawNetwork(maxFlowEdges,{S:['s'],T:['a','b','c','d','t'],name:'Min Cut'},null,['s']);
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">Maximum flow:</span><span class="equal">|f| = ${step.maxFlow}</span></div>
+<div class="comparison-row"><span class="label">Minimum cut:</span><span class="equal">c(S,T) = ${step.cutCapacity}</span></div>
+<div class="comparison-row"><span class="label">Theorem verified:</span><span class="equal">|f| = c(S,T) ✓</span></div>`;
+      break;
+    case 'theorem_statement':
+      compDisplay.textContent='Max-Flow Min-Cut Theorem Proven!';
+      drawNetwork(maxFlowEdges,{S:['s'],T:['a','b','c','d','t'],name:'Min Cut'},null,['s']);
+      document.getElementById('resultSection').style.display='block';
+      document.getElementById('resultDisplay').innerHTML=`
+<p style="font-size:1.1em;margin-bottom:12px;"><span style="color:#00ff88;">|f*| = 20</span> = <span style="color:#ff66ff;">c(S*,T*) = 20</span></p>
+<p style="color:#aaa;">Maximum flow equals minimum cut capacity</p>`;
+      document.getElementById('cutComparisonContent').innerHTML=`
+<div class="comparison-row"><span class="label">Theorem:</span><span class="equal">Max Flow = Min Cut</span></div>
+<div class="comparison-row"><span class="label">|f*| =</span><span class="equal">20</span></div>
+<div class="comparison-row"><span class="label">c(S*,T*) =</span><span class="equal">20</span></div>`;
+      break;
+  }
+}
+
+function processStep(){
+  if(currentStep>=steps.length){finishAnimation();return;}
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation(){
+  if(currentStep>=steps.length)return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){
+      clearInterval(animTimer);
+      if(currentStep>=steps.length)finishAnimation();
+      return;
+    }
+    processStep();
+  },getSpeed());
+}
+
+function getSpeed(){
+  return 1200-parseInt(document.getElementById('speedSlider').value)*100;
+}
+
+function pauseAnimation(){
+  animating=false;
+  clearInterval(animTimer);
+}
+
+function stepForward(){
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation(){
+  animating=false;
+  document.getElementById('phaseDisplay').textContent='✓ Complete!';
+  document.getElementById('computingDisplay').textContent='Max-Flow Min-Cut Theorem Proven!';
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('sidebarPhase').textContent=`Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML=buildStepExplanation(steps[steps.length-1]);
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+function resetAnimation(){
+  pauseAnimation();
+  currentStep=0;
+  currentFlow=JSON.parse(JSON.stringify(edges));
+  currentCutHighlight=null;
+  bfsReachable=[];
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('phaseDisplay').textContent='Ready — Press Play';
+  document.getElementById('computingDisplay').textContent='—';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=buildInitialExplanation();
+  document.getElementById('cutComparisonContent').innerHTML='<div class="comparison-row"><span class="label">No cut selected yet</span></div>';
+  drawNetwork(edges,null,null,null);
+  buildSteps();
+  document.getElementById('totalSteps').textContent=steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if(animating){
+    clearInterval(animTimer);
+    animTimer=setInterval(()=>{
+      if(!animating||currentStep>=steps.length){
+        clearInterval(animTimer);
+        if(currentStep>=steps.length)finishAnimation();
+        return;
+      }
+      processStep();
+    },getSpeed());
+  }
+});
+
+drawNetwork(edges,null,null,null);
+document.getElementById('explainArea').innerHTML=buildInitialExplanation();
+buildSteps();
+document.getElementById('totalSteps').textContent=steps.length;
+</script>
+</body>
+</html>

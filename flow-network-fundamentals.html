@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flow Network Fundamentals</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+  display: none;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section p { color: #ccc; margin: 6px 0; }
+.result-section .result-line {
+  color: #00ff88;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 8px 0;
+}
+.graph-container {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+  overflow-x: auto;
+}
+.graph-container svg {
+  display: inline-block;
+}
+.flow-table-section {
+  margin: 15px 0;
+}
+.flow-table-section .table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.flow-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-size: 0.8em;
+}
+.flow-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  padding: 6px 10px;
+  border: 1px solid #333;
+  font-weight: bold;
+}
+.flow-table td {
+  background: #0d0d1a;
+  color: #aaa;
+  padding: 6px 10px;
+  border: 1px solid #333;
+  text-align: center;
+  transition: all 0.3s;
+}
+.flow-table td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+.flow-table td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+.cut-legend {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 10px 0;
+  font-size: 0.85em;
+}
+.cut-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cut-legend .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.cut-legend .dot.s { background: #00ccff; }
+.cut-legend .dot.t { background: #ff4444; }
+</style>
+</head>
+<body>
+
+<h1>Flow Network Fundamentals</h1>
+<p class="subtitle">Graph Theory — Directed Network with Capacities and Flows</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <div class="graph-container">
+      <svg id="graphSvg" width="680" height="400" viewBox="0 0 680 400"></svg>
+    </div>
+    <div id="cutLegend" class="cut-legend" style="display:none;">
+      <span><span class="dot s"></span> Set S (source side)</span>
+      <span><span class="dot t"></span> Set T (sink side)</span>
+    </div>
+    <div class="info-panel">
+      <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+      <span class="label">Current: </span><span class="highlight" id="computingDisplay">—</span><br>
+      <span class="label">Net Flow |f|: </span><span class="value" id="netFlowDisplay">0</span>
+    </div>
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+    <div class="flow-table-section">
+      <div class="table-title">Flow and Capacity Table</div>
+      <table class="flow-table" id="flowTable">
+        <thead>
+          <tr><th>Edge</th><th>Capacity c(u,v)</th><th>Flow f(u,v)</th><th>Status</th></tr>
+        </thead>
+        <tbody id="flowTableBody"></tbody>
+      </table>
+    </div>
+    <div class="result-section" id="resultSection">
+      <h2>Animation Complete</h2>
+      <p class="result-line" id="resultText">—</p>
+      <p id="resultDetail" style="color:#ccc; margin-top:8px;"></p>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+    </div>
+  </div>
+</div>
+
+<script>
+const NODES = {
+  s: { x: 80,  y: 200, label: 's', color: '#00ff88', type: 'source' },
+  a: { x: 220, y: 100, label: 'a', color: '#00ccff', type: 'intermediate' },
+  b: { x: 220, y: 300, label: 'b', color: '#00ccff', type: 'intermediate' },
+  c: { x: 460, y: 100, label: 'c', color: '#00ccff', type: 'intermediate' },
+  d: { x: 460, y: 300, label: 'd', color: '#00ccff', type: 'intermediate' },
+  t: { x: 600, y: 200, label: 't', color: '#ff6600', type: 'sink' }
+};
+
+const EDGES = [
+  { from: 's', to: 'a', cap: 10 },
+  { from: 's', to: 'b', cap: 10 },
+  { from: 'a', to: 'b', cap: 2  },
+  { from: 'a', to: 'c', cap: 8  },
+  { from: 'a', to: 'd', cap: 4  },
+  { from: 'b', to: 'd', cap: 9  },
+  { from: 'c', to: 't', cap: 10 },
+  { from: 'd', to: 'c', cap: 6  },
+  { from: 'd', to: 't', cap: 10 }
+];
+
+let flow = {};
+let highlightedEdges = [];
+let highlightedNodes = [];
+let cutS = [];
+let cutT = [];
+
+function initFlow() {
+  flow = {};
+  EDGES.forEach(e => { flow[e.from + '-' + e.to] = 0; });
+}
+
+function getEdgeKey(u, v) { return u + '-' + v; }
+
+function drawGraph() {
+  const svg = document.getElementById('graphSvg');
+  let html = '';
+  html += '<defs>';
+  html += '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#555"/></marker>';
+  html += '<marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#00ff88"/></marker>';
+  html += '<marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#ff6600"/></marker>';
+  html += '<marker id="arrowhead-cyan" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#00ccff"/></marker>';
+  html += '<marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#ff4444"/></marker>';
+  html += '</defs>';
+
+  EDGES.forEach(e => {
+    const n1 = NODES[e.from], n2 = NODES[e.to];
+    const dx = n2.x - n1.x, dy = n2.y - n1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const ux = dx/len, uy = dy/len;
+    const x1 = n1.x + ux*28, y1 = n1.y + uy*28;
+    const x2 = n2.x - ux*28, y2 = n2.y - uy*28;
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    const perpX = -uy * 14, perpY = ux * 14;
+    const edgeKey = getEdgeKey(e.from, e.to);
+    const isHighlighted = highlightedEdges.includes(edgeKey);
+    const edgeColor = isHighlighted ? '#00ff88' : '#555';
+    const markerRef = isHighlighted ? 'url(#arrowhead-green)' : 'url(#arrowhead)';
+    const strokeWidth = isHighlighted ? 2.5 : 1.5;
+
+    let capLabel = 'c=' + e.cap;
+    let flowLabel = flow[edgeKey] !== undefined ? 'f=' + flow[edgeKey] : '';
+    if (flow[edgeKey] === 0 && highlightedEdges.length > 0 && !isHighlighted) {
+      flowLabel = '';
+    }
+
+    html += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+edgeColor+'" stroke-width="'+strokeWidth+'" marker-end="'+markerRef+'"/>';
+
+    if (isHighlighted) {
+      html += '<rect x="'+(mx+perpX-22)+'" y="'+(my+perpY-16)+'" width="44" height="18" rx="3" fill="#1a1020" stroke="#ff6600" stroke-width="1"/>';
+      html += '<text x="'+(mx+perpX)+'" y="'+(my+perpY-2)+'" text-anchor="middle" fill="#ff6600" font-size="11" font-family="Courier New" font-weight="bold">'+e.cap+'</text>';
+    } else {
+      html += '<text x="'+(mx+perpX)+'" y="'+(my+perpY-2)+'" text-anchor="middle" fill="#888" font-size="11" font-family="Courier New">'+e.cap+'</text>';
+    }
+
+    if (flowLabel && flow[edgeKey] > 0) {
+      const flowBg = isHighlighted ? '#0a1a12' : '#111';
+      const flowColor = isHighlighted ? '#00ff88' : '#aaa';
+      html += '<rect x="'+(mx+perpX-22)+'" y="'+(my+perpY+4)+'" width="44" height="18" rx="3" fill="'+flowBg+'" stroke="'+flowColor+'" stroke-width="1"/>';
+      html += '<text x="'+(mx+perpX)+'" y="'+(my+perpY+18)+'" text-anchor="middle" fill="'+flowColor+'" font-size="11" font-family="Courier New">'+flow[edgeKey]+'</text>';
+    }
+  });
+
+  Object.keys(NODES).forEach(id => {
+    const n = NODES[id];
+    let nodeColor = n.color;
+    let strokeW = 2;
+    let radius = 24;
+    let glow = '';
+
+    if (cutS.includes(id)) {
+      nodeColor = '#00ccff';
+      glow = '<circle cx="'+n.x+'" cy="'+n.y+'" r="30" fill="none" stroke="#00ccff" stroke-width="2" opacity="0.4"/>';
+    } else if (cutT.includes(id)) {
+      nodeColor = '#ff4444';
+      glow = '<circle cx="'+n.x+'" cy="'+n.y+'" r="30" fill="none" stroke="#ff4444" stroke-width="2" opacity="0.4"/>';
+    }
+
+    if (highlightedNodes.includes(id)) {
+      glow = '<circle cx="'+n.x+'" cy="'+n.y+'" r="32" fill="none" stroke="'+nodeColor+'" stroke-width="3" opacity="0.6"><animate attributeName="r" values="28;34;28" dur="1s" repeatCount="indefinite"/></circle>';
+      strokeW = 3;
+    }
+
+    html += glow;
+    html += '<circle cx="'+n.x+'" cy="'+n.y+'" r="'+radius+'" fill="#111" stroke="'+nodeColor+'" stroke-width="'+strokeW+'"/>';
+    html += '<text x="'+n.x+'" y="'+(n.y+5)+'" text-anchor="middle" fill="'+nodeColor+'" font-size="18" font-family="Courier New" font-weight="bold">'+n.label+'</text>';
+  });
+
+  svg.innerHTML = html;
+}
+
+function buildFlowTable() {
+  const tbody = document.getElementById('flowTableBody');
+  let html = '';
+  EDGES.forEach(e => {
+    const key = getEdgeKey(e.from, e.to);
+    const f = flow[key] || 0;
+    let status = 'Idle';
+    let statusColor = '#888';
+    if (f === e.cap) { status = 'Saturated'; statusColor = '#ff6600'; }
+    else if (f > 0) { status = 'Active'; statusColor = '#00ff88'; }
+    html += '<tr><td style="color:#00ccff">'+e.from+'→'+e.to+'</td>';
+    html += '<td style="color:#ffcc00">'+e.cap+'</td>';
+    html += '<td style="color:#00ff88">'+f+'</td>';
+    html += '<td style="color:'+statusColor+'">'+status+'</td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function buildSteps() {
+  steps = [];
+  initFlow();
+  drawGraph();
+  buildFlowTable();
+  document.getElementById('netFlowDisplay').textContent = '0';
+  document.getElementById('cutLegend').style.display = 'none';
+  cutS = []; cutT = [];
+
+  // Step 1: Show empty network with capacities
+  steps.push({
+    type: 'show_network',
+    explanation: buildExplainSection('Network Overview', [
+      'A <b>flow network</b> is a directed graph where each edge has a <span class="dim">capacity</span> — the maximum amount of flow it can carry.',
+      'Nodes: <span class="dim">s</span> (source), <span class="dim">a, b, c, d</span> (intermediate), <span class="dim">t</span> (sink).',
+      'Edge labels show <span class="dim">c(u,v)</span> — the capacity of each edge.'
+    ], 'Press Play or Step to continue.')
+  });
+
+  // Step 2: Highlight source and sink
+  steps.push({
+    type: 'highlight_source_sink',
+    nodes: ['s', 't'],
+    explanation: buildExplainSection('Source and Sink', [
+      '<span style="color:#00ff88">● Source s</span> — the node where all flow originates. Flow <i>leaves</i> s.',
+      '<span style="color:#ff6600">● Sink t</span> — the node where all flow terminates. Flow <i>enters</i> t.',
+      'All other nodes are <b>intermediate</b> — they must satisfy <span class="dim">flow conservation</span>.'
+    ], 'Source and sink are the endpoints of the flow.')
+  });
+
+  // Step 3: Show flow function appearing (all zeros)
+  steps.push({
+    type: 'show_flow_function',
+    explanation: buildExplainSection('Flow Function f(u,v)', [
+      'The <b>flow function</b> assigns a value <span class="dim">f(u,v)</span> to each edge.',
+      '<span class="formula-line">0 ≤ f(u,v) ≤ c(u,v)</span>',
+      'Flow on each edge cannot exceed its capacity. Initially, all flows are <span class="dim">0</span>.'
+    ], 'Flow values will now appear on each edge.')
+  });
+
+  // Step 4: Animate flow increasing — show a valid flow
+  // Valid flow: s→a:10, s→b:10, a→b:2, a→c:8, a→d:0, b→d:10(wrong, cap 9), let me compute properly
+  // Let me define a valid flow:
+  // f(s,a)=10, f(s,b)=10, f(a,b)=2, f(a,c)=8, f(a,d)=0, f(b,d)=9, f(c,t)=10, f(d,c)=0, f(d,t)=10
+  // Check conservation:
+  // a: in=10(s→a), out=2+8+0=10 ✓
+  // b: in=10(s→b)+2(a→b)=12, out=9(b→d)=9... not equal. Let me recalculate.
+  // Let me find a valid max flow:
+  // Try: f(s,a)=10, f(s,b)=8, f(a,b)=0, f(a,c)=8, f(a,d)=2, f(b,d)=8, f(c,t)=8, f(d,c)=0, f(d,t)=10... no
+  // Let me be systematic. Max flow = 20 (s→a:10, s→b:10). 
+  // Conservation at a: in from s=10, out: a→b=2, a→c=8, a→d=0 → total=10 ✓
+  // Conservation at b: in from s=10 + from a=2 = 12, out: b→d=9 → need 12 out but cap is 9. Problem.
+  // Let me try: f(s,a)=8, f(s,b)=10, f(a,b)=2, f(a,c)=6, f(a,d)=0, f(b,d)=10(but cap=9)
+  // Try: f(s,a)=8, f(s,b)=10, f(a,b)=2, f(a,c)=6, f(a,d)=0, f(b,d)=9, f(c,t)=8, f(d,c)=0, f(d,t)=10
+  // b: in=10+2=12, out=9 → not balanced. 
+  // Let me try f(a,b)=0: f(s,a)=10, f(s,b)=10, f(a,b)=0, f(a,c)=8, f(a,d)=2, f(b,d)=10(cap=9 no)
+  // f(b,d)=9: b in=10, out=9. Need 1 more going somewhere. b only has one outgoing edge b→d with cap 9.
+  // So f(s,b) can be at most 9 (since b only has b→d with cap 9).
+  // Try: f(s,a)=10, f(s,b)=9, f(a,b)=0, f(a,c)=8, f(a,d)=2, f(b,d)=9, f(c,t)=8, f(d,c)=0, f(d,t)=10
+  // Wait, d→t has cap 10, d→c has cap 6. d in from b=9 + from a=2 = 11. d out: d→c=0, d→t=10 → 10 ≠ 11. 
+  // d→c=1: d out=1+10=11 ✓. c in: from a=8 + from d=1 = 9. c→t=9(cap=10) ✓.
+  // Check: f(s,a)=10, f(s,b)=9, f(a,b)=0, f(a,c)=8, f(a,d)=2, f(b,d)=9, f(c,t)=9, f(d,c)=1, f(d,t)=10
+  // Node a: in=10, out=0+8+2=10 ✓
+  // Node b: in=9+0=9, out=9 ✓
+  // Node c: in=8+1=9, out=9 ✓
+  // Node d: in=2+9=11, out=1+10=11 ✓
+  // Net flow from s: f(s,a)+f(s,b)-f(?,s)=10+9=19. No reverse flow into s. |f|=19.
+  // Net flow into t: f(c,t)+f(d,t)-f(t,?)=9+10=19 ✓
+
+  const validFlow = {
+    's-a': 10, 's-b': 9,
+    'a-b': 0, 'a-c': 8, 'a-d': 2,
+    'b-d': 9,
+    'c-t': 9,
+    'd-c': 1, 'd-t': 10
+  };
+
+  steps.push({
+    type: 'set_flow_sa',
+    edge: 's-a', value: 10,
+    explanation: buildExplainSection('Setting Flow: s→a = 10', [
+      'Edge <span class="dim">s→a</span> has capacity <span class="dim">10</span>.',
+      'We push <span class="result-line" style="display:inline;">f(s,a) = 10</span> — the full capacity.',
+      '<span class="formula-line">0 ≤ f(s,a) = 10 ≤ c(s,a) = 10 ✓</span>',
+      'This edge is now <span style="color:#ff6600">saturated</span> — at maximum capacity.'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_sb',
+    edge: 's-b', value: 9,
+    explanation: buildExplainSection('Setting Flow: s→b = 9', [
+      'Edge <span class="dim">s→b</span> has capacity <span class="dim">10</span>.',
+      'We push <span class="result-line" style="display:inline;">f(s,b) = 9</span> — not full capacity.',
+      '<span class="formula-line">0 ≤ f(s,b) = 9 ≤ c(s,b) = 10 ✓</span>',
+      'Total flow out of source so far: <span class="dim">10 + 9 = 19</span>'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_ac',
+    edge: 'a-c', value: 8,
+    explanation: buildExplainSection('Setting Flow: a→c = 8', [
+      'Edge <span class="dim">a→c</span> has capacity <span class="dim">8</span>.',
+      'We push <span class="result-line" style="display:inline;">f(a,c) = 8</span> — full capacity.',
+      'This edge is now <span style="color:#ff6600">saturated</span>.'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_ad',
+    edge: 'a-d', value: 2,
+    explanation: buildExplainSection('Setting Flow: a→d = 2', [
+      'Edge <span class="dim">a→d</span> has capacity <span class="dim">4</span>.',
+      'We push <span class="result-line" style="display:inline;">f(a,d) = 2</span>.',
+      '<span class="formula-line">0 ≤ f(a,d) = 2 ≤ c(a,d) = 4 ✓</span>'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_bd',
+    edge: 'b-d', value: 9,
+    explanation: buildExplainSection('Setting Flow: b→d = 9', [
+      'Edge <span class="dim">b→d</span> has capacity <span class="dim">9</span>.',
+      'We push <span class="result-line" style="display:inline;">f(b,d) = 9</span> — full capacity.',
+      'Saturated edge!'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_dc',
+    edge: 'd-c', value: 1,
+    explanation: buildExplainSection('Setting Flow: d→c = 1', [
+      'Edge <span class="dim">d→c</span> has capacity <span class="dim">6</span>.',
+      'We push <span class="result-line" style="display:inline;">f(d,c) = 1</span>.',
+      'This small flow helps balance conservation at nodes d and c.'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_dt',
+    edge: 'd-t', value: 10,
+    explanation: buildExplainSection('Setting Flow: d→t = 10', [
+      'Edge <span class="dim">d→t</span> has capacity <span class="dim">10</span>.',
+      'We push <span class="result-line" style="display:inline;">f(d,t) = 10</span> — full capacity.',
+      'Saturated edge!'
+    ])
+  });
+
+  steps.push({
+    type: 'set_flow_ct',
+    edge: 'c-t', value: 9,
+    explanation: buildExplainSection('Setting Flow: c→t = 9', [
+      'Edge <span class="dim">c→t</span> has capacity <span class="dim">10</span>.',
+      'We push <span class="result-line" style="display:inline;">f(c,t) = 9</span>.',
+      'All flows are now assigned. Next we verify conservation laws.'
+    ])
+  });
+
+  // Step: Verify conservation at node a
+  steps.push({
+    type: 'check_conservation',
+    node: 'a',
+    nodes: ['a'],
+    explanation: buildExplainSection('Flow Conservation at Node a', [
+      '<span class="formula-line">Σf(v,a) = f(s,a) = 10</span>',
+      '<span class="formula-line">Σf(a,v) = f(a,b) + f(a,c) + f(a,d) = 0 + 8 + 2 = 10</span>',
+      '<span class="result-line">Flow in = Flow out = 10 ✓</span>',
+      'Node a neither creates nor destroys flow.'
+    ])
+  });
+
+  steps.push({
+    type: 'check_conservation',
+    node: 'b',
+    nodes: ['b'],
+    explanation: buildExplainSection('Flow Conservation at Node b', [
+      '<span class="formula-line">Σf(v,b) = f(s,b) + f(a,b) = 9 + 0 = 9</span>',
+      '<span class="formula-line">Σf(b,v) = f(b,d) = 9</span>',
+      '<span class="result-line">Flow in = Flow out = 9 ✓</span>',
+      'Node b satisfies conservation.'
+    ])
+  });
+
+  steps.push({
+    type: 'check_conservation',
+    node: 'c',
+    nodes: ['c'],
+    explanation: buildExplainSection('Flow Conservation at Node c', [
+      '<span class="formula-line">Σf(v,c) = f(a,c) + f(d,c) = 8 + 1 = 9</span>',
+      '<span class="formula-line">Σf(c,v) = f(c,t) = 9</span>',
+      '<span class="result-line">Flow in = Flow out = 9 ✓</span>',
+      'Node c satisfies conservation.'
+    ])
+  });
+
+  steps.push({
+    type: 'check_conservation',
+    node: 'd',
+    nodes: ['d'],
+    explanation: buildExplainSection('Flow Conservation at Node d', [
+      '<span class="formula-line">Σf(v,d) = f(a,d) + f(b,d) = 2 + 9 = 11</span>',
+      '<span class="formula-line">Σf(d,v) = f(d,c) + f(d,t) = 1 + 10 = 11</span>',
+      '<span class="result-line">Flow in = Flow out = 11 ✓</span>',
+      'All intermediate nodes satisfy flow conservation!'
+    ])
+  });
+
+  // Step: Calculate net flow from source
+  steps.push({
+    type: 'calc_net_flow',
+    explanation: buildExplainSection('Net Flow |f| from Source', [
+      '<span class="formula-line">|f| = Σf(s,v) − Σf(v,s)</span>',
+      '<span class="formula-line">= f(s,a) + f(s,b) − 0</span>',
+      '<span class="formula-line">= 10 + 9 − 0</span>',
+      '<span class="result-line">|f| = 19</span>',
+      'The net flow out of the source equals the net flow into the sink: <span class="dim">f(c,t) + f(d,t) = 9 + 10 = 19</span>.'
+    ])
+  });
+
+  // Step: Show a cut (S,T)
+  // Let S = {s, a, b, d}, T = {c, t}
+  // Cut capacity: edges from S to T: a→c(8), d→c(6), d→t(10) → no wait
+  // S={s,a,b,d}, T={c,t}: a→c(8), d→c(6), d→t(10) = 24
+  // But max flow is 19, so this isn't a min cut. Let me find a min cut.
+  // Min cut should equal max flow = 19.
+  // Try S={s,a,b}, T={c,d,t}: a→c(8), a→d(4), b→d(9) = 21. Not min.
+  // Try S={s}, T={a,b,c,d,t}: s→a(10), s→b(10) = 20. Not 19.
+  // Hmm, let me reconsider. Max flow might not be 19.
+  // Actually, let me recalculate. Let me try to find actual max flow.
+  // The issue is I need to verify the flow I constructed is actually maximum.
+  // Let me check if there's an augmenting path in the residual graph.
+  // Residual capacities (forward = cap - flow, backward = flow):
+  // s→a: 10-10=0 forward, 10 backward
+  // s→b: 10-9=1 forward, 9 backward
+  // a→b: 2-0=2 forward, 0 backward
+  // a→c: 8-8=0 forward, 8 backward
+  // a→d: 4-2=2 forward, 2 backward
+  // b→d: 9-9=0 forward, 9 backward
+  // c→t: 10-9=1 forward, 9 backward
+  // d→c: 6-1=5 forward, 1 backward
+  // d→t: 10-10=0 forward, 10 backward
+  // Augmenting path from s to t: s→b(1), b→... b→d has 0 forward. Dead end.
+  // s→a has 0 forward. Dead end.
+  // No augmenting path exists! So the flow is maximum. |f| = 19.
+  // Min cut: S={s,a,b}, T={c,d,t}
+  // Capacity = a→c(8) + a→d(4) + b→d(9) = 21. But that's 21 ≠ 19.
+  // Wait, that can't be right for max-flow min-cut theorem.
+  // Oh wait, I need to reconsider. Let me try S={s,b}, T={a,c,d,t}:
+  // s→a(10) + b→d(9) = 19. Yes! That's the min cut!
+  // Verify: edges from S={s,b} to T={a,c,d,t}: s→a(10), b→d(9) = 19.
+  // No edges from T to S? a→b has cap 2, but that's from T to S, not counted in c(S,T).
+
+  steps.push({
+    type: 'show_cut',
+    S: ['s', 'b'],
+    T: ['a', 'c', 'd', 't'],
+    explanation: buildExplainSection('A Cut (S, T)', [
+      'A <b>cut</b> partitions vertices into two sets:',
+      '<span class="split-info">S = {s, b}</span> — contains the source',
+      '<span class="split-info">T = {a, c, d, t}</span> — contains the sink',
+      '<span class="formula-line">c(S,T) = Σ c(u,v) for u∈S, v∈T</span>',
+      '<span class="formula-line">= c(s,a) + c(b,d) = 10 + 9 = 19</span>',
+      'The <b>capacity of this cut</b> is <span class="result-line" style="display:inline;">19</span>.'
+    ])
+  });
+
+  // Step: Net flow through the cut
+  steps.push({
+    type: 'cut_net_flow',
+    explanation: buildExplainSection('Net Flow Through the Cut', [
+      '<span class="formula-line">f(S,T) = Σ f(u,v) − Σ f(v,u) for u∈S, v∈T</span>',
+      '<span class="formula-line">Forward: f(s,a) + f(b,d) = 10 + 9 = 19</span>',
+      '<span class="formula-line">Backward: f(a,b) = 0</span>',
+      '<span class="formula-line">f(S,T) = 19 − 0 = 19</span>',
+      '<span class="result-line">|f| = c(S,T) = 19</span>',
+      'The net flow through the cut equals the cut capacity — this confirms the flow is <b>maximum</b>!'
+    ])
+  });
+
+  // Step: Max-Flow Min-Cut Theorem
+  steps.push({
+    type: 'theorem',
+    explanation: buildExplainSection('Max-Flow Min-Cut Theorem', [
+      'The <b>Max-Flow Min-Cut Theorem</b> states:',
+      '<span class="formula-line">|f| = c(S,T) for some cut (S,T)</span>',
+      'if and only if <span class="dim">f</span> is a maximum flow.',
+      'Equivalently: a flow is maximum if and only if the <b>residual network</b> has no augmenting path.',
+      '<span class="note">This is one of the most important theorems in combinatorial optimization. It connects flow problems to cut problems.</span>'
+    ])
+  });
+
+  // Final step
+  steps.push({
+    type: 'done',
+    explanation: buildExplainSection('Animation Complete!', [
+      '<span class="result-line">Maximum Flow |f| = 19</span>',
+      'The network has been fully analyzed:',
+      '<span class="formula-line">Max Flow = Min Cut = 19</span>',
+      'Key concepts covered:',
+      '• Flow network definition and capacity constraints',
+      '• Flow conservation at intermediate nodes',
+      '• Net flow calculation from source',
+      '• Cut capacity and the max-flow min-cut theorem'
+    ])
+  });
+}
+
+function buildExplainSection(title, paragraphs, note) {
+  let html = '<div class="explain-section active">';
+  html += '<h3>' + title + '</h3>';
+  paragraphs.forEach(p => { html += '<p>' + p + '</p>'; });
+  if (note) html += '<p class="note">' + note + '</p>';
+  html += '</div>';
+  return html;
+}
+
+function applyStep(step) {
+  highlightedEdges = [];
+  highlightedNodes = [];
+  cutS = [];
+  cutT = [];
+  document.getElementById('cutLegend').style.display = 'none';
+
+  switch(step.type) {
+    case 'show_network':
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Network Overview';
+      document.getElementById('computingDisplay').textContent = 'Directed graph with capacities';
+      break;
+
+    case 'highlight_source_sink':
+      highlightedNodes = ['s', 't'];
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Source & Sink Identified';
+      document.getElementById('computingDisplay').textContent = 'Source s (green), Sink t (orange)';
+      break;
+
+    case 'show_flow_function':
+      buildFlowTable();
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Flow Function Initialized';
+      document.getElementById('computingDisplay').textContent = 'All f(u,v) = 0';
+      break;
+
+    case 'set_flow_sa':
+      flow['s-a'] = 10;
+      highlightedEdges = ['s-a'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(s,a) = 10';
+      break;
+
+    case 'set_flow_sb':
+      flow['s-b'] = 9;
+      highlightedEdges = ['s-b'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(s,b) = 9';
+      break;
+
+    case 'set_flow_ac':
+      flow['a-c'] = 8;
+      highlightedEdges = ['a-c'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(a,c) = 8';
+      break;
+
+    case 'set_flow_ad':
+      flow['a-d'] = 2;
+      highlightedEdges = ['a-d'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(a,d) = 2';
+      break;
+
+    case 'set_flow_bd':
+      flow['b-d'] = 9;
+      highlightedEdges = ['b-d'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(b,d) = 9';
+      break;
+
+    case 'set_flow_dc':
+      flow['d-c'] = 1;
+      highlightedEdges = ['d-c'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(d,c) = 1';
+      break;
+
+    case 'set_flow_dt':
+      flow['d-t'] = 10;
+      highlightedEdges = ['d-t'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(d,t) = 10';
+      break;
+
+    case 'set_flow_ct':
+      flow['c-t'] = 9;
+      highlightedEdges = ['c-t'];
+      drawGraph(); buildFlowTable();
+      document.getElementById('phaseDisplay').textContent = 'Setting Flow';
+      document.getElementById('computingDisplay').textContent = 'f(c,t) = 9';
+      break;
+
+    case 'check_conservation':
+      highlightedNodes = [step.node];
+      const inEdges = EDGES.filter(e => e.to === step.node);
+      const outEdges = EDGES.filter(e => e.from === step.node);
+      inEdges.forEach(e => highlightedEdges.push(getEdgeKey(e.from, e.to)));
+      outEdges.forEach(e => highlightedEdges.push(getEdgeKey(e.from, e.to)));
+      drawGraph();
+      const nodeFlowIn = inEdges.reduce((sum, e) => sum + (flow[getEdgeKey(e.from, e.to)] || 0), 0);
+      document.getElementById('phaseDisplay').textContent = 'Flow Conservation';
+      document.getElementById('computingDisplay').textContent = 'Node ' + step.node + ': in=' + nodeFlowIn + ', out=' + nodeFlowIn;
+      break;
+
+    case 'calc_net_flow':
+      const totalOutS = EDGES.filter(e => e.from === 's').reduce((s, e) => s + (flow[getEdgeKey(e.from, e.to)] || 0), 0);
+      const totalInS = EDGES.filter(e => e.to === 's').reduce((s, e) => s + (flow[getEdgeKey(e.from, e.to)] || 0), 0);
+      const netFlow = totalOutS - totalInS;
+      highlightedEdges = EDGES.filter(e => e.from === 's').map(e => getEdgeKey(e.from, e.to));
+      drawGraph();
+      document.getElementById('netFlowDisplay').textContent = netFlow;
+      document.getElementById('phaseDisplay').textContent = 'Net Flow Calculated';
+      document.getElementById('computingDisplay').textContent = '|f| = ' + netFlow;
+      break;
+
+    case 'show_cut':
+      cutS = step.S;
+      cutT = step.T;
+      document.getElementById('cutLegend').style.display = 'flex';
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Cut (S, T)';
+      document.getElementById('computingDisplay').textContent = 'S={' + cutS.join(',') + '} T={' + cutT.join(',') + '}';
+      break;
+
+    case 'cut_net_flow':
+      cutS = ['s', 'b'];
+      cutT = ['a', 'c', 'd', 't'];
+      document.getElementById('cutLegend').style.display = 'flex';
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Cut Capacity = Net Flow';
+      document.getElementById('computingDisplay').textContent = '|f| = c(S,T) = 19';
+      break;
+
+    case 'theorem':
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = 'Max-Flow Min-Cut Theorem';
+      document.getElementById('computingDisplay').textContent = '|f| = c(S,T) = 19';
+      break;
+
+    case 'done':
+      drawGraph();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = '|f| = 19';
+      break;
+  }
+
+  document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — ' + document.getElementById('phaseDisplay').textContent;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initFlow();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('netFlowDisplay').textContent = '0';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('cutLegend').style.display = 'none';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = '';
+  highlightedEdges = [];
+  highlightedNodes = [];
+  cutS = [];
+  cutT = [];
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = '|f| = 19';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultText').textContent = 'Maximum Flow |f| = 19';
+  document.getElementById('resultDetail').textContent = 'Min Cut: S={s,b}, T={a,c,d,t} with capacity c(S,T) = 19. The Max-Flow Min-Cut theorem is verified.';
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('explainArea').innerHTML = buildExplainSection('Animation Complete!', [
+    '<span class="result-line">Maximum Flow |f| = 19</span>',
+    'The network has been fully analyzed:',
+    '<span class="formula-line">Max Flow = Min Cut = 19</span>',
+    'Key concepts covered:',
+    '• Flow network definition and capacity constraints',
+    '• Flow conservation at intermediate nodes',
+    '• Net flow calculation from source',
+    '• Cut capacity and the max-flow min-cut theorem',
+    '<span class="note">The minimum cut S={s,b}, T={a,c,d,t} has capacity 19, matching the maximum flow — confirming the theorem.</span>'
+  ]);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initFlow();
+buildSteps();
+drawGraph();
+buildFlowTable();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

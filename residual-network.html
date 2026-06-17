@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Residual Network Animation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh}
+h1{text-align:center;font-size:1.6em;color:#00ff88;margin:20px 0 5px;text-shadow:0 0 20px #00ff8855;letter-spacing:2px}
+.subtitle{text-align:center;color:#888;font-size:.9em;margin-bottom:20px}
+.layout{display:flex;gap:0;max-width:1600px;margin:0 auto;padding:0 15px 30px}
+.main-panel{flex:1;min-width:0;padding-right:15px}
+.sidebar{width:420px;min-width:420px;max-height:calc(100vh - 100px);overflow-y:auto;position:sticky;top:10px;background:#0d0d20;border:1px solid #2a2a44;border-radius:12px;padding:20px}
+.sidebar::-webkit-scrollbar{width:5px}
+.sidebar::-webkit-scrollbar-track{background:#111}
+.sidebar::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+@media(max-width:1100px){.layout{flex-direction:column}.sidebar{width:100%;min-width:unset;max-height:none;position:static;margin-top:20px}}
+.sidebar h2{color:#ff6600;font-size:1.05em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #333}
+.sidebar .step-phase{color:#00ccff;font-size:.85em;margin-bottom:10px}
+.explain-section{margin-bottom:18px;padding:12px;background:#111128;border-radius:8px;border-left:3px solid #444;font-size:.85em;line-height:1.7}
+.explain-section.active{border-left-color:#ff6600;background:#1a1020}
+.explain-section h3{color:#ffcc00;font-size:.95em;margin-bottom:6px}
+.explain-section p{color:#ccc;margin:4px 0}
+.explain-section .formula-line{color:#00ccff;background:#0a0a18;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:.95em;display:block;overflow-x:auto;white-space:nowrap}
+.explain-section .result-line{color:#00ff88;font-weight:bold;margin:6px 0}
+.explain-section .note{color:#aaa;font-style:italic;font-size:.9em;margin-top:4px}
+.explain-section .dim{color:#ff9944}
+.explain-section .split-info{color:#ffcc00;margin-top:4px}
+.info-panel{background:#111;border:1px solid #333;border-radius:10px;padding:15px;margin:15px 0;font-size:.85em;line-height:1.8}
+.info-panel .label{color:#888}
+.info-panel .value{color:#ffcc00;font-weight:bold}
+.info-panel .highlight{color:#00ff88}
+.controls{display:flex;justify-content:center;gap:10px;margin:18px 0;flex-wrap:wrap}
+.btn{padding:8px 18px;border:2px solid #444;background:#1a1a2e;color:#e0e0e0;border-radius:8px;cursor:pointer;font-family:'Courier New',monospace;font-size:.85em;transition:all .3s}
+.btn:hover{border-color:#00ff88;color:#00ff88;box-shadow:0 0 15px #00ff8833}
+.btn:active{transform:scale(.95)}
+.btn.primary{background:#002a1a;border-color:#00ff88;color:#00ff88}
+.speed-control{display:flex;align-items:center;gap:6px;color:#888;font-size:.85em}
+.speed-control input{width:80px;accent-color:#00ff88}
+.step-counter{text-align:center;color:#888;font-size:.85em;margin:8px 0}
+.step-counter .count{color:#ff6600;font-weight:bold}
+.result-section{background:#0a1a12;border:2px solid #00ff88;border-radius:12px;padding:20px;margin:25px 0;text-align:center;display:none}
+.result-section h2{color:#00ff88;font-size:1.2em;margin-bottom:12px}
+.graph-container{display:flex;gap:20px;margin:15px 0;justify-content:center;flex-wrap:wrap}
+.graph-box{background:#111;border:1px solid #333;border-radius:10px;padding:15px;flex:1;min-width:280px;max-width:420px}
+.graph-box h3{color:#00ccff;font-size:.9em;margin-bottom:10px;text-align:center}
+svg{display:block;margin:0 auto}
+.edge-label{font-size:11px;font-weight:bold}
+.node-label{font-size:13px;font-weight:bold;fill:#e0e0e0}
+.legend{display:flex;gap:15px;justify-content:center;margin:10px 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.8em;color:#aaa}
+.legend-swatch{width:16px;height:3px;border-radius:2px}
+.table-section{margin:20px 0;overflow-x:auto}
+.table-title{font-size:1em;color:#00ccff;margin-bottom:10px}
+table{border-collapse:collapse;margin:0 auto}
+th,td{padding:6px 12px;text-align:center;border:1px solid #333;font-size:.8em}
+th{background:#1a1a2e;color:#00ccff;font-weight:bold}
+td{background:#0d0d1a;color:#aaa}
+td.filled{background:#0a1a12;color:#00ff88;border-color:#00ff8855}
+td.current{background:#1a0a00!important;color:#ff6600!important;border-color:#ff6600!important;box-shadow:0 0 15px #ff660044}
+</style>
+</head>
+<body>
+<h1>Residual Network</h1>
+<p class="subtitle">Flow Networks — Residual Capacities and Augmenting Paths</p>
+<div class="layout">
+<div class="main-panel">
+<div class="graph-container">
+<div class="graph-box">
+<h3>Original Network G(V,E)</h3>
+<svg id="originalSvg" width="380" height="300" viewBox="0 0 380 300"></svg>
+</div>
+<div class="graph-box">
+<h3>Residual Network G<sub>f</sub>(V,E<sub>f</sub>)</h3>
+<svg id="residualSvg" width="380" height="300" viewBox="0 0 380 300"></svg>
+</div>
+</div>
+<div class="legend">
+<div class="legend-item"><div class="legend-swatch" style="background:#00ff88"></div>Forward Edge (remaining)</div>
+<div class="legend-item"><div class="legend-swatch" style="background:#ff6600"></div>Backward Edge (cancellable)</div>
+<div class="legend-item"><div class="legend-swatch" style="background:#ff66ff"></div>Augmenting Path</div>
+<div class="legend-item"><div class="legend-swatch" style="background:#aaa"></div>No Edge</div>
+</div>
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+<div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span></div>
+<div class="info-panel">
+<span class="label">Algorithm: </span><span class="highlight">Residual Network Construction</span> &nbsp;|&nbsp;
+<span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+<span class="label">Current: </span><span class="value" id="computingDisplay">—</span>
+</div>
+<div class="table-section">
+<div class="table-title">Flow & Capacity Table</div>
+<div id="flowTableWrap"></div>
+</div>
+<div class="result-section" id="resultSection">
+<h2>✅ Residual Network Complete!</h2>
+<div id="resultDisplay"></div>
+</div>
+</div>
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+<div id="explainArea"></div>
+</div>
+</div>
+<script>
+const NODES=['s','a','b','t'];
+const NODE_POS={s:{x:60,y:150},a:{x:190,y:60},b:{x:190,y:240},t:{x:320,y:150}};
+const EDGES=[{from:'s',to:'a',cap:10},{from:'s',to:'b',cap:10},{from:'a',to:'b',cap:2},{from:'a',to:'t',cap:10},{from:'b',to:'t',cap:10}];
+let flow={};
+let steps=[];
+let currentStep=0;
+let animating=false;
+let animTimer=null;
+
+function edgeKey(u,v){return u+'->'+v}
+function initFlow(){flow={};EDGES.forEach(e=>{flow[edgeKey(e.from,e.to)]=0})}
+function getFlow(u,v){return flow[edgeKey(u,v)]||0}
+function getCap(u,v){const e=EDGES.find(x=>x.from===u&&x.to===v);return e?e.cap:0}
+function isOriginalEdge(u,v){return EDGES.some(e=>e.from===u&&e.to===v)}
+
+function getResidualEdges(){
+  const rf=[];
+  const nodeSet=new Set(NODES);
+  nodeSet.forEach(u=>{
+    nodeSet.forEach(v=>{
+      if(u===v)return;
+      const capFw=getCap(u,v)-getFlow(u,v);
+      if(capFw>0)rf.push({from:u,to:v,cap:capFw,type:'forward'});
+      const capBw=getFlow(v,u);
+      if(capBw>0)rf.push({from:v,to:u,cap:capBw,type:'backward'});
+    });
+  });
+  return rf;
+}
+
+function getResidualEdgesFromList(re){
+  const nodeSet=new Set(NODES);
+  nodeSet.forEach(u=>{
+    nodeSet.forEach(v=>{
+      if(u===v)return;
+      const capFw=getCap(u,v)-getFlow(u,v);
+      if(capFw>0)re.push({from:u,to:v,cap:capFw,type:'forward'});
+      const capBw=getFlow(v,u);
+      if(capBw>0)re.push({from:v,to:u,cap:capBw,type:'backward'});
+    });
+  });
+}
+
+function drawNode(svg,x,y,label,color){
+  const ns='http://www.w3.org/2000/svg';
+  const c=document.createElementNS(ns,'circle');
+  c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',20);
+  c.setAttribute('fill','#111');c.setAttribute('stroke',color);c.setAttribute('stroke-width','2.5');
+  svg.appendChild(c);
+  const t=document.createElementNS(ns,'text');
+  t.setAttribute('x',x);t.setAttribute('y',y+1);t.setAttribute('text-anchor','middle');
+  t.setAttribute('dominant-baseline','middle');t.setAttribute('class','node-label');
+  t.setAttribute('fill',color);t.textContent=label;
+  svg.appendChild(t);
+}
+
+function drawArrow(svg,x1,y1,x2,y2,color,label,offset,highlight){
+  const ns='http://www.w3.org/2000/svg';
+  const dx=x2-x1,dy=y2-y1;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  const ux=dx/len,uy=dy/len;
+  const sx=x1+ux*22,sy=y1+uy*22;
+  const ex=x2-ux*22,ey=y2-uy*22;
+  const off=offset||0;
+  const px=-uy,py=ux;
+  const line=document.createElementNS(ns,'line');
+  line.setAttribute('x1',sx+px*off);line.setAttribute('y1',sy+py*off);
+  line.setAttribute('x2',ex+px*off);line.setAttribute('y2',ey+py*off);
+  line.setAttribute('stroke',color);line.setAttribute('stroke-width',highlight?'3':'2');
+  if(highlight)line.setAttribute('filter','url(#glow)');
+  svg.appendChild(line);
+  const aLen=10,aW=6;
+  const ax=ex+px*off,ay=ey+py*off;
+  const poly=document.createElementNS(ns,'polygon');
+  const p1x=ax-ux*aLen-px*aW/2,p1y=ay-uy*aLen-py*aW/2;
+  const p2x=ax-ux*aLen+px*aW/2,p2y=ay-uy*aLen+py*aW/2;
+  poly.setAttribute('points',`${ax},${ay} ${p1x},${p1y} ${p2x},${p2y}`);
+  poly.setAttribute('fill',color);svg.appendChild(poly);
+  if(label!==undefined&&label!==null){
+    const mx=(sx+px*off+ex+px*off)/2,my=(sy+py*off+ey+py*off)/2;
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',mx+px*14);t.setAttribute('y',my+py*14);
+    t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','middle');
+    t.setAttribute('class','edge-label');t.setAttribute('fill',color);
+    t.textContent=label;svg.appendChild(t);
+  }
+}
+
+function drawGraph(svgId,edges,highlightPath){
+  const svg=document.getElementById(svgId);
+  svg.innerHTML='';
+  const ns='http://www.w3.org/2000/svg';
+  const defs=document.createElementNS(ns,'defs');
+  const filter=document.createElementNS(ns,'filter');
+  filter.setAttribute('id','glow');
+  const blur=document.createElementNS(ns,'feGaussianBlur');
+  blur.setAttribute('stdDeviation','3');blur.setAttribute('result','coloredBlur');
+  filter.appendChild(blur);
+  const merge=document.createElementNS(ns,'feMerge');
+  const m1=document.createElementNS(ns,'feMergeNode');m1.setAttribute('in','coloredBlur');
+  merge.appendChild(m1);
+  const m2=document.createElementNS(ns,'feMergeNode');m2.setAttribute('in','SourceGraphic');
+  merge.appendChild(m2);filter.appendChild(merge);defs.appendChild(filter);svg.appendChild(defs);
+  const hlSet=new Set();
+  if(highlightPath)highlightPath.forEach(e=>hlSet.add(edgeKey(e.from,e.to)));
+  NODES.forEach(n=>{
+    const p=NODE_POS[n];
+    const inHL=highlightPath&&highlightPath.some(e=>e.to===n);
+    const outHL=highlightPath&&highlightPath.some(e=>e.from===n);
+    const col=inHL||outHL?'#ff66ff':n==='s'?'#00ff88':n==='t'?'#ff6600':'#00ccff';
+    drawNode(svg,p.x,p.y,n,col);
+  });
+  edges.forEach(e=>{
+    const p1=NODE_POS[e.from],p2=NODE_POS[e.to];
+    const isHL=hlSet.has(edgeKey(e.from,e.to));
+    const col=e.type==='forward'?(isHL?'#ff66ff':'#00ff88'):(isHL?'#ff66ff':'#ff6600');
+    drawArrow(svg,p1.x,p1.y,p2.x,p2.y,col,`${e.cap}`,0,isHL);
+  });
+}
+
+function drawOriginalNetwork(){
+  const svg=document.getElementById('originalSvg');
+  svg.innerHTML='';
+  NODES.forEach(n=>{
+    const p=NODE_POS[n];
+    const col=n==='s'?'#00ff88':n==='t'?'#ff6600':'#00ccff';
+    drawNode(svg,p.x,p.y,n,col);
+  });
+  EDGES.forEach(e=>{
+    const p1=NODE_POS[e.from],p2=NODE_POS[e.to];
+    const f=getFlow(e.from,e.to);
+    const label=f>0?`${f}/${e.cap}`:`${e.cap}`;
+    drawArrow(svg,p1.x,p1.y,p2.x,p2.y,'#555',label,0,false);
+  });
+}
+
+function buildFlowTable(){
+  let html='<table><tr><th>Edge</th><th>Capacity c(u,v)</th><th>Flow f(u,v)</th><th>Residual c<sub>f</sub>(u,v)</th></tr>';
+  EDGES.forEach(e=>{
+    const f=getFlow(e.from,e.to);
+    const r=e.cap-f;
+    html+=`<tr><td>${e.from}→${e.to}</td><td>${e.cap}</td><td>${f}</td><td>${r}</td></tr>`;
+  });
+  html+='</table>';
+  document.getElementById('flowTableWrap').innerHTML=html;
+}
+
+function findAugPathBFS(){
+  const parent={};
+  const parentEdge={};
+  const visited=new Set();
+  const queue=['s'];
+  visited.add('s');
+  const re=getResidualEdges();
+  while(queue.length>0){
+    const u=queue.shift();
+    if(u==='t')break;
+    for(const e of re){
+      if(e.from===u&&!visited.has(e.to)){
+        visited.add(e.to);
+        parent[e.to]=u;
+        parentEdge[e.to]=e;
+        queue.push(e.to);
+      }
+    }
+  }
+  if(!parent['t'])return null;
+  const path=[];
+  let cur='t';
+  while(cur!=='s'){
+    const prev=parent[cur];
+    path.unshift(parentEdge[cur]);
+    cur=prev;
+  }
+  return path;
+}
+
+function getPathBottleneck(path){
+  let min=Infinity;
+  path.forEach(e=>{
+    if(e.cap<min)min=e.cap;
+  });
+  return min;
+}
+
+function pushFlow(path,amount){
+  path.forEach(e=>{
+    if(e.type==='forward'){
+      const k=edgeKey(e.from,e.to);
+      flow[k]=(flow[k]||0)+amount;
+    }else{
+      const k=edgeKey(e.to,e.from);
+      flow[k]=(flow[k]||0)-amount;
+    }
+  });
+}
+
+function buildSteps(){
+  steps=[];
+  initFlow();
+  steps.push({type:'init',explanation:buildInitExplanation()});
+  steps.push({type:'show_network',explanation:buildShowNetworkExplanation()});
+  let iter=0;
+  while(iter<10){
+    const path=findAugPathBFS();
+    if(!path){
+      steps.push({type:'no_aug_path',explanation:buildNoAugPathExplanation()});
+      break;
+    }
+    const bn=getPathBottleneck(path);
+    const pathStr=path.map(e=>e.from).join('→')+'→t';
+    steps.push({type:'find_path',path:path,bottleneck:bn,pathStr:pathStr,
+      explanation:buildFindPathExplanation(path,bn,pathStr)});
+    steps.push({type:'push_flow',path:path,amount:bn,pathStr:pathStr,
+      explanation:buildPushFlowExplanation(path,bn,pathStr)});
+    pushFlow(path,bn);
+    steps.push({type:'update_residual',path:path,amount:bn,pathStr:pathStr,
+      explanation:buildUpdateResidualExplanation(path,bn,pathStr)});
+    iter++;
+  }
+}
+
+function buildInitExplanation(){
+  return `<div class="explain-section active">
+<h3>Why Residual Networks?</h3>
+<p>When we push flow through a network, we need to know <b>what additional flow is possible</b>.</p>
+<p>The <span class="dim">residual network</span> shows all possible flow adjustments — both forward (push more) and backward (cancel existing flow).</p>
+<h3 style="margin-top:10px;">Key Definitions</h3>
+<span class="formula-line"><span style="color:#00ff88">Forward edge:</span> c_f(u,v) = c(u,v) − f(u,v)</span>
+<span class="formula-line"><span style="color:#ff6600">Backward edge:</span> c_f(v,u) = f(u,v)</span>
+<p class="note">Press Play or Step to begin.</p>
+</div>`;
+}
+
+function buildShowNetworkExplanation(){
+  return `<div class="explain-section active">
+<h3>Original Network</h3>
+<p>We start with network <b>G(V,E)</b> with <span class="dim">zero flow</span> on all edges.</p>
+<p>Nodes: <span class="split-info">s, a, b, t</span></p>
+<p>Edges with capacities:</p>
+<span class="formula-line">s→a: 10, s→b: 10, a→b: 2, a→t: 10, b→t: 10</span>
+<p>The <span style="color:#00ff88">source</span> is <b>s</b>, the <span style="color:#ff6600">sink</span> is <b>t</b>.</p>
+<p class="note">All flows start at zero. Now we build the residual network.</p>
+</div>`;
+}
+
+function buildFindPathExplanation(path,bn,pathStr){
+  let edgeList=path.map(e=>{
+    return `${e.from}→${e.to} (c_f=${e.cap}, ${e.type})`;
+  }).join(', ');
+  return `<div class="explain-section active">
+<h3>Finding Augmenting Path</h3>
+<p>An <span class="dim">augmenting path</span> is a simple path from <b>s</b> to <b>t</b> in the residual network.</p>
+<p>We found path: <span class="result-line" style="display:inline">${pathStr}</span></p>
+<h3 style="margin-top:10px;">Residual Capacities Along Path</h3>
+<span class="formula-line">${edgeList}</span>
+<h3 style="margin-top:10px;">Bottleneck Capacity</h3>
+<span class="formula-line">c_f(p) = min{${path.map(e=>e.cap).join(', ')}} = <span style="color:#ffcc00">${bn}</span></span>
+<p class="note">The bottleneck limits how much flow we can push through this path.</p>
+</div>`;
+}
+
+function buildPushFlowExplanation(path,bn,pathStr){
+  let details=path.map(e=>{
+    if(e.type==='forward'){
+      return `<span class="formula-line" style="margin-left:12px"><span style="color:#00ff88">Forward:</span> f(${e.from},${e.to}) += ${bn} → f = ${getFlow(e.from,e.to)+bn}</span>`;
+    }else{
+      return `<span class="formula-line" style="margin-left:12px"><span style="color:#ff6600">Backward:</span> f(${e.to},${e.from}) -= ${bn} → f = ${getFlow(e.to,e.from)-bn}</span>`;
+    }
+  }).join('');
+  return `<div class="explain-section active">
+<h3>Pushing Flow</h3>
+<p>We push <span class="dim">${bn}</span> units of flow along path <span class="result-line" style="display:inline">${pathStr}</span>.</p>
+<h3 style="margin-top:10px;">Edge Updates</h3>
+${details}
+<p class="note">The path is highlighted in <span style="color:#ff66ff">magenta</span>.</p>
+</div>`;
+}
+
+function buildUpdateResidualExplanation(path,bn,pathStr){
+  const re=getResidualEdges();
+  let edgeList=re.slice(0,10).map(e=>{
+    const typeCol=e.type==='forward'?'#00ff88':'#ff6600';
+    return `<span class="formula-line" style="margin-left:12px"><span style="color:${typeCol}">${e.type}</span>: ${e.from}→${e.to} (c_f=${e.cap})</span>`;
+  }).join('');
+  return `<div class="explain-section active">
+<h3>Updated Residual Network</h3>
+<p>After pushing flow, the residual network <b>G<sub>f</sub></b> is updated.</p>
+<p>Current residual edges:</p>
+${edgeList}
+<p>We now search for <b>another augmenting path</b> in the updated residual network.</p>
+</div>`;
+}
+
+function buildNoAugPathExplanation(){
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ No Augmenting Path Found!</h3>
+<p>The residual network has <b>no path from s to t</b>.</p>
+<p>By the <span class="dim">Max-Flow Min-Cut Theorem</span>:</p>
+<span class="formula-line">max flow = min cut</span>
+<p>The current flow is <span class="result-line" style="display:inline">maximum</span>.</p>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V · E²) for Ford-Fulkerson with BFS (Edmonds-Karp)</p>
+<p><span class="dim">Space:</span> O(V + E) for residual graph</p>
+<p class="note">Each augmentation increases flow by at least 1, and max flow ≤ V·E.</p>
+</div>`;
+}
+
+function buildFinishedExplanation(){
+  let totalFlow=getTotalFlow();
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+<h3>✅ Algorithm Complete!</h3>
+<p>The maximum flow from <b>s</b> to <b>t</b> is <span class="result-line" style="display:inline">${totalFlow}</span>.</p>
+<h3 style="margin-top:10px;">Flow Summary</h3>
+${EDGES.filter(e=>e.to==='t').map(e=>
+  `<span class="formula-line">${e.from}→t: f=${getFlow(e.from,e.to)}</span>`
+).join('')}
+<h3 style="margin-top:10px;">Why This Works</h3>
+<p>The residual network has no augmenting path ⟺ flow is maximum.</p>
+<span class="formula-line">Max-Flow Min-Cut Theorem: max|f| = min cut capacity</span>
+<h3 style="margin-top:10px;">Complexity</h3>
+<p><span class="dim">Time:</span> O(V · E²) — each BFS is O(E), at most O(V·E) augmentations</p>
+<p><span class="dim">Space:</span> O(V + E) — residual graph storage</p>
+</div>`;
+}
+
+function applyStep(step){
+  document.getElementById('sidebarPhase').textContent=
+    `Step ${currentStep+1} / ${steps.length} — ${step.type.replace(/_/g,' ')}`;
+  document.getElementById('explainArea').innerHTML=step.explanation;
+  document.getElementById('sidebar').scrollTop=0;
+  switch(step.type){
+    case 'init':
+      document.getElementById('phaseDisplay').textContent='Initialization';
+      document.getElementById('computingDisplay').textContent='Zero flow on all edges';
+      initFlow();
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),null);
+      buildFlowTable();
+      break;
+    case 'show_network':
+      document.getElementById('phaseDisplay').textContent='Original Network';
+      document.getElementById('computingDisplay').textContent='Capacities shown';
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),null);
+      buildFlowTable();
+      break;
+    case 'find_path':
+      document.getElementById('phaseDisplay').textContent='Augmenting Path Found';
+      document.getElementById('computingDisplay').textContent=`Path: ${step.pathStr} (bn=${step.bottleneck})`;
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),step.path);
+      break;
+    case 'push_flow':
+      document.getElementById('phaseDisplay').textContent='Pushing Flow';
+      document.getElementById('computingDisplay').textContent=`Push ${step.amount} along ${step.pathStr}`;
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),step.path);
+      break;
+    case 'update_residual':
+      document.getElementById('phaseDisplay').textContent='Residual Updated';
+      document.getElementById('computingDisplay').textContent=`Flow = ${getTotalFlow()}`;
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),null);
+      buildFlowTable();
+      break;
+    case 'no_aug_path':
+      document.getElementById('phaseDisplay').textContent='✓ Maximum Flow Reached';
+      document.getElementById('computingDisplay').textContent=`Max Flow = ${getTotalFlow()}`;
+      drawOriginalNetwork();
+      drawGraph('residualSvg',getResidualEdges(),null);
+      buildFlowTable();
+      break;
+  }
+}
+
+function getTotalFlow(){
+  let t=0;
+  EDGES.forEach(e=>{if(e.to==='t')t+=getFlow(e.from,e.to)});
+  return t;
+}
+
+function processStep(){
+  if(currentStep>=steps.length){finishAnimation();return}
+  document.getElementById('stepNum').textContent=currentStep+1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation(){
+  if(currentStep>=steps.length)return;
+  animating=true;
+  animTimer=setInterval(()=>{
+    if(!animating||currentStep>=steps.length){
+      clearInterval(animTimer);
+      if(currentStep>=steps.length)finishAnimation();
+      return;
+    }
+    processStep();
+  },getSpeed());
+}
+
+function getSpeed(){return 1200-parseInt(document.getElementById('speedSlider').value)*100}
+
+function pauseAnimation(){animating=false;clearInterval(animTimer)}
+
+function stepForward(){pauseAnimation();processStep()}
+
+function resetAnimation(){
+  pauseAnimation();
+  currentStep=0;
+  initFlow();
+  document.getElementById('resultSection').style.display='none';
+  document.getElementById('phaseDisplay').textContent='Ready — Press Play';
+  document.getElementById('computingDisplay').textContent='—';
+  document.getElementById('stepNum').textContent='0';
+  document.getElementById('sidebarPhase').textContent='Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML=buildInitExplanation();
+  drawOriginalNetwork();
+  drawGraph('residualSvg',getResidualEdges(),null);
+  buildFlowTable();
+  buildSteps();
+  document.getElementById('totalSteps').textContent=steps.length;
+}
+
+function finishAnimation(){
+  animating=false;
+  let totalFlow=getTotalFlow();
+  document.getElementById('phaseDisplay').textContent='✓ Complete!';
+  document.getElementById('computingDisplay').textContent=`Max Flow = ${totalFlow}`;
+  document.getElementById('resultSection').style.display='block';
+  document.getElementById('resultDisplay').innerHTML=`
+    <p style="color:#e0e0e0;font-size:1.1em">Maximum Flow: <span style="color:#00ff88;font-size:1.3em;font-weight:bold">${totalFlow}</span></p>
+    <p style="color:#aaa;margin-top:8px">From source <span style="color:#00ff88">s</span> to sink <span style="color:#ff6600">t</span></p>
+  `;
+  document.getElementById('sidebarPhase').textContent=
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML=buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop=0;
+}
+
+document.getElementById('speedSlider').addEventListener('input',function(){
+  document.getElementById('speedLabel').textContent=this.value+'x';
+  if(animating){
+    clearInterval(animTimer);
+    animTimer=setInterval(()=>{
+      if(!animating||currentStep>=steps.length){
+        clearInterval(animTimer);
+        if(currentStep>=steps.length)finishAnimation();
+        return;
+      }
+      processStep();
+    },getSpeed());
+  }
+});
+
+initFlow();
+buildSteps();
+drawOriginalNetwork();
+drawGraph('residualSvg',getResidualEdges(),null);
+buildFlowTable();
+document.getElementById('totalSteps').textContent=steps.length;
+document.getElementById('explainArea').innerHTML=buildInitExplanation();
+</script>
+</body>
+</html>

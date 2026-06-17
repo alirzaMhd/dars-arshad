@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ford-Fulkerson Algorithm Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: pre;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.graph-panel {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.graph-box {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+}
+.graph-box .graph-title {
+  color: #00ccff;
+  font-size: 0.95em;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2.5;
+  transition: all 0.4s;
+}
+.node-circle.source { stroke: #00ccff; fill: #0a1a2a; stroke-width: 3; }
+.node-circle.sink { stroke: #ff66ff; fill: #1a0a1a; stroke-width: 3; }
+.node-circle.on-path {
+  stroke: #ff6600;
+  stroke-width: 4;
+  fill: #1a0a00;
+  filter: drop-shadow(0 0 8px #ff660066);
+}
+.node-circle.reachable {
+  stroke: #ffcc00;
+  stroke-width: 3;
+  fill: #1a1a00;
+}
+.node-text {
+  fill: #aaa;
+  font-size: 15px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  dominant-baseline: central;
+  text-anchor: middle;
+  transition: all 0.4s;
+}
+.node-text.source { fill: #00ccff; }
+.node-text.sink { fill: #ff66ff; }
+.node-text.on-path { fill: #ff6600; }
+.node-text.reachable { fill: #ffcc00; }
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.on-path {
+  stroke: #ff66ff;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px #ff66ff66);
+}
+.edge-line.saturated {
+  stroke: #ff3333;
+  stroke-width: 2;
+  stroke-dasharray: 6,3;
+}
+.edge-label {
+  fill: #888;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.edge-label.on-path { fill: #ff6600; }
+.edge-label.saturated { fill: #ff3333; }
+.flow-label {
+  fill: #00ff88;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  dominant-baseline: central;
+  text-anchor: middle;
+}
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  padding: 6px 12px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.82em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.flow-active {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+  font-weight: bold;
+}
+td.flow-zero {
+  color: #555;
+}
+.cut-display {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.cut-box {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 18px;
+  text-align: center;
+}
+.cut-box .cut-label { color: #888; font-size: 0.8em; margin-bottom: 4px; }
+.cut-box .cut-nodes { color: #ffcc00; font-size: 1em; font-weight: bold; }
+.cut-box.s { border-color: #00ccff; }
+.cut-box.t { border-color: #ff66ff; }
+</style>
+</head>
+<body>
+
+<h1>FORD-FULKERSON ALGORITHM</h1>
+<p class="subtitle">Max Flow &mdash; Augmenting Path Method</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-panel">
+      <div class="graph-box">
+        <div class="graph-title">Flow Network</div>
+        <svg id="flowSvg" width="420" height="320" viewBox="0 0 420 320">
+          <defs>
+            <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+            </marker>
+            <marker id="arr-path" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+            </marker>
+            <marker id="arr-sat" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#ff3333"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="graph-box">
+        <div class="graph-title">Residual Network G<sub>f</sub></div>
+        <svg id="resSvg" width="420" height="320" viewBox="0 0 420 320">
+          <defs>
+            <marker id="rarr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+            </marker>
+            <marker id="rarr-path" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+            </marker>
+            <marker id="rarr-res" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="cut-display" id="cutDisplay" style="display:none;">
+      <div class="cut-box s">
+        <div class="cut-label">Set S (reachable from s)</div>
+        <div class="cut-nodes" id="cutS"></div>
+      </div>
+      <div class="cut-box t">
+        <div class="cut-label">Set T (remaining)</div>
+        <div class="cut-nodes" id="cutT"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+      <button class="btn" onclick="pauseAnimation()">&#9646;&#9646; Pause</button>
+      <button class="btn" onclick="stepForward()">&#9197; Step</button>
+      <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current Flow:</span> <span class="value" id="flowDisplay">0</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Max Flow:</span> <span class="highlight" id="maxFlowDisplay">&mdash;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Flow Table: f(u,v) / c(u,v)</div>
+      <div class="table-wrapper">
+        <table id="flowTable">
+          <thead><tr><th>Edge</th><th>Flow</th><th>Capacity</th><th>Residual</th><th>Status</th></tr></thead>
+          <tbody id="flowTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>&#10003; Algorithm Complete!</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>&#128214; Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>Find the <b>maximum flow</b> from source <span class="dim">s</span> to sink <span class="dim">t</span> in a flow network.</p>
+        <p>A <b>flow network</b> is a directed graph where each edge has a <span class="dim">capacity</span> c(u,v) &ge; 0.</p>
+        <h3 style="margin-top:10px;">Network Definition</h3>
+        <p><span class="dim">Nodes:</span> V = {s, u, v, t}</p>
+        <p><span class="dim">Edges &amp; Capacities:</span></p>
+        <span class="formula-line">s &rarr; u : 10
+s &rarr; v : 10
+u &rarr; v : 5
+u &rarr; t : 10
+v &rarr; t : 10</span>
+        <h3 style="margin-top:10px;">Algorithm Idea</h3>
+        <p>Repeatedly find an <b>augmenting path</b> from s to t in the <span class="dim">residual network</span> G<sub>f</sub>, then push as much flow as possible along it.</p>
+        <span class="formula-line">Ford-Fulkerson(G, s, t):
+  1. Initialize f(u,v) = 0 for all edges
+  2. While exists augmenting path p in G_f:
+     - c_f(p) = min{c_f(u,v) : (u,v) in p}
+     - For each (u,v) in p:
+       - if (u,v) in E: f(u,v) += c_f(p)
+       - else: f(v,u) -= c_f(p)
+  3. Return f</span>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NODES = ['s','u','v','t'];
+const EDGES = [
+  {from:'s',to:'u',cap:10},
+  {from:'s',to:'v',cap:10},
+  {from:'u',to:'v',cap:5},
+  {from:'u',to:'t',cap:10},
+  {from:'v',to:'t',cap:10}
+];
+const POS = {s:{x:60,y:160},u:{x:200,y:80},v:{x:200,y:240},t:{x:360,y:160}};
+
+let flow = {};
+let residual = {};
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+function initFlow() {
+  flow = {};
+  EDGES.forEach(e => { flow[e.from+'->'+e.to] = 0; });
+}
+
+function buildResidual() {
+  residual = {};
+  NODES.forEach(a => {
+    NODES.forEach(b => { residual[a+'->'+b] = 0; });
+  });
+  EDGES.forEach(e => {
+    const key = e.from+'->'+e.to;
+    residual[key] = e.cap - flow[key];
+    residual[e.to+'->'+e.from] = flow[key];
+  });
+}
+
+function findAugmentingPath() {
+  buildResidual();
+  const visited = new Set();
+  const parent = {};
+  const queue = ['s'];
+  visited.add('s');
+  while (queue.length > 0) {
+    const u = queue.shift();
+    if (u === 't') {
+      const path = [];
+      let v = 't';
+      while (v !== 's') {
+        const p = parent[v];
+        const isForward = EDGES.some(e => e.from === p && e.to === v);
+        path.unshift({from:p, to:v, isForward: isForward});
+        v = p;
+      }
+      return path;
+    }
+    NODES.forEach(v => {
+      if (!visited.has(v) && residual[u+'->'+v] > 0) {
+        visited.add(v);
+        parent[v] = u;
+        queue.push(v);
+      }
+    });
+  }
+  return null;
+}
+
+function computeBottleneck(path) {
+  let bn = Infinity;
+  path.forEach(e => {
+    const r = residual[e.from+'->'+e.to];
+    if (r < bn) bn = r;
+  });
+  return bn;
+}
+
+function pushFlow(path, amount) {
+  path.forEach(e => {
+    if (e.isForward) {
+      flow[e.from+'->'+e.to] += amount;
+    } else {
+      flow[e.to+'->'+e.from] -= amount;
+    }
+  });
+}
+
+function getCurrentFlow() {
+  let total = 0;
+  NODES.forEach(v => {
+    EDGES.forEach(e => {
+      if (e.from === 's') total += flow[e.from+'->'+e.to];
+    });
+  });
+  return total;
+}
+
+function buildSteps() {
+  steps = [];
+  initFlow();
+
+  steps.push({
+    type: 'init',
+    explanation: buildInitExplanation()
+  });
+
+  let iter = 0;
+  while (true) {
+    buildResidual();
+    const path = findAugmentingPath();
+    if (!path) break;
+    iter++;
+
+    steps.push({
+      type: 'find_path',
+      path: path,
+      iteration: iter,
+      explanation: buildFindPathExplanation(path, iter)
+    });
+
+    const bn = computeBottleneck(path);
+    steps.push({
+      type: 'bottleneck',
+      path: path,
+      bottleneck: bn,
+      iteration: iter,
+      explanation: buildBottleneckExplanation(path, bn, iter)
+    });
+
+    pushFlow(path, bn);
+    const totalFlow = getCurrentFlow();
+
+    steps.push({
+      type: 'augment',
+      path: path,
+      bottleneck: bn,
+      totalFlow: totalFlow,
+      iteration: iter,
+      explanation: buildAugmentExplanation(path, bn, totalFlow, iter)
+    });
+  }
+
+  buildResidual();
+  steps.push({
+    type: 'done',
+    totalFlow: getCurrentFlow(),
+    explanation: buildDoneExplanation(getCurrentFlow())
+  });
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Initialization</h3>
+    <p>Set <b>all flows to 0</b>. The residual network initially equals the original network.</p>
+    <span class="formula-line">f(s,u) = 0,  f(s,v) = 0
+f(u,v) = 0,  f(u,t) = 0
+f(v,t) = 0</span>
+    <p>Residual capacities equal original capacities since no flow has been pushed yet.</p>
+    <p class="note">Press Play or Step to find the first augmenting path.</p>
+  </div>`;
+}
+
+function buildFindPathExplanation(path, iter) {
+  const pathStr = path.map(e => e.from).join(' &rarr; ') + ' &rarr; ' + path[path.length-1].to;
+  return `<div class="explain-section active">
+    <h3>Iteration ${iter}: Finding Augmenting Path</h3>
+    <p>Search for a <b>simple path</b> from s to t in the residual network G<sub>f</sub> using BFS.</p>
+    <p><span class="dim">Path found:</span> <b>${pathStr}</b></p>
+    <p>An <b>augmenting path</b> is any path from s to t where every edge has <span class="dim">positive residual capacity</span>.</p>
+    <p class="note">The path alternates between forward edges (unused capacity) and backward edges (can reduce flow).</p>
+  </div>`;
+}
+
+function buildBottleneckExplanation(path, bn, iter) {
+  const pathStr = path.map(e => e.from).join(' &rarr; ') + ' &rarr; ' + path[path.length-1].to;
+  const edgeDetails = path.map(e => {
+    const r = residual[e.from+'->'+e.to];
+    return `c_f(${e.from},${e.to}) = ${r}`;
+  }).join(', ');
+  return `<div class="explain-section active">
+    <h3>Iteration ${iter}: Bottleneck Capacity</h3>
+    <p>The <b>bottleneck</b> is the minimum residual capacity along the path.</p>
+    <span class="formula-line">c_f(p) = min{${edgeDetails}}
+       = ${bn}</span>
+    <p>We can push at most <span class="split-info">${bn} units</span> of flow through this path.</p>
+  </div>`;
+}
+
+function buildAugmentExplanation(path, bn, totalFlow, iter) {
+  const pathStr = path.map(e => e.from).join(' &rarr; ') + ' &rarr; ' + path[path.length-1].to;
+  const updates = path.map(e => {
+    if (e.isForward) {
+      const key = e.from+'->'+e.to;
+      return `f(${e.from},${e.to}) += ${bn} = ${flow[key]}`;
+    } else {
+      const key = e.to+'->'+e.from;
+      return `f(${e.to},${e.from}) -= ${bn} = ${flow[key]}`;
+    }
+  }).join('\n');
+  return `<div class="explain-section active">
+    <h3>Iteration ${iter}: Augment Flow</h3>
+    <p>Push <span class="split-info">${bn} units</span> along <b>${pathStr}</b>.</p>
+    <span class="formula-line">${updates}</span>
+    <p><span class="dim">Total flow:</span> <span class="result-line" style="display:inline;">|f| = ${totalFlow}</span></p>
+    <p class="note">Forward edges gain capacity, backward edges lose capacity (reducing existing flow).</p>
+  </div>`;
+}
+
+function buildDoneExplanation(totalFlow) {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>&#10003; Algorithm Complete!</h3>
+    <p>No more augmenting paths exist in the residual network.</p>
+    <p><span class="dim">Maximum Flow:</span> <span class="result-line" style="display:inline;">|f*| = ${totalFlow}</span></p>
+    <h3 style="margin-top:10px;">Min-Cut Max-Flow Theorem</h3>
+    <p>The max flow equals the min cut capacity.</p>
+    <p><span class="dim">S</span> = nodes reachable from s in G<sub>f</sub></p>
+    <p><span class="dim">T</span> = remaining nodes</p>
+    <p><span class="dim">Cut capacity:</span> c(S,T) = sum of capacities from S to T</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(E &middot; |f|) where |f| is the max flow value</p>
+    <p><span class="dim">Note:</span> Each augmentation increases flow by at least 1</p>
+    <p><span class="dim">Integrality:</span> If all capacities are integers, the flow is integer-valued</p>
+  </div>`;
+}
+
+function getEdgeId(from, to) { return from+'-'+to; }
+
+function drawFlowNetwork() {
+  const svg = document.getElementById('flowSvg');
+  svg.innerHTML = `<defs>
+    <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arr-path" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+    </marker>
+    <marker id="arr-sat" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ff3333"/>
+    </marker>
+  </defs>`;
+
+  EDGES.forEach(e => {
+    const p1 = POS[e.from], p2 = POS[e.to];
+    const dx = p2.x-p1.x, dy = p2.y-p1.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const nx = dx/len, ny = dy/len;
+    const x1 = p1.x+nx*22, y1 = p1.y+ny*22;
+    const x2 = p2.x-nx*22, y2 = p2.y-ny*22;
+    const mx = (x1+x2)/2, my = (y1+y2)/2;
+    const ox = -ny*14, oy = nx*14;
+
+    const f = flow[e.from+'->'+e.to];
+    const saturated = f >= e.cap;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', saturated ? '#ff3333' : '#555');
+    line.setAttribute('stroke-width', saturated ? 2 : 2);
+    line.setAttribute('marker-end', saturated ? 'url(#arr-sat)' : 'url(#arr-gray)');
+    line.setAttribute('class', 'edge-line');
+    line.id = 'flow-edge-'+getEdgeId(e.from,e.to);
+    svg.appendChild(line);
+
+    const capLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+    capLabel.setAttribute('x', mx+ox); capLabel.setAttribute('y', my+oy);
+    capLabel.setAttribute('class', 'edge-label');
+    capLabel.textContent = e.cap;
+    capLabel.id = 'flow-cap-'+getEdgeId(e.from,e.to);
+    svg.appendChild(capLabel);
+
+    const flowLabel = document.createElementNS('http://www.w3.org/2000/svg','text');
+    flowLabel.setAttribute('x', mx+ox); flowLabel.setAttribute('y', my+oy+13);
+    flowLabel.setAttribute('class', 'flow-label');
+    flowLabel.textContent = f + '/' + e.cap;
+    flowLabel.id = 'flow-val-'+getEdgeId(e.from,e.to);
+    svg.appendChild(flowLabel);
+  });
+
+  NODES.forEach(n => {
+    const p = POS[n];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',p.x); circle.setAttribute('cy',p.y);
+    circle.setAttribute('r',20);
+    circle.setAttribute('class', 'node-circle' + (n==='s'?' source':'') + (n==='t'?' sink':''));
+    circle.id = 'flow-node-'+n;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',p.x); text.setAttribute('y',p.y);
+    text.setAttribute('class', 'node-text' + (n==='s'?' source':'') + (n==='t'?' sink':''));
+    text.textContent = n;
+    text.id = 'flow-ntext-'+n;
+    svg.appendChild(text);
+  });
+}
+
+function drawResidualNetwork() {
+  const svg = document.getElementById('resSvg');
+  svg.innerHTML = `<defs>
+    <marker id="rarr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="rarr-path" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+    </marker>
+  </defs>`;
+
+  buildResidual();
+  const drawn = new Set();
+
+  NODES.forEach(a => {
+    NODES.forEach(b => {
+      const key = a+'->'+b;
+      if (a === b) return;
+      const r = residual[key];
+      if (r <= 0) return;
+      const edgeKey = [a,b].sort().join('-');
+      const reverse = residual[b+'->'+a];
+      const p1 = POS[a], p2 = POS[b];
+      const dx = p2.x-p1.x, dy = p2.y-p1.y;
+      const len = Math.sqrt(dx*dx+dy*dy);
+      const nx = dx/len, ny = dy/len;
+      const x1 = p1.x+nx*22, y1 = p1.y+ny*22;
+      const x2 = p2.x-nx*22, y2 = p2.y-ny*22;
+
+      const isForward = EDGES.some(e => e.from===a && e.to===b);
+      const color = isForward ? '#ff66ff88' : '#ffcc0088';
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+      line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', 1.5);
+      line.setAttribute('marker-end', 'url(#rarr-gray)');
+      line.id = 'res-edge-'+getEdgeId(a,b);
+      svg.appendChild(line);
+
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const ox = -ny*12, oy = nx*12;
+      const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x', mx+ox); label.setAttribute('y', my+oy);
+      label.setAttribute('class', 'edge-label');
+      label.setAttribute('fill', isForward ? '#ff66ff' : '#ffcc00');
+      label.textContent = r;
+      label.id = 'res-label-'+getEdgeId(a,b);
+      svg.appendChild(label);
+    });
+  });
+
+  NODES.forEach(n => {
+    const p = POS[n];
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',p.x); circle.setAttribute('cy',p.y);
+    circle.setAttribute('r',20);
+    circle.setAttribute('class', 'node-circle' + (n==='s'?' source':'') + (n==='t'?' sink':''));
+    circle.id = 'res-node-'+n;
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',p.x); text.setAttribute('y',p.y);
+    text.setAttribute('class', 'node-text' + (n==='s'?' source':'') + (n==='t'?' sink':''));
+    text.textContent = n;
+    text.id = 'res-ntext-'+n;
+    svg.appendChild(text);
+  });
+}
+
+function updateFlowTable() {
+  const tbody = document.getElementById('flowTableBody');
+  tbody.innerHTML = '';
+  EDGES.forEach(e => {
+    const key = e.from+'->'+e.to;
+    const f = flow[key];
+    const r = e.cap - f;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${e.from} &rarr; ${e.to}</td><td id="ft-flow-${getEdgeId(e.from,e.to)}">${f}</td><td>${e.cap}</td><td id="ft-res-${getEdgeId(e.from,e.to)}">${r}</td><td id="ft-stat-${getEdgeId(e.from,e.to)}">${f===0?'Idle':f>=e.cap?'Saturated':'Active'}</td>`;
+    if (f > 0) tr.classList.add('flow-active');
+    tbody.appendChild(tr);
+  });
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.on-path').forEach(el => el.classList.remove('on-path'));
+  document.querySelectorAll('.saturated').forEach(el => el.classList.remove('saturated'));
+  document.querySelectorAll('.reachable').forEach(el => el.classList.remove('reachable'));
+}
+
+function highlightPath(path) {
+  path.forEach(e => {
+    const lineEl = document.getElementById('flow-edge-'+getEdgeId(e.from,e.to));
+    if (lineEl) lineEl.classList.add('on-path');
+    const fromNode = document.getElementById('flow-node-'+e.from);
+    const toNode = document.getElementById('flow-node-'+e.to);
+    if (fromNode) fromNode.classList.add('on-path');
+    if (toNode) toNode.classList.add('on-path');
+    const fromText = document.getElementById('flow-ntext-'+e.from);
+    const toText = document.getElementById('flow-ntext-'+e.to);
+    if (fromText) fromText.classList.add('on-path');
+    if (toText) toText.classList.add('on-path');
+  });
+}
+
+function applyStep(step) {
+  clearHighlights();
+  document.getElementById('explainArea').innerHTML = step.explanation;
+
+  if (step.type === 'init') {
+    document.getElementById('phaseDisplay').textContent = 'Initialization';
+    document.getElementById('flowDisplay').textContent = '0';
+    document.getElementById('maxFlowDisplay').textContent = '—';
+    drawFlowNetwork();
+    drawResidualNetwork();
+    updateFlowTable();
+  } else if (step.type === 'find_path') {
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration}: Finding Path`;
+    highlightPath(step.path);
+    drawResidualNetwork();
+  } else if (step.type === 'bottleneck') {
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration}: Bottleneck = ${step.bottleneck}`;
+    highlightPath(step.path);
+  } else if (step.type === 'augment') {
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration}: Flow = ${step.totalFlow}`;
+    document.getElementById('flowDisplay').textContent = step.totalFlow;
+    drawFlowNetwork();
+    drawResidualNetwork();
+    updateFlowTable();
+  } else if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('flowDisplay').textContent = step.totalFlow;
+    document.getElementById('maxFlowDisplay').textContent = step.totalFlow;
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultContent').innerHTML = `
+      <p style="color:#00ff88;font-size:1.4em;margin:10px 0;">|f*| = ${step.totalFlow}</p>
+      <p style="color:#ccc;">The maximum flow from s to t is <b style="color:#00ff88;">${step.totalFlow}</b> units.</p>
+      <p style="color:#aaa;font-size:0.9em;margin-top:8px;">By the Min-Cut Max-Flow Theorem, this equals the minimum cut capacity.</p>`;
+    drawCut(step.totalFlow);
+  }
+  updateFlowTable();
+}
+
+function drawCut(totalFlow) {
+  buildResidual();
+  const visited = new Set();
+  const queue = ['s'];
+  visited.add('s');
+  while (queue.length > 0) {
+    const u = queue.shift();
+    NODES.forEach(v => {
+      if (!visited.has(v) && residual[u+'->'+v] > 0) {
+        visited.add(v);
+        queue.push(v);
+      }
+    });
+  }
+  const S = NODES.filter(n => visited.has(n));
+  const T = NODES.filter(n => !visited.has(n));
+  document.getElementById('cutDisplay').style.display = 'flex';
+  document.getElementById('cutS').textContent = '{' + S.join(', ') + '}';
+  document.getElementById('cutT').textContent = '{' + T.join(', ') + '}';
+
+  let cutCap = 0;
+  EDGES.forEach(e => {
+    if (visited.has(e.from) && !visited.has(e.to)) {
+      cutCap += e.cap;
+    }
+  });
+  document.getElementById('resultContent').innerHTML += `
+    <p style="color:#ffcc00;margin-top:12px;">Min-Cut: c(S,T) = ${cutCap}</p>
+    <p style="color:#aaa;font-size:0.85em;">S = {${S.join(', ')}}, T = {${T.join(', ')}}</p>`;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('cutDisplay').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('flowDisplay').textContent = '0';
+  document.getElementById('maxFlowDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>Find the <b>maximum flow</b> from source <span class="dim">s</span> to sink <span class="dim">t</span> in a flow network.</p>
+    <p>A <b>flow network</b> is a directed graph where each edge has a <span class="dim">capacity</span> c(u,v) &ge; 0.</p>
+    <h3 style="margin-top:10px;">Network Definition</h3>
+    <p><span class="dim">Nodes:</span> V = {s, u, v, t}</p>
+    <p><span class="dim">Edges &amp; Capacities:</span></p>
+    <span class="formula-line">s &rarr; u : 10
+s &rarr; v : 10
+u &rarr; v : 5
+u &rarr; t : 10
+v &rarr; t : 10</span>
+    <h3 style="margin-top:10px;">Algorithm Idea</h3>
+    <p>Repeatedly find an <b>augmenting path</b> from s to t in the <span class="dim">residual network</span> G<sub>f</sub>, then push as much flow as possible along it.</p>
+    <span class="formula-line">Ford-Fulkerson(G, s, t):
+  1. Initialize f(u,v) = 0 for all edges
+  2. While exists augmenting path p in G_f:
+     - c_f(p) = min{c_f(u,v) : (u,v) in p}
+     - For each (u,v) in p:
+       - if (u,v) in E: f(u,v) += c_f(p)
+       - else: f(v,u) -= c_f(p)
+  3. Return f</span>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+  clearHighlights();
+  buildSteps();
+  drawFlowNetwork();
+  drawResidualNetwork();
+  updateFlowTable();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  const totalFlow = getCurrentFlow();
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('flowDisplay').textContent = totalFlow;
+  document.getElementById('maxFlowDisplay').textContent = totalFlow;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultContent').innerHTML = `
+    <p style="color:#00ff88;font-size:1.4em;margin:10px 0;">|f*| = ${totalFlow}</p>
+    <p style="color:#ccc;">The maximum flow from s to t is <b style="color:#00ff88;">${totalFlow}</b> units.</p>
+    <p style="color:#aaa;font-size:0.9em;margin-top:8px;">By the Min-Cut Max-Flow Theorem, this equals the minimum cut capacity.</p>`;
+  document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✓ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(totalFlow);
+  document.getElementById('sidebar').scrollTop = 0;
+  drawCut(totalFlow);
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initFlow();
+drawFlowNetwork();
+drawResidualNetwork();
+updateFlowTable();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
