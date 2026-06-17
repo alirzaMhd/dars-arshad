@@ -1,12 +1,65 @@
 let currentLesson = null;
 let currentChapterIndex = 0;
 
-function showStep(stepNum) {
+async function loadLessons() {
+    const resp = await fetch('/api/lessons');
+    const data = await resp.json();
+    const container = document.getElementById('lessonsContainer');
+    container.innerHTML = '';
+    if (data.lessons.length === 0) {
+        container.innerHTML = '<p style="color:#666;">No saved lessons yet.</p>';
+        return;
+    }
+    data.lessons.forEach(l => {
+        const div = document.createElement('div');
+        div.className = 'lesson-item';
+        div.style.cssText = 'padding:12px; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;';
+        div.innerHTML = `
+            <div>
+                <strong>${l.name}</strong>
+                <span style="color:#666; margin-left:10px;">${l.chapter_count} chapters</span>
+            </div>
+            <button class="btn secondary delete-lesson" data-id="${l.id}" style="padding:4px 12px; font-size:12px;">Delete</button>
+        `;
+        div.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-lesson')) {
+                e.stopPropagation();
+                if (confirm('Delete this lesson?')) {
+                    await fetch(`/api/lessons/${l.id}`, {method: 'DELETE'});
+                    loadLessons();
+                }
+                return;
+            }
+            const resp = await fetch(`/api/lessons/${l.id}`);
+            const data = await resp.json();
+            currentLesson = data.lesson;
+            document.getElementById('lessonList').classList.remove('active');
+            showStep(2);
+            renderChapterTable();
+        });
+        container.appendChild(div);
+    });
+}
+
+document.getElementById('newLessonBtn').addEventListener('click', () => {
+    document.getElementById('lessonList').classList.remove('active');
+    showStep(1);
+});
+
+const originalShowStep = showStep;
+showStep = function(stepNum) {
     document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    if (stepNum === 'list') {
+        document.getElementById('lessonList').classList.add('active');
+        loadLessons();
+        return;
+    }
     document.getElementById(`step${stepNum}`).classList.add('active');
     document.querySelector(`.step[data-step="${stepNum}"]`).classList.add('active');
-}
+};
+
+loadLessons();
 
 function calculateRecommended(book, exams) {
     const frequency = exams / 10;
@@ -63,7 +116,10 @@ function renderChapterTable() {
     });
 }
 
-document.getElementById('backToStep1').addEventListener('click', () => showStep(1));
+document.getElementById('backToStep1').addEventListener('click', () => {
+    showStep('list');
+    loadLessons();
+});
 document.getElementById('generateSheet').addEventListener('click', async () => {
     const allValid = currentLesson.chapters.every(ch => ch.questions_in_book > 0);
     if (!allValid) {
