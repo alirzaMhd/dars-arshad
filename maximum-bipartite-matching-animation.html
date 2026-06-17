@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maximum Bipartite Matching Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.graph-container {
+  background: #0d0d1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 15px 0;
+  text-align: center;
+}
+.graph-container svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.path-edge {
+  background: #1a0030 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+  box-shadow: 0 0 12px #ff66ff55;
+  transform: scale(1.08);
+  font-weight: bold;
+}
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.match-display {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 15px 0;
+}
+.match-pair {
+  background: #111;
+  border: 1px solid #00ff88;
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 1em;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 12px 0;
+  font-size: 0.82em;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #555;
+}
+svg text { font-family: 'Courier New', monospace; }
+</style>
+</head>
+<body>
+
+<h1>Maximum Bipartite Matching</h1>
+<p class="subtitle">Network Flow — Ford-Fulkerson on Flow Network Construction</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container" id="graphContainer">
+      <svg id="flowSvg" width="720" height="320" viewBox="0 0 720 320"></svg>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:#00ccff"></div> Node</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ff6600"></div> Active/Exploring</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#00ff88"></div> Matching Edge</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ff66ff"></div> Augmenting Path</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> No Flow</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Algorithm: </span><span class="value">Ford-Fulkerson (DFS)</span> &nbsp;|&nbsp;
+      <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+      <span class="label">Current: </span><span class="highlight" id="computingDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Edge Flow Table — f(u,v) / c(u,v)</div>
+      <div class="table-wrapper" id="flowTableWrapper"></div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>Maximum Matching Found</h2>
+      <div class="match-display" id="matchDisplay"></div>
+      <p style="color:#aaa; margin-top:10px;">
+        Matching size = <span id="matchingSize" style="color:#00ff88; font-weight:bold;"></span>
+      </p>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>Find the <b>maximum cardinality matching</b> in a bipartite graph — the largest set of edges with no shared endpoints.</p>
+        <p>Left set: <span class="dim">L = {A, B, C, D}</span></p>
+        <p>Right set: <span class="dim">R = {1, 2, 3, 4}</span></p>
+        <p>Edges: <span class="dim">A–1, A–2, B–2, B–3, C–3, C–4, D–1, D–4</span></p>
+        <h3 style="margin-top:10px;">Flow Construction</h3>
+        <span class="formula-line">s→L: cap 1 &nbsp;|&nbsp; L→R: cap 1 per edge &nbsp;|&nbsp; R→t: cap 1</span>
+        <p>Each left and right node has capacity 1, ensuring a valid matching.</p>
+        <h3 style="margin-top:10px;">Key Idea</h3>
+        <span class="formula-line">Ford-Fulkerson: find augmenting paths via DFS</span>
+        <p>Each augmenting path increases flow (and matching size) by 1.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LEFT = ['A','B','C','D'];
+const RIGHT = ['1','2','3','4'];
+const EDGES = [[0,0],[0,1],[1,1],[1,2],[2,2],[2,3],[3,0],[3,3]];
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+let flow = {};
+let matchL = {};
+let matchR = {};
+let augmentingPath = [];
+
+const NODE_POS = {};
+NODE_POS['s'] = {x:60, y:160};
+LEFT.forEach((n,i) => { NODE_POS[n] = {x:220, y:60 + i*70}; });
+RIGHT.forEach((n,i) => { NODE_POS[n] = {x:500, y:60 + i*70}; });
+NODE_POS['t'] = {x:660, y:160};
+
+function edgeKey(u,v) { return u+'→'+v; }
+function initFlows() {
+  flow = {};
+  ['s'].concat(LEFT).forEach(u => {
+    ['s'].concat(LEFT).concat(RIGHT).concat(['t']).forEach(v => {
+      if (u !== v) flow[edgeKey(u,v)] = 0;
+    });
+  });
+  RIGHT.forEach(u => { flow[edgeKey(u,'t')] = 0; });
+  matchL = {}; matchR = {};
+  LEFT.forEach(n => matchL[n] = null);
+  RIGHT.forEach(n => matchR[n] = null);
+  augmentingPath = [];
+}
+
+function capacity(u,v) {
+  if (u === 's' && LEFT.includes(v)) return 1;
+  if (LEFT.includes(u) && RIGHT.includes(v)) {
+    return EDGES.some(e => LEFT[e[0]]===u && RIGHT[e[1]]===v) ? 1 : 0;
+  }
+  if (RIGHT.includes(u) && v === 't') return 1;
+  return 0;
+}
+
+function residualCapacity(u,v) {
+  let c = capacity(u,v);
+  if (c > 0) return c - flow[edgeKey(u,v)];
+  if (capacity(v,u) > 0) return flow[edgeKey(v,u)];
+  return 0;
+}
+
+function buildAugmentingPathDFS() {
+  let visited = new Set();
+  let path = [];
+  function dfs(u) {
+    if (u === 't') return true;
+    visited.add(u);
+    let neighbors = [];
+    LEFT.forEach(v => { if (!visited.has(v)) neighbors.push(v); });
+    RIGHT.forEach(v => { if (!visited.has(v)) neighbors.push(v); });
+    if (!visited.has('t')) neighbors.push('t');
+    for (let v of neighbors) {
+      if (residualCapacity(u,v) > 0 && !visited.has(v)) {
+        path.push(u);
+        if (dfs(v)) return true;
+        path.pop();
+      }
+    }
+    return false;
+  }
+  path = [];
+  if (dfs('s')) { path.push('t'); return path; }
+  return null;
+}
+
+function extractMatching() {
+  let M = [];
+  LEFT.forEach(u => {
+    let v = matchL[u];
+    if (v !== null) M.push([u, RIGHT[v]]);
+  });
+  return M;
+}
+
+function buildSteps() {
+  steps = [];
+  initFlows();
+
+  steps.push({
+    type: 'init',
+    explanation: buildInitExplanation()
+  });
+
+  let pathNum = 0;
+  while (true) {
+    let path = buildAugmentingPathDFS();
+    if (!path) break;
+    pathNum++;
+    augmentingPath = path.slice();
+
+    steps.push({
+      type: 'find_path',
+      path: path.slice(),
+      explanation: buildFindPathExplanation(path, pathNum)
+    });
+
+    let bottleneck = Infinity;
+    for (let i = 0; i < path.length - 1; i++) {
+      let rc = residualCapacity(path[i], path[i+1]);
+      if (rc < bottleneck) bottleneck = rc;
+    }
+
+    for (let i = 0; i < path.length - 1; i++) {
+      let u = path[i], v = path[i+1];
+      let fk = edgeKey(u,v);
+      if (capacity(u,v) > 0) {
+        flow[fk] += bottleneck;
+      } else {
+        flow[edgeKey(v,u)] -= bottleneck;
+      }
+    }
+
+    steps.push({
+      type: 'augment',
+      path: path.slice(),
+      bottleneck: bottleneck,
+      explanation: buildAugmentExplanation(path, bottleneck, pathNum)
+    });
+
+    for (let i = 0; i < path.length - 1; i++) {
+      let u = path[i], v = path[i+1];
+      if (LEFT.includes(u) && RIGHT.includes(v)) {
+        let li = LEFT.indexOf(u), ri = RIGHT.indexOf(v);
+        if (matchL[u] !== null) {
+          let oldR = RIGHT[matchL[u]];
+          delete matchR[oldR];
+        }
+        matchL[u] = ri;
+        matchR[v] = li;
+      }
+    }
+
+    augmentingPath = [];
+  }
+
+  let M = extractMatching();
+  steps.push({
+    type: 'done',
+    matching: M,
+    explanation: buildDoneExplanation(M)
+  });
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>Initialization</h3>
+    <p>Build the <b>flow network</b> from the bipartite graph:</p>
+    <p style="margin-left:8px;">• Add source <span class="dim">s</span> connected to each left node (capacity 1)</p>
+    <p style="margin-left:8px;">• Each original edge gets capacity <span class="dim">1</span></p>
+    <p style="margin-left:8px;">• Each right node connects to sink <span class="dim">t</span> (capacity 1)</p>
+    <span class="formula-line">Total nodes: 10 (s + 4L + 4R + t) &nbsp;|&nbsp; Total edges: 17</span>
+    <p>All flows start at <span class="dim">0</span>. The matching is empty.</p>
+    <p class="note">Now we search for augmenting paths using DFS.</p>
+  </div>`;
+}
+
+function buildFindPathExplanation(path, pathNum) {
+  let pathStr = path.join(' → ');
+  let edges = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    let u = path[i], v = path[i+1];
+    let rc = residualCapacity(u,v);
+    let isBwd = capacity(u,v) === 0 && capacity(v,u) > 0;
+    edges.push(`(${u},${v}) rc=${rc}${isBwd?' [back]':''}`);
+  }
+  return `<div class="explain-section active">
+    <h3>Finding Augmenting Path #${pathNum}</h3>
+    <p>DFS from <span class="dim">s</span> discovers an augmenting path:</p>
+    <span class="formula-line">${pathStr}</span>
+    <p>Edge details:</p>
+    ${edges.map(e => `<p style="margin-left:8px;">• <span class="dim">${e}</span></p>`).join('')}
+    <p>Bottleneck = minimum residual capacity along path.</p>
+    <p class="note">Augmenting paths alternate between unmatched and matched edges.</p>
+  </div>`;
+}
+
+function buildAugmentExplanation(path, bottleneck, pathNum) {
+  let pathStr = path.join(' → ');
+  let edgeChanges = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    let u = path[i], v = path[i+1];
+    let fk = edgeKey(u,v);
+    let oldF = flow[fk];
+    let isBwd = capacity(u,v) === 0 && capacity(v,u) > 0;
+    if (!isBwd) {
+      edgeChanges.push(`${fk}: ${oldF-bottleneck} → ${oldF}`);
+    } else {
+      edgeChanges.push(`${edgeKey(v,u)}: ${oldF+bottleneck} → ${oldF}`);
+    }
+  }
+  let newMatching = extractMatching();
+  return `<div class="explain-section active">
+    <h3>Augmenting Path #${pathNum} — Bottleneck = ${bottleneck}</h3>
+    <p>Push <span class="dim">${bottleneck}</span> unit(s) of flow along the path:</p>
+    <span class="formula-line">${pathStr}</span>
+    <p>Flow updates:</p>
+    ${edgeChanges.map(e => `<p style="margin-left:8px;">• <span class="dim">${e}</span></p>`).join('')}
+    <p>Current matching size: <span class="result-line" style="display:inline;">${newMatching.length}</span></p>
+    <p class="note">Each augment increases the matching by exactly 1.</p>
+  </div>`;
+}
+
+function buildDoneExplanation(M) {
+  let matchStr = M.length > 0 ? M.map(m => `(${m[0]},${m[1]})`).join(', ') : '∅';
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>No more augmenting paths exist. The <span class="result-line" style="display:inline;">maximum matching</span> has size <span class="result-line" style="display:inline;">${M.length}</span>.</p>
+    <h3 style="margin-top:10px;">Maximum Matching</h3>
+    <p>${matchStr}</p>
+    <h3 style="margin-top:10px;">Why This Works</h3>
+    <p>By <b>Kőnig's theorem</b> and the max-flow min-cut theorem, the max flow in this network equals the max matching.</p>
+    <p>Each left→right edge with flow 1 is in the matching. All capacities are 1, so no node is reused.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(V·E) — each augment takes O(E) via DFS, at most O(V) augments.</p>
+    <p><span class="dim">Space:</span> O(V + E) for the flow network and matching.</p>
+  </div>`;
+}
+
+function buildFlowTable() {
+  let html = '<table><tr><th>Edge</th><th>f(u,v)</th><th>c(u,v)</th><th>Residual</th></tr>';
+  EDGES.forEach(([li,ri]) => {
+    let u = LEFT[li], v = RIGHT[ri];
+    let fk = edgeKey(u,v);
+    let f = flow[fk], c = 1;
+    html += `<tr id="ft-${u}${v}"><td>${u}→${v}</td><td id="fv-${u}${v}">${f}</td><td>${c}</td><td id="fr-${u}${v}">${c-f}</td></tr>`;
+  });
+  html += '</table>';
+  return html;
+}
+
+function buildFlowTableHTML() {
+  let html = '<table><tr><th>Edge</th><th>f(u,v)</th><th>c(u,v)</th><th>Residual</th></tr>';
+  EDGES.forEach(([li,ri]) => {
+    let u = LEFT[li], v = RIGHT[ri];
+    let fk = edgeKey(u,v);
+    html += `<tr id="ft-${u}${v}"><td>${u}→${v}</td><td id="fv-${u}${v}">0</td><td>1</td><td id="fr-${u}${v}">1</td></tr>`;
+  });
+  html += '</table>';
+  return html;
+}
+
+function updateFlowTable() {
+  EDGES.forEach(([li,ri]) => {
+    let u = LEFT[li], v = RIGHT[ri];
+    let fk = edgeKey(u,v);
+    let f = flow[fk];
+    let fvEl = document.getElementById(`fv-${u}${v}`);
+    let frEl = document.getElementById(`fr-${u}${v}`);
+    if (fvEl) fvEl.textContent = f;
+    if (frEl) frEl.textContent = 1 - f;
+  });
+}
+
+function drawSvg(pathEdges, pathNodes) {
+  let svg = document.getElementById('flowSvg');
+  let html = '';
+
+  html += `<defs>
+    <marker id="arrowGray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#555"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ff6600"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#00ff88"/>
+    </marker>
+    <marker id="arrowMagenta" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ff66ff"/>
+    </marker>
+  </defs>`;
+
+  let pathSet = new Set();
+  if (pathEdges) {
+    pathEdges.forEach(([u,v]) => pathSet.add(edgeKey(u,v)));
+  }
+  let pathNodeSet = new Set();
+  if (pathNodes) pathNodes.forEach(n => pathNodeSet.add(n));
+
+  EDGES.forEach(([li,ri]) => {
+    let u = LEFT[li], v = RIGHT[ri];
+    let fk = edgeKey(u,v);
+    let f = flow[fk];
+    let p1 = NODE_POS[u], p2 = NODE_POS[v];
+    let color = f > 0 ? '#00ff88' : '#555';
+    let width = f > 0 ? 2.5 : 1.2;
+    let marker = f > 0 ? 'url(#arrowGreen)' : 'url(#arrowGray)';
+    if (pathSet.has(fk)) { color = '#ff66ff'; width = 3; marker = 'url(#arrowMagenta)'; }
+    let mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2 - 8;
+    html += `<line x1="${p1.x+18}" y1="${p1.y}" x2="${p2.x-18}" y2="${p2.y}" stroke="${color}" stroke-width="${width}" marker-end="${marker}"/>`;
+    html += `<text x="${mx}" y="${my}" fill="${color}" font-size="10" text-anchor="middle">${f}/1</text>`;
+  });
+
+  ['s','t'].forEach(n => {
+    let p = NODE_POS[n];
+    let isPath = pathNodeSet.has(n);
+    let borderColor = isPath ? '#ff66ff' : '#00ccff';
+    html += `<circle cx="${p.x}" cy="${p.y}" r="18" fill="#111" stroke="${borderColor}" stroke-width="2"/>`;
+    html += `<text x="${p.x}" y="${p.y}" fill="${borderColor}" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="central">${n}</text>`;
+  });
+
+  LEFT.forEach(n => {
+    let p = NODE_POS[n];
+    let f = flow[edgeKey('s',n)];
+    let isPath = pathNodeSet.has(n);
+    let borderColor = isPath ? '#ff66ff' : '#00ccff';
+    let fillColor = f > 0 ? '#0a1a12' : '#111';
+    html += `<circle cx="${p.x}" cy="${p.y}" r="18" fill="${fillColor}" stroke="${borderColor}" stroke-width="2"/>`;
+    html += `<text x="${p.x}" y="${p.y}" fill="${borderColor}" font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="central">${n}</text>`;
+  });
+
+  RIGHT.forEach(n => {
+    let p = NODE_POS[n];
+    let f = flow[edgeKey(n,'t')];
+    let isPath = pathNodeSet.has(n);
+    let borderColor = isPath ? '#ff66ff' : '#00ccff';
+    let fillColor = f > 0 ? '#0a1a12' : '#111';
+    html += `<circle cx="${p.x}" cy="${p.y}" r="18" fill="${fillColor}" stroke="${borderColor}" stroke-width="2"/>`;
+    html += `<text x="${p.x}" y="${p.y}" fill="${borderColor}" font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="central">${n}</text>`;
+  });
+
+  let sp = NODE_POS['s'], tp = NODE_POS['t'];
+  let fs = flow[edgeKey('s','A')] + flow[edgeKey('s','B')] + flow[edgeKey('s','C')] + flow[edgeKey('s','D')];
+  html += `<text x="${(sp.x+NODE_POS['A'].x)/2}" y="${sp.y-22}" fill="#00ccff" font-size="10" text-anchor="middle">cap=1</text>`;
+  html += `<text x="${(NODE_POS['D'].x+tp.x)/2}" y="${tp.y-22}" fill="#00ccff" font-size="10" text-anchor="middle">cap=1</text>`;
+
+  let M = extractMatching();
+  html += `<text x="360" y="310" fill="#888" font-size="11" text-anchor="middle">Flow: ${fs} | Matching size: ${M.length}</text>`;
+
+  svg.innerHTML = html;
+}
+
+function clearHighlights() {
+  document.querySelectorAll('td.current, td.computing, td.path-edge').forEach(el => {
+    el.classList.remove('current','computing','path-edge');
+  });
+  document.querySelectorAll('line').forEach(el => {});
+}
+
+function applyStep(step) {
+  clearHighlights();
+  updateFlowTable();
+
+  if (step.type === 'find_path' || step.type === 'augment') {
+    let pathNodes = step.path;
+    let pathEdges = [];
+    for (let i = 0; i < pathNodes.length - 1; i++) {
+      pathEdges.push([pathNodes[i], pathNodes[i+1]]);
+    }
+    drawSvg(pathEdges, pathNodes);
+
+    if (step.type === 'find_path') {
+      document.getElementById('phaseDisplay').textContent = 'Finding augmenting path...';
+      let lastNode = pathNodes[pathNodes.length-1];
+      document.getElementById('computingDisplay').textContent = pathNodes.join(' → ');
+    } else {
+      document.getElementById('phaseDisplay').textContent = `Augmenting (bottleneck=${step.bottleneck})`;
+      document.getElementById('computingDisplay').textContent = `Push ${step.bottleneck} along ${pathNodes.join(' → ')}`;
+    }
+
+    EDGES.forEach(([li,ri]) => {
+      let u = LEFT[li], v = RIGHT[ri];
+      let fk = edgeKey(u,v);
+      let isOnPath = pathEdges.some(e => edgeKey(e[0],e[1]) === fk);
+      if (isOnPath) {
+        let td = document.getElementById(`ft-${u}${v}`);
+        if (td) td.classList.add(step.type === 'augment' ? 'current' : 'path-edge');
+      }
+    });
+  } else if (step.type === 'done') {
+    drawSvg([], []);
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    let M = step.matching;
+    document.getElementById('computingDisplay').textContent = `|M*| = ${M.length}`;
+  }
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'init' ? 'Initialization' : step.type === 'find_path' ? 'Finding augmenting path' : step.type === 'augment' ? 'Augmenting flow' : 'Complete'}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initFlows();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>Find the <b>maximum cardinality matching</b> in a bipartite graph — the largest set of edges with no shared endpoints.</p>
+    <p>Left set: <span class="dim">L = {A, B, C, D}</span></p>
+    <p>Right set: <span class="dim">R = {1, 2, 3, 4}</span></p>
+    <p>Edges: <span class="dim">A–1, A–2, B–2, B–3, C–3, C–4, D–1, D–4</span></p>
+    <h3 style="margin-top:10px;">Flow Construction</h3>
+    <span class="formula-line">s→L: cap 1 | L→R: cap 1 per edge | R→t: cap 1</span>
+    <p>Each left and right node has capacity 1, ensuring a valid matching.</p>
+    <h3 style="margin-top:10px;">Key Idea</h3>
+    <span class="formula-line">Ford-Fulkerson: find augmenting paths via DFS</span>
+    <p>Each augmenting path increases flow (and matching size) by 1.</p>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+  clearHighlights();
+  buildSteps();
+  initTables();
+  drawSvg([], []);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  let M = extractMatching();
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = `|M*| = ${M.length}`;
+  document.getElementById('resultSection').style.display = 'block';
+  let matchHtml = M.map(m => `<div class="match-pair">${m[0]} — ${m[1]}</div>`).join('');
+  document.getElementById('matchDisplay').innerHTML = matchHtml;
+  document.getElementById('matchingSize').textContent = M.length;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(M);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function initTables() {
+  document.getElementById('flowTableWrapper').innerHTML = buildFlowTableHTML();
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initTables();
+drawSvg([], []);
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
