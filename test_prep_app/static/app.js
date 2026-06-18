@@ -55,8 +55,7 @@ document.getElementById('newLessonBtn').addEventListener('click', () => {
     showStep(1);
 });
 
-const originalShowStep = showStep;
-showStep = function(stepNum) {
+function showStep(stepNum) {
     document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     if (stepNum === 'list') {
@@ -66,7 +65,7 @@ showStep = function(stepNum) {
     }
     document.getElementById(`step${stepNum}`).classList.add('active');
     document.querySelector(`.step[data-step="${stepNum}"]`).classList.add('active');
-};
+}
 
 loadLessons();
 
