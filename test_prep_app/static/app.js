@@ -122,11 +122,43 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     renderChapterTable();
 });
 
+function renderFooterRow() {
+    const tfoot = document.getElementById('chapterFoot');
+    if (!tfoot) return;
+    const totalBook = currentLesson.chapters.reduce((s, ch) => s + (ch.questions_in_book || 0), 0);
+    const totalExams = currentLesson.chapters.reduce((s, ch) => s + (ch.questions_in_exams || 0), 0);
+    const totalRec = currentLesson.chapters.reduce((s, ch) => s + (ch.recommended || 0), 0);
+    tfoot.innerHTML = `<tr class="total-row">
+        <td class="total-label">Total</td>
+        <td>${totalBook}</td>
+        <td>${totalExams}</td>
+        <td>${totalRec}</td>
+    </tr>`;
+}
+
+function updateAllFromFieldChange() {
+    const totalIntendedInput = document.getElementById('totalIntended');
+    const prevSelected = currentLesson.chapters.map(ch => ch.selected_count);
+    const prevRecommended = currentLesson.chapters.map(ch => ch.recommended);
+
+    currentLesson.total_intended = parseInt(totalIntendedInput.value) || 20;
+    recalculateAllRecommended();
+
+    currentLesson.chapters.forEach((ch, i) => {
+        const recInput = document.querySelector(`#chapterBody input[data-field="selected_count"][data-index="${i}"]`);
+        if (!recInput) return;
+        if (prevSelected[i] === prevRecommended[i]) {
+            ch.selected_count = ch.recommended;
+            recInput.value = ch.recommended;
+        }
+    });
+
+    renderFooterRow();
+}
+
 function renderChapterTable() {
     const totalIntendedInput = document.getElementById('totalIntended');
     if (currentLesson.total_intended) totalIntendedInput.value = currentLesson.total_intended;
-    currentLesson.total_intended = parseInt(totalIntendedInput.value) || 20;
-    recalculateAllRecommended();
 
     const tbody = document.getElementById('chapterBody');
     tbody.innerHTML = '';
@@ -136,29 +168,10 @@ function renderChapterTable() {
             <td>${ch.name}</td>
             <td><input type="number" min="1" value="${ch.questions_in_book || ''}" data-field="questions_in_book" data-index="${i}"></td>
             <td><input type="number" min="0" max="10" value="${ch.questions_in_exams || ''}" data-field="questions_in_exams" data-index="${i}"></td>
-            <td class="recommended-cell"><input type="number" min="1" value="${ch.recommended}" data-field="selected_count" data-index="${i}"></td>
+            <td class="recommended-cell"><input type="number" min="1" value="${ch.selected_count}" data-field="selected_count" data-index="${i}"></td>
         `;
         tbody.appendChild(tr);
     });
-
-    function updateAllFromFieldChange(changedIdx, changedField) {
-        const prevSelected = currentLesson.chapters.map(ch => ch.selected_count);
-        const prevRecommended = currentLesson.chapters.map(ch => ch.recommended);
-
-        currentLesson.total_intended = parseInt(totalIntendedInput.value) || 20;
-        recalculateAllRecommended();
-
-        currentLesson.chapters.forEach((ch, i) => {
-            const recInput = tbody.querySelector(`input[data-field="selected_count"][data-index="${i}"]`);
-            if (!recInput) return;
-            if (prevSelected[i] === prevRecommended[i]) {
-                ch.selected_count = ch.recommended;
-                recInput.value = ch.recommended;
-            }
-        });
-    }
-
-    totalIntendedInput.addEventListener('input', () => updateAllFromFieldChange(-1, null));
 
     tbody.querySelectorAll('input').forEach(input => {
         input.addEventListener('input', (e) => {
@@ -168,11 +181,15 @@ function renderChapterTable() {
             currentLesson.chapters[idx][field] = val;
 
             if (field === 'questions_in_book' || field === 'questions_in_exams') {
-                updateAllFromFieldChange(idx, field);
+                updateAllFromFieldChange();
             }
         });
     });
+
+    updateAllFromFieldChange();
 }
+
+document.getElementById('totalIntended').addEventListener('input', updateAllFromFieldChange);
 
 document.getElementById('backToStep1').addEventListener('click', () => {
     showStep('list');
