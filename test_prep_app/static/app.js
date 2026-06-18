@@ -69,10 +69,39 @@ function showStep(stepNum) {
 
 loadLessons();
 
-function calculateRecommended(book, exams) {
-    const frequency = exams / 10;
-    const rec = Math.round(frequency * book);
-    return Math.min(Math.max(5, rec), book || 5);
+function recalculateAllRecommended() {
+    const chapters = currentLesson.chapters;
+    const totalIntended = currentLesson.total_intended || 20;
+    if (!chapters.length) return;
+
+    const weights = chapters.map(ch => (ch.questions_in_book || 0) + (ch.questions_in_exams || 0));
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+    if (totalWeight === 0) {
+        const perChapter = Math.max(1, Math.floor(totalIntended / chapters.length));
+        chapters.forEach((ch, i) => {
+            const maxBook = ch.questions_in_book || totalIntended;
+            if (i === 0) {
+                ch.recommended = Math.min(maxBook, Math.max(1, totalIntended - perChapter * (chapters.length - 1)));
+            } else {
+                ch.recommended = Math.min(maxBook, Math.max(1, perChapter));
+            }
+        });
+        return;
+    }
+
+    let allocated = 0;
+    chapters.forEach((ch, i) => {
+        let raw;
+        if (i === chapters.length - 1) {
+            raw = totalIntended - allocated;
+        } else {
+            raw = Math.round(totalIntended * weights[i] / totalWeight);
+        }
+        const maxBook = ch.questions_in_book || totalIntended;
+        ch.recommended = Math.min(maxBook, Math.max(1, raw));
+        allocated += ch.recommended;
+    });
 }
 
 document.getElementById('startBtn').addEventListener('click', async () => {
@@ -94,6 +123,11 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 });
 
 function renderChapterTable() {
+    const totalIntendedInput = document.getElementById('totalIntended');
+    if (currentLesson.total_intended) totalIntendedInput.value = currentLesson.total_intended;
+    currentLesson.total_intended = parseInt(totalIntendedInput.value) || 20;
+    recalculateAllRecommended();
+
     const tbody = document.getElementById('chapterBody');
     tbody.innerHTML = '';
     currentLesson.chapters.forEach((ch, i) => {
@@ -107,6 +141,25 @@ function renderChapterTable() {
         tbody.appendChild(tr);
     });
 
+    function updateAllFromFieldChange(changedIdx, changedField) {
+        const prevSelected = currentLesson.chapters.map(ch => ch.selected_count);
+        const prevRecommended = currentLesson.chapters.map(ch => ch.recommended);
+
+        currentLesson.total_intended = parseInt(totalIntendedInput.value) || 20;
+        recalculateAllRecommended();
+
+        currentLesson.chapters.forEach((ch, i) => {
+            const recInput = tbody.querySelector(`input[data-field="selected_count"][data-index="${i}"]`);
+            if (!recInput) return;
+            if (prevSelected[i] === prevRecommended[i]) {
+                ch.selected_count = ch.recommended;
+                recInput.value = ch.recommended;
+            }
+        });
+    }
+
+    totalIntendedInput.addEventListener('input', () => updateAllFromFieldChange(-1, null));
+
     tbody.querySelectorAll('input').forEach(input => {
         input.addEventListener('input', (e) => {
             const idx = parseInt(e.target.dataset.index);
@@ -115,14 +168,7 @@ function renderChapterTable() {
             currentLesson.chapters[idx][field] = val;
 
             if (field === 'questions_in_book' || field === 'questions_in_exams') {
-                const ch = currentLesson.chapters[idx];
-                const prevRecommended = ch.recommended;
-                const wasOverridden = ch.selected_count !== prevRecommended;
-                ch.recommended = calculateRecommended(ch.questions_in_book, ch.questions_in_exams);
-                if (!wasOverridden) {
-                    ch.selected_count = ch.recommended;
-                    tbody.querySelector(`input[data-field="selected_count"][data-index="${idx}"]`).value = ch.recommended;
-                }
+                updateAllFromFieldChange(idx, field);
             }
         });
     });
@@ -144,10 +190,14 @@ document.getElementById('generateSheet').addEventListener('click', async () => {
 });
 
 async function saveLesson() {
+    currentLesson.total_intended = parseInt(document.getElementById('totalIntended')?.value) || currentLesson.total_intended || 20;
     await fetch(`/api/lessons/${currentLesson.id}`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({chapters: currentLesson.chapters})
+        body: JSON.stringify({
+            chapters: currentLesson.chapters,
+            total_intended: currentLesson.total_intended
+        })
     });
 }
 

@@ -83,6 +83,7 @@ def api_create_lesson():
     lesson = {
         'id': lesson_id,
         'name': name,
+        'total_intended': 20,
         'chapters': chapters,
         'created_at': now,
         'updated_at': now
@@ -104,7 +105,7 @@ def api_update_lesson(lesson_id):
         return jsonify({'error': 'Lesson not found'}), 404
     data = request.get_json()
     from datetime import datetime
-    for key in ('name', 'chapters'):
+    for key in ('name', 'chapters', 'total_intended'):
         if key in data:
             lesson[key] = data[key]
     lesson['updated_at'] = datetime.now().isoformat()
