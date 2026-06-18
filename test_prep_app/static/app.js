@@ -314,6 +314,14 @@ document.getElementById('backToStep2').addEventListener('click', async () => {
     showStep(2);
 });
 
+document.getElementById('nextQuestion').addEventListener('click', () => {
+    const ch = currentLesson.chapters[activeChapterIdx];
+    if (activeQuestionIdx < ch.question_numbers.length - 1) {
+        activeQuestionIdx++;
+        renderActiveChapter();
+    }
+});
+
 document.getElementById('printSheet').addEventListener('click', () => {
     const ch = currentLesson.chapters[activeChapterIdx];
     document.getElementById('printLessonName').textContent = currentLesson.name;
