@@ -385,6 +385,55 @@
   }
   .ctx-menu .submenu:hover .submenu-items { display: block; }
 
+  /* ─── User annotations (highlights) ─── */
+  .user-highlight {
+    position: absolute; border-radius: 2px; pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .user-highlight:hover { opacity: 1 !important; filter: brightness(1.1); }
+
+  /* ─── Sticky notes (always visible, Adobe-style) ─── */
+  .sticky-note {
+    position: absolute; z-index: 10;
+    width: 200px; min-height: 70px; max-height: 300px;
+    background: #fef9c3; border: 1px solid #ca8a04; border-radius: 4px;
+    box-shadow: 2px 3px 12px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column; overflow: hidden;
+    cursor: default; user-select: none;
+    transition: box-shadow 0.15s;
+  }
+  .sticky-note:hover { box-shadow: 2px 4px 18px rgba(0,0,0,0.45); }
+  .sticky-note .note-header {
+    display: flex; align-items: center; gap: 4px; padding: 3px 6px;
+    background: #fde68a; border-bottom: 1px solid #ca8a04;
+    cursor: grab; flex: 0 0 auto;
+  }
+  .sticky-note .note-header:active { cursor: grabbing; }
+  .sticky-note .note-header .note-title { font-size: 0.65rem; color: #92400e; font-weight: 600; flex: 1; }
+  .sticky-note .note-header .note-delete {
+    background: none; border: none; color: #92400e; cursor: pointer;
+    font-size: 0.75rem; padding: 0 2px; line-height: 1; opacity: 0.5;
+  }
+  .sticky-note .note-header .note-delete:hover { opacity: 1; }
+  .sticky-note .note-textarea {
+    flex: 1; width: 100%; border: none; outline: none; resize: none;
+    padding: 6px 8px; font-size: 0.8rem; font-family: inherit;
+    background: transparent; color: #713f12; line-height: 1.4;
+    min-height: 44px; user-select: text; -webkit-user-select: text;
+  }
+
+  /* ─── Mode indicator on toolbar ─── */
+  .toolbar .mode-btn { position: relative; }
+  .toolbar .mode-btn.active { background: var(--accent) !important; color: white !important; border-color: var(--accent) !important; }
+  .toolbar .mode-btn.active::after {
+    content: ''; position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+  }
+
+  /* ─── Cursor modes ─── */
+  body.mode-highlight .textLayer { cursor: crosshair !important; }
+  body.mode-note .pdf-area { cursor: cell !important; }
+
   /* When chat is open, the PDF area shrinks */
   body.chat-open .pdf-area { padding-right: 24px; }
   body.chat-open .hover-tab .tab-btn { border-radius: 8px 0 0 8px; }
@@ -488,6 +537,17 @@
       </div>
     </div>
   </div>
+
+  <span class="sep"></span>
+
+  <div class="group">
+    <button id="highlightModeBtn" class="icon-btn mode-btn" title="Highlight text (H)">🖍️</button>
+    <button id="noteModeBtn" class="icon-btn mode-btn" title="Add sticky note (S)">📌</button>
+  </div>
+
+  <span class="sep"></span>
+
+  <button id="downloadBtn" class="btn-primary icon-btn" title="Download annotated PDF">⬇️ Download</button>
 </div>
 
 <div class="main">
@@ -620,6 +680,9 @@ const state = {
     pdfMeta: null,
     pendingAction: null,
   },
+  mode: 'idle',
+  annotations: { highlights: [], notes: [] },
+  noteIdCounter: 0,
 };
 
 const el = {
@@ -654,6 +717,8 @@ const el = {
   chatTyping: $('chatTyping'), chatTypingText: $('chatTypingText'),
   chatInput: $('chatInput'), chatSendBtn: $('chatSendBtn'),
   ctxMenu: $('ctxMenu'),
+  highlightModeBtn: $('highlightModeBtn'), noteModeBtn: $('noteModeBtn'),
+  downloadBtn: $('downloadBtn'),
 };
 
 const ctx = el.pdfCanvas.getContext('2d');
@@ -1783,6 +1848,272 @@ document.addEventListener('keydown', e => {
 
 // Refresh model list when chat opens
 el.chatModelSelect.addEventListener('focus', () => loadChatModels());
+
+// ─── Annotation system (highlights + sticky notes) ───
+
+function setMode(newMode) {
+  if (state.mode === newMode) {
+    state.mode = 'idle';
+  } else {
+    state.mode = newMode;
+  }
+  document.body.classList.toggle('mode-highlight', state.mode === 'highlight');
+  document.body.classList.toggle('mode-note', state.mode === 'note');
+  el.highlightModeBtn.classList.toggle('active', state.mode === 'highlight');
+  el.noteModeBtn.classList.toggle('active', state.mode === 'note');
+  if (state.mode !== 'idle') {
+    window.getSelection()?.removeAllRanges();
+  }
+}
+
+el.highlightModeBtn.addEventListener('click', () => setMode('highlight'));
+el.noteModeBtn.addEventListener('click', () => setMode('note'));
+
+function getSelectedRects() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  const text = sel.toString().trim();
+  if (!text) return null;
+  const textLayerRect = el.textLayer.getBoundingClientRect();
+  const clientRects = range.getClientRects();
+  const rects = [];
+  for (let i = 0; i < clientRects.length; i++) {
+    const cr = clientRects[i];
+    if (cr.width < 2 || cr.height < 2) continue;
+    rects.push({
+      x: cr.left - textLayerRect.left,
+      y: cr.top - textLayerRect.top,
+      w: cr.width,
+      h: cr.height,
+    });
+  }
+  if (!rects.length) return null;
+  return { text, rects };
+}
+
+function createHighlight(selectionInfo) {
+  const id = 'hl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const hl = {
+    id,
+    page: state.currentPage,
+    text: selectionInfo.text,
+    rects: selectionInfo.rects,
+    color: state.highlightColor,
+    opacity: state.highlightOpacity,
+  };
+  state.annotations.highlights.push(hl);
+  renderUserHighlights();
+}
+
+function renderUserHighlights() {
+  const existing = el.highlightOverlay.querySelectorAll('.user-highlight');
+  existing.forEach(e => e.remove());
+  const pageHLs = state.annotations.highlights.filter(h => h.page === state.currentPage);
+  pageHLs.forEach(hl => {
+    hl.rects.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'user-highlight';
+      div.dataset.id = hl.id;
+      div.style.left = r.x + 'px';
+      div.style.top = r.y + 'px';
+      div.style.width = r.w + 'px';
+      div.style.height = r.h + 'px';
+      div.style.background = hexToRgba(hl.color, hl.opacity);
+      div.title = hl.text.slice(0, 100);
+      el.highlightOverlay.appendChild(div);
+    });
+  });
+}
+
+document.addEventListener('mouseup', e => {
+  if (state.mode !== 'highlight') return;
+  if (e.target.closest('.toolbar') || e.target.closest('.chat-sidebar') || e.target.closest('.audio-dock')) return;
+  setTimeout(() => {
+    const sel = getSelectedRects();
+    if (sel) {
+      createHighlight(sel);
+      window.getSelection()?.removeAllRanges();
+    }
+  }, 10);
+});
+
+// ─── Sticky notes ───
+
+el.pageWrapper.addEventListener('click', e => {
+  if (state.mode !== 'note') return;
+  if (e.target.closest('.sticky-note')) return;
+  if (e.target.closest('.toolbar') || e.target.closest('.chat-sidebar') || e.target.closest('.audio-dock')) return;
+  const wrapperRect = el.pageWrapper.getBoundingClientRect();
+  const x = e.clientX - wrapperRect.left;
+  const y = e.clientY - wrapperRect.top;
+  createStickyNote(x, y);
+});
+
+function createStickyNote(x, y, text = '', id = null) {
+  const noteId = id || ('note_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+  const note = {
+    id: noteId,
+    page: state.currentPage,
+    x, y,
+    text,
+    color: '#facc15',
+  };
+  if (!id) state.annotations.notes.push(note);
+  renderStickyNote(note);
+}
+
+function renderStickyNote(note) {
+  const existing = el.highlightOverlay.querySelector(`.sticky-note[data-id="${note.id}"]`);
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.className = 'sticky-note';
+  div.dataset.id = note.id;
+  div.style.left = note.x + 'px';
+  div.style.top = note.y + 'px';
+
+  const header = document.createElement('div');
+  header.className = 'note-header';
+
+  const title = document.createElement('span');
+  title.className = 'note-title';
+  title.textContent = 'Note';
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'note-delete';
+  delBtn.textContent = '✕';
+  delBtn.title = 'Delete note';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    state.annotations.notes = state.annotations.notes.filter(n => n.id !== note.id);
+    div.remove();
+  });
+
+  header.appendChild(title);
+  header.appendChild(delBtn);
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'note-textarea';
+  textarea.placeholder = 'Write a note...';
+  textarea.value = note.text;
+  textarea.addEventListener('input', () => {
+    const n = state.annotations.notes.find(n => n.id === note.id);
+    if (n) n.text = textarea.value;
+  });
+  textarea.addEventListener('mousedown', e => e.stopPropagation());
+
+  div.appendChild(header);
+  div.appendChild(textarea);
+
+  // Dragging via header
+  let isDragging = false;
+  let dragOffsetX, dragOffsetY;
+
+  header.addEventListener('mousedown', e => {
+    isDragging = true;
+    const rect = div.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function onDragMove(e) {
+    if (!isDragging) return;
+    const wrapperRect = el.highlightOverlay.getBoundingClientRect();
+    let newX = e.clientX - wrapperRect.left - dragOffsetX;
+    let newY = e.clientY - wrapperRect.top - dragOffsetY;
+    newX = Math.max(0, Math.min(el.highlightOverlay.offsetWidth - 200, newX));
+    newY = Math.max(0, Math.min(el.highlightOverlay.offsetHeight - 70, newY));
+    div.style.left = newX + 'px';
+    div.style.top = newY + 'px';
+    const n = state.annotations.notes.find(n => n.id === note.id);
+    if (n) { n.x = newX; n.y = newY; }
+  });
+
+  document.addEventListener('mouseup', function onDragEnd() {
+    isDragging = false;
+  });
+
+  el.highlightOverlay.appendChild(div);
+}
+
+function renderAllNotes() {
+  el.highlightOverlay.querySelectorAll('.sticky-note').forEach(e => e.remove());
+  const pageNotes = state.annotations.notes.filter(n => n.page === state.currentPage);
+  pageNotes.forEach(n => renderStickyNote(n));
+}
+
+// Re-render annotations on page change
+const _origRenderPage = renderPage;
+renderPage = async function() {
+  await _origRenderPage.call(this);
+  renderUserHighlights();
+  renderAllNotes();
+};
+
+// ─── Download annotated PDF ───
+el.downloadBtn.addEventListener('click', async () => {
+  if (!state.sessionId) return alert('Upload a PDF first');
+  if (!state.annotations.highlights.length && !state.annotations.notes.length) {
+    return alert('No annotations to download. Add highlights or notes first.');
+  }
+  el.downloadBtn.disabled = true;
+  el.downloadBtn.textContent = '⏳ Generating…';
+  try {
+    const res = await fetch(`/api/download-annotated/${state.sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        highlights: state.annotations.highlights.map(h => ({
+          page: h.page,
+          text: h.text,
+          color: h.color,
+          rects: h.rects,
+        })),
+        notes: state.annotations.notes.map(n => ({
+          page: n.page,
+          x: n.x,
+          y: n.y,
+          text: n.text,
+        })),
+        scale: state.scale,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Download failed' }));
+      throw new Error(err.error || 'Download failed');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `annotated_${state.fileName?.textContent || 'document.pdf'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Download failed: ' + e.message);
+  } finally {
+    el.downloadBtn.disabled = false;
+    el.downloadBtn.textContent = '⬇️ Download';
+  }
+});
+
+// ─── Keyboard shortcuts for annotation modes ───
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.key === 'h' || e.key === 'H') {
+    if (!e.ctrlKey && !e.metaKey) { setMode('highlight'); return; }
+  }
+  if (e.key === 's' || e.key === 'S') {
+    if (!e.ctrlKey && !e.metaKey) { setMode('note'); return; }
+  }
+  if (e.key === 'Escape') {
+    if (state.mode !== 'idle') { setMode('idle'); return; }
+  }
+});
 </script>
 </body>
 </html>

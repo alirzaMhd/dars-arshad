@@ -1,9 +1,9 @@
-import os, uuid, json, re, threading, time, importlib, subprocess, shutil
+import os, uuid, json, re, threading, time, importlib, subprocess, shutil, tempfile
 import numpy as np
 import soundfile as sf
 import pymupdf
 import torch
-from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file, render_template, send_from_directory, after_this_request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -898,6 +898,113 @@ def chat_send():
         'Connection': 'keep-alive',
     }
     return app.response_class(gen(), mimetype='text/event-stream', headers=headers)
+
+import tempfile
+
+@app.route('/api/download-annotated/<session_id>', methods=['POST'])
+def download_annotated(session_id):
+    session = load_session(session_id)
+    if not session:
+        return jsonify({'error': 'Session not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    highlights = data.get('highlights', [])
+    notes = data.get('notes', [])
+    client_scale = float(data.get('scale', 1.5))
+
+    doc = pymupdf.open(session['pdf_path'])
+
+    for hl in highlights:
+        page_num = hl.get('page', 0)
+        text = hl.get('text', '')
+        color_hex = hl.get('color', '#FFFF00')
+        viewport_rects = hl.get('rects', [])
+        if page_num < 0 or page_num >= len(doc):
+            continue
+        page = doc[page_num]
+        r, g, b = _hex_to_rgb(color_hex)
+
+        # Strategy 1: find text via search
+        rects = find_segment_rects(page, text)
+
+        # Strategy 2: use frontend viewport rects converted to PDF coords
+        if not rects and viewport_rects:
+            pdf_page_height = page.rect.height
+            for vr in viewport_rects:
+                x0 = vr.get('x', 0) / client_scale
+                y0_viewport = vr.get('y', 0)
+                w = vr.get('w', 0) / client_scale
+                h = vr.get('h', 0) / client_scale
+                # Convert viewport coords (y-down from top) to PDF coords (y-down from top)
+                # In the frontend, y is measured from the top of the page-wrapper
+                # In PDF coords, y is also from the top, so just divide by scale
+                y0 = y0_viewport / client_scale
+                rects.append([x0, y0, x0 + w, y0 + h])
+
+        for rect in rects:
+            try:
+                r_obj = pymupdf.Rect(rect)
+                annot = page.add_highlight_annot(r_obj)
+                if annot:
+                    annot.set_colors(stroke=(r, g, b))
+                    annot.set_info(content=text[:2000], title="Kokoro Reader")
+                    annot.update()
+            except Exception as e:
+                print(f'[download] highlight error: {e}', flush=True)
+
+    for note in notes:
+        page_num = note.get('page', 0)
+        if page_num < 0 or page_num >= len(doc):
+            continue
+        page = doc[page_num]
+        note_text = note.get('text', '')
+        viewport_x = note.get('x', 50)
+        viewport_y = note.get('y', 50)
+        pdf_page_height = page.rect.height
+        pdf_x = viewport_x / client_scale
+        pdf_y = pdf_page_height - (viewport_y / client_scale)
+        pdf_y = max(20, min(pdf_page_height - 20, pdf_y))
+        pdf_x = max(20, min(page.rect.width - 20, pdf_x))
+        try:
+            annot = page.add_text_annot((pdf_x, pdf_y), note_text)
+            if annot:
+                annot.set_info(title="Kokoro Reader", content=note_text[:2000])
+                annot.set_colors(stroke=(1, 1, 0))
+                annot.update()
+        except Exception as e:
+            print(f'[download] note error: {e}', flush=True)
+
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False, dir='/tmp')
+    try:
+        doc.save(tmp.name)
+        doc.close()
+        tmp.close()
+        @after_this_request
+        def cleanup(response):
+            try:
+                os.unlink(tmp.name)
+            except Exception:
+                pass
+            return response
+        return send_file(
+            tmp.name,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'annotated_{session.get("filename", "document.pdf")}'
+        )
+    except Exception as e:
+        doc.close()
+        try:
+            os.unlink(tmp.name)
+        except Exception:
+            pass
+        return jsonify({'error': str(e)}), 500
+
+
+def _hex_to_rgb(hex_color):
+    h = hex_color.lstrip('#')
+    return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+
 
 @app.route('/static/sessions/<path:filename>')
 def serve_session_file(filename):
