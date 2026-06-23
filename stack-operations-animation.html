@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stack Operations Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .stack-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    .stack-box {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .stack-box .title {
+      color: #00ccff;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+    .stack-visual {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 3px;
+      min-height: 200px;
+      padding: 10px;
+      background: #0a0a18;
+      border-radius: 6px;
+      border: 1px solid #333;
+    }
+    .stack-element {
+      width: 100%;
+      height: 40px;
+      border: 2px solid #444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1em;
+      font-weight: bold;
+      background: #1a1a2e;
+      transition: all 0.3s;
+    }
+    .stack-element.highlight {
+      border-color: #ff6600;
+      background: #1a0a00;
+      color: #ff6600;
+      box-shadow: 0 0 10px #ff660044;
+    }
+    .stack-element.filled {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+    }
+    .stack-pointer {
+      color: #ff6600;
+      font-size: 0.8em;
+      margin-top: 5px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .operation-btns {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>STACK OPERATIONS</h1>
+  <p class="subtitle">Data Structures — LIFO (Last In First Out)</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <!-- Stack Display -->
+      <div class="stack-container">
+        <div class="stack-box">
+          <div class="title">Stack</div>
+          <div class="stack-visual" id="stackVisual"></div>
+          <div class="stack-pointer" id="stackPointer">TOP: -1</div>
+        </div>
+      </div>
+
+      <!-- Operation Buttons -->
+      <div class="operation-btns">
+        <button class="btn" onclick="pushElement()">⬆ Push</button>
+        <button class="btn" onclick="popElement()">⬇ Pop</button>
+        <button class="btn" onclick="peekElement()">👁 Peek</button>
+        <button class="btn" onclick="resetStack()">↺ Reset</button>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset Animation</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <span class="label">Data Structure:</span> <span class="highlight">Stack (LIFO)</span><br>
+        <span class="label">Stack Size:</span> <span class="value" id="stackSize">0</span><br>
+        <span class="label">Top Element:</span> <span class="value" id="topElement">None</span><br>
+        <span class="label">Current Operation:</span> <span class="value" id="operationDisplay">None</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      </div>
+
+      <!-- Step Counter -->
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <!-- Result Section -->
+      <div class="result-section" id="resultSection">
+        <h2>✓ Operation Complete!</h2>
+        <p id="resultMessage">Operation completed successfully.</p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Visualize stack operations: <b>Push</b>, <b>Pop</b>, and <b>Peek</b>.</p>
+          <p>A stack is a LIFO (Last In First Out) data structure.</p>
+          <h3 style="margin-top:10px;">Operations</h3>
+          <span class="formula-line">push(x): Add x to top of stack</span>
+          <span class="formula-line">pop(): Remove and return top element</span>
+          <span class="formula-line">peek(): Return top element without removing</span>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    let currentOperation = 'none';
+    let pushValue = null;
+    
+    // Stack implementation
+    let stack = [];
+    const MAX_SIZE = 5;
+    
+    function buildSteps() {
+      steps = [];
+      
+      if (currentOperation === 'push' && pushValue !== null) {
+        steps.push({
+          type: 'check_full',
+          explanation: buildCheckFullExplanation()
+        });
+        steps.push({
+          type: 'increment_top',
+          explanation: buildIncrementTopExplanation()
+        });
+        steps.push({
+          type: 'store_value',
+          explanation: buildStoreValueExplanation()
+        });
+        steps.push({
+          type: 'push_done',
+          explanation: buildPushDoneExplanation()
+        });
+      } else if (currentOperation === 'pop') {
+        steps.push({
+          type: 'check_empty',
+          explanation: buildCheckEmptyExplanation()
+        });
+        steps.push({
+          type: 'retrieve_value',
+          explanation: buildRetrieveValueExplanation()
+        });
+        steps.push({
+          type: 'decrement_top',
+          explanation: buildDecrementTopExplanation()
+        });
+        steps.push({
+          type: 'pop_done',
+          explanation: buildPopDoneExplanation()
+        });
+      } else if (currentOperation === 'peek') {
+        steps.push({
+          type: 'check_empty_peek',
+          explanation: buildCheckEmptyPeekExplanation()
+        });
+        steps.push({
+          type: 'return_top',
+          explanation: buildReturnTopExplanation()
+        });
+      }
+    }
+
+    function buildCheckFullExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Stack is Full</h3>
+          <p>Before pushing, check if stack has reached maximum capacity.</p>
+          <span class="formula-line">if (top == MAX_SIZE - 1) → Stack Overflow</span>
+          <p>Current top: <span class="dim">${stack.length - 1}</span>, Max size: <span class="dim">${MAX_SIZE}</span></p>
+          <p>${stack.length < MAX_SIZE ? '✅ Stack is not full, can push.' : '❌ Stack is full, cannot push!'}</p>
+          <p class="note">Array-based stack has fixed maximum size.</p>
+        </div>
+      `;
+    }
+
+    function buildIncrementTopExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Increment Top Pointer</h3>
+          <p>Move the top pointer to the next empty position.</p>
+          <span class="formula-line">top = top + 1 = ${stack.length}</span>
+          <p>Top now points to position <span class="dim">${stack.length}</span></p>
+          <p class="note">In array implementation, top is an index.</p>
+        </div>
+      `;
+    }
+
+    function buildStoreValueExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Store Value at Top</h3>
+          <p>Place the new element at the top of the stack.</p>
+          <span class="formula-line">stack[top] = ${pushValue}</span>
+          <p>Element <span class="result-line">${pushValue}</span> stored at index <span class="dim">${stack.length}</span></p>
+          <p class="note">Push operation is O(1) time complexity.</p>
+        </div>
+      `;
+    }
+
+    function buildPushDoneExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Push Complete!</h3>
+          <p>Element <span class="result-line">${pushValue}</span> pushed onto stack.</p>
+          <p>New stack size: <span class="dim">${stack.length + 1}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1) additional</p>
+          <p class="note">Stack follows LIFO principle.</p>
+        </div>
+      `;
+    }
+
+    function buildCheckEmptyExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Stack is Empty</h3>
+          <p>Before popping, check if stack has any elements.</p>
+          <span class="formula-line">if (top == -1) → Stack Underflow</span>
+          <p>Current top: <span class="dim">${stack.length - 1}</span></p>
+          <p>${stack.length > 0 ? '✅ Stack is not empty, can pop.' : '❌ Stack is empty, cannot pop!'}</p>
+          <p class="note">Always check for underflow before popping.</p>
+        </div>
+      `;
+    }
+
+    function buildRetrieveValueExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Retrieve Top Value</h3>
+          <p>Get the value at the top of the stack.</p>
+          <span class="formula-line">value = stack[top] = ${stack[stack.length - 1]}</span>
+          <p>Retrieved value: <span class="result-line">${stack[stack.length - 1]}</span></p>
+          <p class="note">We retrieve before decrementing top.</p>
+        </div>
+      `;
+    }
+
+    function buildDecrementTopExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Decrement Top Pointer</h3>
+          <p>Move the top pointer back by one position.</p>
+          <span class="formula-line">top = top - 1 = ${stack.length - 2}</span>
+          <p>Top now points to position <span class="dim">${stack.length - 2}</span></p>
+          <p class="note">The old top element is logically removed.</p>
+        </div>
+      `;
+    }
+
+    function buildPopDoneExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Pop Complete!</h3>
+          <p>Element <span class="result-line">${stack[stack.length - 1]}</span> popped from stack.</p>
+          <p>New stack size: <span class="dim">${stack.length - 1}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1) additional</p>
+          <p class="note">Pop operation returns the last pushed element.</p>
+        </div>
+      `;
+    }
+
+    function buildCheckEmptyPeekExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Stack is Empty</h3>
+          <p>Before peeking, check if stack has any elements.</p>
+          <span class="formula-line">if (top == -1) → Stack is empty</span>
+          <p>Current top: <span class="dim">${stack.length - 1}</span></p>
+          <p>${stack.length > 0 ? '✅ Stack is not empty, can peek.' : '❌ Stack is empty, cannot peek!'}</p>
+          <p class="note">Peek doesn't modify the stack.</p>
+        </div>
+      `;
+    }
+
+    function buildReturnTopExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Peek Complete!</h3>
+          <p>Top element: <span class="result-line">${stack[stack.length - 1]}</span></p>
+          <p>Stack size unchanged: <span class="dim">${stack.length}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1)</p>
+          <p class="note">Peek is useful when you need to check the top without removing it.</p>
+        </div>
+      `;
+    }
+
+    function renderStack() {
+      const container = document.getElementById('stackVisual');
+      container.innerHTML = '';
+      
+      // Render stack elements (bottom to top)
+      for (let i = 0; i < stack.length; i++) {
+        const element = document.createElement('div');
+        element.className = 'stack-element';
+        element.id = `stack-${i}`;
+        element.textContent = stack[i];
+        container.appendChild(element);
+      }
+      
+      // Add empty slots
+      for (let i = stack.length; i < MAX_SIZE; i++) {
+        const element = document.createElement('div');
+        element.className = 'stack-element';
+        element.style.borderColor = '#333';
+        element.style.color = '#555';
+        element.textContent = '—';
+        container.appendChild(element);
+      }
+      
+      document.getElementById('stackSize').textContent = stack.length;
+      document.getElementById('topElement').textContent = stack.length > 0 ? stack[stack.length - 1] : 'None';
+      document.getElementById('stackPointer').textContent = `TOP: ${stack.length - 1}`;
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      
+      if (step.type === 'store_value') {
+        stack.push(pushValue);
+        renderStack();
+        document.getElementById(`stack-${stack.length - 1}`).classList.add('highlight');
+      } else if (step.type === 'retrieve_value') {
+        document.getElementById(`stack-${stack.length - 1}`).classList.add('highlight');
+      } else if (step.type === 'pop_done') {
+        stack.pop();
+        renderStack();
+      }
+      
+      document.getElementById('phaseDisplay').textContent = 
+        `Executing ${currentOperation} operation`;
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${currentStep + 1} / ${steps.length}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight').forEach(el => {
+        el.classList.remove('highlight');
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('operationDisplay').textContent = 'None';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      clearHighlights();
+      buildSteps();
+      renderStack();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      
+      let message = '';
+      if (currentOperation === 'push') {
+        message = `Pushed ${pushValue} onto stack`;
+      } else if (currentOperation === 'pop') {
+        message = 'Popped element from stack';
+      } else if (currentOperation === 'peek') {
+        message = 'Peeked at top element';
+      }
+      
+      document.getElementById('resultMessage').textContent = message;
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Operation Complete!</h3>
+          <p>${message}</p>
+          <h3 style="margin-top:10px;">Stack Properties</h3>
+          <p><span class="dim">Push:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Pop:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Peek:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Implementation:</span> Array or Linked List</p>
+          <p class="note">Stacks are used in function calls, expression evaluation, and backtracking.</p>
+        </div>
+      `;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function pushElement() {
+      if (stack.length >= MAX_SIZE) {
+        alert("Stack Overflow! Cannot push more elements.");
+        return;
+      }
+      const value = prompt("Enter value to push:");
+      if (value !== null) {
+        pushValue = parseInt(value);
+        currentOperation = 'push';
+        document.getElementById('operationDisplay').textContent = `Push(${pushValue})`;
+        resetAnimation();
+      }
+    }
+
+    function popElement() {
+      if (stack.length === 0) {
+        alert("Stack Underflow! Cannot pop from empty stack.");
+        return;
+      }
+      currentOperation = 'pop';
+      document.getElementById('operationDisplay').textContent = 'Pop()';
+      resetAnimation();
+    }
+
+    function peekElement() {
+      if (stack.length === 0) {
+        alert("Stack is empty! Cannot peek.");
+        return;
+      }
+      currentOperation = 'peek';
+      document.getElementById('operationDisplay').textContent = 'Peek()';
+      resetAnimation();
+    }
+
+    function resetStack() {
+      stack = [];
+      currentOperation = 'none';
+      document.getElementById('operationDisplay').textContent = 'None';
+      renderStack();
+      resetAnimation();
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    renderStack();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

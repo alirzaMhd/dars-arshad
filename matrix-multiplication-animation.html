@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matrix Multiplication Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .matrix-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .matrix-box {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    .matrix-box .title {
+      color: #00ccff;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+    .matrix-grid {
+      display: grid;
+      gap: 3px;
+    }
+    .matrix-cell {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8em;
+      background: #0d0d1a;
+      transition: all 0.3s;
+    }
+    .matrix-cell.highlight {
+      border-color: #ff6600;
+      background: #1a0a00;
+      color: #ff6600;
+      box-shadow: 0 0 10px #ff660044;
+    }
+    .matrix-cell.computing {
+      border-color: #ffff00;
+      background: #1a1a00;
+      color: #ffff00;
+      box-shadow: 0 0 10px #ffff0033;
+    }
+    .matrix-cell.filled {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+    }
+    .operator {
+      font-size: 2em;
+      color: #ff6600;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>MATRIX MULTIPLICATION</h1>
+  <p class="subtitle">Data Structures — C[i,j] = Σ A[i,k] × B[k,j]</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <!-- Matrix Display -->
+      <div class="matrix-container">
+        <div class="matrix-box">
+          <div class="title">Matrix A</div>
+          <div class="matrix-grid" id="matrixA" style="grid-template-columns: repeat(3, 1fr);"></div>
+        </div>
+        <div class="operator">×</div>
+        <div class="matrix-box">
+          <div class="title">Matrix B</div>
+          <div class="matrix-grid" id="matrixB" style="grid-template-columns: repeat(3, 1fr);"></div>
+        </div>
+        <div class="operator">=</div>
+        <div class="matrix-box">
+          <div class="title">Result C</div>
+          <div class="matrix-grid" id="matrixC" style="grid-template-columns: repeat(3, 1fr);"></div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="highlight">Matrix Multiplication</span><br>
+        <span class="label">Dimensions:</span> <span class="value">A(3×3) × B(3×3) = C(3×3)</span><br>
+        <span class="label">Operations:</span> <span class="value" id="opsDisplay">0 multiplications, 0 additions</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      </div>
+
+      <!-- Step Counter -->
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <!-- Result Section -->
+      <div class="result-section" id="resultSection">
+        <h2>✓ Multiplication Complete!</h2>
+        <p>The result matrix C has been computed.</p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Multiply two matrices <b>A</b> and <b>B</b> to produce result matrix <b>C</b>.</p>
+          <p>For each element C[i,j], compute the dot product of row i from A and column j from B.</p>
+          <h3 style="margin-top:10px;">Formula</h3>
+          <span class="formula-line">C[i,j] = Σ(k=1 to m) A[i,k] × B[k,j]</span>
+          <p class="note">Where m is the number of columns in A (must equal rows in B)</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n³) for n×n matrices</p>
+          <p><span class="dim">Space:</span> O(n²) for result matrix</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    let opsCount = { mult: 0, add: 0 };
+    
+    const matrixA = [
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9]
+    ];
+    
+    const matrixB = [
+      [2, 0, 1],
+      [1, 3, 0],
+      [0, 1, 2]
+    ];
+    
+    const matrixC = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
+
+    function buildSteps() {
+      steps = [];
+      opsCount = { mult: 0, add: 0 };
+      
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          for (let k = 0; k < 3; k++) {
+            steps.push({
+              type: 'multiply',
+              i: i,
+              j: j,
+              k: k,
+              explanation: buildMultiplyExplanation(i, j, k)
+            });
+          }
+          steps.push({
+            type: 'set',
+            i: i,
+            j: j,
+            explanation: buildSetExplanation(i, j)
+          });
+        }
+      }
+    }
+
+    function buildMultiplyExplanation(i, j, k) {
+      const aVal = matrixA[i][k];
+      const bVal = matrixB[k][j];
+      const product = aVal * bVal;
+      
+      return `
+        <div class="explain-section active">
+          <h3>Multiply A[${i},${k}] × B[${k},${j}]</h3>
+          <p>Computing element C[${i},${j}]: row <span class="dim">${i}</span> of A × column <span class="dim">${j}</span> of B</p>
+          <p>Step <span class="dim">${k+1}</span> of 3 in dot product</p>
+          <span class="formula-line">A[${i},${k}] = ${aVal}</span>
+          <span class="formula-line">B[${k},${j}] = ${bVal}</span>
+          <span class="formula-line">${aVal} × ${bVal} = ${product}</span>
+          <p>Running sum for C[${i},${j}]: <span class="result-line">${getRunningSum(i, j, k)}</span></p>
+          <p class="note">Multiplication #${opsCount.mult + 1}</p>
+        </div>
+      `;
+    }
+
+    function getRunningSum(i, j, k) {
+      let sum = 0;
+      for (let m = 0; m <= k; m++) {
+        sum += matrixA[i][m] * matrixB[m][j];
+      }
+      return sum;
+    }
+
+    function buildSetExplanation(i, j) {
+      let sum = 0;
+      for (let k = 0; k < 3; k++) {
+        sum += matrixA[i][k] * matrixB[k][j];
+      }
+      
+      return `
+        <div class="explain-section active">
+          <h3>Set C[${i},${j}] = ${sum}</h3>
+          <p>Dot product complete for element C[${i},${j}]</p>
+          <span class="formula-line">C[${i},${j}] = (A[${i},0]×B[0,${j}]) + (A[${i},1]×B[1,${j}]) + (A[${i},2]×B[2,${j}])</span>
+          <span class="formula-line">= (${matrixA[i][0]}×${matrixB[0][j]}) + (${matrixA[i][1]}×${matrixB[1][j]}) + (${matrixA[i][2]}×${matrixB[2][j]})</span>
+          <span class="formula-line">= ${matrixA[i][0]*matrixB[0][j]} + ${matrixA[i][1]*matrixB[1][j]} + ${matrixA[i][2]*matrixB[2][j]}</span>
+          <p>Final value: <span class="result-line">${sum}</span></p>
+          <p class="note">Element stored in result matrix</p>
+        </div>
+      `;
+    }
+
+    function initMatrices() {
+      const gridA = document.getElementById('matrixA');
+      const gridB = document.getElementById('matrixB');
+      const gridC = document.getElementById('matrixC');
+      
+      gridA.innerHTML = '';
+      gridB.innerHTML = '';
+      gridC.innerHTML = '';
+      
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const cellA = document.createElement('div');
+          cellA.className = 'matrix-cell';
+          cellA.id = `a-${i}-${j}`;
+          cellA.textContent = matrixA[i][j];
+          gridA.appendChild(cellA);
+          
+          const cellB = document.createElement('div');
+          cellB.className = 'matrix-cell';
+          cellB.id = `b-${i}-${j}`;
+          cellB.textContent = matrixB[i][j];
+          gridB.appendChild(cellB);
+          
+          const cellC = document.createElement('div');
+          cellC.className = 'matrix-cell';
+          cellC.id = `c-${i}-${j}`;
+          cellC.textContent = '0';
+          gridC.appendChild(cellC);
+        }
+      }
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      
+      if (step.type === 'multiply') {
+        // Highlight A[i,k] and B[k,j]
+        document.getElementById(`a-${step.i}-${step.k}`).classList.add('highlight');
+        document.getElementById(`b-${step.k}-${step.j}`).classList.add('highlight');
+        document.getElementById(`c-${step.i}-${step.j}`).classList.add('computing');
+        opsCount.mult++;
+      } else if (step.type === 'set') {
+        // Calculate and set C[i,j]
+        let sum = 0;
+        for (let k = 0; k < 3; k++) {
+          sum += matrixA[step.i][k] * matrixB[k][step.j];
+        }
+        const cellC = document.getElementById(`c-${step.i}-${step.j}`);
+        cellC.textContent = sum;
+        cellC.classList.add('filled');
+        opsCount.add += 2;
+      }
+      
+      document.getElementById('opsDisplay').textContent = 
+        `${opsCount.mult} multiplications, ${opsCount.add} additions`;
+      document.getElementById('phaseDisplay').textContent = 
+        `Computing C[${step.i},${step.j}]`;
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${currentStep + 1} / ${steps.length} — Computing C[${step.i},${step.j}]`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight, .computing').forEach(el => {
+        el.classList.remove('highlight', 'computing');
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      opsCount = { mult: 0, add: 0 };
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('opsDisplay').textContent = '0 multiplications, 0 additions';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      clearHighlights();
+      buildSteps();
+      initMatrices();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>Matrix multiplication is complete.</p>
+          <h3 style="margin-top:10px;">Result Matrix C</h3>
+          <p>C = A × B =</p>
+          <p>[1×2+2×1+3×0, 1×0+2×3+3×1, 1×1+2×0+3×2] = [4, 9, 7]</p>
+          <p>[4×2+5×1+6×0, 4×0+5×3+6×1, 4×1+5×0+6×2] = [13, 21, 16]</p>
+          <p>[7×2+8×1+9×0, 7×0+8×3+9×1, 7×1+8×0+9×2] = [22, 33, 25]</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n³) — three nested loops</p>
+          <p><span class="dim">Space:</span> O(n²) — for result matrix</p>
+          <p><span class="dim">Total Operations:</span> n³ multiplications + n²(n-1) additions</p>
+        </div>
+      `;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    initMatrices();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

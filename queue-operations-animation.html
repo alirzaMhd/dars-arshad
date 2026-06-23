@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queue Operations Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .queue-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    .queue-box {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      min-width: 300px;
+    }
+    .queue-box .title {
+      color: #00ccff;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+    .queue-visual {
+      display: flex;
+      gap: 3px;
+      min-height: 60px;
+      padding: 10px;
+      background: #0a0a18;
+      border-radius: 6px;
+      border: 1px solid #333;
+      align-items: center;
+    }
+    .queue-element {
+      width: 50px;
+      height: 50px;
+      border: 2px solid #444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1em;
+      font-weight: bold;
+      background: #1a1a2e;
+      transition: all 0.3s;
+    }
+    .queue-element.highlight {
+      border-color: #ff6600;
+      background: #1a0a00;
+      color: #ff6600;
+      box-shadow: 0 0 10px #ff660044;
+    }
+    .queue-element.filled {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+    }
+    .queue-pointers {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 0.8em;
+    }
+    .pointer {
+      padding: 4px 8px;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      border-radius: 4px;
+    }
+    .pointer.front {
+      color: #00ff88;
+      border-color: #00ff88;
+    }
+    .pointer.rear {
+      color: #ff6600;
+      border-color: #ff6600;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .operation-btns {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>QUEUE OPERATIONS</h1>
+  <p class="subtitle">Data Structures — FIFO (First In First Out)</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <!-- Queue Display -->
+      <div class="queue-container">
+        <div class="queue-box">
+          <div class="title">Queue</div>
+          <div class="queue-visual" id="queueVisual"></div>
+          <div class="queue-pointers">
+            <div class="pointer front" id="frontPointer">FRONT: -1</div>
+            <div class="pointer rear" id="rearPointer">REAR: -1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Operation Buttons -->
+      <div class="operation-btns">
+        <button class="btn" onclick="enqueueElement()">⬅ Enqueue</button>
+        <button class="btn" onclick="dequeueElement()">➡ Dequeue</button>
+        <button class="btn" onclick="peekFront()">👁 Peek Front</button>
+        <button class="btn" onclick="resetQueue()">↺ Reset</button>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset Animation</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <span class="label">Data Structure:</span> <span class="highlight">Queue (FIFO)</span><br>
+        <span class="label">Queue Size:</span> <span class="value" id="queueSize">0</span><br>
+        <span class="label">Front Element:</span> <span class="value" id="frontElement">None</span><br>
+        <span class="label">Rear Element:</span> <span class="value" id="rearElement">None</span><br>
+        <span class="label">Current Operation:</span> <span class="value" id="operationDisplay">None</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      </div>
+
+      <!-- Step Counter -->
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <!-- Result Section -->
+      <div class="result-section" id="resultSection">
+        <h2>✓ Operation Complete!</h2>
+        <p id="resultMessage">Operation completed successfully.</p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Visualize queue operations: <b>Enqueue</b>, <b>Dequeue</b>, and <b>Peek</b>.</p>
+          <p>A queue is a FIFO (First In First Out) data structure.</p>
+          <h3 style="margin-top:10px;">Operations</h3>
+          <span class="formula-line">enqueue(x): Add x to rear of queue</span>
+          <span class="formula-line">dequeue(): Remove and return front element</span>
+          <span class="formula-line">peek(): Return front element without removing</span>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    let currentOperation = 'none';
+    let enqueueValue = null;
+    
+    // Queue implementation (circular queue)
+    let queue = [];
+    const MAX_SIZE = 5;
+    let front = -1;
+    let rear = -1;
+    
+    function buildSteps() {
+      steps = [];
+      
+      if (currentOperation === 'enqueue' && enqueueValue !== null) {
+        steps.push({
+          type: 'check_full',
+          explanation: buildCheckFullExplanation()
+        });
+        steps.push({
+          type: 'increment_rear',
+          explanation: buildIncrementRearExplanation()
+        });
+        steps.push({
+          type: 'store_value',
+          explanation: buildStoreValueExplanation()
+        });
+        steps.push({
+          type: 'enqueue_done',
+          explanation: buildEnqueueDoneExplanation()
+        });
+      } else if (currentOperation === 'dequeue') {
+        steps.push({
+          type: 'check_empty',
+          explanation: buildCheckEmptyExplanation()
+        });
+        steps.push({
+          type: 'retrieve_value',
+          explanation: buildRetrieveValueExplanation()
+        });
+        steps.push({
+          type: 'increment_front',
+          explanation: buildIncrementFrontExplanation()
+        });
+        steps.push({
+          type: 'dequeue_done',
+          explanation: buildDequeueDoneExplanation()
+        });
+      } else if (currentOperation === 'peek') {
+        steps.push({
+          type: 'check_empty_peek',
+          explanation: buildCheckEmptyPeekExplanation()
+        });
+        steps.push({
+          type: 'return_front',
+          explanation: buildReturnFrontExplanation()
+        });
+      }
+    }
+
+    function buildCheckFullExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Queue is Full</h3>
+          <p>Before enqueueing, check if queue has reached maximum capacity.</p>
+          <span class="formula-line">if ((rear + 1) % MAX_SIZE == front) → Queue Full</span>
+          <p>Current front: <span class="dim">${front}</span>, rear: <span class="dim">${rear}</span></p>
+          <p>${queue.length < MAX_SIZE ? '✅ Queue is not full, can enqueue.' : '❌ Queue is full, cannot enqueue!'}</p>
+          <p class="note">Circular queue uses modulo to wrap around.</p>
+        </div>
+      `;
+    }
+
+    function buildIncrementRearExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Increment Rear Pointer</h3>
+          <p>Move the rear pointer to the next empty position.</p>
+          <span class="formula-line">rear = (rear + 1) % MAX_SIZE</span>
+          <span class="formula-line">rear = (${rear} + 1) % ${MAX_SIZE} = ${(rear + 1) % MAX_SIZE}</span>
+          <p>Rear now points to position <span class="dim">${(rear + 1) % MAX_SIZE}</span></p>
+          <p class="note">Modulo operation handles wrap-around.</p>
+        </div>
+      `;
+    }
+
+    function buildStoreValueExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Store Value at Rear</h3>
+          <p>Place the new element at the rear of the queue.</p>
+          <span class="formula-line">queue[rear] = ${enqueueValue}</span>
+          <p>Element <span class="result-line">${enqueueValue}</span> stored at index <span class="dim">${(rear + 1) % MAX_SIZE}</span></p>
+          <p class="note">Enqueue operation is O(1) time complexity.</p>
+        </div>
+      `;
+    }
+
+    function buildEnqueueDoneExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Enqueue Complete!</h3>
+          <p>Element <span class="result-line">${enqueueValue}</span> added to queue.</p>
+          <p>New queue size: <span class="dim">${queue.length + 1}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1) additional</p>
+          <p class="note">Queue follows FIFO principle.</p>
+        </div>
+      `;
+    }
+
+    function buildCheckEmptyExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Queue is Empty</h3>
+          <p>Before dequeueing, check if queue has any elements.</p>
+          <span class="formula-line">if (front == -1 AND rear == -1) → Queue Empty</span>
+          <p>Current front: <span class="dim">${front}</span>, rear: <span class="dim">${rear}</span></p>
+          <p>${queue.length > 0 ? '✅ Queue is not empty, can dequeue.' : '❌ Queue is empty, cannot dequeue!'}</p>
+          <p class="note">Always check for underflow before dequeueing.</p>
+        </div>
+      `;
+    }
+
+    function buildRetrieveValueExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Retrieve Front Value</h3>
+          <p>Get the value at the front of the queue.</p>
+          <span class="formula-line">value = queue[front] = ${queue[0]}</span>
+          <p>Retrieved value: <span class="result-line">${queue[0]}</span></p>
+          <p class="note">We retrieve before incrementing front.</p>
+        </div>
+      `;
+    }
+
+    function buildIncrementFrontExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Increment Front Pointer</h3>
+          <p>Move the front pointer forward by one position.</p>
+          <span class="formula-line">front = (front + 1) % MAX_SIZE</span>
+          <p>Front now points to position <span class="dim">${(front + 1) % MAX_SIZE}</span></p>
+          <p class="note">The old front element is logically removed.</p>
+        </div>
+      `;
+    }
+
+    function buildDequeueDoneExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Dequeue Complete!</h3>
+          <p>Element <span class="result-line">${queue[0]}</span> removed from queue.</p>
+          <p>New queue size: <span class="dim">${queue.length - 1}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1) additional</p>
+          <p class="note">Dequeue operation returns the first enqueued element.</p>
+        </div>
+      `;
+    }
+
+    function buildCheckEmptyPeekExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Check if Queue is Empty</h3>
+          <p>Before peeking, check if queue has any elements.</p>
+          <span class="formula-line">if (front == -1 AND rear == -1) → Queue Empty</span>
+          <p>Current front: <span class="dim">${front}</span>, rear: <span class="dim">${rear}</span></p>
+          <p>${queue.length > 0 ? '✅ Queue is not empty, can peek.' : '❌ Queue is empty, cannot peek!'}</p>
+          <p class="note">Peek doesn't modify the queue.</p>
+        </div>
+      `;
+    }
+
+    function buildReturnFrontExplanation() {
+      return `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Peek Complete!</h3>
+          <p>Front element: <span class="result-line">${queue[0]}</span></p>
+          <p>Queue size unchanged: <span class="dim">${queue.length}</span></p>
+          <p><span class="dim">Time Complexity:</span> O(1)</p>
+          <p><span class="dim">Space Complexity:</span> O(1)</p>
+          <p class="note">Peek is useful when you need to check the front without removing it.</p>
+        </div>
+      `;
+    }
+
+    function renderQueue() {
+      const container = document.getElementById('queueVisual');
+      container.innerHTML = '';
+      
+      // Render queue elements
+      for (let i = 0; i < queue.length; i++) {
+        const element = document.createElement('div');
+        element.className = 'queue-element';
+        element.id = `queue-${i}`;
+        element.textContent = queue[i];
+        container.appendChild(element);
+      }
+      
+      // Add empty slots
+      for (let i = queue.length; i < MAX_SIZE; i++) {
+        const element = document.createElement('div');
+        element.className = 'queue-element';
+        element.style.borderColor = '#333';
+        element.style.color = '#555';
+        element.textContent = '—';
+        container.appendChild(element);
+      }
+      
+      document.getElementById('queueSize').textContent = queue.length;
+      document.getElementById('frontElement').textContent = queue.length > 0 ? queue[0] : 'None';
+      document.getElementById('rearElement').textContent = queue.length > 0 ? queue[queue.length - 1] : 'None';
+      document.getElementById('frontPointer').textContent = `FRONT: ${front}`;
+      document.getElementById('rearPointer').textContent = `REAR: ${rear}`;
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      
+      if (step.type === 'store_value') {
+        queue.push(enqueueValue);
+        renderQueue();
+        document.getElementById(`queue-${queue.length - 1}`).classList.add('highlight');
+      } else if (step.type === 'retrieve_value') {
+        document.getElementById('queue-0').classList.add('highlight');
+      } else if (step.type === 'dequeue_done') {
+        queue.shift();
+        renderQueue();
+      }
+      
+      document.getElementById('phaseDisplay').textContent = 
+        `Executing ${currentOperation} operation`;
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${currentStep + 1} / ${steps.length}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight').forEach(el => {
+        el.classList.remove('highlight');
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('operationDisplay').textContent = 'None';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      clearHighlights();
+      buildSteps();
+      renderQueue();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      
+      let message = '';
+      if (currentOperation === 'enqueue') {
+        message = `Enqueued ${enqueueValue} to queue`;
+      } else if (currentOperation === 'dequeue') {
+        message = 'Dequeued element from queue';
+      } else if (currentOperation === 'peek') {
+        message = 'Peeked at front element';
+      }
+      
+      document.getElementById('resultMessage').textContent = message;
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Operation Complete!</h3>
+          <p>${message}</p>
+          <h3 style="margin-top:10px;">Queue Properties</h3>
+          <p><span class="dim">Enqueue:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Dequeue:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Peek:</span> O(1) time, O(1) space</p>
+          <p><span class="dim">Implementation:</span> Array (circular) or Linked List</p>
+          <p class="note">Queues are used in BFS, scheduling, and buffering.</p>
+        </div>
+      `;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function enqueueElement() {
+      if (queue.length >= MAX_SIZE) {
+        alert("Queue is full! Cannot enqueue more elements.");
+        return;
+      }
+      const value = prompt("Enter value to enqueue:");
+      if (value !== null) {
+        enqueueValue = parseInt(value);
+        currentOperation = 'enqueue';
+        document.getElementById('operationDisplay').textContent = `Enqueue(${enqueueValue})`;
+        resetAnimation();
+      }
+    }
+
+    function dequeueElement() {
+      if (queue.length === 0) {
+        alert("Queue is empty! Cannot dequeue.");
+        return;
+      }
+      currentOperation = 'dequeue';
+      document.getElementById('operationDisplay').textContent = 'Dequeue()';
+      resetAnimation();
+    }
+
+    function peekFront() {
+      if (queue.length === 0) {
+        alert("Queue is empty! Cannot peek.");
+        return;
+      }
+      currentOperation = 'peek';
+      document.getElementById('operationDisplay').textContent = 'Peek()';
+      resetAnimation();
+    }
+
+    function resetQueue() {
+      queue = [];
+      front = -1;
+      rear = -1;
+      currentOperation = 'none';
+      document.getElementById('operationDisplay').textContent = 'None';
+      renderQueue();
+      resetAnimation();
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    renderQueue();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

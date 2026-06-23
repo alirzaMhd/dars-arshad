@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sparse Matrix Transpose Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .matrix-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .matrix-box {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    .matrix-box .title {
+      color: #00ccff;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+    .matrix-grid {
+      display: grid;
+      gap: 3px;
+    }
+    .matrix-cell {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8em;
+      background: #0d0d1a;
+      transition: all 0.3s;
+    }
+    .matrix-cell.highlight {
+      border-color: #ff6600;
+      background: #1a0a00;
+      color: #ff6600;
+      box-shadow: 0 0 10px #ff660044;
+    }
+    .matrix-cell.filled {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+    }
+    .operator {
+      font-size: 2em;
+      color: #ff6600;
+    }
+    .triplet-table {
+      margin: 20px 0;
+    }
+    .triplet-table table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    .triplet-table th, .triplet-table td {
+      width: 80px;
+      height: 35px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.8em;
+    }
+    .triplet-table th {
+      background: #1a1a2e;
+      color: #00ccff;
+    }
+    .triplet-table td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    .triplet-table td.highlight {
+      background: #1a0a00;
+      color: #ff6600;
+      border-color: #ff6600;
+    }
+    .triplet-table td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SPARSE MATRIX TRANSPOSE</h1>
+  <p class="subtitle">Data Structures — Fast Transpose Algorithm</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <!-- Matrix Display -->
+      <div class="matrix-container">
+        <div class="matrix-box">
+          <div class="title">Original Matrix A</div>
+          <div class="matrix-grid" id="matrixA" style="grid-template-columns: repeat(4, 1fr);"></div>
+        </div>
+        <div class="operator">→</div>
+        <div class="matrix-box">
+          <div class="title">Transposed Matrix B</div>
+          <div class="matrix-grid" id="matrixB" style="grid-template-columns: repeat(4, 1fr);"></div>
+        </div>
+      </div>
+
+      <!-- Triplet Tables -->
+      <div class="triplet-table">
+        <h3 style="color: #00ccff; text-align: center; margin-bottom: 10px;">Sparse Matrix Representation (Triples)</h3>
+        <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+          <div>
+            <div style="color: #ffcc00; text-align: center; margin-bottom: 5px;">Original (A)</div>
+            <table id="tripletA">
+              <thead>
+                <tr><th>Row</th><th>Col</th><th>Value</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div>
+            <div style="color: #ffcc00; text-align: center; margin-bottom: 5px;">Transposed (B)</div>
+            <table id="tripletB">
+              <thead>
+                <tr><th>Row</th><th>Col</th><th>Value</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="highlight">Fast Transpose</span><br>
+        <span class="label">Matrix Dimensions:</span> <span class="value">4×4</span><br>
+        <span class="label">Non-zero Elements:</span> <span class="value">6</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span>
+      </div>
+
+      <!-- Step Counter -->
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <!-- Result Section -->
+      <div class="result-section" id="resultSection">
+        <h2>✓ Transpose Complete!</h2>
+        <p>The sparse matrix has been transposed successfully.</p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Transpose a sparse matrix stored in triplet format (row, col, value).</p>
+          <p>For sparse matrices, we only store non-zero elements to save space.</p>
+          <h3 style="margin-top:10px;">Fast Transpose Algorithm</h3>
+          <span class="formula-line">1. Count elements in each column of A</span>
+          <span class="formula-line">2. Compute starting position of each row in B</span>
+          <span class="formula-line">3. Place elements in correct position in B</span>
+          <p class="note">Time complexity: O(n + t) where n = columns, t = non-zero elements</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    
+    // Original 4x4 matrix with sparse elements
+    const matrixA = [
+      [0, 0, 0, 5],
+      [0, 2, 0, 0],
+      [0, 0, 0, 0],
+      [3, 0, 0, 0]
+    ];
+    
+    // Triplet representation: [row, col, value]
+    const tripletA = [
+      [0, 3, 5],
+      [1, 1, 2],
+      [3, 0, 3]
+    ];
+    
+    // Transposed matrix (will be filled)
+    const matrixB = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ];
+    
+    // Triplet for transposed matrix
+    let tripletB = [];
+    
+    function buildSteps() {
+      steps = [];
+      
+      // Step 1: Count elements in each column
+      steps.push({
+        type: 'count',
+        explanation: buildCountExplanation()
+      });
+      
+      // Step 2: Compute starting positions
+      steps.push({
+        type: 'compute_positions',
+        explanation: buildComputePositionsExplanation()
+      });
+      
+      // Step 3: Place elements
+      for (let i = 0; i < tripletA.length; i++) {
+        steps.push({
+          type: 'place',
+          index: i,
+          explanation: buildPlaceExplanation(i)
+        });
+      }
+    }
+
+    function buildCountExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Step 1: Count Elements per Column</h3>
+          <p>Count how many non-zero elements are in each column of matrix A.</p>
+          <span class="formula-line">Column 0: 1 element</span>
+          <span class="formula-line">Column 1: 1 element</span>
+          <span class="formula-line">Column 2: 0 elements</span>
+          <span class="formula-line">Column 3: 1 element</span>
+          <p>This tells us how many elements will be in each row of B.</p>
+          <p class="note">These counts will determine the starting position of each row in the transposed matrix.</p>
+        </div>
+      `;
+    }
+
+    function buildComputePositionsExplanation() {
+      return `
+        <div class="explain-section active">
+          <h3>Step 2: Compute Starting Positions</h3>
+          <p>Calculate where each row of B starts in the triplet array.</p>
+          <span class="formula-line">pos[0] = 0 (row 0 starts at index 0)</span>
+          <span class="formula-line">pos[1] = pos[0] + count[0] = 0 + 1 = 1</span>
+          <span class="formula-line">pos[2] = pos[1] + count[1] = 1 + 1 = 2</span>
+          <span class="formula-line">pos[3] = pos[2] + count[2] = 2 + 0 = 2</span>
+          <p>Now we know where to place each element in the transposed matrix.</p>
+          <p class="note">This precomputation allows O(1) placement for each element.</p>
+        </div>
+      `;
+    }
+
+    function buildPlaceExplanation(index) {
+      const [row, col, val] = tripletA[index];
+      return `
+        <div class="explain-section active">
+          <h3>Place Element ${index + 1}: A[${row},${col}] = ${val}</h3>
+          <p>Move element from position (${row}, ${col}) to (${col}, ${row}) in transposed matrix.</p>
+          <span class="formula-line">Original: A[${row},${col}] = ${val}</span>
+          <span class="formula-line">Transposed: B[${col},${row}] = ${val}</span>
+          <p>Element placed at index <span class="result-line">${index}</span> in triplet B.</p>
+          <p class="note">Row and column indices are swapped in transpose.</p>
+        </div>
+      `;
+    }
+
+    function initMatrices() {
+      const gridA = document.getElementById('matrixA');
+      const gridB = document.getElementById('matrixB');
+      
+      gridA.innerHTML = '';
+      gridB.innerHTML = '';
+      
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          const cellA = document.createElement('div');
+          cellA.className = 'matrix-cell';
+          cellA.id = `a-${i}-${j}`;
+          cellA.textContent = matrixA[i][j] === 0 ? '0' : matrixA[i][j];
+          if (matrixA[i][j] !== 0) cellA.style.color = '#00ff88';
+          gridA.appendChild(cellA);
+          
+          const cellB = document.createElement('div');
+          cellB.className = 'matrix-cell';
+          cellB.id = `b-${i}-${j}`;
+          cellB.textContent = '0';
+          gridB.appendChild(cellB);
+        }
+      }
+      
+      // Initialize triplet tables
+      const tbodyA = document.querySelector('#tripletA tbody');
+      tbodyA.innerHTML = '';
+      tripletA.forEach((triplet, idx) => {
+        const tr = document.createElement('tr');
+        tr.id = `triplet-a-${idx}`;
+        triplet.forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        tbodyA.appendChild(tr);
+      });
+      
+      const tbodyB = document.querySelector('#tripletB tbody');
+      tbodyB.innerHTML = '';
+      for (let i = 0; i < tripletA.length; i++) {
+        const tr = document.createElement('tr');
+        tr.id = `triplet-b-${i}`;
+        for (let j = 0; j < 3; j++) {
+          const td = document.createElement('td');
+          td.textContent = '';
+          tr.appendChild(td);
+        }
+        tbodyB.appendChild(tr);
+      }
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      
+      if (step.type === 'count') {
+        // Highlight columns being counted
+        document.getElementById('phaseDisplay').textContent = 'Counting elements per column';
+      } else if (step.type === 'compute_positions') {
+        document.getElementById('phaseDisplay').textContent = 'Computing starting positions';
+      } else if (step.type === 'place') {
+        const idx = step.index;
+        const [row, col, val] = tripletA[idx];
+        
+        // Highlight source element
+        document.getElementById(`a-${row}-${col}`).classList.add('highlight');
+        document.getElementById(`triplet-a-${idx}`).classList.add('highlight');
+        
+        // Set target element
+        const cellB = document.getElementById(`b-${col}-${row}`);
+        cellB.textContent = val;
+        cellB.classList.add('filled');
+        
+        // Update triplet B
+        const tripletRow = document.getElementById(`triplet-b-${idx}`);
+        const cells = tripletRow.querySelectorAll('td');
+        cells[0].textContent = col;
+        cells[1].textContent = row;
+        cells[2].textContent = val;
+        cells.forEach(cell => cell.classList.add('filled'));
+        
+        document.getElementById('phaseDisplay').textContent = `Placing element ${idx + 1}`;
+      }
+      
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${currentStep + 1} / ${steps.length}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight, .filled').forEach(el => {
+        if (!el.classList.contains('matrix-cell') || el.textContent !== '0') {
+          // Don't remove filled class from non-zero elements in matrix A
+        }
+        el.classList.remove('highlight');
+      });
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      clearHighlights();
+      buildSteps();
+      initMatrices();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('sidebarPhase').textContent = 
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>Sparse matrix transpose is complete.</p>
+          <h3 style="margin-top:10px;">Summary</h3>
+          <p><span class="dim">Original:</span> 4×4 matrix with 3 non-zero elements</p>
+          <p><span class="dim">Transposed:</span> 4×4 matrix with 3 non-zero elements</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n + t) where n = columns, t = non-zero elements</p>
+          <p><span class="dim">Space:</span> O(n + t) for triplet representation</p>
+          <p class="note">Fast transpose is much more efficient than naive O(n×t) approach.</p>
+        </div>
+      `;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    initMatrices();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>
