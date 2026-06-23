@@ -2,6 +2,7 @@
 """
 Coverage verifier for textbook-to-html skill.
 Checks if all topics, formulas, and algorithms are covered.
+Also checks for English content (not copy-pasted from source).
 """
 
 import os
@@ -23,6 +24,37 @@ def count_formulas_in_html(filepath):
             return formula_count, algorithm_count, example_count
     except:
         return 0, 0, 0
+
+def check_english_content(filepath):
+    """Check if file has English content (not just copied from source)."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+            # Check for English words (common words)
+            english_words = ['the', 'is', 'are', 'was', 'and', 'or', 'not', 'in', 'on', 'at',
+                           'to', 'for', 'of', 'with', 'by', 'from', 'as', 'into', 'through',
+                           'Time', 'Space', 'Example', 'Formula', 'Algorithm', 'Complexity']
+            
+            english_count = sum(1 for word in english_words if word in content)
+            
+            # Check for Persian/Arabic characters (UTF-8 range)
+            persian_chars = len(re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]', content))
+            
+            # Good if has English content and minimal Persian
+            has_english = english_count >= 5
+            has_persian = persian_chars > 10
+            
+            if has_english and not has_persian:
+                return "✓ English"
+            elif has_english and has_persian:
+                return "⚠ Mixed"
+            elif has_persian:
+                return "✗ Persian"
+            else:
+                return "? Unknown"
+    except:
+        return "? Error"
 
 def verify_coverage(coverage_file, html_dir):
     """Verify coverage against coverage.txt tracker."""
@@ -54,17 +86,35 @@ def verify_coverage(coverage_file, html_dir):
         
         if os.path.exists(filepath):
             formulas, algorithms, examples = count_formulas_in_html(filepath)
+            english_status = check_english_content(filepath)
             total_formulas += formulas
             total_algorithms += algorithms
             total_examples += examples
             
-            status = "✓" if formulas > 0 and examples >= 3 else "✗"
+            # Check if topic is complete
+            has_formulas = formulas > 0
+            has_examples = examples >= 3
+            has_english = "✓" in english_status
+            
+            status = "✓" if has_formulas and has_examples and has_english else "✗"
             if status == "✗":
                 all_covered = False
             
             print(f"[{status}] {topic}")
             print(f"    File: {filename}")
             print(f"    Formulas: {formulas}, Algorithms: {algorithms}, Examples: {examples}")
+            print(f"    Language: {english_status}")
+            
+            # Show specific issues
+            issues = []
+            if not has_formulas:
+                issues.append("Missing formulas")
+            if not has_examples:
+                issues.append(f"Only {examples} examples (need 3+)")
+            if not has_english:
+                issues.append("Content not in English")
+            if issues:
+                print(f"    Issues: {', '.join(issues)}")
         else:
             print(f"[✗] {topic}")
             print(f"    File: {filename} - NOT FOUND!")

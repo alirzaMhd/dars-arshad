@@ -16,33 +16,70 @@ Converts textbook chapters (PDF or extracted text) into comprehensive, interacti
 - User wants interactive HTML files with animations
 - User wants to ensure no concept is missed
 
+## How to Extract (NOT Copy-Paste)
+
+**IMPORTANT:** Do NOT copy-paste text from the PDF. Extract CONCEPTS and rephrase in English.
+
+### The Rule
+
+1. **Read** the source text (Persian/Arabic/other language)
+2. **Understand** the concept being explained
+3. **Write** the explanation fresh in English
+4. **Keep** formulas exactly as-is (math is universal)
+5. **Create** your own examples (don't copy textbook examples)
+
+### Examples
+
+**WRONG (copy-paste):**
+```
+PDF: "آرایه خطی داده ساختاری است که عناصر آن در حافظه پیوسته ذخیره می شوند"
+HTML: "Array linear data structure is that elements it in memory continuous are stored"
+```
+
+**RIGHT (extract concept):**
+```
+PDF: "آرایه خطی داده ساختاری است که عناصر آن در حافظه پیوسته ذخیره می شوند"
+HTML: "An array is a linear data structure where elements are stored in contiguous memory locations"
+```
+
+### Language Rules
+
+- **HTML content:** Always in English
+- **Formulas:** Keep exact notation from textbook
+- **Variable names:** Keep as-is (i, j, n, α, etc.)
+- **Algorithm names:** Keep as-is (KMP, Binary Search, etc.)
+
 ## Core Workflow
 
 ```dot
 digraph workflow {
-    "Start: PDF/Text Input" [shape=box];
+    "Start: PDF Input" [shape=box];
     "Extract Text" [shape=box];
-    "Identify All Topics" [shape=box];
+    "Create Topic List" [shape=box];
+    "Show Topics to User" [shape=box];
+    "User Selects Topics" [shape=diamond];
     "Create HTML per Topic" [shape=box];
-    "Check Coverage" [shape=diamond];
-    "Missing Topics?" [shape=diamond];
-    "Update/Create Missing" [shape=box];
+    "Verify Coverage" [shape=box];
+    "Show Final Review" [shape=box];
+    "User Confirms" [shape=diamond];
     "Done" [shape=doublecircle];
 
-    "Start: PDF/Text Input" -> "Extract Text";
-    "Extract Text" -> "Identify All Topics";
-    "Identify All Topics" -> "Create HTML per Topic";
-    "Create HTML per Topic" -> "Check Coverage";
-    "Check Coverage" -> "Missing Topics?";
-    "Missing Topics?" -> "Update/Create Missing" [label="yes"];
-    "Missing Topics?" -> "Done" [label="no"];
-    "Update/Create Missing" -> "Check Coverage";
+    "Start: PDF Input" -> "Extract Text";
+    "Extract Text" -> "Create Topic List";
+    "Create Topic List" -> "Show Topics to User";
+    "Show Topics to User" -> "User Selects Topics";
+    "User Selects Topics" -> "Create HTML per Topic" [label="user picks"];
+    "Create HTML per Topic" -> "Verify Coverage";
+    "Verify Coverage" -> "Show Final Review";
+    "Show Final Review" -> "User Confirms";
+    "User Confirms" -> "Done" [label="approved"];
+    "User Confirms" -> "Create HTML per Topic" [label="changes needed"];
 }
 ```
 
 ## MANDATORY WORKFLOW (Follow Exactly)
 
-**DO NOT skip any phase. DO NOT stop until coverage.txt shows 100%.**
+**DO NOT skip any phase. DO NOT stop until user confirms final review.**
 
 ### Phase 1: Extract Content (MANDATORY)
 
@@ -59,36 +96,37 @@ digraph workflow {
 
 2. **Read the extracted text completely** - DO NOT skim
 
-### Phase 2: Build Topic Inventory (MANDATORY)
+### Phase 2: Create Topic List (MANDATORY)
 
-Create `topics.txt` with this EXACT format:
+Read extracted text and create a numbered list of ALL topics:
+
 ```
-TOPIC: Topic Name
-  SUBTOPIC: Subtopic 1
-    FORMULA: formula description
-    ALGORITHM: algorithm name
-  SUBTOPIC: Subtopic 2
-  EXAMPLES: minimum 3 needed
-STATUS: pending
----
+Found these topics in pages X-Y:
+
+1. [Topic Name] - [Brief description]
+2. [Topic Name] - [Brief description]
+3. [Topic Name] - [Brief description]
+...
+
+Which topics should I create HTML for? (Enter numbers or "all")
 ```
 
-**Scan for EVERY:**
-- Formula (with all variables defined)
-- Algorithm (with pseudocode)
-- Definition
-- Theorem or property
-- Special case / edge case
-- Comparison (e.g., Row vs Column major)
-- Example worked in textbook
+**Wait for user response before continuing.**
 
 ### Phase 3: Create HTML Files (MANDATORY)
 
-For EACH topic in topics.txt, create `[topic-name]-comprehensive.html`
+For EACH topic user selected, create `[topic-name]-comprehensive.html`
+
+**Extraction Process per Topic:**
+1. Read the Persian/Arabic text for this topic
+2. Understand the concept
+3. Write explanation fresh in English
+4. Keep formulas exactly as shown
+5. Create 3-5 new examples (don't copy textbook examples)
 
 **Required Elements:**
 1. Tabbed navigation
-2. ALL formulas with variable definitions
+2. ALL formulas with variable definitions (in English)
 3. Algorithm pseudocode
 4. 3-5 worked examples
 5. Comparison tables
@@ -97,45 +135,57 @@ For EACH topic in topics.txt, create `[topic-name]-comprehensive.html`
 
 ### Phase 4: Coverage Verification (MANDATORY)
 
-1. **Copy coverage-template.txt to coverage.txt**
-2. **Fill in all fields** with actual topic counts
-3. **Run verification script:**
+1. **Run verification script:**
    ```bash
    python3 verify_coverage.py coverage.txt /path/to/html/files
    ```
-4. **Check output** - must show "ALL TOPICS COVERED"
 
-### Phase 5: LOOP Until 100% (MANDATORY)
+2. **Check output** - fix any gaps found
+
+### Phase 5: LOOP Until Complete (MANDATORY)
 
 **RUN verification script. If it shows gaps, DO NOT STOP.**
 
 Loop:
-1. Run: `python3 verify_coverage.py coverage.txt /path/to/html/files`
+1. Run: `python3 verify_coverage.py coverage.txt .`
 2. Find first gap from output
 3. Create or update HTML to fix gap
-4. Update coverage.txt
-5. Re-run verification script
-6. Repeat until output shows "ALL TOPICS COVERED"
+4. Re-run verification script
+5. Repeat until output shows "ALL TOPICS COVERED"
 
-**STOP only when verification script outputs:**
-```
-STATUS: ✓ ALL TOPICS COVERED
-```
+### Phase 6: Final Review (MANDATORY)
 
-### Phase 6: Final Report (MANDATORY)
+Show user a summary:
 
-Output summary:
 ```
 === CONVERSION COMPLETE ===
-Source: textbook.pdf pages X-Y
-Topics covered: N
-HTML files created: N
-Total formulas: N
-Total algorithms: N
-Total examples: N
-Coverage: 100%
-Files: [list all HTML files]
+Source: [filename] pages X-Y
+
+HTML Files Created:
+1. [filename].html - [Topic Name]
+2. [filename].html - [Topic Name]
+...
+
+Statistics:
+- Topics covered: N
+- Total formulas: N
+- Total algorithms: N
+- Total examples: N
+
+All files are in: [directory path]
+
+Any changes needed? (yes/no)
 ```
+
+**Wait for user confirmation before marking complete.**
+
+### Phase 7: Apply Changes (IF NEEDED)
+
+If user requests changes:
+1. Make the requested changes
+2. Re-run verification
+3. Show updated summary
+4. Wait for user confirmation again
 
 ## Files in This Skill
 
@@ -153,7 +203,7 @@ Use `html-template.html` for consistent styling across all files.
 Each HTML file must have:
 - [ ] Dark theme with green/orange accents
 - [ ] Tabbed navigation for sub-topics
-- [ ] All formulas from textbook
+- [ ] All formulas from textbook (with English descriptions)
 - [ ] Algorithm pseudocode
 - [ ] 3-5 worked examples
 - [ ] Comparison tables
@@ -161,29 +211,52 @@ Each HTML file must have:
 - [ ] Warning boxes for common mistakes
 - [ ] Quick reference cards
 - [ ] Responsive layout
+- [ ] ALL content in English (not copy-pasted from source)
 
 ## Common Mistakes to Avoid
 
-1. **Don't skip topics** - Every concept must have an HTML
-2. **Don't have just one example** - Minimum 3 per concept
-3. **Don't forget formulas** - All equations must be included
-4. **Don't skip edge cases** - Include special cases
-5. **Don't forget complexity** - Time and space for all algorithms
+1. **Don't copy-paste** - Extract concepts, write fresh in English
+2. **Don't skip topics** - Every selected concept must have an HTML
+3. **Don't have just one example** - Minimum 3 per concept
+4. **Don't forget formulas** - All equations must be included
+5. **Don't skip edge cases** - Include special cases
+6. **Don't forget complexity** - Time and space for all algorithms
+7. **Don't create without user confirmation** - Always wait for topic selection
 
 ## Example Usage
 
 ```
-User: "Read chapter 3 of this PDF and create HTML files for exam prep"
+User: "Read pages 74-99 of this PDF and create HTML files"
 
 Agent:
-1. Extract text from PDF pages 74-99
-2. Identify topics: Arrays, Matrix Operations, Sparse Matrix, 
-   String Matching, Linked Lists, Stacks, Queues, Expressions
-3. Create 9 HTML files covering all topics
-4. Check coverage - found missing "Binary Search"
-5. Create search-algorithms-comprehensive.html
-6. Re-check - all topics covered
-7. Report: "All 9 topics covered with 45+ examples total"
+1. Extract text from pages 74-99 → extracted.txt
+2. Show: "Found these topics:
+   1. Array Address Calculation
+   2. Matrix Multiplication
+   3. Sparse Matrix
+   4. String Matching
+   5. Linked Lists
+   6. Stacks
+   7. Expression Conversion
+   8. Queues
+   Which topics should I create HTML for?"
+
+User: "all"
+
+Agent:
+3. Create 8 HTML files (concepts rephrased in English)
+4. Run verification - all covered
+5. Show: "=== COMPLETE === Created 8 files with 40+ examples"
+
+User: "Add more examples to Stacks"
+
+Agent:
+6. Update stack-comprehensive.html with more examples
+7. Show updated summary
+
+User: "looks good"
+
+Agent: Done ✓
 ```
 
 ## File Naming Convention
