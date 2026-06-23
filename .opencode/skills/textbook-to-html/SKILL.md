@@ -40,122 +40,113 @@ digraph workflow {
 }
 ```
 
-## Step-by-Step Process
+## MANDATORY WORKFLOW (Follow Exactly)
 
-### Phase 1: Extract Content
+**DO NOT skip any phase. DO NOT stop until coverage.txt shows 100%.**
 
-1. **If PDF:** Use `pypdf` to extract text from all pages
+### Phase 1: Extract Content (MANDATORY)
+
+1. **If PDF:** Use `pypdf` to extract text from specified pages
    ```bash
    python3 -c "
    from pypdf import PdfReader
    reader = PdfReader('textbook.pdf')
-   for i, page in enumerate(reader.pages):
-       print(f'=== PAGE {i+1} ===')
+   for i, page in enumerate(reader.pages[START:END]):
+       print(f'=== PAGE {START+i+1} ===')
        print(page.extract_text())
    " > extracted.txt
    ```
 
-2. **If text file:** Read directly
+2. **Read the extracted text completely** - DO NOT skim
 
-3. **Identify page ranges** for each chapter/section
+### Phase 2: Build Topic Inventory (MANDATORY)
 
-### Phase 2: Topic Identification
-
-Read extracted text and list ALL topics:
-- Main concepts (e.g., "Array Address Calculation")
-- Sub-concepts (e.g., "Row Major", "Column Major")
-- Algorithms (e.g., "Binary Search", "KMP")
-- Formulas and equations
-- Special cases and edge cases
-
-### Phase 3: Create HTML Files
-
-For EACH topic, create a comprehensive HTML file:
-
-**Required Structure:**
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>[Topic Name] - Comprehensive</title>
-  <style>
-    /* Dark theme with green/orange accents */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; }
-    /* ... full styling ... */
-  </style>
-</head>
-<body>
-  <h1>[TOPIC NAME]</h1>
-  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
-  
-  <div class="container">
-    <!-- Tabs for sub-topics -->
-    <div class="tabs">
-      <button class="tab active" onclick="showSection('tab1')">Tab 1</button>
-      <button class="tab" onclick="showSection('tab2')">Tab 2</button>
-    </div>
-    
-    <!-- Content sections -->
-    <div class="content active" id="tab1">
-      <div class="section">
-        <h2>Section Title</h2>
-        <!-- Formulas, examples, tables -->
-      </div>
-    </div>
-  </div>
-  
-  <script>
-    function showSection(id) {
-      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      event.target.classList.add('active');
-    }
-  </script>
-</body>
-</html>
+Create `topics.txt` with this EXACT format:
+```
+TOPIC: Topic Name
+  SUBTOPIC: Subtopic 1
+    FORMULA: formula description
+    ALGORITHM: algorithm name
+  SUBTOPIC: Subtopic 2
+  EXAMPLES: minimum 3 needed
+STATUS: pending
+---
 ```
 
-**Required Elements per HTML:**
-1. **Formulas** - All equations with clear labels
-2. **Algorithms** - Pseudocode in code blocks
-3. **Examples** - Multiple worked examples (3-5 minimum)
-4. **Tables** - Comparison tables, complexity tables
-5. **Visual Diagrams** - ASCII art or CSS-based visuals
-6. **Warning Boxes** - Common mistakes and exam tips
-7. **Grid Cards** - Quick reference summaries
+**Scan for EVERY:**
+- Formula (with all variables defined)
+- Algorithm (with pseudocode)
+- Definition
+- Theorem or property
+- Special case / edge case
+- Comparison (e.g., Row vs Column major)
+- Example worked in textbook
 
-### Phase 4: Coverage Check
+### Phase 3: Create HTML Files (MANDATORY)
 
-After creating all files, verify coverage:
+For EACH topic in topics.txt, create `[topic-name]-comprehensive.html`
 
-1. **List all topics from extracted text**
-2. **Check each topic has an HTML file**
-3. **Check each HTML has:**
-   - All formulas from textbook
-   - All algorithms with pseudocode
-   - Multiple examples (not just one)
-   - Time/space complexity
-   - Edge cases and special cases
+**Required Elements:**
+1. Tabbed navigation
+2. ALL formulas with variable definitions
+3. Algorithm pseudocode
+4. 3-5 worked examples
+5. Comparison tables
+6. Time/space complexity
+7. Warning boxes for common mistakes
 
-4. **Identify gaps:**
-   - Missing topics
-   - Topics with insufficient examples
-   - Missing formulas or algorithms
+### Phase 4: Coverage Verification (MANDATORY)
 
-### Phase 5: Loop Until Complete
+1. **Copy coverage-template.txt to coverage.txt**
+2. **Fill in all fields** with actual topic counts
+3. **Run verification script:**
+   ```bash
+   python3 verify_coverage.py coverage.txt /path/to/html/files
+   ```
+4. **Check output** - must show "ALL TOPICS COVERED"
 
-If gaps found:
-1. Create new HTML files for missing topics
-2. Update existing files with more examples
-3. Re-check coverage
-4. Repeat until 100% covered
+### Phase 5: LOOP Until 100% (MANDATORY)
+
+**RUN verification script. If it shows gaps, DO NOT STOP.**
+
+Loop:
+1. Run: `python3 verify_coverage.py coverage.txt /path/to/html/files`
+2. Find first gap from output
+3. Create or update HTML to fix gap
+4. Update coverage.txt
+5. Re-run verification script
+6. Repeat until output shows "ALL TOPICS COVERED"
+
+**STOP only when verification script outputs:**
+```
+STATUS: ✓ ALL TOPICS COVERED
+```
+
+### Phase 6: Final Report (MANDATORY)
+
+Output summary:
+```
+=== CONVERSION COMPLETE ===
+Source: textbook.pdf pages X-Y
+Topics covered: N
+HTML files created: N
+Total formulas: N
+Total algorithms: N
+Total examples: N
+Coverage: 100%
+Files: [list all HTML files]
+```
+
+## Files in This Skill
+
+- `SKILL.md` - This file (workflow and instructions)
+- `html-template.html` - Reusable HTML template with styling
+- `coverage-template.txt` - Copy this to create coverage.txt tracker
+- `verify_coverage.py` - Script to verify coverage automatically
 
 ## HTML Template
 
-Use the template in `html-template.html` for consistent styling.
+Use `html-template.html` for consistent styling across all files.
 
 ## Quality Checklist
 
