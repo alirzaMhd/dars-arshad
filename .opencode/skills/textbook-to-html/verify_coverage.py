@@ -15,12 +15,15 @@ def count_formulas_in_html(filepath):
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
-            # Count formula divs
-            formula_count = len(re.findall(r'class="formula"', content))
-            # Count code blocks (algorithms)
+            # Count formula divs (multiple class name patterns)
+            formula_count = len(re.findall(r'class="formula(?:\s|")', content))
+            formula_count += len(re.findall(r'class="formula-box"', content))
+            # Count code blocks (algorithms) - multiple patterns
             algorithm_count = len(re.findall(r'class="code"', content))
-            # Count examples
+            algorithm_count += len(re.findall(r'class="pseudo"', content))
+            # Count examples - multiple patterns
             example_count = len(re.findall(r'class="example"', content))
+            example_count += len(re.findall(r'class="card(?:\s|")', content))
             return formula_count, algorithm_count, example_count
     except:
         return 0, 0, 0

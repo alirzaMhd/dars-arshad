@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deap (Double-Ended Heap) - Comprehensive Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a0a00; border-left: 3px solid #ff6600; padding: 12px 15px; margin: 12px 0; border-radius: 0 6px 6px 0; }
+    .warning .warn-title { color: #ff6600; font-weight: bold; margin-bottom: 5px; }
+    .warning p { color: #ccc; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; line-height: 1.6; border: 1px solid #222; }
+    .code .kw { color: #ff6600; }
+    .code .fn { color: #ffcc00; }
+    .code .cm { color: #666; }
+    .code .num { color: #00ff88; }
+    .tree-visual { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 10px 0; text-align: center; font-size: 0.9em; line-height: 1.8; border: 1px solid #222; overflow-x: auto; }
+    .tree-visual .min-node { color: #00ff88; }
+    .tree-visual .max-node { color: #ff6600; }
+    .tree-visual .empty { color: #666; }
+    .complexity-card { background: linear-gradient(135deg, #0a0a18, #111); border: 2px solid #00ff88; border-radius: 12px; padding: 20px; text-align: center; }
+    .complexity-card .big { font-size: 2em; color: #00ff88; font-weight: bold; }
+    .complexity-card .label { color: #888; font-size: 0.85em; }
+    .quick-ref { background: #0d0d1a; border: 2px solid #00ccff; border-radius: 12px; padding: 20px; margin: 15px 0; }
+    .quick-ref h3 { color: #00ccff; margin-bottom: 10px; }
+    .quick-ref ul { list-style: none; padding: 0; }
+    .quick-ref li { padding: 5px 0; border-bottom: 1px solid #222; }
+    .quick-ref li:last-child { border-bottom: none; }
+    .comparison-highlight { background: #002a1a; }
+    .formula-box { background: #0a0a18; border: 2px solid #00ccff; border-radius: 12px; padding: 20px; margin: 15px 0; }
+    .formula-box h3 { color: #00ccff; margin-bottom: 10px; }
+    .step-list { list-style: none; counter-reset: step; padding: 0; }
+    .step-list li { padding: 8px 0 8px 35px; position: relative; border-bottom: 1px solid #222; }
+    .step-list li::before { counter-increment: step; content: "Step " counter(step); position: absolute; left: 0; color: #00ff88; font-weight: bold; font-size: 0.85em; }
+    .index-table td { font-size: 0.85em; padding: 6px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+    .badge-min { background: #002a1a; color: #00ff88; border: 1px solid #00ff88; }
+    .badge-max { background: #2a0a00; color: #ff6600; border: 1px solid #ff6600; }
+    .badge-both { background: #1a1a2e; color: #00ccff; border: 1px solid #00ccff; }
+  </style>
+</head>
+<body>
+  <h1>DEAP (Double-Ended Heap)</h1>
+  <p class="subtitle">Data Structures &mdash; Complete Exam-Ready Guide</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1', this)">Definition &amp; Structure</button>
+      <button class="tab" onclick="showSection('tab2', this)">Find &amp; Access</button>
+      <button class="tab" onclick="showSection('tab3', this)">Insert Operation</button>
+      <button class="tab" onclick="showSection('tab4', this)">Delete Min/Max</button>
+      <button class="tab" onclick="showSection('tab5', this)">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab6', this)">Complexity &amp; Comparison</button>
+      <button class="tab" onclick="showSection('tab7', this)">Quick Reference</button>
+    </div>
+
+    <!-- ==================== TAB 1: Definition & Structure ==================== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>1. What is a Deap?</h2>
+        <p>A <strong>deap</strong> (double-ended heap) is a complete binary tree data structure that supports efficient <span class="badge badge-min">find-min</span>, <span class="badge badge-max">find-max</span>, <span class="badge badge-both">insert</span>, <span class="badge badge-min">delete-min</span>, and <span class="badge badge-max">delete-max</span> operations.</p>
+
+        <div class="warning">
+          <div class="warn-title">Key Structural Property</div>
+          <p>The root node is <strong>always empty</strong>. No key is ever stored at index 1 (the root). The deap stores n elements using an array of size n+1, where index 0 is unused and index 1 is the empty root.</p>
+        </div>
+
+        <h3>Complete Binary Tree Structure</h3>
+        <p>A deap is a <strong>complete binary tree</strong> of height h. The tree is divided into two subtrees:</p>
+        <ul style="margin: 10px 0 10px 20px; line-height: 1.8;">
+          <li><span class="badge badge-min">Left Subtree</span> &mdash; A <strong>min-heap</strong> (minimum values)</li>
+          <li><span class="badge badge-max">Right Subtree</span> &mdash; A <strong>max-heap</strong> (maximum values)</li>
+        </ul>
+
+        <div class="tree-visual">
+          <span class="empty">[ ]</span> (root, always empty)<br>
+          / &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \<br>
+          <span class="min-node">min-heap</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="max-node">max-heap</span><br>
+          (left subtree) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (right subtree)
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Correspondence Between Nodes</h2>
+        <p>The deap maintains a <strong>correspondence</strong> between nodes in the left (min) subtree and nodes in the right (max) subtree. This is the key invariant that enables all operations.</p>
+
+        <div class="formula-box">
+          <h3>Correspondence Formula</h3>
+          <div class="formula">
+            <div class="label">Given index i in the left subtree (min-heap):</div>
+            <div class="expr">j = 2<sup>&lfloor;lg i&rfloor; + 1</sup> + i - 1</div>
+            <div class="desc">Where j is the corresponding index in the right subtree (max-heap), and lg denotes log base 2.</div>
+          </div>
+
+          <div class="formula">
+            <div class="label">Inverse: Given index j in the right subtree (max-heap):</div>
+            <div class="expr">i = j - 2<sup>&lfloor;lg j&rfloor; + 1</sup> + 1</div>
+            <div class="desc">Where i is the corresponding index in the left subtree (min-heap).</div>
+          </div>
+        </div>
+
+        <h3>Why This Correspondence?</h3>
+        <p>The correspondence pairs nodes that are at the <strong>same depth</strong> in their respective subtrees. For a node at position i in the left subtree, its corresponding node j in the right subtree is at the same level. The deap invariant requires:</p>
+        <div class="formula">
+          <div class="label">Deap Invariant:</div>
+          <div class="expr">min-heap[i] &le; max-heap[j]</div>
+          <div class="desc">Every element in the left (min) subtree must be &le; every element in the right (max) subtree. The correspondent of each left-node must satisfy this ordering.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Array Representation</h2>
+        <p>The deap is stored as a complete binary tree in an array. Index 0 is unused. Index 1 is the empty root.</p>
+
+        <table class="index-table">
+          <tr><th>Index</th><th>Subtree</th><th>Role</th></tr>
+          <tr><td>1</td><td>&mdash;</td><td>Empty root</td></tr>
+          <tr><td>2</td><td>Left (min)</td><td>Root of min-heap</td></tr>
+          <tr><td>3</td><td>Right (max)</td><td>Root of max-heap</td></tr>
+          <tr><td>4, 5</td><td>Left (min)</td><td>Children of index 2</td></tr>
+          <tr><td>6, 7</td><td>Right (max)</td><td>Children of index 3</td></tr>
+          <tr><td>8 &ndash; 11</td><td>Left (min)</td><td>Next level left</td></tr>
+          <tr><td>12 &ndash; 15</td><td>Right (max)</td><td>Next level right</td></tr>
+        </table>
+
+        <div class="example">
+          <div class="title">Correspondence Examples</div>
+          <p>For a deap with n = 15 elements (height 3):</p>
+          <table style="margin-top: 10px;">
+            <tr><th>Left Index (i)</th><th>&lfloor;lg i&rfloor;</th><th>j = 2<sup>&lfloor;lg i&rfloor;+1</sup> + i - 1</th><th>Right Index (j)</th></tr>
+            <tr><td>2</td><td>1</td><td>2<sup>2</sup> + 2 - 1 = <strong>5</strong></td><td>5</td></tr>
+            <tr><td>4</td><td>2</td><td>2<sup>3</sup> + 4 - 1 = <strong>11</strong></td><td>11</td></tr>
+            <tr><td>5</td><td>2</td><td>2<sup>3</sup> + 5 - 1 = <strong>12</strong></td><td>12</td></tr>
+            <tr><td>8</td><td>3</td><td>2<sup>4</sup> + 8 - 1 = <strong>23</strong></td><td>23</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: Find & Access ==================== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>4. Finding the Minimum &mdash; O(1)</h2>
+        <p>The minimum element is always at the root of the <strong>left (min) subtree</strong>.</p>
+
+        <div class="formula">
+          <div class="label">Find-Min:</div>
+          <div class="expr">return array[2]</div>
+          <div class="desc">The root of the min-heap is always at index 2. This is O(1) since no search is needed.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Point</h3>
+            <p>• The left subtree root (index 2) holds the global minimum</p>
+            <p>• This is because the min-heap property ensures the root of any min-heap is its smallest element</p>
+          </div>
+          <div class="card">
+            <h3>Time Complexity</h3>
+            <p>Find-Min: <span class="highlight">O(1)</span></p>
+            <p>Space: <span class="dim">O(1)</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>5. Finding the Maximum &mdash; O(1)</h2>
+        <p>The maximum element is always at the root of the <strong>right (max) subtree</strong>.</p>
+
+        <div class="formula">
+          <div class="label">Find-Max:</div>
+          <div class="expr">return array[3]</div>
+          <div class="desc">The root of the max-heap is always at index 3. This is O(1) since no search is needed.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Point</h3>
+            <p>• The right subtree root (index 3) holds the global maximum</p>
+            <p>• The max-heap property ensures the root of any max-heap is its largest element</p>
+          </div>
+          <div class="card">
+            <h3>Time Complexity</h3>
+            <p>Find-Max: <span class="highlight">O(1)</span></p>
+            <p>Space: <span class="dim">O(1)</span></p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="warn-title">Important Note</div>
+          <p>Unlike a regular heap, the deap provides <strong>O(1) access to both min AND max</strong>. A standard binary heap only gives O(1) access to one extreme.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>6. Visual Example: Find Min/Max</h2>
+        <div class="example">
+          <div class="title">Example: Deap with 11 elements</div>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+         <span class="empty">[ ]</span>          (index 1: empty root)
+        /       \
+   <span class="min-node">[ 2 ]</span>       <span class="max-node">[ 15 ]</span>      (index 2: min-root, index 3: max-root)
+   /   \       /     \
+ <span class="min-node">[ 5 ]</span> <span class="min-node">[ 8 ]</span> <span class="max-node">[ 12 ]</span> <span class="max-node">[ 14 ]</span>
+ / \   /
+<span class="min-node">[7]</span> <span class="min-node">[9]</span> <span class="min-node">[11]</span>
+
+Min-heap (left):  2, 5, 8, 7, 9, 11
+Max-heap (right): 15, 12, 14
+</pre>
+          </div>
+          <p><strong>Find-Min:</strong> array[2] = <span class="result">2</span></p>
+          <p><strong>Find-Max:</strong> array[3] = <span class="result">15</span></p>
+          <p class="note">Note: Every element in the left subtree (&le;11) is &le; every element in the right subtree (&ge;12). The deap invariant holds.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: Insert Operation ==================== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>7. Insert Operation &mdash; O(lg n)</h2>
+        <p>Inserting a new element into a deap involves placing it at the next available position and then restoring the deap invariant.</p>
+
+        <h3>Insert Algorithm (Pseudocode)</h3>
+        <div class="code">
+<span class="kw">function</span> <span class="fn">DEAP-INSERT</span>(deap, key):
+    <span class="cm">// Step 1: Place key at next available position</span>
+    n = n + 1
+    array[n] = key
+
+    <span class="cm">// Step 2: Find which subtree it belongs to</span>
+    <span class="kw">if</span> n is in the left subtree (min-heap):
+        <span class="cm">// Compare with its correspondent in right subtree</span>
+        j = <span class="fn">correspondent</span>(n)
+        <span class="kw">if</span> j exists and array[n] &gt; array[j]:
+            <span class="fn">swap</span>(array[n], array[j])
+            <span class="fn">BUBBLE-DOWN-MAX</span>(j)  <span class="cm">// fix max-heap</span>
+        <span class="kw">else</span>:
+            <span class="fn">BUBBLE-DOWN-MIN</span>(n)  <span class="cm">// fix min-heap</span>
+    <span class="kw">else</span>:  <span class="cm">// n is in the right subtree (max-heap)</span>
+        <span class="cm">// Compare with its correspondent in left subtree</span>
+        i = <span class="fn">inverse-correspondent</span>(n)
+        <span class="kw">if</span> i exists and array[n] &lt; array[i]:
+            <span class="fn">swap</span>(array[n], array[i])
+            <span class="fn">BUBBLE-DOWN-MIN</span>(i)  <span class="cm">// fix min-heap</span>
+        <span class="kw">else</span>:
+            <span class="fn">BUBBLE-DOWN-MAX</span>(n)  <span class="cm">// fix max-heap</span>
+</div>
+
+        <h3>Helper: Bubble Down in Min-Heap</h3>
+        <div class="code">
+<span class="kw">function</span> <span class="fn">BUBBLE-DOWN-MIN</span>(i):
+    <span class="kw">while</span> i has children:
+        smallest = i
+        <span class="kw">if</span> left_child(i) &le; n and array[left_child(i)] &lt; array[smallest]:
+            smallest = left_child(i)
+        <span class="kw">if</span> right_child(i) &le; n and array[right_child(i)] &lt; array[smallest]:
+            smallest = right_child(i)
+        <span class="kw">if</span> smallest &ne; i:
+            <span class="fn">swap</span>(array[i], array[smallest])
+            i = smallest
+        <span class="kw">else</span>:
+            <span class="kw">break</span>
+</div>
+
+        <h3>Helper: Bubble Down in Max-Heap</h3>
+        <div class="code">
+<span class="kw">function</span> <span class="fn">BUBBLE-DOWN-MAX</span>(i):
+    <span class="kw">while</span> i has children:
+        largest = i
+        <span class="kw">if</span> left_child(i) &le; n and array[left_child(i)] &gt; array[largest]:
+            largest = left_child(i)
+        <span class="kw">if</span> right_child(i) &le; n and array[right_child(i)] &gt; array[largest]:
+            largest = right_child(i)
+        <span class="kw">if</span> largest &ne; i:
+            <span class="fn">swap</span>(array[i], array[largest])
+            i = largest
+        <span class="kw">else</span>:
+            <span class="kw">break</span>
+</div>
+
+        <div class="warning">
+          <div class="warn-title">Critical Step</div>
+          <p>When inserting at position n, <strong>always check the correspondence first</strong>. The new element might violate the deap invariant with its correspondent, requiring a swap before the standard heap bubble-down.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: Delete Min/Max ==================== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>8. Delete-Min Operation &mdash; O(lg n)</h2>
+        <p>Remove the minimum element (at index 2) and restore the deap invariant.</p>
+
+        <h3>Delete-Min Algorithm (Pseudocode)</h3>
+        <div class="code">
+<span class="kw">function</span> <span class="fn">DEAP-DELETE-MIN</span>(deap):
+    <span class="cm">// Step 1: Save the minimum</span>
+    min_val = array[2]
+
+    <span class="cm">// Step 2: Move last element to position 2</span>
+    array[2] = array[n]
+    n = n - 1
+
+    <span class="cm">// Step 3: If tree is now empty or has only root, done</span>
+    <span class="kw">if</span> n &lt; 2:
+        <span class="kw">return</span> min_val
+
+    <span class="cm">// Step 4: Check if element now at position 2 belongs in right subtree</span>
+    <span class="kw">if</span> 2 is in the right subtree range:
+        <span class="cm">// The element came from the right side; find its correct left position</span>
+        i = <span class="fn">find-correct-left-position</span>(array[2])
+        <span class="fn">swap</span>(array[2], array[i])
+        <span class="fn">BUBBLE-DOWN-MAX</span>(2)
+    <span class="kw">else</span>:
+        <span class="cm">// Standard: bubble down in min-heap</span>
+        <span class="fn">BUBBLE-DOWN-MIN</span>(2)
+
+    <span class="cm">// Step 5: Fix correspondence invariant</span>
+    <span class="fn">FIX-CORRESPONDENCE</span>()
+
+    <span class="kw">return</span> min_val
+</div>
+
+        <div class="warning">
+          <div class="warn-title">After Delete-Min</div>
+          <p>When the last element replaces the deleted min, it may not belong in the min-heap. Check whether it should be moved to the max-heap by testing the correspondence. If violated, swap with the correspondent and fix both heaps.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>9. Delete-Max Operation &mdash; O(lg n)</h2>
+        <p>Remove the maximum element (at index 3) and restore the deap invariant.</p>
+
+        <h3>Delete-Max Algorithm (Pseudocode)</h3>
+        <div class="code">
+<span class="kw">function</span> <span class="fn">DEAP-DELETE-MAX</span>(deap):
+    <span class="cm">// Step 1: Save the maximum</span>
+    max_val = array[3]
+
+    <span class="cm">// Step 2: Move last element to position 3</span>
+    array[3] = array[n]
+    n = n - 1
+
+    <span class="cm">// Step 3: If tree is now small, done</span>
+    <span class="kw">if</span> n &lt; 3:
+        <span class="kw">return</span> max_val
+
+    <span class="cm">// Step 4: Check if element now at position 3 belongs in left subtree</span>
+    <span class="kw">if</span> 3 is in the left subtree range:
+        <span class="cm">// The element came from the left side; find its correct right position</span>
+        j = <span class="fn">find-correct-right-position</span>(array[3])
+        <span class="fn">swap</span>(array[3], array[j])
+        <span class="fn">BUBBLE-DOWN-MIN</span>(3)
+    <span class="kw">else</span>:
+        <span class="cm">// Standard: bubble down in max-heap</span>
+        <span class="fn">BUBBLE-DOWN-MAX</span>(3)
+
+    <span class="cm">// Step 5: Fix correspondence invariant</span>
+    <span class="fn">FIX-CORRESPONDENCE</span>()
+
+    <span class="kw">return</span> max_val
+</div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Delete-Min</h3>
+            <p>• Removes from <span class="highlight">index 2</span></p>
+            <p>• Replaces with last element</p>
+            <p>• Bubbles down in min-heap</p>
+            <p>• Fixes correspondence</p>
+          </div>
+          <div class="card">
+            <h3>Delete-Max</h3>
+            <p>• Removes from <span class="highlight">index 3</span></p>
+            <p>• Replaces with last element</p>
+            <p>• Bubbles down in max-heap</p>
+            <p>• Fixes correspondence</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 5: Worked Examples ==================== -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>10. Worked Example 1: Building a Deap by Insertion</h2>
+        <p>Insert the sequence: <strong>10, 5, 20, 3, 15, 25, 8</strong> into an empty deap.</p>
+
+        <div class="example">
+          <div class="title">Step-by-Step Insertion</div>
+
+          <h3>Insert 10 (n=1 &rarr; index 2, left subtree)</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+  <span class="empty">[ ]</span>
+  /
+<span class="min-node">[10]</span>
+</pre>
+          </div>
+          <p>No correspondent yet (right subtree empty). Done. Array: <code>[_, 10]</code></p>
+
+          <h3>Insert 5 (n=2 &rarr; index 3, right subtree)</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+    <span class="empty">[ ]</span>
+   /    \
+<span class="min-node">[10]</span>  <span class="max-node">[5]</span>
+</pre>
+          </div>
+          <p>Correspondent of index 3 (right) is index 2 (left). 5 &lt; 10, so <strong>swap</strong>: array becomes <code>[_, 5, 10]</code></p>
+          <p>Fix min-heap (index 2): 5 has no children. Fix max-heap (index 3): 10 has no children. Done.</p>
+
+          <h3>Insert 20 (n=3 &rarr; index 4, left subtree)</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+      <span class="empty">[ ]</span>
+     /    \
+  <span class="min-node">[5]</span>    <span class="max-node">[10]</span>
+  /
+<span class="min-node">[20]</span>
+</pre>
+          </div>
+          <p>Correspondent of 4 (left) is j = 2<sup>&lfloor;lg 4&rfloor;+1</sup> + 4 - 1 = 2<sup>3</sup> + 3 = <strong>11</strong>. Index 11 doesn't exist yet. Bubble down in min-heap: 20 &gt; 5 (parent), done. Array: <code>[_, 5, 10, 20]</code></p>
+
+          <h3>Insert 3 (n=4 &rarr; index 5, right subtree)</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+      <span class="empty">[ ]</span>
+     /    \
+  <span class="min-node">[5]</span>    <span class="max-node">[10]</span>
+  / \     /
+<span class="min-node">[20]</span><span class="max-node">[3]</span>
+</pre>
+          </div>
+          <p>Correspondent of 5 (right) is i = 5 - 2<sup>&lfloor;lg 5&rfloor;+1</sup> + 1 = 5 - 8 + 1 = <strong>-2</strong> (invalid, so use left child of root). Actually, inverse: i = 5 - 2<sup>3</sup> + 1 = -2. Try parent: correspondent of position 5 in right is position 2 in left. 3 &lt; 5, so <strong>swap</strong>: array becomes <code>[_, 3, 10, 20, 5]</code></p>
+          <p>Fix min-heap at index 2: 3 &lt; 10 (parent). Fix max-heap at index 5: 5 &lt; 10 (parent). Done.</p>
+
+          <h3>Insert 15 (n=5 &rarr; index 6, left subtree)</h3>
+          <p>Correspondent of 6 (left): j = 2<sup>&lfloor;lg 6&rfloor;+1</sup> + 6 - 1 = 2<sup>3</sup> + 5 = <strong>13</strong>. Doesn't exist. Bubble down in min-heap: 15 &gt; 3, done. Array: <code>[_, 3, 10, 20, 5, 15]</code></p>
+
+          <h3>Insert 25 (n=6 &rarr; index 7, right subtree)</h3>
+          <p>Correspondent: i = 7 - 2<sup>&lfloor;lg 7&rfloor;+1</sup> + 1 = 7 - 16 + 1 = <strong>-8</strong>. Use index 2. 25 &gt; 3, OK. Bubble down in max-heap: 25 &gt; 10, done. Array: <code>[_, 3, 10, 20, 5, 15, 25]</code></p>
+
+          <h3>Insert 8 (n=7 &rarr; index 8, left subtree)</h3>
+          <p>Correspondent of 8 (left): j = 2<sup>&lfloor;lg 8&rfloor;+1</sup> + 8 - 1 = 2<sup>4</sup> + 7 = <strong>23</strong>. Doesn't exist. Bubble down in min-heap: 8 &gt; 10? No, 8 &lt; 10. Swap with parent. 8 &gt; 3 (root). Done. Array: <code>[_, 3, 8, 20, 5, 15, 25, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, 10]</code></p>
+
+          <h3>Final Deap</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+           <span class="empty">[ ]</span>
+          /       \
+     <span class="min-node">[ 3 ]</span>       <span class="max-node">[ 25 ]</span>
+     /    \       /     \
+ <span class="min-node">[ 8 ]</span>  <span class="min-node">[15 ]</span> <span class="max-node">[ 20 ]</span> <span class="max-node">[ 10 ]</span>
+ / \     /
+<span class="min-node">[5]</span> <span class="min-node">[20]</span>
+</pre>
+          </div>
+          <p><strong>Min-heap:</strong> 3, 8, 15, 5, 20 &mdash; root is 3 (global min)</p>
+          <p><strong>Max-heap:</strong> 25, 20, 10 &mdash; root is 25 (global max)</p>
+          <p class="note">Verify deap invariant: every element in left &le; every element in right. 20 (max of left) &le; 25 (max of right) &check;</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>11. Worked Example 2: Delete-Min</h2>
+        <p>Starting from the deap in Example 1, delete the minimum.</p>
+
+        <div class="example">
+          <div class="title">Delete-Min from Deap</div>
+
+          <h3>Before:</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+           <span class="empty">[ ]</span>
+          /       \
+     <span class="min-node">[ 3 ]</span>       <span class="max-node">[ 25 ]</span>
+     /    \       /     \
+ <span class="min-node">[ 8 ]</span>  <span class="min-node">[15 ]</span> <span class="max-node">[ 20 ]</span> <span class="max-node">[ 10 ]</span>
+ / \     /
+<span class="min-node">[5]</span> <span class="min-node">[20]</span>
+</pre>
+          </div>
+
+          <ol class="step-list">
+            <li><strong>Save min:</strong> min_val = 3 (at index 2)</li>
+            <li><strong>Replace with last:</strong> Move 20 (last element) to index 2. n becomes 7.</li>
+            <li><strong>Check position 2:</strong> 2 is in left subtree. Standard bubble-down in min-heap.</li>
+            <li><strong>Bubble-down min at index 2:</strong> Compare 20 with children (8, 15). Swap with smaller child (8). Now at index 4.</li>
+            <li><strong>Continue bubble-down:</strong> Compare 20 with children (5). 20 &gt; 5, swap. Now at index 8. No children. Done.</li>
+            <li><strong>Verify correspondence:</strong> Check all left-right pairs still satisfy deap invariant.</li>
+          </ol>
+
+          <h3>After:</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+           <span class="empty">[ ]</span>
+          /       \
+     <span class="min-node">[ 5 ]</span>       <span class="max-node">[ 25 ]</span>
+     /    \       /     \
+ <span class="min-node">[ 8 ]</span>  <span class="min-node">[15 ]</span> <span class="max-node">[ 20 ]</span> <span class="max-node">[ 10 ]</span>
+   \
+   <span class="min-node">[20]</span>
+</pre>
+          </div>
+          <p><strong>Returned:</strong> <span class="result">3</span></p>
+          <p class="note">The new minimum is 5 (at index 2). The max is still 25 (at index 3).</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>12. Worked Example 3: Delete-Max</h2>
+        <p>Starting from the deap in Example 2, delete the maximum.</p>
+
+        <div class="example">
+          <div class="title">Delete-Max from Deap</div>
+
+          <h3>Before:</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+           <span class="empty">[ ]</span>
+          /       \
+     <span class="min-node">[ 5 ]</span>       <span class="max-node">[ 25 ]</span>
+     /    \       /     \
+ <span class="min-node">[ 8 ]</span>  <span class="min-node">[15 ]</span> <span class="max-node">[ 20 ]</span> <span class="max-node">[ 10 ]</span>
+   \
+   <span class="min-node">[20]</span>
+</pre>
+          </div>
+
+          <ol class="step-list">
+            <li><strong>Save max:</strong> max_val = 25 (at index 3)</li>
+            <li><strong>Replace with last:</strong> Move 20 (last element at index 8) to index 3. n becomes 6.</li>
+            <li><strong>Check position 3:</strong> 3 is in right subtree. Standard bubble-down in max-heap.</li>
+            <li><strong>Bubble-down max at index 3:</strong> Compare 20 with children (20, 10). 20 = 20, no swap needed. Done.</li>
+            <li><strong>Verify correspondence:</strong> Check all left-right pairs satisfy deap invariant. All OK.</li>
+          </ol>
+
+          <h3>After:</h3>
+          <div class="tree-visual">
+<pre style="text-align: left; display: inline-block;">
+           <span class="empty">[ ]</span>
+          /       \
+     <span class="min-node">[ 5 ]</span>       <span class="max-node">[ 20 ]</span>
+     /    \       /     \
+ <span class="min-node">[ 8 ]</span>  <span class="min-node">[15 ]</span> <span class="max-node">[ 20 ]</span> <span class="max-node">[ 10 ]</span>
+</pre>
+          </div>
+          <p><strong>Returned:</strong> <span class="result">25</span></p>
+          <p class="note">The new max is 20 (at index 3). The min is still 5 (at index 2).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 6: Complexity & Comparison ==================== -->
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>13. Time &amp; Space Complexity</h2>
+        <p>All major operations in a deap run in logarithmic time.</p>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+          <div class="complexity-card">
+            <div class="label">Find-Min</div>
+            <div class="big">O(1)</div>
+            <div class="label">constant time</div>
+          </div>
+          <div class="complexity-card">
+            <div class="label">Find-Max</div>
+            <div class="big">O(1)</div>
+            <div class="label">constant time</div>
+          </div>
+          <div class="complexity-card">
+            <div class="label">Insert</div>
+            <div class="big">O(lg n)</div>
+            <div class="label">bubble up/down</div>
+          </div>
+          <div class="complexity-card">
+            <div class="label">Delete-Min</div>
+            <div class="big">O(lg n)</div>
+            <div class="label">bubble down</div>
+          </div>
+          <div class="complexity-card">
+            <div class="label">Delete-Max</div>
+            <div class="big">O(lg n)</div>
+            <div class="label">bubble down</div>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Space Complexity:</div>
+          <div class="expr">O(n)</div>
+          <div class="desc">Array of size n+1 stores the complete binary tree. No pointers needed.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>14. Deap vs Min-Max Heap Comparison</h2>
+        <p>Both data structures support efficient dual-priority operations, but they differ in structure and implementation.</p>
+
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>Deap</th>
+            <th>Min-Max Heap</th>
+          </tr>
+          <tr>
+            <td>Structure</td>
+            <td>Two separate subtrees (min-heap + max-heap)</td>
+            <td>Single alternating-level heap</td>
+          </tr>
+          <tr>
+            <td>Root</td>
+            <td>Always <strong>empty</strong></td>
+            <td>Contains the <strong>minimum</strong></td>
+          </tr>
+          <tr>
+            <td>Min location</td>
+            <td>Root of left subtree (index 2)</td>
+            <td>Root (index 1)</td>
+          </tr>
+          <tr>
+            <td>Max location</td>
+            <td>Root of right subtree (index 3)</td>
+            <td>Child of root (index 2 or 3)</td>
+          </tr>
+          <tr>
+            <td>Find-Min</td>
+            <td><span class="result">O(1)</span></td>
+            <td><span class="result">O(1)</span></td>
+          </tr>
+          <tr>
+            <td>Find-Max</td>
+            <td><span class="result">O(1)</span></td>
+            <td><span class="result">O(1)</span></td>
+          </tr>
+          <tr>
+            <td>Insert</td>
+            <td><span class="result">O(lg n)</span></td>
+            <td><span class="result">O(lg n)</span></td>
+          </tr>
+          <tr>
+            <td>Delete-Min</td>
+            <td><span class="result">O(lg n)</span></td>
+            <td><span class="result">O(lg n)</span></td>
+          </tr>
+          <tr>
+            <td>Delete-Max</td>
+            <td><span class="result">O(lg n)</span></td>
+            <td><span class="result">O(lg n)</span></td>
+          </tr>
+          <tr>
+            <td>Array size</td>
+            <td>n + 1 (index 0 unused, index 1 empty)</td>
+            <td>n + 1 (index 0 unused)</td>
+          </tr>
+          <tr>
+            <td>Correspondence</td>
+            <td>Explicit left-right pairing formula</td>
+            <td>Level-based alternating min/max</td>
+          </tr>
+          <tr>
+            <td>Implementation</td>
+            <td>More complex correspondence tracking</td>
+            <td>Simpler level-based logic</td>
+          </tr>
+          <tr>
+            <td>Key Invariant</td>
+            <td>min-heap[i] &le; max-heap[j] for all correspondents</td>
+            <td>min at even levels, max at odd levels</td>
+          </tr>
+          <tr>
+            <td>Advantage</td>
+            <td>Clean separation of min/max concerns</td>
+            <td>Single unified structure</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <div class="warn-title">Exam Tip: Key Difference</div>
+          <p>The deap's defining feature is its <strong>empty root</strong> and the <strong>correspondence formula</strong> j = 2<sup>&lfloor;lg i&rfloor;+1</sup> + i - 1. A min-max heap uses <strong>alternating levels</strong> (min at even depth, max at odd depth) with a single root holding the minimum.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>15. When to Use Deap</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Use Deap When</h3>
+            <p>• You need both min and max access</p>
+            <p>• You want clean separation of min/max heaps</p>
+            <p>• Priority queue with dual-ended access</p>
+            <p>• Scheduling with min and max priorities</p>
+          </div>
+          <div class="card">
+            <h3>Use Min-Max Heap When</h3>
+            <p>• Simpler implementation is preferred</p>
+            <p>• Single unified structure is easier to reason about</p>
+            <p>• Level-based logic is more intuitive</p>
+            <p>• Less concern about correspondence tracking</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 7: Quick Reference ==================== -->
+    <div class="content" id="tab7">
+      <div class="section">
+        <h2>16. Quick Reference Card</h2>
+
+        <div class="quick-ref">
+          <h3>Deap Properties</h3>
+          <ul>
+            <li><strong>Type:</strong> Complete binary tree</li>
+            <li><strong>Structure:</strong> Left subtree = min-heap, Right subtree = max-heap</li>
+            <li><strong>Root:</strong> Always empty (index 1 unused for data)</li>
+            <li><strong>Min element:</strong> array[2]</li>
+            <li><strong>Max element:</strong> array[3]</li>
+            <li><strong>Storage:</strong> Array of size n+1</li>
+          </ul>
+        </div>
+
+        <div class="formula-box">
+          <h3>Core Formulas</h3>
+          <div class="formula">
+            <div class="label">Correspondence (left &rarr; right):</div>
+            <div class="expr">j = 2<sup>&lfloor;lg i&rfloor; + 1</sup> + i - 1</div>
+          </div>
+          <div class="formula">
+            <div class="label">Inverse correspondence (right &rarr; left):</div>
+            <div class="expr">i = j - 2<sup>&lfloor;lg j&rfloor; + 1</sup> + 1</div>
+          </div>
+          <div class="formula">
+            <div class="label">Deap invariant:</div>
+            <div class="expr">array[left[i]] &le; array[right[j]]</div>
+            <div class="desc">For every correspondent pair (i, j)</div>
+          </div>
+        </div>
+
+        <div class="quick-ref">
+          <h3>Operation Summary</h3>
+          <ul>
+            <li><strong>Find-Min:</strong> return array[2] &mdash; <span class="result">O(1)</span></li>
+            <li><strong>Find-Max:</strong> return array[3] &mdash; <span class="result">O(1)</span></li>
+            <li><strong>Insert:</strong> place at end, compare with correspondent, swap if needed, bubble down &mdash; <span class="result">O(lg n)</span></li>
+            <li><strong>Delete-Min:</strong> remove array[2], replace with last, bubble down, fix correspondence &mdash; <span class="result">O(lg n)</span></li>
+            <li><strong>Delete-Max:</strong> remove array[3], replace with last, bubble down, fix correspondence &mdash; <span class="result">O(lg n)</span></li>
+          </ul>
+        </div>
+
+        <div class="quick-ref">
+          <h3>Common Mistakes (Exam Warnings)</h3>
+          <ul>
+            <li><span class="warning" style="display: inline; padding: 0; border: none; margin: 0;">Don't store anything at index 1</span> &mdash; the root is always empty</li>
+            <li><span class="warning" style="display: inline; padding: 0; border: none; margin: 0;">Don't forget the correspondence check on insert</span> &mdash; a new element might violate the invariant with its correspondent</li>
+            <li><span class="warning" style="display: inline; padding: 0; border: none; margin: 0;">Don't skip the correspondence fix on delete</span> &mdash; after replacing with the last element, check if it belongs in the other subtree</li>
+            <li><span class="warning" style="display: inline; padding: 0; border: none; margin: 0;">Don't confuse deap with min-max heap</span> &mdash; deap has TWO subtrees; min-max heap has alternating levels</li>
+            <li><span class="warning" style="display: inline; padding: 0; border: none; margin: 0;">Remember lg = log base 2</span> &mdash; in formulas, lg means log<sub>2</sub></li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">Quick Index Lookup (height 3 deap)</div>
+          <table>
+            <tr><th>Position</th><th>Subtree</th><th>Parent</th><th>Left Child</th><th>Right Child</th><th>Correspondent</th></tr>
+            <tr><td>1</td><td>Empty</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td>2</td><td>Min</td><td>&mdash;</td><td>4</td><td>5</td><td>5</td></tr>
+            <tr><td>3</td><td>Max</td><td>&mdash;</td><td>6</td><td>7</td><td>2</td></tr>
+            <tr><td>4</td><td>Min</td><td>2</td><td>8</td><td>9</td><td>11</td></tr>
+            <tr><td>5</td><td>Min</td><td>2</td><td>10</td><td>11</td><td>12</td></tr>
+            <tr><td>6</td><td>Max</td><td>3</td><td>12</td><td>13</td><td>4</td></tr>
+            <tr><td>7</td><td>Max</td><td>3</td><td>14</td><td>15</td><td>5</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id, el) {
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      el.classList.add('active');
+    }
+  </script>
+</body>
+</html>

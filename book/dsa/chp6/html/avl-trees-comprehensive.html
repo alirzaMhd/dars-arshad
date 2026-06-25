@@ -25,7 +25,7 @@
     .card .dim { color: #ff9944; }
     .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
     .result { color: #00ff88; font-weight: bold; }
-    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; font-size: 0.9em; }
     table { border-collapse: collapse; width: 100%; margin: 10px 0; }
     th, td { border: 1px solid #333; padding: 8px; text-align: center; }
     th { background: #1a1a2e; color: #00ccff; }
@@ -36,262 +36,1066 @@
     .tab:hover { border-color: #00ff88; color: #00ff88; }
     .content { display: none; }
     .content.active { display: block; }
-    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
-    .tree { font-family: monospace; white-space: pre; background: #0a0a18; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #333; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .tree-ascii { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #00ff88; white-space: pre; overflow-x: auto; line-height: 1.4; }
+    .bf-pos { color: #ff6600; font-weight: bold; }
+    .bf-neg { color: #ff6600; font-weight: bold; }
+    .bf-zero { color: #00ff88; font-weight: bold; }
+    .compare-row td:first-child { text-align: left; font-weight: bold; color: #ffcc00; }
   </style>
 </head>
 <body>
   <h1>AVL Trees</h1>
-  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
+  <p class="subtitle">Self-Balancing BST — Complete Exam Guide</p>
 
   <div class="container">
     <div class="tabs">
-      <button class="tab active" onclick="showSection('tab1')">Definition</button>
-      <button class="tab" onclick="showSection('tab2')">Balance Factor</button>
-      <button class="tab" onclick="showSection('tab3')">Height Properties</button>
-      <button class="tab" onclick="showSection('tab4')">Examples</button>
-      <button class="tab" onclick="showSection('tab5')">Quick Reference</button>
+      <button class="tab active" onclick="showSection('tab1')">Definition & Properties</button>
+      <button class="tab" onclick="showSection('tab2')">Balance Factor & Formulas</button>
+      <button class="tab" onclick="showSection('tab3')">Rotations (4 Cases)</button>
+      <button class="tab" onclick="showSection('tab4')">Insert & Fix-up</button>
+      <button class="tab" onclick="showSection('tab5')">Construction Examples</button>
+      <button class="tab" onclick="showSection('tab6')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab7')">Complexity Analysis</button>
+      <button class="tab" onclick="showSection('tab8')">Quick Reference</button>
     </div>
 
-    <!-- Tab 1: Definition -->
+    <!-- TAB 1: Definition & Properties -->
     <div class="content active" id="tab1">
       <div class="section">
-        <h2>What is an AVL Tree?</h2>
+        <h2>AVL Tree Definition</h2>
+        <p>An <span class="result">AVL tree</span> is a <strong>self-balancing Binary Search Tree</strong> invented by <span class="highlight">Georgy Adelson-Velsky</span> and <span class="highlight">Evgenii Landis</span> in 1962.</p>
 
         <div class="formula">
-          <div class="label">Definition:</div>
-          <div class="expr">AVL Tree is a self-balancing BST where the height difference between left and right subtrees of ANY node is at most 1</div>
-          <div class="desc">Named after Adelson-Velsky and Landis (inventors)</div>
-        </div>
-
-        <div class="formula">
-          <div class="label">Balance Condition:</div>
-          <div class="expr">For every node x: |height(left[x]) - height(right[x])| ≤ 1</div>
-          <div class="desc">This is called the AVL property</div>
-        </div>
-
-        <div class="example">
-          <div class="title">Balanced vs Unbalanced</div>
-          <div class="tree">
-Balanced AVL Tree:     Unbalanced (NOT AVL):
-      20                      20
-     /  \                    /  \
-    10   30                 10    30
-   / \                     /
-  5  15                   5
-                         /
-                        2
-          </div>
-          <p>Left tree: All nodes have balance factor in {-1, 0, 1} → <span class="result">AVL</span></p>
-          <p>Right tree: Node 20 has balance factor = 2 → <span class="dim">NOT AVL</span></p>
+          <div class="label">Name Origin:</div>
+          <div class="expr">AVL = Adelson-Velsky and Landis</div>
+          <div class="desc">Named after its inventors, who published the first self-balancing BST.</div>
         </div>
 
         <div class="warning">
-          <strong>Key Point:</strong> AVL trees guarantee O(lg n) height, which means ALL operations (search, insert, delete) are O(lg n).
+          <strong>Key Rule:</strong> An AVL tree is a BST that maintains an additional <strong>balance property</strong>: for every node, the height difference between its left and right subtrees is at most 1.
+        </div>
+
+        <h3>The Two Properties</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>BST Property</h3>
+            <p>For every node x, all keys in x's left subtree are <span class="highlight">less than</span> x.key, and all keys in x's right subtree are <span class="highlight">greater than</span> x.key.</p>
+          </div>
+          <div class="card">
+            <h3>Balance Property</h3>
+            <p>For every node x, the heights of x.left and x.right differ by <span class="highlight">at most 1</span>.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Balance Condition (for every node x):</div>
+          <div class="expr">|height(x.left) - height(x.right)| ≤ 1</div>
+          <div class="desc">This is the defining property that distinguishes AVL from ordinary BST.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Height Convention</h2>
+        <p>Height of a node = length of longest path from node to a <span class="highlight">leaf</span>.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Empty tree (NIL)</h3>
+            <p>Height = <span class="dim">-1</span></p>
+          </div>
+          <div class="card">
+            <h3>Single node (leaf)</h3>
+            <p>Height = <span class="highlight">0</span></p>
+          </div>
+          <div class="card">
+            <h3>Tree with 3 nodes</h3>
+            <p>Root height = <span class="highlight">1</span></p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Note:</strong> Some textbooks use height = number of nodes on longest path (1 for single node). The formulas below use the edge-count convention (0 for single node). Always check which convention your exam uses!
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why AVL Trees?</h2>
+        <p>A regular BST can degenerate to a linked list with height O(n). AVL trees guarantee <span class="result">O(lg n)</span> height.</p>
+
+        <div class="example">
+          <div class="title">Problem: BST Degeneration</div>
+          <p>Insert keys 1, 2, 3, 4, 5 into a regular BST (always going right):</p>
+          <div class="tree-ascii">1
+ \
+  2
+   \
+    3
+     \
+      4
+       \
+        5      ← Height = 4, Search takes O(n)!</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Solution: AVL Tree</div>
+          <p>Same keys with AVL balancing:</p>
+          <div class="tree-ascii">    3          ← Height = 2, Search takes O(lg n)!
+   / \
+  2   4
+ /     \
+1       5</div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 2: Balance Factor -->
+    <!-- TAB 2: Balance Factor & Formulas -->
     <div class="content" id="tab2">
       <div class="section">
         <h2>Balance Factor</h2>
-
         <div class="formula">
-          <div class="label">Balance Factor Formula:</div>
-          <div class="expr">BF(x) = height(left[x]) - height(right[x])</div>
-          <div class="desc">Can be -1, 0, or 1 for AVL trees</div>
+          <div class="label">Definition:</div>
+          <div class="expr">BF(x) = height(x.left) - height(x.right)</div>
+          <div class="desc">Balance factor of node x = height of left subtree minus height of right subtree.</div>
         </div>
 
         <div class="formula">
-          <div class="label">Balance Factor Values:</div>
-          <div class="expr">BF = 0: Left and right subtrees same height (perfectly balanced)<br>
-          BF = 1: Left subtree one level taller (left-heavy)<br>
-          BF = -1: Right subtree one level taller (right-heavy)</div>
-          <div class="desc">Any other value means the tree is NOT balanced</div>
+          <div class="label">Valid Values:</div>
+          <div class="expr">BF(x) ∈ { -1, 0, +1 }   for every node x</div>
+          <div class="desc">If any node has BF = ±2 or beyond, the tree is <strong>unbalanced</strong> and needs rotation.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>BF = +1 (Left-heavy)</h3>
+            <p>Left subtree is 1 level taller. <span class="highlight">Valid.</span></p>
+          </div>
+          <div class="card">
+            <h3>BF = 0 (Balanced)</h3>
+            <p>Both subtrees same height. <span class="highlight">Perfectly balanced.</span></p>
+          </div>
+          <div class="card">
+            <h3>BF = -1 (Right-heavy)</h3>
+            <p>Right subtree is 1 level taller. <span class="highlight">Valid.</span></p>
+          </div>
+          <div class="card">
+            <h3>BF = ±2 (Unbalanced!)</h3>
+            <p>Height difference &gt; 1. <span class="dim">Needs rotation!</span></p>
+          </div>
         </div>
 
         <div class="example">
-          <div class="title">Example: Compute balance factors</div>
-          <div class="tree">
-        20 (BF = 0)
+          <div class="title">Example: Computing Balance Factors</div>
+          <div class="tree-ascii">        30 (BF = +1)          ← h(L)=2, h(R)=1
        /  \
-      10    30 (BF = 0)
-     / \   / \
-    5  15 25  35
-   (BF=0)(BF=0)(BF=0)(BF=0)
-          </div>
-          <p>All nodes have BF = 0 → <span class="result">Perfectly balanced AVL tree</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example: Tree with BF = -1</div>
-          <div class="tree">
-        20 (BF = -1)
-       /  \
-      10    30 (BF = 0)
-     / \   / \
-    5  15 25  35
-              \
-              40 (BF = 0)
-          </div>
-          <p>Node 20: height(left)=1, height(right)=2 → BF = -1</p>
-          <p>Still valid AVL! (BF is within {-1, 0, 1})</p>
+  20 (BF=0) 40 (BF=-1)        ← 20: h(L)=0,h(R)=0; 40: h(L)=0,h(R)=1
+  / \          \
+10    25        50             ← All leaves: BF = 0</div>
+          <p>Check: BF(30) = 2 - 1 = <span class="bf-pos">+1</span> ✓</p>
+          <p>Check: BF(20) = 1 - 1 = <span class="bf-zero">0</span> ✓</p>
+          <p>Check: BF(40) = 0 - 1 = <span class="bf-neg">-1</span> ✓</p>
+          <p>All nodes have BF ∈ {-1, 0, +1} → <span class="result">Valid AVL tree!</span></p>
         </div>
       </div>
-    </div>
 
-    <!-- Tab 3: Height Properties -->
-    <div class="content" id="tab3">
       <div class="section">
-        <h2>AVL Tree Height Properties</h2>
+        <h2>Minimum Nodes for Height h</h2>
+        <p>What is the <strong>minimum number of nodes</strong> N(h) needed to build an AVL tree of height h?</p>
 
         <div class="formula">
-          <div class="label">Minimum nodes for height h:</div>
+          <div class="label">Recurrence Relation:</div>
           <div class="expr">N(h) = N(h-1) + N(h-2) + 1</div>
-          <div class="desc">Where N(0) = 1, N(1) = 2</div>
+          <div class="desc">Root + left subtree of height h-1 (minimum) + right subtree of height h-2 (minimum). To minimize nodes, make subtrees as small as possible while maintaining balance.</div>
         </div>
 
         <div class="formula">
-          <div class="label">This is related to Fibonacci numbers:</div>
-          <div class="expr">N(h) = F(h+2) - 1</div>
-          <div class="desc">Where F is the Fibonacci sequence: 0, 1, 1, 2, 3, 5, 8, 13, ...</div>
+          <div class="label">Base Cases:</div>
+          <div class="expr">N(0) = 1,   N(1) = 2</div>
+          <div class="desc">Height 0 tree: single node (1 node). Height 1 tree: root + one child (2 nodes).</div>
+        </div>
+
+        <h3>Computing N(h) Step by Step</h3>
+        <table>
+          <tr><th>h</th><th>N(h) = N(h-1) + N(h-2) + 1</th><th>Value</th></tr>
+          <tr><td>0</td><td>Base case</td><td><span class="result">1</span></td></tr>
+          <tr><td>1</td><td>Base case</td><td><span class="result">2</span></td></tr>
+          <tr><td>2</td><td>N(1) + N(0) + 1 = 2 + 1 + 1</td><td><span class="result">4</span></td></tr>
+          <tr><td>3</td><td>N(2) + N(1) + 1 = 4 + 2 + 1</td><td><span class="result">7</span></td></tr>
+          <tr><td>4</td><td>N(3) + N(2) + 1 = 7 + 4 + 1</td><td><span class="result">12</span></td></tr>
+          <tr><td>5</td><td>N(4) + N(3) + 1 = 12 + 7 + 1</td><td><span class="result">20</span></td></tr>
+          <tr><td>6</td><td>N(5) + N(4) + 1 = 20 + 12 + 1</td><td><span class="result">33</span></td></tr>
+          <tr><td>7</td><td>N(6) + N(5) + 1 = 33 + 20 + 1</td><td><span class="result">54</span></td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Memory aid:</strong> N(h) = N(h-1) + N(h-2) + 1 looks like the Fibonacci recurrence! This connects to the Fibonacci number relation below.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Fibonacci Connection</h2>
+        <div class="formula">
+          <div class="label">Fibonacci Relation:</div>
+          <div class="expr">N(h) = F(h+3) - 1</div>
+          <div class="desc">Where F is the Fibonacci sequence: F(0)=0, F(1)=1, F(2)=1, F(3)=2, F(4)=3, F(5)=5, F(6)=8, F(7)=13, F(8)=21, ...</div>
         </div>
 
         <div class="example">
-          <div class="title">Example: Minimum nodes for different heights</div>
+          <div class="title">Verification: N(h) = F(h+3) - 1</div>
           <table>
-            <tr>
-              <th>Height (h)</th>
-              <th>Min Nodes N(h)</th>
-              <th>Fibonacci F(h+2)</th>
-            </tr>
-            <tr>
-              <td>0</td>
-              <td class="highlight">1</td>
-              <td>1</td>
-            </tr>
-            <tr>
-              <td>1</td>
-              <td class="highlight">2</td>
-              <td>2</td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td class="highlight">4</td>
-              <td>5</td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td class="highlight">7</td>
-              <td>8</td>
-            </tr>
-            <tr>
-              <td>4</td>
-              <td class="highlight">12</td>
-              <td>13</td>
-            </tr>
+            <tr><th>h</th><th>h+3</th><th>F(h+3)</th><th>F(h+3) - 1</th><th>N(h)</th><th>Match?</th></tr>
+            <tr><td>0</td><td>3</td><td>2</td><td>1</td><td>1</td><td><span class="result">✓</span></td></tr>
+            <tr><td>1</td><td>4</td><td>3</td><td>2</td><td>2</td><td><span class="result">✓</span></td></tr>
+            <tr><td>2</td><td>5</td><td>5</td><td>4</td><td>4</td><td><span class="result">✓</span></td></tr>
+            <tr><td>3</td><td>6</td><td>8</td><td>7</td><td>7</td><td><span class="result">✓</span></td></tr>
+            <tr><td>4</td><td>7</td><td>13</td><td>12</td><td>12</td><td><span class="result">✓</span></td></tr>
           </table>
         </div>
+      </div>
+
+      <div class="section">
+        <h2>Height Bound: h ≤ 2·lg(n+1) - 2</h2>
+        <p>From the minimum nodes formula, we derive the <strong>maximum height</strong> of an AVL tree with n nodes.</p>
 
         <div class="formula">
-          <div class="label">Maximum height of AVL tree with n nodes:</div>
-          <div class="expr">h < 1.44 × lg(n+2) - 0.328</div>
-          <div class="desc">This is approximately O(lg n)</div>
+          <div class="label">Lower Bound on N(h):</div>
+          <div class="expr">N(h) ≥ 2^(h/2) - 1</div>
+          <div class="desc">This can be proved by induction. Since N(h) grows at least as fast as 2^(h/2), the tree cannot be too tall.</div>
         </div>
 
-        <div class="warning">
-          <strong>Key Insight:</strong> AVL trees are ALWAYS approximately balanced. The height is guaranteed to be O(lg n), which ensures O(lg n) for all operations.
+        <div class="formula">
+          <div class="label">Derivation:</div>
+          <div class="expr">n ≥ N(h) ≥ 2^(h/2) - 1</div>
+          <div class="desc">n + 1 ≥ 2^(h/2) → lg(n+1) ≥ h/2 → h ≤ 2·lg(n+1)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Final Height Bound:</div>
+          <div class="expr">h ≤ 2·lg(n+1) - 2</div>
+          <div class="desc">For large n, this simplifies to h ≈ 2·lg(n). The AVL tree height is <strong>O(lg n)</strong>.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Maximum height for n = 1,000,000</div>
+          <p>h ≤ 2·lg(1,000,001) - 2 ≈ 2 × 20 - 2 = <span class="result">38</span></p>
+          <p>Compare: degenerate BST would have height 999,999. AVL keeps it under 40!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: Height of AVL Trees</h2>
+        <div class="formula">
+          <div class="label">Height:</div>
+          <div class="expr">Θ(lg n)</div>
+          <div class="desc">An AVL tree with n nodes always has height Θ(lg n), guaranteed by the balance property.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Tight Bound:</div>
+          <div class="expr">lg(n+1) - 1 ≤ h ≤ 1.44 · lg(n+2) - 0.328</div>
+          <div class="desc">The lower bound is for a complete binary tree. The upper bound uses the golden ratio φ ≈ 1.618.</div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 4: Examples -->
+    <!-- TAB 3: Rotations (4 Cases) -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Why Rotations?</h2>
+        <p>After insertion or deletion, some node may become <span class="dim">unbalanced</span> (|BF| = 2). We use <span class="result">rotations</span> to restore balance while maintaining the BST property.</p>
+
+        <div class="warning">
+          <strong>Key Fact:</strong> At most <span class="result">1 or 2 rotations</span> are needed to fix any imbalance after insertion. After deletion, up to O(lg n) rotations may be needed.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Identifying the Problem Nodes</h2>
+        <div class="formula">
+          <div class="label">Three Important Nodes:</div>
+          <div class="expr">x = nearest ancestor with BF = ±2</div>
+          <div class="desc">x is the first unbalanced node encountered when walking up from the newly inserted node.</div>
+        </div>
+        <div class="formula">
+          <div class="expr">y = child of x on the insertion path</div>
+          <div class="desc">y is the child of x that is closer to the newly inserted node.</div>
+        </div>
+        <div class="formula">
+          <div class="expr">z = newly inserted node (or the node that caused the imbalance)</div>
+          <div class="desc">z is the node that was just inserted, or in deletion, the node that was removed.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Identifying x, y, z</div>
+          <div class="tree-ascii">Before inserting z=30:
+
+        50 (x)         ← x: first unbalanced ancestor (BF=+2)
+       /
+      30 (y)           ← y: child of x on insertion path
+     /
+    z=30              ← z: newly inserted node</div>
+          <p class="note">After insertion of 30: BF(50) = 2 (unbalanced!). x=50, y=30, z=30.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Four Rotation Cases</h2>
+        <p>The type of rotation depends on where y and z are relative to x.</p>
+
+        <div class="example" style="border-color: #ff6600;">
+          <div class="title" style="color: #ff6600;">Case 1: Left-Left (LL) — Single Right Rotation</div>
+          <p><strong>Condition:</strong> y is <span class="highlight">LEFT</span> child of x, z is <span class="highlight">LEFT</span> child of y</p>
+          <p><strong>Fix:</strong> <span class="result">Right rotate(x)</span></p>
+          <div class="tree-ascii">     x                y
+    / \              / \
+   y   C    →       A   x
+  / \                  / \
+ A   B                B   C
+
+BF(x)=+2, BF(y)=+1 → after right rotate(x): balanced</div>
+          <p class="note">Think: "z is left of y, y is left of x" → everything is left-leaning → push x down to the right.</p>
+        </div>
+
+        <div class="example" style="border-color: #ff6600;">
+          <div class="title" style="color: #ff6600;">Case 2: Right-Right (RR) — Single Left Rotation</div>
+          <p><strong>Condition:</strong> y is <span class="highlight">RIGHT</span> child of x, z is <span class="highlight">RIGHT</span> child of y</p>
+          <p><strong>Fix:</strong> <span class="result">Left rotate(x)</span></p>
+          <div class="tree-ascii">  x                  y
+ / \                / \
+A   y       →      x   C
+   / \            / \
+  B   C          A   B
+
+BF(x)=-2, BF(y)=-1 → after left rotate(x): balanced</div>
+          <p class="note">Think: "z is right of y, y is right of x" → everything is right-leaning → push x down to the left.</p>
+        </div>
+
+        <div class="example" style="border-color: #ff6600;">
+          <div class="title" style="color: #ff6600;">Case 3: Right-Left (RL) — Double Rotation</div>
+          <p><strong>Condition:</strong> y is <span class="highlight">RIGHT</span> child of x, z is <span class="highlight">LEFT</span> child of y</p>
+          <p><strong>Fix:</strong> <span class="result">Right rotate(y), then Left rotate(x)</span></p>
+          <div class="tree-ascii">  x              x              z
+ / \            / \            / \
+A   y    →     A   z    →    x   y
+   / \            / \        / \ / \
+  z   C          B   y      A  B C  C'
+ / \                / \
+B   D              D   C'
+
+Step 1: Right rotate y  |  Step 2: Left rotate x</div>
+          <p class="note">Think: "y is right of x, z is left of y" → zig-zag pattern → two rotations needed.</p>
+        </div>
+
+        <div class="example" style="border-color: #ff6600;">
+          <div class="title" style="color: #ff6600;">Case 4: Left-Right (LR) — Double Rotation</div>
+          <p><strong>Condition:</strong> y is <span class="highlight">LEFT</span> child of x, z is <span class="highlight">RIGHT</span> child of y</p>
+          <p><strong>Fix:</strong> <span class="result">Left rotate(y), then Right rotate(x)</span></p>
+          <div class="tree-ascii">    x            x              z
+   / \          / \            / \
+  y   C   →    z   C    →    y   x
+ / \          / \           / \ / \
+A   z        y   D         A  B C  D
+   / \      / \
+  B   D    A   B
+
+Step 1: Left rotate y  |  Step 2: Right rotate x</div>
+          <p class="note">Think: "y is left of x, z is right of y" → zig-zag pattern → two rotations needed.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Rotation Comparison Table</h2>
+        <table>
+          <tr>
+            <th>Case</th>
+            <th>Name</th>
+            <th>Condition</th>
+            <th>Rotation</th>
+            <th>When</th>
+          </tr>
+          <tr class="compare-row">
+            <td>1</td>
+            <td>LL</td>
+            <td>y = LEFT of x, z = LEFT of y</td>
+            <td>Right rotate(x)</td>
+            <td>Insert into left subtree of left child</td>
+          </tr>
+          <tr class="compare-row">
+            <td>2</td>
+            <td>RR</td>
+            <td>y = RIGHT of x, z = RIGHT of y</td>
+            <td>Left rotate(x)</td>
+            <td>Insert into right subtree of right child</td>
+          </tr>
+          <tr class="compare-row">
+            <td>3</td>
+            <td>RL</td>
+            <td>y = RIGHT of x, z = LEFT of y</td>
+            <td>Right rotate(y), Left rotate(x)</td>
+            <td>Insert into left subtree of right child</td>
+          </tr>
+          <tr class="compare-row">
+            <td>4</td>
+            <td>LR</td>
+            <td>y = LEFT of x, z = RIGHT of y</td>
+            <td>Left rotate(y), Right rotate(x)</td>
+            <td>Insert into right subtree of left child</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>How to Determine the Case</h2>
+        <div class="formula">
+          <div class="label">Decision Tree:</div>
+          <div class="expr">Look at y's position relative to x, then z's position relative to y:</div>
+        </div>
+        <div class="tree-ascii">        y is LEFT of x?              y is RIGHT of x?
+           /        \                    /        \
+        YES          NO              YES          NO
+         |            |                |            |
+  z LEFT of y?   z RIGHT of y?   z LEFT of y?   z RIGHT of y?
+    /    \          /    \          /    \          /    \
+  YES    NO      YES    NO      YES    NO      YES    NO
+   |      |       |      |       |      |       |      |
+  LL     LR      RL*    RR      RL     RR*     LL*    RR
+
+   * = impossible (BST property violation)</div>
+
+        <div class="warning">
+          <strong>Only 4 valid cases exist:</strong> LL, RR, RL, LR. The "impossible" cases would violate the BST ordering property.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Insert & Fix-up -->
     <div class="content" id="tab4">
       <div class="section">
-        <h2>AVL Tree Examples</h2>
+        <h2>AVL Insert Algorithm</h2>
+        <p>Insert works in two phases: <span class="highlight">standard BST insert</span>, then <span class="result">fix imbalances</span> walking back up.</p>
 
-        <div class="example">
-          <div class="title">Example 1: Valid AVL tree with 7 nodes</div>
-          <div class="tree">
-        20 (BF=0)
-       /  \
-      10    30 (BF=0)
-     / \   / \
-    5  15 25  35
-   (0)(0)(0)(0)
+        <div class="code">AVL-INSERT(T, z)
+  // Phase 1: Standard BST insert
+  1. Insert z following BST rules (search for position, attach as leaf)
+  2. Set height[z] = 0
+  3. Set BF[z] = 0
+
+  // Phase 2: Fix imbalances
+  4. x = parent[z]
+  5. while x ≠ NIL:
+       a. Update height[x] and BF[x]
+       b. if |BF[x]| > 1:          // Found unbalanced node!
+            Determine y (child of x toward z)
+            Determine case (LL/RR/RL/LR)
+            Apply rotation(s)
+            return                  // After fix, tree is balanced
+       x = parent[x]</div>
+      </div>
+
+      <div class="section">
+        <h2>Left Rotate Operation</h2>
+        <div class="code">LEFT-ROTATE(T, x)
+  y = right[x]              // y is x's right child
+  right[x] = left[y]        // y's left subtree becomes x's right
+  if left[y] ≠ NIL
+    parent[left[y]] = x
+  parent[y] = parent[x]     // Link y to x's parent
+  if parent[x] = NIL
+    root[T] = y
+  else if x = left[parent[x]]
+    left[parent[x]] = y
+  else
+    right[parent[x]] = y
+  left[y] = x               // x becomes y's left child
+  parent[x] = y
+
+  // Update heights
+  height[x] = max(height[left[x]], height[right[x]]) + 1
+  height[y] = max(height[left[y]], height[right[y]]) + 1</div>
+      </div>
+
+      <div class="section">
+        <h2>Right Rotate Operation</h2>
+        <div class="code">RIGHT-ROTATE(T, x)
+  y = left[x]               // y is x's left child
+  left[x] = right[y]        // y's right subtree becomes x's left
+  if right[y] ≠ NIL
+    parent[right[y]] = x
+  parent[y] = parent[x]
+  if parent[x] = NIL
+    root[T] = y
+  else if x = left[parent[x]]
+    left[parent[x]] = y
+  else
+    right[parent[x]] = y
+  right[y] = x              // x becomes y's right child
+  parent[x] = y
+
+  // Update heights
+  height[x] = max(height[left[x]], height[right[x]]) + 1
+  height[y] = max(height[left[y]], height[right[y]]) + 1</div>
+      </div>
+
+      <div class="section">
+        <h2>Insert Pseudocode (Complete)</h2>
+        <div class="code">AVL-INSERT(T, z)
+  // BST insert
+  y = NIL; x = root[T]
+  while x ≠ NIL:
+    y = x
+    if key[z] < key[x]
+      x = left[x]
+    else
+      x = right[x]
+  parent[z] = y
+  if y = NIL
+    root[T] = z
+  else if key[z] < key[y]
+    left[y] = z
+  else
+    right[y] = z
+
+  height[z] = 0
+  BF[z] = 0
+
+  // Walk up and fix
+  current = parent[z]
+  while current ≠ NIL:
+    h_left = if left[current] ≠ NIL then height[left[current]] else -1
+    h_right = if right[current] ≠ NIL then height[right[current]] else -1
+    height[current] = max(h_left, h_right) + 1
+    BF[current] = h_left - h_right
+
+    if BF[current] = 2:
+      if BF[left[current]] ≥ 0:        // LL case
+        RIGHT-ROTATE(T, current)
+      else:                              // LR case
+        LEFT-ROTATE(T, left[current])
+        RIGHT-ROTATE(T, current)
+      return
+
+    if BF[current] = -2:
+      if BF[right[current]] ≤ 0:       // RR case
+        LEFT-ROTATE(T, current)
+      else:                              // RL case
+        RIGHT-ROTATE(T, right[current])
+        LEFT-ROTATE(T, current)
+      return
+
+    current = parent[current]</div>
+      </div>
+
+      <div class="section">
+        <h2>Important Properties of AVL Insert</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>At Most 1 Imbalance</h3>
+            <p>Insertion creates at most <span class="highlight">one</span> unbalanced node on the path up. After fixing it, the tree is balanced.</p>
           </div>
-          <p>Height = 2, all BFs in {-1, 0, 1} → <span class="result">Valid AVL</span></p>
-          <p>Minimum nodes for h=2: N(2) = 4 ✓ (we have 7 ≥ 4)</p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 2: Invalid AVL tree</div>
-          <div class="tree">
-        20 (BF=2) ← NOT AVL!
-       /  \
-      10    30
-     /
-    5
-   /
-  2
+          <div class="card">
+            <h3>At Most 2 Rotations</h3>
+            <p>Fixing requires at most <span class="highlight">2 rotations</span> (for RL and LR cases). LL and RR need only 1 rotation.</p>
           </div>
-          <p>Node 20: height(left)=3, height(right)=1 → BF = 2</p>
-          <p><span class="dim">NOT valid AVL! Needs rotation to fix.</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 3: How many AVL trees with 4 nodes?</div>
-          <p>For n=4 distinct keys, there are <span class="result">4 different AVL trees</span></p>
-          <p>All have height = 2 (minimum possible for 4 nodes)</p>
+          <div class="card">
+            <h3>O(lg n) Time</h3>
+            <p>BST insert is O(lg n), fix-up walks up O(lg n) nodes, each taking O(1). Total: <span class="highlight">O(lg n)</span>.</p>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab 5: Quick Reference -->
+    <!-- TAB 5: Construction Examples -->
     <div class="content" id="tab5">
       <div class="section">
-        <h2>Quick Reference Card</h2>
+        <h2>Construction: Keys 1, 2, 3 (Order: 1, 2, 3)</h2>
+        <div class="example">
+          <div class="title">Insert 1, then 2, then 3</div>
+          <div class="tree-ascii">Step 1: Insert 1
+    1 (BF=0)                     ← Single node, balanced
 
-        <div class="grid">
-          <div class="card">
-            <h3>Definition</h3>
-            <p>• Self-balancing BST</p>
-            <p>• |BF| ≤ 1 for all nodes</p>
-            <p>• Height = O(lg n)</p>
-          </div>
-          <div class="card">
-            <h3>Balance Factor</h3>
-            <p>• BF = height(L) - height(R)</p>
-            <p>• Values: -1, 0, 1</p>
-            <p>• Any other = not AVL</p>
-          </div>
+Step 2: Insert 2
+    1 (BF=-1)                    ← BF(1) = 0-1 = -1, still OK
+     \
+      2 (BF=0)
+
+Step 3: Insert 3
+    1 (BF=-2) ← UNBALANCED!      ← BF(1) = 0-2 = -2
+     \
+      2 (BF=-1)
+       \
+        3
+
+Case: RR (y=2 is RIGHT of x=1, z=3 is RIGHT of y=2)
+Fix: Left rotate(1)
+
+Final AVL Tree:
+      2 (BF=0)
+     / \
+    1   3     ← Balanced! All BF ∈ {-1,0,1}</div>
         </div>
+      </div>
 
-        <div class="grid">
-          <div class="card">
-            <h3>Height Formula</h3>
-            <p>• N(h) = N(h-1) + N(h-2) + 1</p>
-            <p>• h < 1.44 × lg(n+2)</p>
-            <p>• Always O(lg n)</p>
-          </div>
-          <div class="card">
-            <h3>Operations</h3>
-            <p>• Search: O(lg n)</p>
-            <p>• Insert: O(lg n)</p>
-            <p>• Delete: O(lg n)</p>
-          </div>
+      <div class="section">
+        <h2>Construction: Keys 1, 2, 3 (Order: 3, 2, 1)</h2>
+        <div class="example">
+          <div class="title">Insert 3, then 2, then 1</div>
+          <div class="tree-ascii">Step 1: Insert 3
+    3 (BF=0)                     ← Single node
+
+Step 2: Insert 2
+    3 (BF=+1)
+   /
+  2 (BF=0)
+
+Step 3: Insert 1
+      3 (BF=+2) ← UNBALANCED!
+     /
+    2 (BF=+1)
+   /
+  1
+
+Case: LL (y=2 is LEFT of x=3, z=1 is LEFT of y=2)
+Fix: Right rotate(3)
+
+Final AVL Tree:
+    2 (BF=0)
+   / \
+  1   3     ← Balanced!</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Construction: Keys 1, 2, 3 (Order: 2, 1, 3)</h2>
+        <div class="example">
+          <div class="title">Insert 2, then 1, then 3</div>
+          <div class="tree-ascii">Step 1: Insert 2
+    2 (BF=0)                     ← Single node
+
+Step 2: Insert 1
+    2 (BF=+1)
+   /
+  1 (BF=0)
+
+Step 3: Insert 3
+    2 (BF=0)                     ← BF(2) = 1-1 = 0, already balanced!
+   / \
+  1   3
+
+No rotation needed! Already balanced after inserting 3.</div>
+          <p class="result">Result: Perfectly balanced from the start. No rotation needed!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Construction: Keys 1, 2, 3 (Order: 2, 3, 1)</h2>
+        <div class="example">
+          <div class="title">Insert 2, then 3, then 1</div>
+          <div class="tree-ascii">Step 1: Insert 2
+    2 (BF=0)
+
+Step 2: Insert 3
+    2 (BF=-1)
+      \
+       3
+
+Step 3: Insert 1
+    2 (BF=0)                     ← BF(2) = 1-1 = 0, already balanced!
+   / \
+  1   3
+
+No rotation needed!</div>
+          <p class="result">Result: Already balanced. No rotation needed!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: All Orders for Keys {1, 2, 3}</h2>
+        <table>
+          <tr><th>Insertion Order</th><th>Rotations Needed</th><th>Final Tree Height</th></tr>
+          <tr><td>1, 2, 3</td><td>1 (Left rotate at 1)</td><td>1</td></tr>
+          <tr><td>3, 2, 1</td><td>1 (Right rotate at 3)</td><td>1</td></tr>
+          <tr><td>2, 1, 3</td><td>0 (Already balanced)</td><td>1</td></tr>
+          <tr><td>1, 3, 2</td><td>0 (Already balanced)</td><td>1</td></tr>
+          <tr><td>2, 3, 1</td><td>0 (Already balanced)</td><td>1</td></tr>
+          <tr><td>3, 1, 2</td><td>0 (Already balanced)</td><td>1</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Key Insight:</strong> Only 2 out of 6 insertion orders require rotation. The final tree shape depends on insertion order, but ALL produce a valid AVL tree of height 1.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: Worked Examples -->
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>Worked Example 1: Insert 10, 20, 30, 40, 50, 25</h2>
+        <div class="example">
+          <div class="title">Step-by-step AVL Insertion</div>
+          <div class="tree-ascii">Step 1: Insert 10
+    10 (BF=0)
+
+Step 2: Insert 20
+    10 (BF=-1)
+      \
+       20 (BF=0)
+
+Step 3: Insert 30 — UNBALANCED at 10 (BF=-2)
+    10 (BF=-2) ← Case RR: Left rotate(10)
+      \
+       20 (BF=-1)
+         \
+          30
+
+After left rotate(10):
+      20 (BF=0)
+     /  \
+    10   30
+
+Step 4: Insert 40
+      20 (BF=-1)
+     /  \
+    10   30 (BF=-1)
+            \
+             40
+
+Step 5: Insert 50 — UNBALANCED at 20 (BF=-2)
+      20 (BF=-2) ← Case RR at 30: Left rotate(30)
+     /  \
+    10   30 (BF=-2)
+          \
+           40 (BF=-1)
+             \
+              50
+
+First: Left rotate(30):
+      20 (BF=-2)
+     /  \
+    10   40 (BF=-1)
+          / \
+         30  50
+
+Then: Left rotate(20):
+        40 (BF=0)
+       /  \
+      20   50
+     / \
+    10  30
+
+Step 6: Insert 25
+        40 (BF=+1)
+       /  \
+      20   50
+     / \ 
+    10  30 (BF=-1)
+         \
+          25
+
+BF(30) = 0 - 1 = -1 ✓
+BF(20) = 1 - 2 = -1 ✓
+BF(40) = 2 - 1 = +1 ✓
+
+Final tree is balanced!</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Insert 50, 30, 70, 20, 40, 60, 80, 25</h2>
+        <div class="example">
+          <div class="title">Building a complete AVL tree</div>
+          <div class="tree-ascii">After inserting 50, 30, 70, 20, 40, 60, 80:
+        50
+       /  \
+      30   70
+     / \  / \
+    20  40 60 80     ← Perfectly balanced, no rotations needed!
+
+Step 8: Insert 25
+        50
+       /  \
+      30   70       BF(30) = +2 → UNBALANCED!
+     / \  / \
+    20  40 60 80
+      \
+       25
+
+x = 30, y = 20, z = 25
+Case: LR (y=20 is LEFT of x=30, z=25 is RIGHT of y=20)
+
+Fix: Left rotate(20), then Right rotate(30)
+
+After Left rotate(20):
+      50
+     /  \
+    30   70
+   / \  / \
+  25  40 60 80
+ /
+20
+
+After Right rotate(30):
+        50
+       /  \
+      25   70
+     / \  / \
+    20  30 60 80   ← Balanced!</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: LR Double Rotation</h2>
+        <div class="example">
+          <div class="title">Demonstrating LR case with keys 30, 10, 20</div>
+          <div class="tree-ascii">Step 1: Insert 30
+    30 (BF=0)
+
+Step 2: Insert 10
+    30 (BF=+1)
+   /
+  10
+
+Step 3: Insert 20 — UNBALANCED at 30 (BF=+2)
+      30 (BF=+2) ← UNBALANCED!
+     /
+    10 (BF=-1)
+      \
+       20
+
+x = 30, y = 10, z = 20
+Case: LR (y=10 is LEFT of x=30, z=20 is RIGHT of y=10)
+
+Fix: Left rotate(10), then Right rotate(30)
+
+Step 3a: Left rotate(10):
+      30
+     /
+    20
+   /
+  10
+
+Step 3b: Right rotate(30):
+    20 (BF=0)
+   / \
+  10  30    ← Balanced!</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: RL Double Rotation</h2>
+        <div class="example">
+          <div class="title">Demonstrating RL case with keys 10, 30, 20</div>
+          <div class="tree-ascii">Step 1: Insert 10
+    10 (BF=0)
+
+Step 2: Insert 30
+    10 (BF=-1)
+      \
+       30
+
+Step 3: Insert 20 — UNBALANCED at 10 (BF=-2)
+    10 (BF=-2)
+      \
+       30 (BF=+1)
+      /
+     20
+
+x = 10, y = 30, z = 20
+Case: RL (y=30 is RIGHT of x=10, z=20 is LEFT of y=30)
+
+Fix: Right rotate(30), then Left rotate(10)
+
+Step 3a: Right rotate(30):
+    10
+      \
+       20
+        \
+         30
+
+Step 3b: Left rotate(10):
+    20 (BF=0)
+   / \
+  10  30    ← Balanced!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: Complexity Analysis -->
+    <div class="content" id="tab7">
+      <div class="section">
+        <h2>Time Complexity Summary</h2>
+        <table>
+          <tr><th>Operation</th><th>Time Complexity</th><th>Notes</th></tr>
+          <tr><td>Search</td><td><span class="result">O(lg n)</span></td><td>Height is O(lg n), each step O(1)</td></tr>
+          <tr><td>Insert</td><td><span class="result">O(lg n)</span></td><td>BST insert + at most 2 rotations</td></tr>
+          <tr><td>Delete</td><td><span class="result">O(lg n)</span></td><td>BST delete + up to O(lg n) rotations</td></tr>
+          <tr><td>Min / Max</td><td><span class="result">O(lg n)</span></td><td>Follow left/right links</td></tr>
+          <tr><td>Successor</td><td><span class="result">O(lg n)</span></td><td>Min of right subtree or walk up</td></tr>
+          <tr><td>Predecessor</td><td><span class="result">O(lg n)</span></td><td>Max of left subtree or walk up</td></tr>
+          <tr><td>In-order Traversal</td><td><span class="result">Θ(n)</span></td><td>Must visit all nodes</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Key Difference from BST:</strong> In a regular BST, all operations are O(n) worst case. In AVL, they are all <span class="result">O(lg n)</span> worst case — guaranteed by the balance property.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Space Complexity</h2>
+        <div class="formula">
+          <div class="label">Per Node:</div>
+          <div class="expr">Extra space: O(1) per node</div>
+          <div class="desc">Each node stores: key, left, right, parent pointers, height, balance factor. This is constant extra space per node compared to a regular BST.</div>
         </div>
 
         <div class="formula">
-          <div class="label">Minimum Nodes Formula:</div>
-          <div class="expr">N(h) = F(h+2) - 1, where F is Fibonacci</div>
-          <div class="desc">N(0)=1, N(1)=2, N(2)=4, N(3)=7, N(4)=12, N(5)=20</div>
+          <div class="label">Total Space:</div>
+          <div class="expr">O(n)</div>
+          <div class="desc">Same as any binary tree with n nodes. The AVL overhead is only the height and BF fields.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Rotation Cost Analysis</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Insert Rotations</h3>
+            <p>At most <span class="highlight">1 rotation</span> (single) or <span class="highlight">2 rotations</span> (double). Each rotation is O(1). Total rotation cost: <span class="result">O(1)</span>.</p>
+          </div>
+          <div class="card">
+            <h3>Delete Rotations</h3>
+            <p>In the worst case, deletion may require <span class="dim">O(lg n) rotations</span> because rebalancing can propagate up to the root.</p>
+          </div>
         </div>
 
-        <div class="warning">
-          <strong>Remember:</strong> AVL trees are named after Adelson-Velsky and Landis. They were the first self-balancing BST invented (1962).
+        <div class="example">
+          <div class="title">Why at most 1 imbalance for insert?</div>
+          <p>After inserting a node, walking up from that node:</p>
+          <p>1. All ancestors above the first unbalanced node have their heights unchanged.</p>
+          <p>2. After rotation, the subtree height returns to what it was before the insertion.</p>
+          <p class="result">Therefore, fixing one imbalance restores the entire tree to balance!</p>
         </div>
+      </div>
+
+      <div class="section">
+        <h2>AVL vs Unbalanced BST</h2>
+        <div class="example">
+          <div class="title">Worst Case Comparison (n = 1,000,000)</div>
+          <table>
+            <tr><th>Property</th><th>Unbalanced BST</th><th>AVL Tree</th></tr>
+            <tr><td>Height</td><td><span class="dim">999,999</span></td><td><span class="result">≤ 38</span></td></tr>
+            <tr><td>Search (worst)</td><td><span class="dim">O(n)</span></td><td><span class="result">O(lg n)</span></td></tr>
+            <tr><td>Insert (worst)</td><td><span class="dim">O(n)</span></td><td><span class="result">O(lg n)</span></td></tr>
+            <tr><td>Delete (worst)</td><td><span class="dim">O(n)</span></td><td><span class="result">O(lg n)</span></td></tr>
+            <tr><td>Space per node</td><td>3 pointers</td><td>3 pointers + height + BF</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 8: Quick Reference -->
+    <div class="content" id="tab8">
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h4 style="color: #ffcc00;">Definition</h4>
+            <p>BST + balance property: |BF(x)| ≤ 1 for all nodes x</p>
+          </div>
+          <div class="card">
+            <h4 style="color: #ffcc00;">Balance Factor</h4>
+            <p>BF(x) = height(left) - height(right) ∈ {-1, 0, +1}</p>
+          </div>
+          <div class="card">
+            <h4 style="color: #ffcc00;">Height Bound</h4>
+            <p>h ≤ 2·lg(n+1) - 2 = O(lg n)</p>
+          </div>
+          <div class="card">
+            <h4 style="color: #ffcc00;">Min Nodes</h4>
+            <p>N(h) = N(h-1) + N(h-2) + 1 = F(h+3) - 1</p>
+          </div>
+          <div class="card">
+            <h4 style="color: #ffcc00;">All Operations</h4>
+            <p>O(lg n) worst case for search, insert, delete</p>
+          </div>
+          <div class="card">
+            <h4 style="color: #ffcc00;">Insert Rotations</h4>
+            <p>At most 1-2 rotations needed per insertion</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Rotation Quick Reference</h2>
+        <table>
+          <tr><th>Case</th><th>Name</th><th>Condition</th><th>Fix</th></tr>
+          <tr><td>1</td><td>LL</td><td>y=LEFT(x), z=LEFT(y)</td><td>Right rotate(x)</td></tr>
+          <tr><td>2</td><td>RR</td><td>y=RIGHT(x), z=RIGHT(y)</td><td>Left rotate(x)</td></tr>
+          <tr><td>3</td><td>RL</td><td>y=RIGHT(x), z=LEFT(y)</td><td>Right(y) then Left(x)</td></tr>
+          <tr><td>4</td><td>LR</td><td>y=LEFT(x), z=RIGHT(y)</td><td>Left(y) then Right(x)</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Mnemonic:</div>
+          <div class="expr">"Same direction → single rotation, Different direction → double rotation"</div>
+          <div class="desc">LL/RR: both in same direction → 1 rotation. RL/LR: zig-zag → 2 rotations.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Formulas for Exam</h2>
+        <div class="formula">
+          <div class="label">1. Balance Factor:</div>
+          <div class="expr">BF(x) = height(x.left) - height(x.right) ∈ {-1, 0, +1}</div>
+        </div>
+        <div class="formula">
+          <div class="label">2. Minimum Nodes Recurrence:</div>
+          <div class="expr">N(h) = N(h-1) + N(h-2) + 1,  N(0)=1, N(1)=2</div>
+        </div>
+        <div class="formula">
+          <div class="label">3. Fibonacci Connection:</div>
+          <div class="expr">N(h) = F(h+3) - 1</div>
+        </div>
+        <div class="formula">
+          <div class="label">4. Height Lower Bound:</div>
+          <div class="expr">N(h) ≥ 2^(h/2) - 1</div>
+        </div>
+        <div class="formula">
+          <div class="label">5. Height Upper Bound:</div>
+          <div class="expr">h ≤ 2·lg(n+1) - 2</div>
+        </div>
+        <div class="formula">
+          <div class="label">6. AVL Height:</div>
+          <div class="expr">h = Θ(lg n)</div>
+        </div>
+        <div class="formula">
+          <div class="label">7. All Operations:</div>
+          <div class="expr">O(lg n) worst case</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Node Values Table (for Quick Lookup)</h2>
+        <table>
+          <tr><th>h</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+          <tr><td>N(h)</td><td>1</td><td>2</td><td>4</td><td>7</td><td>12</td><td>20</td><td>33</td><td>54</td></tr>
+          <tr><td>F(h+3)</td><td>2</td><td>3</td><td>5</td><td>8</td><td>13</td><td>21</td><td>34</td><td>55</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Exam Tip:</strong> Memorize N(0)=1, N(1)=2, N(2)=4, N(3)=7. These appear frequently. Also remember N(h) = F(h+3)-1 and h ≤ 2·lg(n+1)-2.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: AVL vs Other BSTs</h2>
+        <table>
+          <tr><th>Property</th><th>AVL</th><th>Red-Black</th><th>BST</th></tr>
+          <tr><td>Balance</td><td><span class="result">Strict (|BF|≤1)</span></td><td>Relaxed</td><td>None</td></tr>
+          <tr><td>Height</td><td><span class="result">~1.44 lg n</span></td><td>≤ 2 lg n</td><td><span class="dim">≤ n</span></td></tr>
+          <tr><td>Search</td><td><span class="result">O(lg n)</span></td><td>O(lg n)</td><td><span class="dim">O(n)</span></td></tr>
+          <tr><td>Insert rotations</td><td>≤ 2</td><td>≤ 2</td><td>0</td></tr>
+          <tr><td>Delete rotations</td><td><span class="dim">O(lg n)</span></td><td><span class="result">≤ 3</span></td><td>0</td></tr>
+          <tr><td>Use case</td><td>Read-heavy</td><td>General purpose</td><td>Small/static data</td></tr>
+        </table>
       </div>
     </div>
   </div>

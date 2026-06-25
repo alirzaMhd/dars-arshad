@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fibonacci Heaps - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a1200; padding: 10px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .quick-ref { background: #0d1a0d; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .quick-ref h2 { color: #00ff88; border-bottom: 1px solid #00ff88; padding-bottom: 8px; }
+    .tree-viz { background: #0a0a18; padding: 15px; border-radius: 6px; margin: 10px 0; text-align: center; font-size: 0.9em; line-height: 1.6; }
+    .amortized { background: #1a0a2e; border: 1px solid #6644aa; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .amortized .label { color: #aa88ff; font-weight: bold; }
+    .star { color: #ff6600; font-weight: bold; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h1>FIBONACCI HEAPS</h1>
+  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Definition</button>
+      <button class="tab" onclick="showSection('tab2')">Structure</button>
+      <button class="tab" onclick="showSection('tab3')">Lazy Merge</button>
+      <button class="tab" onclick="showSection('tab4')">Operations</button>
+      <button class="tab" onclick="showSection('tab5')">Comparison</button>
+      <button class="tab" onclick="showSection('tab6')">Amortized Analysis</button>
+      <button class="tab" onclick="showSection('tab7')">Applications</button>
+      <button class="tab" onclick="showSection('tab8')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab9')">Quick Reference</button>
+    </div>
+
+    <!-- TAB 1: DEFINITION -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Fibonacci Heap Definition</h2>
+        <p>A <strong>Fibonacci heap</strong> is a collection of <strong>min-heap-ordered trees</strong>. The trees are rooted but <em>not</em> binomial trees. Fibonacci heaps are a refinement of binomial heaps that achieve better amortized time for several operations.</p>
+
+        <div class="formula">
+          <div class="label">Formal Definition:</div>
+          <div class="expr">F(n) = collection of min-heap-ordered trees with n total nodes</div>
+          <div class="desc">Each tree satisfies: parent.key ≤ child.key for every parent-child pair. No structural constraints on the trees (unlike binomial heaps).</div>
+        </div>
+
+        <div class="warning">
+          <strong>Key Distinction:</strong> Unlike binomial heaps where trees have a fixed structure (Binomial tree Bₖ has exactly C(n,k) nodes), Fibonacci heaps have NO structural constraints. Trees can be any shape, as long as the min-heap property holds.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Root List</h3>
+            <p class="highlight">min pointer →</p>
+            <p>• Circular doubly-linked list of tree roots</p>
+            <p>• Points to tree with minimum key</p>
+          </div>
+          <div class="card">
+            <h3>Tree Property</h3>
+            <p class="highlight">Min-Heap Ordered</p>
+            <p>• Parent ≤ Children</p>
+            <p>• No fixed structure</p>
+          </div>
+          <div class="card">
+            <h3>Node Structure</h3>
+            <p class="dim">key, parent, child</p>
+            <p>• left, right (sibling list)</p>
+            <p>• degree, mark</p>
+          </div>
+          <div class="card">
+            <h3>Key Fields</h3>
+            <p class="highlight">n = total nodes</p>
+            <p>• min = pointer to min root</p>
+            <p>• degree(min) = number of children</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Node Structure Detail</h2>
+        <div class="code">struct FibonacciNode {
+  key          // priority value (comparable)
+  parent       // pointer to parent node
+  child        // pointer to any one child
+  left, right  // pointers for circular doubly-linked list
+  degree       // number of children
+  mark         // boolean: has this node lost a child since
+               // it became a child of its current parent?
+}</div>
+
+        <div class="formula">
+          <div class="label">Circular Doubly-Linked List:</div>
+          <div class="expr">node.left.right == node && node.right.left == node</div>
+          <div class="desc">Siblings form a circular doubly-linked list. The root list and each child list use this structure. This allows O(1) insertion, deletion, and concatenation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: STRUCTURE -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Visual Structure of Fibonacci Heap</h2>
+
+        <div class="tree-viz">
+          <strong>Fibonacci Heap Example (13 nodes):</strong><br>
+<pre>
+          Root List (circular doubly-linked list):
+     ┌───┐   ┌───┐   ┌───┐   ┌───┐
+  ←──┤ 3 ├───┤ 7 ├───┤ 1 ├───┤ 5 ├──→
+     └─┬─┘   └─┬─┘   └─┬─┘   └───┘
+       │       │       │
+     ┌─┴─┐   ┌┴┐     ┌┴───┐
+     │   │   │18│     │24  │
+    ┌┴┐  │   └──┘    ┌┴┐  ┌┴┐
+   │38│ ┌┴┐        │26│ │46│
+   └──┘ │39│       └──┘ └──┘
+        └──┘
+
+  min → pointer to node with key = 1
+  n = 13 (total nodes)
+</pre>
+          <strong>min = 1</strong> (pointed to by min pointer)
+        </div>
+
+        <div class="warning">
+          <strong>No Structural Constraints:</strong> Unlike binomial heaps, the trees can be different shapes. Node 3 has 2 children, node 7 has 1 child, node 5 has 2 children. There is no requirement that trees follow any particular pattern.
+        </div>
+
+        <div class="formula">
+          <div class="label">Key Property — Degree Bound:</div>
+          <div class="expr">degree(x) ≤ ⌊log_φ(n)⌋ where φ = (1+√5)/2 ≈ 1.618</div>
+          <div class="desc">The degree of any node is at most O(log n). This is proven using Fibonacci numbers, hence the name "Fibonacci heap." The mark field is crucial for maintaining this bound.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Node Fields Explained</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>key</h3>
+            <p>The priority value. Used for comparisons. Must support &lt;, ≤, = operations.</p>
+          </div>
+          <div class="card">
+            <h3>parent</h3>
+            <p>Pointer to parent. NIL for root nodes. Used during cascading cut.</p>
+          </div>
+          <div class="card">
+            <h3>child</h3>
+            <p>Pointer to any one child. Since children form a circular list, any child will do.</p>
+          </div>
+          <div class="card">
+            <h3>left / right</h3>
+            <p>Circular doubly-linked list pointers. Connect siblings in root list or child list.</p>
+          </div>
+          <div class="card">
+            <h3>degree</h3>
+            <p>Number of children. Updated during link operation. Used in consolidation.</p>
+          </div>
+          <div class="card">
+            <h3>mark</h3>
+            <p class="dim">Critical for amortized analysis!</p>
+            <p>True if node lost a child since becoming a child of current parent. Enables cascading cut.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: LAZY MERGE -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Lazy Merge Strategy</h2>
+        <p>The fundamental insight of Fibonacci heaps: <strong>defer work as long as possible</strong>. Merging is done by simply concatenating root lists — actual tree restructuring is deferred.</p>
+
+        <div class="formula">
+          <div class="label">Merge Operation:</div>
+          <div class="expr">MERGE(H₁, H₂): O(1) amortized</div>
+          <div class="desc">Just concatenate the two root lists. Update min pointer if needed. No tree restructuring!</div>
+        </div>
+
+        <div class="code">MERGE(H₁, H₂):
+  // Simply concatenate root lists — O(1)!
+  concatenate root list of H₁ with root list of H₂
+  if H₁.min == NIL or (H₂.min ≠ NIL and H₂.min.key < H₁.min.key)
+    H.min = H₂.min
+  H.n = H₁.n + H₂.n</div>
+
+        <div class="warning">
+          <strong>Why is this powerful?</strong> In binomial heaps, merge requires comparing and linking trees — O(log n). In Fibonacci heaps, merge is truly O(1) because we just splice two circular lists together. The actual "cleanup" (consolidation) is deferred to DELETE-MIN.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Lazy Operations Summary</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>INSERT — O(1)</h3>
+            <p>Create new node, add to root list. Update min if needed. No restructuring.</p>
+            <p class="highlight">→ Lazy: just add to root list</p>
+          </div>
+          <div class="card">
+            <h3>MERGE — O(1)</h3>
+            <p>Concatenate root lists. Update min pointer. No tree linking.</p>
+            <p class="highlight">→ Lazy: just splice lists</p>
+          </div>
+          <div class="card">
+            <h3>FIND-MIN — O(1)</h3>
+            <p>Return min pointer value. Always valid since min is maintained.</p>
+            <p class="highlight">→ Always O(1)</p>
+          </div>
+          <div class="card">
+            <h3>DECREASE-KEY — O(1)*</h3>
+            <p>Cut node from parent, add to root list. Mark parent. Cascading cut if needed.</p>
+            <p class="highlight">→ Cut + cascading cut</p>
+          </div>
+        </div>
+
+        <div class="amortized">
+          <h3 class="label">Amortized vs Actual Cost</h3>
+          <p>The key insight: INSERT and MERGE have O(1) actual cost. DECREASE-KEY has O(1) amortized cost. The expensive CONSOLIDATE is paid for by the cheap operations — this is the power of potential function analysis.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: OPERATIONS -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>INSERT Operation</h2>
+        <div class="code">INSERT(H, x):
+  x.degree = 0
+  x.parent = NIL
+  x.child = NIL
+  x.mark = FALSE
+  // Add x to root list — O(1)
+  add x to root list of H
+  if H.min == NIL or x.key < H.min.key
+    H.min = x
+  H.n = H.n + 1</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">INSERT: O(1) actual, O(1) amortized</div>
+          <div class="desc">Just create node and add to root list. No tree restructuring. The potential increases by 1 (one new tree), which is charged to the operation.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>FIND-MIN Operation</h2>
+        <div class="code">FIND-MIN(H):
+  return H.min</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">FIND-MIN: O(1) actual, O(1) amortized</div>
+          <div class="desc">The min pointer is always maintained. Simply return the pointer. This is one of the key advantages of Fibonacci heaps.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>UNION (Merge) Operation</h2>
+        <div class="code">UNION(H₁, H₂):
+  H = MAKE-FIB-HEAP()
+  // Concatenate root lists — O(1)
+  concatenate root list of H₁ with root list of H₂
+  if H₁.min == NIL or (H₂.min ≠ NIL and H₂.min.key < H₁.min.key)
+    H.min = H₁.min
+  else
+    H.min = H₂.min
+  H.n = H₁.n + H₂.n
+  return H</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">UNION: O(1) actual, O(1) amortized</div>
+          <div class="desc">Simply splice two circular doubly-linked lists. No tree restructuring. This is the key advantage over binomial heaps (O(log n)).</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>EXTRACT-MIN Operation</h2>
+        <p>The most complex operation — this is where consolidation happens.</p>
+        <div class="code">EXTRACT-MIN(H):
+  z = H.min
+  if z ≠ NIL:
+    // Add all children of z to root list
+    for each child x of z:
+      add x to root list of H
+      x.parent = NIL
+    // Remove z from root list
+    remove z from root list of H
+
+    if z == z.right:  // z was only node
+      H.min = NIL
+    else:
+      H.min = z.right  // temporary
+      CONSOLIDATE(H)   // THE KEY STEP
+    H.n = H.n - 1
+  return z</div>
+
+        <div class="warning">
+          <strong>CONSOLIDATE — The expensive step:</strong> After removing min, we must merge trees of the same degree. This is where the O(log n) work happens. We use an array A[0..D(H.n)] where D(n) = ⌊log_φ(n)⌋.
+        </div>
+
+        <div class="code">CONSOLIDATE(H):
+  let A[0..D(H.n)] be a new array, all entries NIL
+  for each node x in root list of H:
+    w = x
+    d = w.degree
+    while A[d] ≠ NIL:
+      y = A[d]         // another node with same degree
+      if w.key > y.key:
+        swap w and y   // w always has smaller key
+      LINK(y, w)       // make y a child of w
+      A[d] = NIL
+      d = d + 1
+    A[d] = w
+
+  // Rebuild root list from array A
+  H.min = NIL
+  for i = 0 to D(H.n):
+    if A[i] ≠ NIL:
+      add A[i] to root list of H
+      if H.min == NIL or A[i].key < H.min.key:
+        H.min = A[i]</div>
+
+        <div class="code">LINK(y, x):
+  // Make y a child of x
+  remove y from root list of H
+  make y a child of x
+  x.degree = x.degree + 1
+  y.mark = FALSE</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">EXTRACT-MIN: O(log n) amortized</div>
+          <div class="desc">Adding children to root list is O(log n) total. CONSOLIDATE processes each node once. The potential decreases, paying for the work. Actual cost can be O(n) but amortized is O(log n).</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>DECREASE-KEY Operation</h2>
+        <p>The operation that gives Fibonacci heaps their advantage over other priority queues.</p>
+        <div class="code">DECREASE-KEY(H, x, k):
+  if k > x.key:
+    error "new key is greater than current key"
+  x.key = k
+  y = x.parent
+  if y ≠ NIL and x.key < y.key:
+    CUT(H, x, y)
+    CASCADING-CUT(H, y)
+  if x.key < H.min.key:
+    H.min = x</div>
+
+        <div class="code">CUT(H, x, y):
+  remove x from child list of y
+  y.degree = y.degree - 1
+  add x to root list of H
+  x.parent = NIL
+  x.mark = FALSE</div>
+
+        <div class="code">CASCADING-CUT(H, y):
+  z = y.parent
+  if z ≠ NIL:
+    if y.mark == FALSE:
+      y.mark = TRUE    // first child lost
+    else:
+      CUT(H, y, z)     // second child lost → cut!
+      CASCADING-CUT(H, z)  // recurse up</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">DECREASE-KEY: O(1) amortized</div>
+          <div class="desc">The cut is O(1). Cascading cut may do multiple cuts, but each cut removes a marked node, reducing the potential by at least 1. The potential function accounts for all the work.</div>
+        </div>
+
+        <div class="warning">
+          <strong>The Mark Field is Critical:</strong> Without the mark field and cascading cut, a node could accumulate too many children, violating the degree bound. The mark ensures each node loses at most one child before being cut itself, keeping degrees at O(log n).
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>DELETE Operation</h2>
+        <div class="code">DELETE(H, x):
+  DECREASE-KEY(H, x, -∞)  // make it the minimum
+  EXTRACT-MIN(H)           // remove it</div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">DELETE: O(log n) amortized</div>
+          <div class="desc">Combine DECREASE-KEY (O(1) amortized) with EXTRACT-MIN (O(log n) amortized). The -∞ trick forces the node to the root, then it is extracted.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: COMPARISON -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Data Structure Comparison</h2>
+
+        <table>
+          <tr>
+            <th>Operation</th>
+            <th>Unsorted Linked List</th>
+            <th>Sorted Linked List</th>
+            <th>Binary Heap</th>
+            <th>Binomial Heap</th>
+            <th>Fibonacci Heap</th>
+          </tr>
+          <tr>
+            <td><strong>MAKE-HEAP</strong></td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+          </tr>
+          <tr>
+            <td><strong>INSERT</strong></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>O(lg n)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(1)*</strong></td>
+          </tr>
+          <tr>
+            <td><strong>FIND-MIN</strong></td>
+            <td>O(n)</td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(1)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>EXTRACT-MIN</strong></td>
+            <td>O(n)</td>
+            <td>O(1)</td>
+            <td>O(lg n)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(lg n)*</strong></td>
+          </tr>
+          <tr>
+            <td><strong>DECREASE-KEY</strong></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>O(lg n)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(1)*</strong></td>
+          </tr>
+          <tr>
+            <td><strong>DELETE</strong></td>
+            <td>O(n)</td>
+            <td>O(1)</td>
+            <td>O(lg n)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(lg n)*</strong></td>
+          </tr>
+          <tr>
+            <td><strong>MERGE</strong></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>O(n)</td>
+            <td>O(lg n)</td>
+            <td class="highlight"><strong>O(1)</strong></td>
+          </tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Legend:</div>
+          <div class="expr"><span class="star">*</span> = Amortized time</div>
+          <div class="desc">An asterisk (*) indicates amortized time — the average time per operation over a sequence of operations, not the worst-case for any single operation.</div>
+        </div>
+
+        <div class="warning">
+          <strong>The Key Advantage:</strong> Fibonacci heap is the ONLY structure that achieves O(1) for INSERT, FIND-MIN, DECREASE-KEY, and MERGE simultaneously (amortized). This makes it ideal for graph algorithms like Dijkstra and Prim's.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Amortized Time Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>O(1) Operations</h3>
+            <p class="highlight">INSERT*</p>
+            <p class="highlight">FIND-MIN</p>
+            <p class="highlight">DECREASE-KEY*</p>
+            <p class="highlight">MERGE</p>
+            <p class="dim">* = amortized</p>
+          </div>
+          <div class="card">
+            <h3>O(log n) Operations</h3>
+            <p class="highlight">EXTRACT-MIN*</p>
+            <p class="highlight">DELETE*</p>
+            <p class="dim">* = amortized</p>
+          </div>
+          <div class="card">
+            <h3>Space</h3>
+            <p class="highlight">O(n)</p>
+            <p>n = number of nodes</p>
+            <p>Each node: O(1) extra fields</p>
+          </div>
+          <div class="card">
+            <h3>Real-time?</h3>
+            <p class="dim">NO</p>
+            <p>Worst-case can be worse</p>
+            <p>EXTRACT-MIN worst: O(n)</p>
+            <p>Only guaranteed amortized</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>When to Use What?</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Use Binary Heap</h3>
+            <p>• Simple priority queue</p>
+            <p>• No decrease-key needed</p>
+            <p>• Cache-friendly (array)</p>
+            <p>• Small datasets</p>
+          </div>
+          <div class="card">
+            <h3>Use Binomial Heap</h3>
+            <p>• Need mergeable heaps</p>
+            <p>• Worst-case guarantees</p>
+            <p>• No amortization needed</p>
+          </div>
+          <div class="card">
+            <h3>Use Fibonacci Heap</h3>
+            <p class="highlight">• Many DECREASE-KEY ops</p>
+            <p class="highlight">• Graph algorithms (Dijkstra)</p>
+            <p class="highlight">• Need optimal asymptotic</p>
+            <p>• Large datasets</p>
+          </div>
+          <div class="card">
+            <h3>Avoid Fibonacci Heap</h3>
+            <p>• Small n (constant factors)</p>
+            <p>• Need real-time guarantees</p>
+            <p>• Memory overhead matters</p>
+            <p>• Simple implementation preferred</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: AMORTIZED ANALYSIS -->
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>Amortized Analysis — Potential Function</h2>
+        <p>Fibonacci heaps are analyzed using the <strong>potential method</strong> of amortized analysis. The potential function captures the "stored credit" from cheap operations.</p>
+
+        <div class="formula">
+          <div class="label">Potential Function Φ(H):</div>
+          <div class="expr">Φ(H) = t(H) + 2·m(H)</div>
+          <div class="desc">
+            where:<br>
+            • t(H) = number of trees in the root list<br>
+            • m(H) = number of marked nodes in the heap<br>
+            • Φ(H) ≥ 0 always (empty heap: Φ = 0)
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Critical Insight:</strong> The potential function is always non-negative. Each INSERT adds a tree (t increases by 1 → Φ increases by 1). Each cascading cut removes a marked node (m decreases → Φ decreases). The potential "pays" for expensive operations.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Amortized Cost Derivations</h2>
+
+        <div class="formula">
+          <div class="label">INSERT Amortized Cost:</div>
+          <div class="expr">â(INSERT) = 1 + ΔΦ = 1 + 1 = O(1)</div>
+          <div class="desc">Actual cost = 1 (add to root list). ΔΦ = +1 (new tree). Amortized = 1+1 = O(1).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">FIND-MIN Amortized Cost:</div>
+          <div class="expr">â(FIND-MIN) = 0 + ΔΦ = 0 + 0 = O(1)</div>
+          <div class="desc">Actual cost = 0 (just return pointer). ΔΦ = 0. Amortized = O(1).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">MERGE Amortized Cost:</div>
+          <div class="expr">â(MERGE) = 1 + ΔΦ = 1 + t₂ = O(1)*</div>
+          <div class="desc">Actual cost = 1 (splice lists). ΔΦ = t₂ (new trees from H₂). If we define MERGE's amortized cost as 1 + t₂, it's O(1) when t₂ is small. In practice, MERGE is O(1) because t₂ is bounded by the number of distinct degrees.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">EXTRACT-MIN Amortized Cost:</div>
+          <div class="expr">â(EXTRACT-MIN) = O(t + D(n)) + ΔΦ = O(log n)</div>
+          <div class="desc">Actual cost = O(t + D(n)) where t = trees before, D(n) = ⌊log_φ(n)⌋. After consolidation, we have at most D(n)+1 trees. ΔΦ = -t + D(n) + 1 - 2m' (potential decreases). Amortized = O(D(n)) = O(log n).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">DECREASE-KEY Amortized Cost:</div>
+          <div class="expr">â(DECREASE-KEY) = c + ΔΦ = O(1)</div>
+          <div class="desc">Actual cost c = 1 + number of cascading cuts. Each cascading cut removes one marked node. ΔΦ = 1 - 2·(number of cascading cuts). So â = c + 1 - 2c = 1 - c ≤ O(1). The potential "pays" for all the cuts!</div>
+        </div>
+
+        <div class="amortized">
+          <h3 class="label">The Magic of DECREASE-KEY</h3>
+          <p>When DECREASE-KEY does cascading cuts, it removes marked nodes. Each removed marked node decreases Φ by 2, but the cut costs only 1. So each cascading cut actually has a NET NEGATIVE amortized cost — it "earns" credit! This is why DECREASE-KEY can be O(1) amortized despite doing potentially many cuts.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Potential Summary Table</h2>
+        <table>
+          <tr>
+            <th>Operation</th>
+            <th>Actual Cost</th>
+            <th>ΔΦ</th>
+            <th>Amortized Cost</th>
+          </tr>
+          <tr>
+            <td>INSERT</td>
+            <td>O(1)</td>
+            <td>+1</td>
+            <td class="highlight">O(1)</td>
+          </tr>
+          <tr>
+            <td>FIND-MIN</td>
+            <td>O(1)</td>
+            <td>0</td>
+            <td class="highlight">O(1)</td>
+          </tr>
+          <tr>
+            <td>MERGE</td>
+            <td>O(1)</td>
+            <td>+t₂</td>
+            <td class="highlight">O(1)*</td>
+          </tr>
+          <tr>
+            <td>EXTRACT-MIN</td>
+            <td>O(t + D(n))</td>
+            <td>−t + D(n) + 1 − 2m'</td>
+            <td class="highlight">O(log n)</td>
+          </tr>
+          <tr>
+            <td>DECREASE-KEY</td>
+            <td>O(1 + c)</td>
+            <td>+1 − 2c</td>
+            <td class="highlight">O(1)</td>
+          </tr>
+        </table>
+        <p class="note">where t = number of trees, D(n) = ⌊log_φ(n⌋, c = number of cascading cuts, m' = marked nodes removed</p>
+      </div>
+    </div>
+
+    <!-- TAB 7: APPLICATIONS -->
+    <div class="content" id="tab7">
+      <div class="section">
+        <h2>Graph Algorithm Applications</h2>
+        <p>The primary motivation for Fibonacci heaps: optimizing graph algorithms that make many DECREASE-KEY calls.</p>
+
+        <div class="formula">
+          <div class="label">Dijkstra's Shortest Path:</div>
+          <div class="expr">With Fibonacci Heap: O(V lg V + E)</div>
+          <div class="desc">With Binary Heap: O((V + E) lg V). The improvement comes from DECREASE-KEY being O(1)* instead of O(lg n). For dense graphs where E ≈ V², this is a significant improvement.</div>
+        </div>
+
+        <div class="code">DIJKSTRA(G, w, s):
+  initialize single source(G, s)
+  S = ∅
+  Q = V[G]                    // Q is a Fibonacci heap
+  while Q ≠ ∅:
+    u = EXTRACT-MIN(Q)        // O(lg V)* amortized
+    S = S ∪ {u}
+    for each vertex v ∈ Adj[u]:
+      RELAX(u, v, w)          // calls DECREASE-KEY
+
+RELAX(u, v, w):
+  if d[v] > d[u] + w(u, v):
+    d[v] = d[u] + w(u, v)
+    π[v] = u
+    DECREASE-KEY(Q, v, d[v])  // O(1)* amortized!</div>
+
+        <div class="formula">
+          <div class="label">Prim's MST Algorithm:</div>
+          <div class="expr">With Fibonacci Heap: O(E + V lg V)</div>
+          <div class="desc">Same advantage as Dijkstra. Each edge may trigger a DECREASE-KEY. With binary heap: O(E lg V). With Fibonacci heap: O(E) for all DECREASE-KEY operations combined.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complexity Comparison: Graph Algorithms</h2>
+        <table>
+          <tr>
+            <th>Algorithm</th>
+            <th>Binary Heap</th>
+            <th>Binomial Heap</th>
+            <th>Fibonacci Heap</th>
+          </tr>
+          <tr>
+            <td><strong>Dijkstra</strong></td>
+            <td>O((V+E) lg V)</td>
+            <td>O((V+E) lg V)</td>
+            <td class="highlight"><strong>O(V lg V + E)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Prim</strong></td>
+            <td>O(E lg V)</td>
+            <td>O(E lg V)</td>
+            <td class="highlight"><strong>O(E + V lg V)</strong></td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>When does Fibonacci heap help?</strong>
+          <br>• Dense graphs: E ≈ V² → Dijkstra becomes O(V²) vs O(V² lg V) with binary heap
+          <br>• Sparse graphs: E ≈ V → Both are O(V lg V), no advantage
+          <br>• The advantage grows with the ratio E/V (edge density)
+        </div>
+
+        <div class="formula">
+          <div class="label">Why the Improvement?</div>
+          <div class="expr">Dijkstra: V × EXTRACT-MIN + E × DECREASE-KEY</div>
+          <div class="desc">
+            Binary Heap: V·O(lg V) + E·O(lg V) = O((V+E) lg V)<br>
+            Fibonacci: V·O(lg V)* + E·O(1)* = O(V lg V + E)<br>
+            The E × DECREASE-KEY term drops from O(E lg V) to O(E)!
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Other Applications</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Network Optimization</h3>
+            <p>• Minimum spanning tree</p>
+            <p>• Shortest path problems</p>
+            <p>• Maximum flow (some variants)</p>
+          </div>
+          <div class="card">
+            <h3>Greedy Algorithms</h3>
+            <p>• Activity selection with weights</p>
+            <p>• Job scheduling</p>
+            <p>• Any algorithm with many decrease-key calls</p>
+          </div>
+          <div class="card">
+            <h3>Theoretical Importance</h3>
+            <p>• Asymptotically optimal</p>
+            <p>• Demonstrates power of amortized analysis</p>
+            <p>• Lazy evaluation paradigm</p>
+          </div>
+          <div class="card">
+            <h3>Practical Note</h3>
+            <p class="dim">In practice, often slower</p>
+            <p>• Cache misses (pointer-based)</p>
+            <p>• Constant factors matter</p>
+            <p>• Binary heap often wins for moderate n</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 8: WORKED EXAMPLES -->
+    <div class="content" id="tab8">
+      <div class="section">
+        <h2>Worked Example 1: Insert and Extract-Min</h2>
+        <div class="example">
+          <div class="title">Step-by-step: Insert 3, 7, 1, 5 then EXTRACT-MIN</div>
+
+          <p><strong>Step 1: INSERT(3)</strong></p>
+<pre>
+Root list:  [3]   ← min = 3
+</pre>
+
+          <p><strong>Step 2: INSERT(7)</strong></p>
+<pre>
+Root list:  [3] ←→ [7]   ← min = 3
+</pre>
+
+          <p><strong>Step 3: INSERT(1)</strong></p>
+<pre>
+Root list:  [3] ←→ [7] ←→ [1]   ← min = 1
+</pre>
+
+          <p><strong>Step 4: INSERT(5)</strong></p>
+<pre>
+Root list:  [3] ←→ [7] ←→ [1] ←→ [5]   ← min = 1
+</pre>
+
+          <p><strong>Step 5: EXTRACT-MIN()</strong> — remove node 1</p>
+<pre>
+  Node 1 has no children → root list becomes [3] ←→ [7] ←→ [5]
+
+  CONSOLIDATE: process nodes by degree
+  - Node 3: degree 0 → A[0] = 3
+  - Node 7: degree 0 → A[0] occupied! LINK(7, 3)
+    → Node 3 now has child 7, degree 1 → A[1] = 3
+  - Node 5: degree 0 → A[0] = 5
+
+  After consolidation:
+  A[0] = [5], A[1] = [3]←[7]
+
+  Rebuild root list: [5] ←→ [3]←[7]   ← min = 5
+</pre>
+          <p><strong>Result:</strong> EXTRACT-MIN returns <span class="result">1</span>. Heap now has 3 nodes, min = 5.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Decrease-Key with Cascading Cut</h2>
+        <div class="example">
+          <div class="title">Step-by-step: Cascading cut scenario</div>
+
+          <p><strong>Initial Heap:</strong></p>
+<pre>
+         1 ← min
+        / \
+       3   2
+      / \   \
+     7   5   8
+    /
+   12
+</pre>
+
+          <p><strong>DECREASE-KEY(12, 0):</strong> — reduce key 12 to 0</p>
+<pre>
+  1. Node 12 has key 0 now. Parent is 7.
+     0 < 7 → CUT needed!
+
+  2. CUT: Remove 12 from children of 7
+     - 7.degree: 1 → 0
+     - Add 12 to root list
+     - 12.parent = NIL, 12.mark = FALSE
+
+  3. CASCADING-CUT on 7:
+     - 7.parent = 3 (not NIL)
+     - 7.mark = FALSE → set 7.mark = TRUE
+     - (No more cuts — first child lost)
+
+  Result:
+         1 ← min
+        / \   \
+       3   2   0  ← NEW ROOT (was 12)
+      / \   \
+     7   5   8
+    (mark = TRUE)
+</pre>
+
+          <p><strong>Now DECREASE-KEY(8, 4):</strong> — reduce key 8 to 4</p>
+<pre>
+  1. Node 8 has key 4. Parent is 2.
+     4 < 2? NO → no cut needed.
+
+  2. Check min: 4 > 1, no update to min.
+
+  Result: no change to structure
+</pre>
+
+          <p><strong>Now DECREASE-KEY(7, 0):</strong> — reduce key 7 to 0</p>
+<pre>
+  1. Node 7 has key 0. Parent is 3.
+     0 < 3 → CUT needed!
+
+  2. CUT: Remove 7 from children of 3
+     - 3.degree: 2 → 1
+     - Add 7 to root list
+     - 7.parent = NIL, 7.mark = FALSE (reset)
+
+  3. CASCADING-CUT on 3:
+     - 3.parent = 1 (not NIL)
+     - 3.mark = FALSE → set 3.mark = TRUE
+
+  4. Update min: 0 < 1 → min = 7 (key 0)
+
+  Result:
+         1
+        / \   \
+       3   2   0
+        \   \
+         5   8
+   (mark=TRUE)
+
+   Root list: [1] ←→ [0] ←→ [0]  ← min = 0
+</pre>
+
+          <p><strong>Key Observation:</strong> Cascading cut prevented node 3 from accumulating too many children. The mark field ensures each node loses at most one child before being cut itself.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: Full Dijkstra with Fibonacci Heap</h2>
+        <div class="example">
+          <div class="title">Dijkstra on a 4-vertex graph</div>
+
+<pre>
+Graph:
+    A ---4--- B
+    |       / |
+    2     1   7
+    |   /     |
+    C ---3--- D
+
+Edges: (A,B,4), (A,C,2), (B,C,1), (B,D,7), (C,D,3)
+Source: A
+</pre>
+
+          <p><strong>Initialize:</strong> d[A]=0, d[B]=∞, d[C]=∞, d[D]=∞</p>
+
+          <p><strong>Fibonacci Heap after init:</strong></p>
+<pre>
+Q = [(A,0)] ←→ [(B,∞)] ←→ [(C,∞)] ←→ [(D,∞)]
+min = A (key = 0)
+</pre>
+
+          <p><strong>Iteration 1: EXTRACT-MIN → A(0)</strong></p>
+<pre>
+  Relax edges from A:
+  - (A,B,4): d[B] = ∞ > 0+4 = 4 → d[B] = 4, DECREASE-KEY(B, 4)
+  - (A,C,2): d[C] = ∞ > 0+2 = 2 → d[C] = 2, DECREASE-KEY(C, 2)
+
+  Q = [(C,2)] ←→ [(B,4)] ←→ [(D,∞)]
+  min = C (key = 2)
+</pre>
+
+          <p><strong>Iteration 2: EXTRACT-MIN → C(2)</strong></p>
+<pre>
+  Relax edges from C:
+  - (C,B,1): d[B] = 4 > 2+1 = 3 → d[B] = 3, DECREASE-KEY(B, 3)
+  - (C,D,3): d[D] = ∞ > 2+3 = 5 → d[D] = 5, DECREASE-KEY(D, 5)
+
+  Q = [(B,3)] ←→ [(D,5)]
+  min = B (key = 3)
+</pre>
+
+          <p><strong>Iteration 3: EXTRACT-MIN → B(3)</strong></p>
+<pre>
+  Relax edges from B:
+  - (B,D,7): d[D] = 5 > 3+7 = 10 → NO UPDATE
+
+  Q = [(D,5)]
+  min = D (key = 5)
+</pre>
+
+          <p><strong>Iteration 4: EXTRACT-MIN → D(5)</strong></p>
+<pre>
+  No outgoing edges to relax.
+
+  Q = [] (empty)
+</pre>
+
+          <p><strong>Final distances:</strong></p>
+<pre>
+  d[A] = <span class="result">0</span>  (source)
+  d[B] = <span class="result">3</span>  (A→C→B)
+  d[C] = <span class="result">2</span>  (A→C)
+  d[D] = <span class="result">5</span>  (A→C→D)
+</pre>
+
+          <p><strong>Operation counts:</strong></p>
+<pre>
+  INSERT:       4 times → O(4) actual
+  EXTRACT-MIN:  4 times → O(4 lg 4)* amortized
+  DECREASE-KEY: 3 times → O(3) amortized
+
+  Total with Fibonacci: O(V lg V + E) = O(4 lg 4 + 5)
+  Total with Binary Heap: O((V+E) lg V) = O(9 lg 4)
+</pre>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: Consolidation Detail</h2>
+        <div class="example">
+          <div class="title">Full consolidation with 8 trees of degree 0</div>
+
+          <p><strong>Scenario:</strong> After removing min from a heap with 8 nodes all as separate trees (degree 0).</p>
+
+<pre>
+CONSOLIDATE with A[0..D(8)] where D(8) = ⌊log_φ(8)⌋ = ⌊4.09⌋ = 4
+
+Processing nodes (keys: 3, 7, 1, 5, 8, 12, 2, 9):
+
+Step 1: Node(3), d=0 → A[0] = 3
+  A = [3, _, _, _, _]
+
+Step 2: Node(7), d=0 → A[0] occupied!
+  LINK(7, 3): 7 becomes child of 3, degree=1
+  A[1] = 3, A[0] = _
+  A = [_, 3, _, _, _]
+
+Step 3: Node(1), d=0 → A[0] = 1
+  A = [1, 3, _, _, _]
+
+Step 4: Node(5), d=0 → A[0] occupied!
+  LINK(5, 1): 5 becomes child of 1, degree=1
+  A[1] occupied! LINK(1, 3): 1 becomes child of 3
+  A[2] = 3, A[1] = _, A[0] = _
+  A = [_, _, 3, _, _]
+
+Step 5: Node(8), d=0 → A[0] = 8
+  A = [8, _, 3, _, _]
+
+Step 6: Node(12), d=0 → A[0] occupied!
+  LINK(12, 8): 12 becomes child of 8, degree=1
+  A[1] = 8, A[0] = _
+  A = [_, 8, 3, _, _]
+
+Step 7: Node(2), d=0 → A[0] = 2
+  A = [2, 8, 3, _, _]
+
+Step 8: Node(9), d=0 → A[0] occupied!
+  LINK(9, 2): 9 becomes child of 2, degree=1
+  A[1] occupied! LINK(2, 8): 2 becomes child of 8
+  A[2] occupied! LINK(8, 3): 8 becomes child of 3
+  A[3] = 3, A[2] = _, A[1] = _, A[0] = _
+  A = [_, _, _, 3, _]
+
+FINAL: Only A[3] = 3 (single tree of degree 3)
+</pre>
+
+          <p><strong>Result:</strong> 8 trees of degree 0 consolidated into <span class="result">1 tree of degree 3</span></p>
+
+<pre>
+    3 ← min (key=3)
+   /|\
+  1  8  7
+ /|  |\
+5 12 2  9
+</pre>
+
+          <p>This demonstrates how consolidation reduces many small trees into fewer larger trees.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 9: QUICK REFERENCE -->
+    <div class="content" id="tab9">
+      <div class="quick-ref">
+        <h2>Fibonacci Heap — Quick Reference Card</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Definition</h3>
+            <p>Collection of min-heap-ordered trees</p>
+            <p>No structural constraints</p>
+            <p>Root list: circular doubly-linked list</p>
+            <p>min pointer → minimum root</p>
+          </div>
+          <div class="card">
+            <h3>Node Fields</h3>
+            <p>key, parent, child</p>
+            <p>left, right (sibling list)</p>
+            <p>degree (num children)</p>
+            <p>mark (lost child?)</p>
+          </div>
+          <div class="card">
+            <h3>Potential Function</h3>
+            <p class="highlight">Φ(H) = t(H) + 2·m(H)</p>
+            <p>t = # trees in root list</p>
+            <p>m = # marked nodes</p>
+            <p>Φ ≥ 0 always</p>
+          </div>
+          <div class="card">
+            <h3>Degree Bound</h3>
+            <p class="highlight">degree(x) ≤ ⌊log_φ(n)⌋</p>
+            <p>φ = (1+√5)/2 ≈ 1.618</p>
+            <p>Named after Fibonacci numbers</p>
+          </div>
+        </div>
+
+        <h3 style="color: #ff6600; margin: 15px 0 10px;">Amortized Complexities</h3>
+        <table>
+          <tr><th>Operation</th><th>Time</th><th>Key Insight</th></tr>
+          <tr><td>INSERT</td><td class="highlight">O(1)*</td><td>Add to root list, no restructuring</td></tr>
+          <tr><td>FIND-MIN</td><td class="highlight">O(1)</td><td>min pointer always valid</td></tr>
+          <tr><td>MERGE</td><td class="highlight">O(1)</td><td>Concatenate root lists</td></tr>
+          <tr><td>EXTRACT-MIN</td><td class="highlight">O(log n)*</td><td>Consolidate trees of same degree</td></tr>
+          <tr><td>DECREASE-KEY</td><td class="highlight">O(1)*</td><td>Cut + cascading cut</td></tr>
+          <tr><td>DELETE</td><td class="highlight">O(log n)*</td><td>Decrease-key + extract-min</td></tr>
+        </table>
+
+        <h3 style="color: #ff6600; margin: 15px 0 10px;">Pseudocode — All Operations</h3>
+        <div class="code">INSERT(H, x):
+  x.degree=0; x.parent=NIL; x.child=NIL; x.mark=FALSE
+  add x to root list of H
+  if H.min==NIL or x.key < H.min.key: H.min = x
+  H.n++
+
+FIND-MIN(H):
+  return H.min
+
+UNION(H₁, H₂):
+  concatenate root lists; update min; H.n = H₁.n + H₂.n
+
+EXTRACT-MIN(H):
+  z = H.min
+  add all children of z to root list
+  remove z from root list
+  CONSOLIDATE(H)
+  H.n--; return z
+
+CONSOLIDATE(H):
+  A[0..D(n)] = all NIL
+  for each x in root list:
+    w = x; d = w.degree
+    while A[d] ≠ NIL:
+      y = A[d]; if w.key > y.key: swap
+      LINK(y,w); A[d]=NIL; d++
+    A[d] = w
+  rebuild root list from A; update min
+
+LINK(y, x):
+  remove y from root list
+  make y child of x; x.degree++
+  y.mark = FALSE
+
+DECREASE-KEY(H, x, k):
+  x.key = k; y = x.parent
+  if y ≠ NIL and x.key < y.key:
+    CUT(H,x,y); CASCADING-CUT(H,y)
+  if x.key < H.min.key: H.min = x
+
+CUT(H, x, y):
+  remove x from y's children; y.degree--
+  add x to root list; x.parent=NIL; x.mark=FALSE
+
+CASCADING-CUT(H, y):
+  z = y.parent
+  if z ≠ NIL:
+    if y.mark == FALSE: y.mark = TRUE
+    else: CUT(H,y,z); CASCADING-CUT(H,z)
+
+DELETE(H, x):
+  DECREASE-KEY(H, x, -∞)
+  EXTRACT-MIN(H)</div>
+
+        <h3 style="color: #ff6600; margin: 15px 0 10px;">Key Formulas</h3>
+        <div class="grid">
+          <div class="formula">
+            <div class="label">Golden Ratio:</div>
+            <div class="expr">φ = (1+√5)/2 ≈ 1.618</div>
+          </div>
+          <div class="formula">
+            <div class="label">Degree Bound:</div>
+            <div class="expr">D(n) = ⌊log_φ(n)⌋</div>
+          </div>
+          <div class="formula">
+            <div class="label">Fibonacci Numbers:</div>
+            <div class="expr">F(k+2) = 1 + Σᵢ₌₀ᵏ F(i)</div>
+          </div>
+          <div class="formula">
+            <div class="label">Dijkstra Complexity:</div>
+            <div class="expr">O(V lg V + E)</div>
+          </div>
+        </div>
+
+        <h3 style="color: #ff6600; margin: 15px 0 10px;">Critical Warnings for Exam</h3>
+        <div class="warning">
+          <strong>1.</strong> Fibonacci heap is NOT a binomial heap. Trees have no fixed structure.<br>
+          <strong>2.</strong> O(1) for DECREASE-KEY is AMORTIZED, not worst-case.<br>
+          <strong>3.</strong> The mark field is essential — without it, degree bound fails.<br>
+          <strong>4.</strong> CONSOLIDATE is the expensive step in EXTRACT-MIN.<br>
+          <strong>5.</strong> Practical performance often worse than binary heap due to constants.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
