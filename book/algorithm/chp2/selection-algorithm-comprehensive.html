@@ -57,27 +57,51 @@
     <div class="content active" id="tab1">
       <div class="section">
         <h2>What is the Selection Problem?</h2>
-        <p>Given an array A of n elements, find the k-th smallest element (k-th order statistic).</p>
+        <p>The selection problem is one of the fundamental problems in computer science and algorithm design. Given an unsorted array A of n elements, your task is to find the k-th smallest element in that array. This element is also known as the k-th order statistic. The selection problem appears frequently in real-world applications such as finding the median salary, the top-k scores, or the 90th percentile in a dataset.</p>
         
         <div class="formula">
-          <div class="label">Problem Statement:</div>
+          <div class="label">Formal Problem Statement:</div>
           <div class="expr">Find the k-th minimum in array A[1..n]</div>
-          <div class="desc">k is the rank we're looking for (1 ≤ k ≤ n)</div>
+          <div class="desc">k is the rank we're looking for (1 ≤ k ≤ n). The k-th smallest element means there are exactly k-1 elements smaller than it and n-k elements larger than it in the array.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Concrete Example:</div>
+          <p>Consider the array A = [7, 10, 4, 3, 20, 15]. If k = 3, we want the 3rd smallest element. First, let's sort: [3, 4, 7, 10, 15, 20]. The 3rd smallest is 7. Notice that there are exactly 2 elements smaller than 7 (namely 3 and 4) and 3 elements larger than 7 (namely 10, 15, 20). This confirms that 7 is indeed the 3rd smallest element.</p>
         </div>
 
         <div class="grid">
           <div class="card">
             <h3>Special Cases</h3>
-            <p>• k = 1: Find minimum</p>
-            <p>• k = n: Find maximum</p>
-            <p>• k = ⌈n/2⌉: Find median</p>
+            <p>• k = 1: Find the minimum element in the array. This is the smallest element overall.</p>
+            <p>• k = n: Find the maximum element in the array. This is the largest element overall.</p>
+            <p>• k = ⌈n/2⌉: Find the median. This is the middle element that splits the array into two equal halves.</p>
+            <p>• k = ⌊n/4⌋: Find the lower quartile (25th percentile).</p>
+            <p>• k = ⌊3n/4⌋: Find the upper quartile (75th percentile).</p>
           </div>
           <div class="card">
-            <h3>Naive Approach</h3>
-            <p>• Sort the array first</p>
-            <p>• Return A[k]</p>
-            <p>Time: <span class="dim">O(n lg n)</span></p>
+            <h3>Naive Approach (Sorting)</h3>
+            <p>• Sort the entire array using any comparison-based sorting algorithm (e.g., merge sort, quicksort, heap sort).</p>
+            <p>• Return the element at position A[k] in the sorted array.</p>
+            <p>Time: <span class="dim">O(n lg n)</span> — this is dominated by the sorting step.</p>
+            <p>Space: <span class="dim">O(n)</span> if using merge sort, or <span class="dim">O(1)</span> if in-place like heapsort.</p>
+            <p><strong>Problem:</strong> We're doing much more work than necessary. We only need ONE element, but sorting computes ALL order information.</p>
           </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Why Not Just Sort?</div>
+          <p>Sorting the entire array to find one element is like reading an entire encyclopedia to answer one question. While it works, it's wasteful. The sorting approach costs O(n lg n) time, but we can do much better. The goal of the selection problem is to find the k-th smallest element WITHOUT fully sorting the array, ideally in linear O(n) time. The Select algorithm achieves exactly this — it finds the k-th smallest element in guaranteed Θ(n) time, which is optimal for comparison-based selection.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Applications of Selection</div>
+          <p>• <strong>Finding the median:</strong> Used in statistics, robust estimation, and as a pivot in quickselect.</p>
+          <p>• <strong>Order statistics:</strong> Finding the 90th percentile of test scores, the top-10% of earners, etc.</p>
+          <p>• <strong>Divide-and-conquer algorithms:</strong> Many algorithms need the median to partition data evenly.</p>
+          <p>• <strong>Computational geometry:</strong> Finding the median x-coordinate to split point sets.</p>
+          <p>• <strong>Load balancing:</strong> Finding the median task length to balance workloads.</p>
+          <p>• <strong>Network routing:</strong> Selecting median latency for routing decisions.</p>
         </div>
       </div>
     </div>
@@ -85,34 +109,70 @@
     <!-- Tab 2: Select Algorithm -->
     <div class="content" id="tab2">
       <div class="section">
-        <h2>The Select Algorithm</h2>
-        <p>A divide-and-conquer algorithm that finds the k-th smallest element in Θ(n) time.</p>
+        <h2>The Select Algorithm — Detailed Explanation</h2>
+        <p>The Select algorithm is a clever divide-and-conquer algorithm that finds the k-th smallest element in an unsorted array in guaranteed Θ(n) linear time. It was designed by Blum, Floyd, Pratt, Rivest, and Tarjan in 1973. The key idea is to use a "median of medians" pivot selection strategy that guarantees the pivot is reasonably close to the true median, ensuring that the recursion makes sufficient progress on every call.</p>
+
+        <div class="example">
+          <div class="title">High-Level Strategy:</div>
+          <p>The algorithm works by selecting a "good" pivot element, partitioning the array around that pivot, and then recursively searching only one side of the partition. The genius of the algorithm is in how it chooses the pivot: it uses the "median of medians" technique to guarantee that the pivot is always in the middle 30% of the array (between ranks 3n/10 and 7n/10), which ensures that each recursive call reduces the problem size by at least a constant fraction.</p>
+        </div>
 
         <div class="code">
           sel(A[L..u], k)<br>
           {<br>
-          &nbsp;&nbsp;n = u - L + 1;<br>
-          &nbsp;&nbsp;if (n ≤ 25) use brute force!<br>
+          &nbsp;&nbsp;n = u - L + 1;                    // Compute array size<br>
+          &nbsp;&nbsp;if (n ≤ 25) use brute force!       // Base case: sort and return A[L+k-1]<br>
           &nbsp;&nbsp;else {<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;m = ⌈n/5⌉; B[1..m]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;m = ⌈n/5⌉; B[1..m]              // m = number of groups of 5<br>
           &nbsp;&nbsp;&nbsp;&nbsp;/* Step 1: Find medians of groups of 5 */<br>
           &nbsp;&nbsp;&nbsp;&nbsp;for (i = 1 to m)<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B[i] = sel(A[5i-4 .. 5i], 3);<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;B[i] = sel(A[5i-4 .. 5i], 3); // Find median of i-th group<br>
           &nbsp;&nbsp;&nbsp;&nbsp;/* Step 2: Find median of medians */<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;x = sel(B[1..m], ⌈m/2⌉);<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;x = sel(B[1..m], ⌈m/2⌉);       // Recursively find median of B<br>
           &nbsp;&nbsp;&nbsp;&nbsp;/* Step 3: Partition around x */<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;j = partition(A[L..u], x);<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;i = j - L + 1;<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;j = partition(A[L..u], x);      // Partition array around pivot x<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;i = j - L + 1;                  // i = rank of pivot x<br>
           &nbsp;&nbsp;&nbsp;&nbsp;/* Step 4: Check position and recurse */<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;if (k == i) return A[j];<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;else if (k < i) return sel(A[L..j-1], k);<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;else return sel(A[j+1..u], k-i);<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;if (k == i) return A[j];        // x is the k-th smallest<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;else if (k < i) return sel(A[L..j-1], k);   // k-th is in left part<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;else return sel(A[j+1..u], k-i);             // k-th is in right part<br>
           &nbsp;&nbsp;}<br>
           }
         </div>
 
+        <div class="example">
+          <div class="title">Step-by-Step Breakdown:</div>
+          <p><strong>Step 1 — Divide into groups of 5:</strong> The array A[L..u] of size n is divided into ⌈n/5⌉ groups, each containing exactly 5 elements (except possibly the last group which may have fewer). For each group, we find its median using any method (even brute-force sorting of 5 elements takes constant time Θ(1)). We store all these medians in a new array B[1..m] where m = ⌈n/5⌉.</p>
+          <p><strong>Step 2 — Find median of medians:</strong> We recursively call sel(B[1..m], ⌈m/2⌉) to find the median of the medians array B. This gives us a pivot element x. The crucial property is that x is guaranteed to be between ranks 3n/10 and 7n/10 in the original array.</p>
+          <p><strong>Step 3 — Partition around pivot x:</strong> We partition the original array A around x using a standard partition procedure (similar to quicksort's partition). After partitioning, all elements to the left of x are ≤ x, and all elements to the right are > x. Let j be the final position of x in the array.</p>
+          <p><strong>Step 4 — Recurse on the correct side:</strong> We compute i = j - L + 1, which is the rank of x in the current subarray. If k == i, then x is our answer. If k < i, we recurse on the left subarray A[L..j-1] looking for the k-th smallest. If k > i, we recurse on the right subarray A[j+1..u] looking for the (k-i)-th smallest (since i elements are to the left of x).</p>
+        </div>
+
         <div class="warning">
-          <strong>Key Insight:</strong> The threshold of 25 is used because for small n, brute force is more efficient. The constant factors in the recursive algorithm make it impractical for small arrays.
+          <strong>Key Insight — Why groups of 5?</strong> The choice of group size 5 is NOT arbitrary. Groups of 5 are the smallest odd group size that guarantees linear time. Groups of 3 yield Θ(n lg n) (no better than sorting), while groups of 5 yield Θ(n). Any group size ≥ 5 works, but 5 gives the smallest constants. The critical property: with groups of 5, at least 3n/10 elements are guaranteed to be ≤ the median of medians, ensuring the larger partition is at most 7n/10, which gives the recurrence T(n) = T(n/5) + T(7n/10) + Θ(n) with solution Θ(n).
+        </div>
+
+        <div class="warning">
+          <strong>Why threshold 25 for brute force?</strong> For very small arrays (n ≤ 25), the overhead of the recursive algorithm (partitioning, finding medians, etc.) is actually MORE expensive than just sorting the array and picking the k-th element. The constant factors in the recursive calls (function call overhead, partitioning passes) make brute force more efficient for small n. The threshold 25 is a practical choice — some implementations use 15 or 50. The key point is that the base case handles small inputs directly.
+        </div>
+
+        <div class="example">
+          <div class="title">The Partition Procedure (Lomuto or Hoare):</div>
+          <p>The partition procedure rearranges array elements around a pivot x. After partitioning:</p>
+          <p>• All elements in positions L to j-1 are ≤ x (less than or equal to the pivot)</p>
+          <p>• Element at position j equals x (the pivot is placed here)</p>
+          <p>• All elements in positions j+1 to u are > x (greater than the pivot)</p>
+          <p>• j is the final rank of x in the current subarray</p>
+          <p>Partition takes Θ(n) time — just one pass through the array. This is the same partition used in quicksort. The partition is stable if using Lomuto's scheme, and in-place (no extra array needed).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Why Does This Algorithm Work?</div>
+          <p>The algorithm works because of the "progress guarantee" — at every level of recursion, the problem size decreases by a constant fraction. Specifically:</p>
+          <p>• The median of medians step (T(n/5)) ensures we find a good pivot in time proportional to n/5.</p>
+          <p>• The good pivot guarantees that at least 3n/10 elements are on each side, so the larger recursive call is at most T(7n/10).</p>
+          <p>• Since 1/5 + 7/10 = 9/10 < 1, the total work decreases geometrically, giving Θ(n) overall.</p>
+          <p>• Without the median of medians pivot selection, we could get unlucky and always pick the worst pivot, leading to O(n²) like naive quickselect.</p>
         </div>
       </div>
     </div>
@@ -120,66 +180,78 @@
     <!-- Tab 3: Median of Medians -->
     <div class="content" id="tab3">
       <div class="section">
-        <h2>Median of Medians Analysis</h2>
+        <h2>Median of Medians — Deep Dive Analysis</h2>
+        <p>The "median of medians" is the heart of the Select algorithm. This technique guarantees that the pivot we choose is always a "good" pivot — one that falls in the middle 30% of the array. Understanding why this works requires careful analysis of each step and how the bounds propagate through the array.</p>
         
         <h3>Step 1: Divide into groups of 5</h3>
-        <p>Array A is divided into ⌈n/5⌉ groups, each containing 5 elements (except possibly the last).</p>
-        <p>Time: Θ(n) - we simply scan through the array</p>
+        <p>Array A of size n is divided into ⌈n/5⌉ groups, each containing exactly 5 elements (except possibly the last group which may have fewer than 5 elements). This step is straightforward — we simply walk through the array and group consecutive elements. No sorting or comparison is needed here, just the grouping. Time: Θ(n) — we scan through the array exactly once, assigning each element to a group.</p>
+        <p>For example, if n = 17, we get ⌈17/5⌉ = 4 groups: [A[1..5]], [A[6..10]], [A[11..15]], [A[16..17]] (the last group has only 2 elements).</p>
 
         <h3>Step 2: Find median of each group</h3>
-        <p>For each group of 5, find the median using any method (sorting 5 elements takes Θ(1)).</p>
-        <p>Store medians in array B[1..m] where m = ⌈n/5⌉</p>
+        <p>For each group of 5 elements, we find the median (the 3rd smallest element). We can do this by sorting each group and picking the middle element. Since each group has at most 5 elements, sorting takes Θ(1) constant time per group. There are ⌈n/5⌉ groups, so the total time for this step is Θ(n/5) = Θ(n). We store all these medians in a new array B[1..m] where m = ⌈n/5⌉.</p>
+        <p>Why is finding the median of 5 elements constant time? Because 5 is a fixed constant — the number of comparisons needed to sort 5 elements is at most 7 (using an optimal sorting network). This doesn't depend on n, so it's Θ(1) per group.</p>
 
         <h3>Step 3: Recursively find median of B</h3>
-        <p>Call sel(B[1..m], ⌈m/2⌉) to find the median of medians, call it x.</p>
+        <p>We now have an array B of m = ⌈n/5⌉ medians. We recursively call sel(B[1..m], ⌈m/2⌉) to find the median of these medians. Let's call this element x. The time for this step is T(⌈n/5⌉) — a recursive call on a problem of size n/5. This is the "median of medians" — the element x that will serve as our pivot.</p>
 
         <div class="formula">
-          <div class="label">Recurrence for Step 2:</div>
+          <div class="label">Recurrence for Steps 1-3:</div>
           <div class="expr">T(n/5)</div>
-          <div class="desc">Finding median of ⌈n/5⌉ medians</div>
+          <div class="desc">Finding the median of ⌈n/5⌉ medians requires a recursive call on a problem of size n/5. This is the "cost of choosing a good pivot."</div>
         </div>
 
-        <h3>Step 4: Partition and recurse</h3>
-        <p>The median of medians x guarantees that at least 3n/10 elements are ≤ x and at least 3n/10 elements are ≥ x.</p>
+        <h3>Step 4: Partition and recurse on the correct side</h3>
+        <p>Now we partition the original array A around the pivot x. After partitioning, we know exactly where x sits in the array. The crucial question is: how large can the larger side be? This is where the 3n/10 bound comes in — the median of medians guarantees that at least 3n/10 elements are ≤ x and at least 3n/10 elements are ≥ x. Therefore, the larger side has at most 7n/10 elements.</p>
 
         <div class="formula">
           <div class="label">Worst case for Step 4:</div>
-          <div class="expr">T(7n/10)</div>
-          <div class="desc">At most 7n/10 elements on one side of x</div>
+          <div class="expr">T(7n/10 + 6)</div>
+          <div class="desc">At most 7n/10 + 6 elements on one side of x. The +6 accounts for edge cases: the last group (may have <5 elements) and the group containing x itself. These edge cases can reduce the guaranteed bound by at most 6 elements.</div>
         </div>
 
         <div class="formula">
           <div class="label">Precise Recurrence (with boundary constants):</div>
           <div class="expr">T(n) = T(⌈n/5⌉) + T(7n/10 + 6) + Θ(n)</div>
-          <div class="desc">The +6 accounts for the last group (may have &lt;5 elements) and the group containing x, excluding at most 2 groups from the count.</div>
+          <div class="desc">The total recurrence includes: T(n/5) for finding the median of medians, T(7n/10 + 6) for recursing on the larger partition side, and Θ(n) for the partitioning step and the group median computations.</div>
         </div>
 
-        <h3>Detailed 3n/10 Bound Derivation</h3>
-        <p>Let's prove at least <span class="dim">3n/10</span> elements are ≤ x (the median of medians):</p>
+        <h3>Detailed 3n/10 Bound Derivation — Why At Least 3n/10 Elements ≤ x</h3>
+        <p>This is the most critical part of the analysis. We need to prove that the median of medians x guarantees at least 3n/10 elements are ≤ x (and by symmetry, at least 3n/10 are ≥ x). This ensures that x is in the "middle 30%" of the array.</p>
         <div class="example">
-          <div class="title">Step-by-step bound proof:</div>
-          <p><strong>1.</strong> There are ⌈n/5⌉ groups → ⌈n/5⌉ medians in array B.</p>
-          <p><strong>2.</strong> x = sel(B[1..m], ⌈m/2⌉) → x is the median of B → at least ⌈m/2⌉ = ⌈⌈n/5⌉/2⌉ = ⌈n/10⌉ medians are ≤ x.</p>
-          <p><strong>3.</strong> Each median is the 3rd smallest in its group of 5 → there are 2 elements in each such group that are ≤ that median (hence ≤ x).</p>
-          <p><strong>4.</strong> Total elements ≤ x ≥ 3 × ⌈n/10⌉ ≥ 3n/10.</p>
-          <p><strong>5.</strong> By symmetry, at least 3n/10 elements are ≥ x.</p>
-          <p><strong>6.</strong> Therefore x has rank between 3n/10 and 7n/10 → the larger side has at most 7n/10 elements.</p>
+          <div class="title">Step-by-Step Bound Proof:</div>
+          <p><strong>Step A — Count the medians:</strong> There are m = ⌈n/5⌉ groups, each producing one median. So there are ⌈n/5⌉ medians in array B.</p>
+          <p><strong>Step B — Median of medians property:</strong> x = sel(B[1..m], ⌈m/2⌉) is the median of B. By definition of median, at least ⌈m/2⌉ medians in B are ≤ x. Since m = ⌈n/5⌉, we have ⌈m/2⌉ = ⌈⌈n/5⌉/2⌉ = ⌈n/10⌉. So at least ⌈n/10⌉ medians are ≤ x.</p>
+          <p><strong>Step C — Each median contributes 3 elements:</strong> For each median that is ≤ x, that median is the 3rd smallest in its group of 5. In its group, there are exactly 2 elements smaller than or equal to it (the 1st and 2nd smallest in the group). So each such group contributes at least 3 elements ≤ x: the 2 elements smaller than the median, plus the median itself.</p>
+          <p><strong>Step D — Total count:</strong> Total elements ≤ x ≥ 3 × ⌈n/10⌉ ≥ 3n/10. This is because ⌈n/10⌉ ≥ n/10, so 3 × n/10 = 3n/10.</p>
+          <p><strong>Step E — Symmetry argument:</strong> By the same logic applied to the "greater than" side, at least 3n/10 elements are ≥ x. (The median of medians is also the "median of medians from the top" — if we flip the comparison, the same bound holds.)</p>
+          <p><strong>Step F — Final conclusion:</strong> Since at least 3n/10 elements are ≤ x and at least 3n/10 are ≥ x, the rank of x is between 3n/10 and n - 3n/10 + 1 = 7n/10 + 1. Therefore, the larger recursive side has at most n - 3n/10 = 7n/10 elements.</p>
         </div>
 
         <h3>Precise Bound (with group edge cases)</h3>
         <p>For a tighter analysis considering edge cases (the last group may have fewer than 5 elements, and one group contains x itself):</p>
         <div class="example">
-          <div class="title">Refined counting:</div>
-          <p>• ⌈n/5⌉ medians are found in Step 1.</p>
-          <p>• Excluding the last group (possible deficit) and the group containing x → at least ⌈n/10⌉ − 2 groups contribute fully.</p>
-          <p>• In each such group, 3 elements are ≤ x (the median + 2 smaller elements).</p>
-          <p>• So at least 3(⌈n/10⌉ − 2) ≥ 3n/10 − 6 elements are ≤ x.</p>
+          <div class="title">Refined Counting:</div>
+          <p>• There are ⌈n/5⌉ medians found in Step 1.</p>
+          <p>• Excluding the last group (which may have a deficit — fewer than 5 elements) and the group containing x (which is handled separately since x is the pivot) → at least ⌈n/10⌉ − 2 groups contribute fully.</p>
+          <p>• In each such group, 3 elements are ≤ x (the median + 2 smaller elements in the group).</p>
+          <p>• So at least 3(⌈n/10⌉ − 2) ≥ 3n/10 − 6 elements are guaranteed to be ≤ x.</p>
           <p>• Hence at most n − (3n/10 − 6) = 7n/10 + 6 elements are on the larger side.</p>
           <p>• This yields the recurrence: <span class="result">T(n) = T(⌈n/5⌉) + T(7n/10 + 6) + Θ(n)</span></p>
         </div>
 
         <div class="warning">
-          <strong>Key Point:</strong> The bound 3n/10 comes from: ⌈n/10⌉ medians ≤ x, each contributes 3 elements (median + 2 smaller) → 3⌈n/10⌉ ≥ 3n/10.
+          <strong>Key Point — The 3n/10 Bound is the Magic:</strong> The bound 3n/10 comes from this chain of reasoning: ⌈n/10⌉ medians ≤ x → each contributes 3 elements (median + 2 smaller) → 3⌈n/10⌉ ≥ 3n/10. This is the MINIMUM guarantee. In practice, the bound is often better, but the worst-case guarantee of 3n/10 is what makes the algorithm work. Without this guarantee, the algorithm could degrade to O(n²).
+        </div>
+
+        <div class="example">
+          <div class="title">Visual Intuition:</div>
+          <p>Imagine the array divided into columns of 5:</p>
+          <p>Group 1: [a1, a2, a3, a4, a5] — median is a3 (rank 3 in group)</p>
+          <p>Group 2: [b1, b2, b3, b4, b5] — median is b3</p>
+          <p>Group 3: [c1, c2, c3, c4, c5] — median is c3</p>
+          <p>... and so on.</p>
+          <p>When x = median of medians, at least half the group medians (a3, b3, c3, ...) are ≤ x. For each such group, at least 3 elements (the median + the 2 smaller ones) are ≤ x. So if we have ⌈n/10⌉ such groups, we get at least 3⌈n/10⌉ ≥ 3n/10 elements ≤ x.</p>
+          <p>This is like having a grid where x is the "king" and we can guarantee at least 30% of the grid is "below" x.</p>
         </div>
       </div>
     </div>
@@ -187,65 +259,76 @@
     <!-- Tab 4: Examples -->
     <div class="content" id="tab4">
       <div class="section">
-        <h2>Worked Examples</h2>
+        <h2>Worked Examples — Detailed Step-by-Step Traces</h2>
+        <p>These examples trace through the Select algorithm step by step, showing exactly how the median of medians pivot selection works, how partitioning proceeds, and how the recursion narrows down to the answer. Understanding these traces is essential for exam preparation.</p>
 
         <div class="example">
           <div class="title">Example 1: Find 3rd smallest in A = [19, 5, 1, 11, 15, 26, 59, 61, 48, 37]</div>
-          <p>n = 10, k = 3</p>
-          <p>Groups of 5: [19, 5, 1, 11, 15] and [26, 59, 61, 48, 37]</p>
-          <p>Medians: 11 and 48 → B = [11, 48]</p>
-          <p>Median of medians: x = 11</p>
-          <p>Partition around 11: [5, 1, 11, 19, 15, 26, 59, 61, 48, 37]</p>
-          <p>j = 3 (11 is at position 3)</p>
-          <p>Since k = j = 3, return A[3] = <span class="result">11</span></p>
+          <p>n = 10, k = 3. We want the 3rd smallest element.</p>
+          <p><strong>Step 1 — Divide into groups of 5:</strong> Group 1: [19, 5, 1, 11, 15]. Group 2: [26, 59, 61, 48, 37]. We have ⌈10/5⌉ = 2 groups.</p>
+          <p><strong>Step 2 — Find median of each group:</strong> Sort Group 1: [1, 5, 11, 15, 19] → median = 11 (3rd element). Sort Group 2: [26, 37, 48, 59, 61] → median = 48 (3rd element). So B = [11, 48].</p>
+          <p><strong>Step 3 — Find median of medians:</strong> sel(B[1..2], ⌈2/2⌉) = sel([11, 48], 1) → the 1st smallest of [11, 48] is 11. So x = 11 is our pivot.</p>
+          <p><strong>Step 4 — Partition around 11:</strong> We rearrange A so all elements ≤ 11 come first, then 11, then elements > 11. After partition: [5, 1, 11, 19, 15, 26, 59, 61, 48, 37]. The pivot 11 is at position j = 3 (1-indexed).</p>
+          <p><strong>Step 5 — Check rank:</strong> i = j - L + 1 = 3 - 1 + 1 = 3. Since k = 3 = i, the pivot 11 IS the 3rd smallest element. We return <span class="result">11</span>.</p>
+          <p><strong>Why this worked:</strong> The median of medians (11) happened to be exactly the element we were looking for. In general, we might need to recurse, but the good pivot guaranteed that even if we needed to recurse, we'd only recurse on at most 7n/10 = 7 elements.</p>
         </div>
 
         <div class="example">
           <div class="title">Example 2: Find 5th smallest in A = [3, 1, 4, 1, 5, 9, 2, 6]</div>
-          <p>n = 8, k = 5</p>
-          <p>Groups of 5: [3, 1, 4, 1, 5] and [9, 2, 6]</p>
-          <p>Medians: 3 and 6 → B = [3, 6]</p>
-          <p>Median of medians: x = 3</p>
-          <p>Partition around 3: [1, 1, 2, 3, 4, 5, 9, 6]</p>
-          <p>j = 4 (3 is at position 4)</p>
-          <p>k > j, so recurse on right: sel([4, 5, 9, 6], 5-4) = sel([4, 5, 9, 6], 1)</p>
-          <p>Result: <span class="result">4</span></p>
+          <p>n = 8, k = 5. We want the 5th smallest element.</p>
+          <p><strong>Step 1 — Divide into groups of 5:</strong> Group 1: [3, 1, 4, 1, 5]. Group 2: [9, 2, 6] (only 3 elements). We have ⌈8/5⌉ = 2 groups.</p>
+          <p><strong>Step 2 — Find median of each group:</strong> Sort Group 1: [1, 1, 3, 4, 5] → median = 3. Sort Group 2: [2, 6, 9] → median = 6 (middle of 3). So B = [3, 6].</p>
+          <p><strong>Step 3 — Find median of medians:</strong> sel(B[1..2], ⌈2/2⌉) = sel([3, 6], 1) → the 1st smallest of [3, 6] is 3. So x = 3 is our pivot.</p>
+          <p><strong>Step 4 — Partition around 3:</strong> After partition: [1, 1, 2, 3, 4, 5, 9, 6]. The pivot 3 is at position j = 4 (1-indexed).</p>
+          <p><strong>Step 5 — Check rank:</strong> i = j - L + 1 = 4 - 1 + 1 = 4. Since k = 5 > i = 4, we need the 5th smallest but the pivot is only the 4th smallest. So we recurse on the RIGHT side: sel(A[5..8], k - i) = sel([4, 5, 9, 6], 5 - 4) = sel([4, 5, 9, 6], 1).</p>
+          <p><strong>Recursive call — sel([4, 5, 9, 6], 1):</strong> Find the 1st smallest (minimum) in [4, 5, 9, 6]. n = 4 ≤ 25, so use brute force. Minimum = 4. Return <span class="result">4</span>.</p>
+          <p><strong>Why we recursed right:</strong> After partitioning around 3, we knew that 3 was the 4th smallest. Since we wanted the 5th smallest, it must be somewhere to the right of 3. The offset k - i = 5 - 4 = 1 accounts for the 4 elements we've already "used up" (the 4 elements ≤ 3).</p>
         </div>
 
         <div class="example">
-          <div class="title">Example 3: Find minimum (k=1)</div>
-          <p>For k=1, we can use the same algorithm or simply scan the array.</p>
-          <p>Minimum comparisons needed: n - 1</p>
-          <p>This is optimal - every element except one must be compared.</p>
+          <div class="title">Example 3: Find minimum (k=1) — Special Case</div>
+          <p>For k = 1, we want the smallest element. While the general Select algorithm works, there's a simpler optimal approach.</p>
+          <p><strong>Simple approach:</strong> Scan through the array once, keeping track of the minimum seen so far. This requires exactly n - 1 comparisons.</p>
+          <p><strong>Why n - 1 is optimal:</strong> Every element except one must be compared at least once. If any element is never compared, we cannot determine whether it's the minimum or not. So n - 1 is a lower bound, and the simple scan achieves it.</p>
+          <p><strong>Select algorithm for k=1:</strong> The Select algorithm also works, but is overkill. It would still find the minimum in Θ(n) time, but with higher constant factors due to the median of medians overhead. For k = 1 or k = n, simple scanning is preferred in practice.</p>
+          <p><strong>Key insight:</strong> The selection problem is trivially solvable in Θ(n) for k = 1 and k = n (just scan). The challenge is for general k, especially k = ⌈n/2⌉ (the median), where the Select algorithm shines.</p>
         </div>
 
         <div class="example">
           <div class="title">Example 4: Find median of [7, 10, 4, 3, 20, 15]</div>
-          <p>n = 6, k = 3 (or 4 for upper median)</p>
-          <p>Sorted: [3, 4, 7, 10, 15, 20]</p>
-          <p>Median = (7 + 10)/2 = 8.5</p>
-          <p>For lower median (k=3): <span class="result">7</span></p>
+          <p>n = 6, k = 3 (lower median) or k = 4 (upper median). For even n, there are two medians.</p>
+          <p><strong>Sorted array:</strong> [3, 4, 7, 10, 15, 20]. The two middle elements are 7 and 10.</p>
+          <p><strong>Lower median (k=3):</strong> The 3rd smallest = <span class="result">7</span>. This is the element at position ⌊n/2⌋ = 3 in the sorted array.</p>
+          <p><strong>Upper median (k=4):</strong> The 4th smallest = <span class="result">10</span>. This is the element at position ⌈n/2⌉ = 4 in the sorted array.</p>
+          <p><strong>Average median:</strong> Sometimes "median" for even n is defined as the average of the two middle elements: (7 + 10)/2 = 8.5. But for selection algorithms, we typically return one of the two middle elements, not their average.</p>
+          <p><strong>Select algorithm trace for k=3:</strong> Groups of 5: [7, 10, 4, 3, 20] → median = 7, [15] → median = 15. B = [7, 15]. Median of medians: sel([7, 15], 1) = 7. Partition around 7: [4, 3, 7, 10, 20, 15]. j = 3, i = 3 = k → return 7.</p>
         </div>
 
         <div class="example">
-          <div class="title">Example 5: Partition with pivot = 26 — A = [26, 5, 37, 1, 61, 11, 59, 15, 48, 19]</div>
-          <p>n = 10. Pivot = A[1] = 26, j = 1 initially.</p>
-          <p>i scans from 2 to 10, stopping on elements smaller than 26: 5 (i=2), 1 (i=4), 11 (i=6), 15 (i=8), 19 (i=10).</p>
-          <p>Each time i stops, j increments and swap(A[i], A[j]) is executed.</p>
-          <p>After loop: swap(A[1], A[6]) → pivot placed at position 6.</p>
-          <p>Result: <span class="result">[19, 5, 1, 11, 15, 26, 59, 61, 48, 37]</span> — pivot=26 is the 6th smallest.</p>
-          <p>If k=6: return 26. If k&lt;6: recurse left. If k&gt;6: recurse right with k-6.</p>
+          <div class="title">Example 5: Detailed Partition Trace — pivot = 26</div>
+          <p>A = [26, 5, 37, 1, 61, 11, 59, 15, 48, 19], n = 10. Pivot = A[1] = 26.</p>
+          <p><strong>Partition procedure (Lomuto scheme):</strong> Initialize j = 1 (the pivot position). Scan i from 2 to 10:</p>
+          <p>• i = 2: A[2] = 5 < 26 → j++ → j = 2 → swap(A[2], A[2]) → no change. Array: [26, 5, 37, 1, 61, 11, 59, 15, 48, 19]</p>
+          <p>• i = 3: A[3] = 37 > 26 → skip. Array unchanged.</p>
+          <p>• i = 4: A[4] = 1 < 26 → j++ → j = 3 → swap(A[4], A[3]) → swap(1, 37). Array: [26, 5, 1, 37, 61, 11, 59, 15, 48, 19]</p>
+          <p>• i = 5: A[5] = 61 > 26 → skip.</p>
+          <p>• i = 6: A[6] = 11 < 26 → j++ → j = 4 → swap(A[6], A[4]) → swap(11, 37). Array: [26, 5, 1, 11, 61, 37, 59, 15, 48, 19]</p>
+          <p>• i = 7: A[7] = 59 > 26 → skip.</p>
+          <p>• i = 8: A[8] = 15 < 26 → j++ → j = 5 → swap(A[8], A[5]) → swap(15, 61). Array: [26, 5, 1, 11, 15, 37, 59, 61, 48, 19]</p>
+          <p>• i = 9: A[9] = 48 > 26 → skip.</p>
+          <p>• i = 10: A[10] = 19 < 26 → j++ → j = 6 → swap(A[10], A[6]) → swap(19, 37). Array: [26, 5, 1, 11, 15, 19, 59, 61, 48, 37]</p>
+          <p><strong>Final swap:</strong> swap(A[1], A[j]) = swap(A[1], A[6]) → swap(26, 19). Array: [19, 5, 1, 11, 15, 26, 59, 61, 48, 37]</p>
+          <p><strong>Result:</strong> Pivot 26 is at position j = 6. All elements in positions 1-5 are ≤ 26, all in positions 7-10 are > 26. Pivot rank = 6. If k = 6 → return 26. If k < 6 → recurse left. If k > 6 → recurse right with k - 6.</p>
         </div>
 
         <div class="example">
-          <div class="title">Example 6: What if we use groups of 3 instead of 5?</div>
+          <div class="title">Example 6: Groups of 3 — What If We Use Groups of 3 Instead of 5?</div>
           <p>Given n = 12, find the 8th smallest in A = [35, 12, 8, 27, 3, 42, 19, 5, 30, 15, 22, 10] using groups of 3.</p>
-          <p>Groups: [35,12,8]→8, [27,3,42]→27, [19,5,30]→19, [15,22,10]→15</p>
-          <p>Medians B = [8, 27, 19, 15] → median of medians x = sel(B, 2) = 15</p>
-          <p>Partition around 15: [12, 8, 3, 5, 10, 15, 35, 27, 42, 19, 30, 22]</p>
-          <p>j = 6 (15 at position 6). k = 8 &gt; 6 → recurse right on [35,27,42,19,30,22] with k = 8-6 = 2.</p>
-          <p>Groups of 3 on right: [35,27,42]→35, [19,30,22]→22 → medians [35,22], x = 22</p>
-          <p>Partition around 22: [19, 22, 42, 35, 30] → j = 2. k = 2 == j → return <span class="result">22</span>.</p>
+          <p><strong>Step 1 — Groups of 3:</strong> [35,12,8] → sort: [8,12,35] → median = 12. [27,3,42] → sort: [3,27,42] → median = 27. [19,5,30] → sort: [5,19,30] → median = 19. [15,22,10] → sort: [10,15,22] → median = 15.</p>
+          <p><strong>Step 2 — Medians:</strong> B = [12, 27, 19, 15]. Find median of B: sort [12, 15, 19, 27] → median = 15 (2nd element). So x = 15.</p>
+          <p><strong>Step 3 — Partition around 15:</strong> [12, 8, 3, 5, 10, 15, 35, 27, 42, 19, 30, 22]. j = 6 (15 at position 6). k = 8 > 6 → recurse right on [35,27,42,19,30,22] with k = 8-6 = 2.</p>
+          <p><strong>Recursive call on right side:</strong> [35,27,42] → median = 35. [19,30,22] → sort: [19,22,30] → median = 22. B = [35, 22]. Median of medians = 22. Partition around 22: [19, 22, 42, 35, 30]. j = 2, k = 2 = j → return <span class="result">22</span>.</p>
+          <p><strong>Note:</strong> This example used groups of 3, which gives Θ(n lg n) worst-case (not Θ(n)). The group-of-3 version may give unbalanced partitions, but in this case it happened to work well. In the worst case, groups of 3 can degrade significantly.</p>
         </div>
       </div>
     </div>
@@ -253,40 +336,59 @@
     <!-- Tab 5: Complexity -->
     <div class="content" id="tab5">
       <div class="section">
-        <h2>Time Complexity Analysis</h2>
+        <h2>Time Complexity Analysis — Complete Derivation</h2>
+        <p>The time complexity of the Select algorithm is one of the most elegant results in algorithm design. The algorithm achieves Θ(n) — linear time — for the selection problem, which is optimal for comparison-based algorithms. Understanding WHY this is linear requires careful analysis of the recurrence relation and its solution.</p>
 
         <div class="formula">
           <div class="label">Recurrence Relation:</div>
           <div class="expr">T(n) = T(n/5) + T(7n/10) + Θ(n)</div>
-          <div class="desc">T(n/5) = find median of medians, T(7n/10) = recurse on larger part, Θ(n) = partition</div>
+          <div class="desc">T(n/5) = cost of finding median of medians (recursive call on n/5 elements). T(7n/10) = cost of recursing on the larger partition side (at most 7n/10 elements). Θ(n) = cost of partitioning + finding group medians + other linear work.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Where Each Term Comes From:</div>
+          <p><strong>T(n/5):</strong> In Step 2, we recursively find the median of ⌈n/5⌉ medians. This is a recursive call on a problem of size n/5.</p>
+          <p><strong>T(7n/10):</strong> In Step 4, after partitioning, we recurse on the larger side. The median of medians guarantees at least 3n/10 elements are on each side, so the larger side has at most 7n/10 elements. In the worst case, we recurse on this larger side.</p>
+          <p><strong>Θ(n):</strong> The partitioning step takes Θ(n) time (one pass through the array). Finding the medians of ⌈n/5⌉ groups also takes Θ(n) total (each group median takes Θ(1), and there are n/5 groups). Other overhead (computing indices, etc.) is also Θ(n).</p>
         </div>
 
         <div class="formula">
           <div class="label">Solution:</div>
           <div class="expr">T(n) = Θ(n)</div>
-          <div class="desc">Since 1/5 + 7/10 = 9/10 < 1, the recurrence solves to linear time</div>
+          <div class="desc">Since 1/5 + 7/10 = 9/10 < 1, the recurrence solves to linear time. The sum of the fractions is less than 1, meaning the total work at each level of recursion decreases geometrically.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Why 1/5 + 7/10 = 9/10 < 1 Implies Θ(n):</div>
+          <p>This is a standard result from the theory of divide-and-conquer recurrences. For a recurrence of the form T(n) = T(αn) + T(βn) + Θ(n) where α + β < 1, the solution is Θ(n). Here's the intuition:</p>
+          <p>• At the top level, we do Θ(n) work.</p>
+          <p>• At the next level, the total work is Θ(αn) + Θ(βn) = Θ((α+β)n) = Θ(0.9n).</p>
+          <p>• At the level after that, the total work is Θ((α+β)²n) = Θ(0.81n).</p>
+          <p>• This forms a geometric series: n + 0.9n + 0.81n + ... = n × (1 + 0.9 + 0.81 + ...) = n × 1/(1-0.9) = 10n = Θ(n).</p>
+          <p>• Since α + β = 9/10 < 1, the series converges, giving Θ(n) total.</p>
+          <p>This is exactly Case 3 of the Akra-Bazzi method (or can be proved by induction). The key insight: if the sum of fractions is less than 1, the geometric series converges to a constant, giving linear time.</p>
         </div>
 
         <div class="grid">
           <div class="card">
             <h3>Best Case</h3>
             <p>Time: <span class="highlight">Θ(n)</span></p>
-            <p>When partition is balanced</p>
+            <p>When the pivot happens to be the exact k-th smallest element, we find it immediately without recursing. The median of medians might find the answer in one pass. Even in the best case, we still do Θ(n) work for the partitioning and group median computations.</p>
           </div>
           <div class="card">
             <h3>Average Case</h3>
             <p>Time: <span class="highlight">Θ(n)</span></p>
-            <p>Same as worst case!</p>
+            <p>Same as worst case! This is a remarkable property of the Select algorithm. Unlike quicksort where the average case is much better than worst case, Select achieves Θ(n) in ALL cases. The median of medians pivot selection eliminates the randomness dependency.</p>
           </div>
           <div class="card">
             <h3>Worst Case</h3>
             <p>Time: <span class="highlight">Θ(n)</span></p>
-            <p>Guaranteed linear</p>
+            <p>Guaranteed linear. Even in the absolute worst case (adversary picks the worst possible input), the algorithm still runs in Θ(n). This is because the median of medians always guarantees a good pivot, preventing the O(n²) degradation that naive quickselect suffers from.</p>
           </div>
           <div class="card">
             <h3>Space</h3>
             <p>Space: <span class="dim">O(lg n)</span></p>
-            <p>Recursion stack depth</p>
+            <p>Recursion stack depth. The recursion depth is O(lg n) because at each level, the problem size decreases by a constant factor (at least 10%). The recursion tree has depth O(lg n), and each level uses O(1) stack space. The algorithm is in-place — no extra arrays are needed beyond the input.</p>
           </div>
         </div>
 
@@ -297,29 +399,59 @@
             <th>Best</th>
             <th>Average</th>
             <th>Worst</th>
+            <th>Space</th>
           </tr>
           <tr>
             <td>Sort then select</td>
             <td>Θ(n lg n)</td>
             <td>Θ(n lg n)</td>
             <td>Θ(n lg n)</td>
+            <td>O(n) or O(1)</td>
           </tr>
           <tr>
-            <td>Naive partition</td>
+            <td>Naive quickselect</td>
             <td>Θ(n)</td>
-            <td>Θ(n²)</td>
-            <td>Θ(n²)</td>
+            <td>Θ(n)</td>
+            <td><span class="dim">Θ(n²)</span></td>
+            <td>O(lg n)</td>
           </tr>
           <tr>
             <td>Select (median of medians)</td>
             <td>Θ(n)</td>
             <td>Θ(n)</td>
+            <td><span class="result">Θ(n)</span></td>
+            <td>O(lg n)</td>
+          </tr>
+          <tr>
+            <td>Randomized select</td>
             <td>Θ(n)</td>
+            <td>Θ(n)</td>
+            <td><span class="dim">Θ(n²)</span> (rare)</td>
+            <td>O(lg n)</td>
           </tr>
         </table>
 
+        <div class="example">
+          <div class="title">Why Not Just Use Naive Quickselect?</div>
+          <p>Naive quickselect (without median of medians) picks a random pivot and partitions. On AVERAGE, it runs in Θ(n) time. But in the WORST case, if the adversary always picks the worst pivot (e.g., always the smallest or largest element), quickselect degrades to O(n²). This is because each partition only removes ONE element, requiring n recursive calls of decreasing size: n + (n-1) + (n-2) + ... + 1 = O(n²).</p>
+          <p>The Select algorithm fixes this by using median of medians to GUARANTEE a good pivot. The cost is higher constant factors (about 2-3x slower in practice), but the worst-case guarantee is worth it for applications that need guaranteed performance.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Practical Considerations:</div>
+          <p><strong>Constant factors:</strong> The Select algorithm has higher constant factors than naive quickselect. In practice, naive quickselect (or randomized quickselect) is often faster because the average case is the same Θ(n) but with smaller constants. The Select algorithm is preferred when worst-case guarantees are critical.</p>
+          <p><strong>Cache performance:</strong> The partitioning step is cache-friendly (sequential access), but the median of medians step introduces some random access patterns. For very large arrays, cache effects can matter.</p>
+          <p><strong>Implementation complexity:</strong> The Select algorithm is more complex to implement correctly than naive quickselect. The base case threshold (25) needs tuning, and the partition procedure must handle edge cases.</p>
+        </div>
+
         <div class="warning">
-          <strong>Key Point:</strong> The Select algorithm is optimal for worst-case selection. No comparison-based algorithm can do better than Θ(n) in the worst case.
+          <strong>Key Point:</strong> The Select algorithm is optimal for worst-case selection. No comparison-based algorithm can do better than Θ(n) in the worst case (this follows from the Ω(n) lower bound for comparison-based selection). The Select algorithm matches this lower bound, making it asymptotically optimal.
+        </div>
+
+        <div class="formula">
+          <div class="label">Lower Bound Argument:</div>
+          <div class="expr">Ω(n) is a lower bound for selection</div>
+          <div class="desc">Any comparison-based algorithm must examine at least n elements to find the k-th smallest. If any element is never examined, we cannot determine whether it's smaller or larger than the k-th smallest. Therefore, Ω(n) comparisons are necessary. The Select algorithm achieves Θ(n), matching this lower bound exactly.</div>
         </div>
       </div>
     </div>
@@ -327,105 +459,189 @@
     <!-- Tab 6: Group-of-3 Analysis -->
     <div class="content" id="tab6">
       <div class="section">
-        <h2>Analysis with Groups of 3 (Instead of 5)</h2>
-        <p>An important exam question: what if we divide into groups of 3 instead of groups of 5? This changes the recurrence from Θ(n) to Θ(n lg n).</p>
+        <h2>Analysis with Groups of 3 (Instead of 5) — Deep Dive</h2>
+        <p>An important exam question: what if we divide into groups of 3 instead of groups of 5? This changes the recurrence from Θ(n) to Θ(n lg n). Understanding WHY groups of 3 fail while groups of 5 succeed is crucial for mastering the selection algorithm. The difference comes down to a single mathematical fact: whether the sum of the fractions is less than 1 or equal to 1.</p>
 
         <div class="formula">
           <div class="label">Recurrence with Groups of 3:</div>
           <div class="expr">T(n) = T(n/3) + T(2n/3) + Θ(n)</div>
-          <div class="desc">T(n/3) = find median of ⌈n/3⌉ medians, T(2n/3) = worst-case size of larger partition side</div>
+          <div class="desc">T(n/3) = find median of ⌈n/3⌉ medians (recursive call on n/3 elements). T(2n/3) = worst-case size of larger partition side (at most 2n/3 elements). Θ(n) = partitioning + group median computations.</div>
         </div>
 
         <div class="formula">
           <div class="label">Solution:</div>
           <div class="expr">T(n) = Θ(n lg n)</div>
-          <div class="desc">Since n/3 + 2n/3 = 1, the recurrence falls into Case 2 of the Master Theorem: Θ(n lg n)</div>
+          <div class="desc">Since n/3 + 2n/3 = 1, the recurrence falls into Case 2 of the Master Theorem: Θ(n lg n). This is NO BETTER than simply sorting the array and picking the k-th element!</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Why Groups of 3 Give 2n/3 (Not 7n/10):</div>
+          <p>With groups of 3, each group has 3 elements and we find the 2nd smallest (median). When we compute the median of medians x:</p>
+          <p>• There are ⌈n/3⌉ groups, each producing one median.</p>
+          <p>• x = median of these ⌈n/3⌉ medians → at least ⌈n/6⌉ medians are ≤ x.</p>
+          <p>• Each median of 3 has exactly 1 element smaller than it in its group (the smallest element).</p>
+          <p>• So each group contributes at least 2 elements ≤ x (the smallest + the median).</p>
+          <p>• Total elements ≤ x ≥ 2 × ⌈n/6⌉ ≥ n/3.</p>
+          <p>• Therefore, at most n − n/3 = 2n/3 elements are on the larger side.</p>
+          <p>This gives the worst-case recurrence T(n) = T(n/3) + T(2n/3) + Θ(n), where the larger side is 2n/3 instead of 7n/10.</p>
         </div>
 
         <h3>Why Groups of 5 but Not 3?</h3>
         <div class="grid">
           <div class="card">
-            <h3>Groups of 5</h3>
+            <h3>Groups of 5 — Works!</h3>
             <p>Recurrence: T(n/5) + T(7n/10) + Θ(n)</p>
-            <p>Sum: 1/5 + 7/10 = 9/10 &lt; 1</p>
-            <p>Result: <span class="highlight">Θ(n)</span></p>
-            <p>Linear time guaranteed</p>
+            <p>Fraction sum: 1/5 + 7/10 = 2/10 + 7/10 = 9/10</p>
+            <p>Since 9/10 < 1 → <span class="highlight">Θ(n)</span></p>
+            <p>The geometric series converges: n × (1 + 0.9 + 0.81 + ...) = 10n = Θ(n).</p>
+            <p>Linear time guaranteed because the total work decreases by 10% at each recursion level.</p>
           </div>
           <div class="card">
-            <h3>Groups of 3</h3>
+            <h3>Groups of 3 — Fails!</h3>
             <p>Recurrence: T(n/3) + T(2n/3) + Θ(n)</p>
-            <p>Sum: 1/3 + 2/3 = 1</p>
-            <p>Result: <span class="dim">Θ(n lg n)</span></p>
-            <p>No better than sorting!</p>
+            <p>Fraction sum: 1/3 + 2/3 = 1</p>
+            <p>Since 1 = 1 → <span class="dim">Θ(n lg n)</span></p>
+            <p>The geometric series diverges: n × (1 + 1 + 1 + ...) = n × lg n = Θ(n lg n).</p>
+            <p>No better than sorting! Each recursion level does the SAME total work, not less.</p>
           </div>
           <div class="card">
-            <h3>Groups of 7</h3>
+            <h3>Groups of 7 — Also Works!</h3>
             <p>Recurrence: T(n/7) + T(5n/7) + Θ(n)</p>
-            <p>Sum: 1/7 + 5/7 = 6/7 &lt; 1</p>
-            <p>Result: <span class="highlight">Θ(n)</span></p>
-            <p>Also linear, but larger constants</p>
+            <p>Fraction sum: 1/7 + 5/7 = 6/7</p>
+            <p>Since 6/7 < 1 → <span class="highlight">Θ(n)</span></p>
+            <p>Works like groups of 5, but with larger constants (more work per group).</p>
+            <p>Groups of 5 are preferred because they give the smallest constant factors.</p>
           </div>
         </div>
 
-        <h3>Derivation of the 2n/3 Upper Bound</h3>
+        <h3>Derivation of the 2n/3 Upper Bound — Full Proof</h3>
         <div class="example">
-          <div class="title">Bound analysis for groups of 3:</div>
-          <p><strong>Step 1:</strong> Divide A into ⌈n/3⌉ groups, each containing at most 3 elements. Find the median of each group (2nd smallest). Time: Θ(n).</p>
-          <p><strong>Step 2:</strong> Recursively find the median x of the ⌈n/3⌉ medians. Time: T(⌈n/3⌉).</p>
-          <p><strong>Step 3:</strong> Partition A around x. Time: Θ(n).</p>
-          <p><strong>Step 4:</strong> Recurse on appropriate side.</p>
-          <p>— Half of the ⌈n/3⌉ medians are ≤ x → at least ⌈n/6⌉ medians.</p>
-          <p>— Each median of 3 has 1 element smaller than it in its group.</p>
-          <p>— So at least 2 × ⌈n/6⌉ ≥ n/3 elements are ≤ x.</p>
+          <div class="title">Bound analysis for groups of 3 — Step by step:</div>
+          <p><strong>Step 1 — Divide:</strong> Divide A into ⌈n/3⌉ groups, each containing at most 3 elements. Find the median (2nd smallest) of each group. Time: Θ(n) — each group median takes Θ(1) and there are n/3 groups.</p>
+          <p><strong>Step 2 — Recurse for pivot:</strong> Recursively find the median x of the ⌈n/3⌉ medians. Time: T(⌈n/3⌉). This is the "cost of choosing a good pivot."</p>
+          <p><strong>Step 3 — Partition:</strong> Partition A around x. Time: Θ(n) — one pass through the array.</p>
+          <p><strong>Step 4 — Bound analysis:</strong> We need to show at least n/3 elements are ≤ x.</p>
+          <p>— Half of the ⌈n/3⌉ medians are ≤ x (by definition of median) → at least ⌈n/6⌉ medians.</p>
+          <p>— Each median of 3 has exactly 1 element smaller than it in its group (the smallest element in the group).</p>
+          <p>— So each such group contributes at least 2 elements ≤ x: the smallest element and the median itself.</p>
+          <p>— Total elements ≤ x ≥ 2 × ⌈n/6⌉ ≥ 2 × (n/6) = n/3.</p>
           <p>— Hence at most n − n/3 = 2n/3 elements are on the larger side.</p>
           <p>— Worst-case recurrence: <span class="result">T(n) = T(n/3) + T(2n/3) + Θ(n)</span></p>
         </div>
 
-        <h3>Why 3 Groups are Insufficient for Linearity</h3>
+        <h3>Why 3 Groups are Insufficient for Linearity — The Critical Difference</h3>
         <div class="warning">
-          <strong>Master Theorem Analysis:</strong> For T(n) = T(αn) + T(βn) + Θ(n) with α + β = 1, the solution is Θ(n lg n). Only when α + β &lt; 1 do we get Θ(n). Groups of 5 give α = 1/5, β = 7/10, sum = 9/10 &lt; 1. Groups of 3 give α = 1/3, β = 2/3, sum = 1 → Θ(n lg n).
+          <strong>Master Theorem Analysis:</strong> For T(n) = T(αn) + T(βn) + Θ(n) with α + β = c:<br><br>
+          • If c < 1: The solution is Θ(n). The work decreases geometrically at each level.<br>
+          • If c = 1: The solution is Θ(n lg n). The work is the same at each level, giving lg n levels of height n.<br>
+          • If c > 1: The solution is Θ(n^c) or worse. The work increases at each level.<br><br>
+          Groups of 5 give α = 1/5, β = 7/10, sum = 9/10 < 1 → Θ(n).<br>
+          Groups of 3 give α = 1/3, β = 2/3, sum = 1 → Θ(n lg n).<br>
+          Groups of 7 give α = 1/7, β = 5/7, sum = 6/7 < 1 → Θ(n).
+        </div>
+
+        <div class="example">
+          <div class="title">Geometric Series Intuition:</div>
+          <p>Consider the total work at each level of the recursion tree:</p>
+          <p><strong>Groups of 5 (sum = 9/10 < 1):</strong></p>
+          <p>Level 0: n work</p>
+          <p>Level 1: 0.9n work</p>
+          <p>Level 2: 0.81n work</p>
+          <p>Level 3: 0.729n work</p>
+          <p>... This is a geometric series with ratio 0.9 < 1. Total = n × 1/(1-0.9) = 10n = Θ(n).</p>
+          <p><strong>Groups of 3 (sum = 1):</strong></p>
+          <p>Level 0: n work</p>
+          <p>Level 1: n work (1/3 + 2/3 = 1)</p>
+          <p>Level 2: n work</p>
+          <p>Level 3: n work</p>
+          <p>... This series does NOT converge. Each level does n work, and there are Θ(lg n) levels. Total = n × lg n = Θ(n lg n).</p>
+          <p>The critical threshold is whether α + β < 1 (geometric convergence → linear) or α + β = 1 (no convergence → n lg n).</p>
         </div>
 
         <h3>Worked Example with Groups of 3</h3>
         <div class="example">
           <div class="title">Full trace: n = 9, find 5th smallest in A = [29, 14, 3, 42, 7, 21, 35, 18, 11]</div>
-          <p><strong>Level 1:</strong> Groups of 3 → [29,14,3] median=14, [42,7,21] median=21, [35,18,11] median=18</p>
-          <p>B = [14, 21, 18], m = 3. sel(B, 2) → groups of 3 → [14,21] median=21 (or [14,21,18] median=18). x = 18.</p>
-          <p>Partition around 18: [14, 3, 7, 11, 18, 29, 42, 21, 35] → j = 5. k = 5 → return <span class="result">18</span>.</p>
+          <p><strong>Level 1:</strong></p>
+          <p>Groups of 3: [29,14,3] → sort [3,14,29] → median = 14. [42,7,21] → sort [7,21,42] → median = 21. [35,18,11] → sort [11,18,35] → median = 18.</p>
+          <p>B = [14, 21, 18], m = 3. Find median of B: sort [14, 18, 21] → median = 18. x = 18.</p>
+          <p>Partition around 18: [14, 3, 7, 11, 18, 29, 42, 21, 35] → j = 5 (18 at position 5). k = 5 = j → return <span class="result">18</span>.</p>
           <p>Lucky case: balanced partition found answer immediately.</p>
-          <p><strong>Worst-case scenario:</strong> If k=9 (maximum), after partition the right side has 4 elements [29,42,21,35]. Groups of 3: [29,42,21]→29, [35]→35. Medians [29,35], x=29. Partition right around 29: [21, 29, 42, 35] → j=2. k−5=4 &gt; 2 → recurse right on [42,35] with k=4−2=2. This gives T(9) = T(3) + T(6) + Θ(9), illustrating the Θ(n lg n) behavior.</p>
+          <p><strong>Worst-case scenario (k=9):</strong> If k=9 (maximum), after partition the right side has 4 elements [29,42,21,35]. Groups of 3: [29,42,21] → sort [21,29,42] → median = 29. [35] → median = 35. Medians [29,35], x = 29. Partition right around 29: [21, 29, 42, 35] → j = 2. k − 5 = 4 > 2 → recurse right on [42,35] with k = 4−2 = 2.</p>
+          <p>This gives T(9) = T(3) + T(6) + Θ(9), illustrating the Θ(n lg n) behavior — the larger side is 6 = 2/3 × 9, not 7/10 × 9 = 6.3.</p>
         </div>
 
-        <h3>Comparison Table</h3>
+        <h3>Comparison Table — All Group Sizes</h3>
         <table>
           <tr>
             <th>Group Size</th>
             <th>Recurrence</th>
             <th>α + β</th>
             <th>Complexity</th>
+            <th>Why?</th>
           </tr>
           <tr>
             <td>3</td>
             <td>T(n/3) + T(2n/3) + Θ(n)</td>
             <td>1</td>
             <td><span class="dim">Θ(n lg n)</span></td>
+            <td>Sum = 1 → no geometric convergence</td>
           </tr>
           <tr>
             <td>5</td>
             <td>T(n/5) + T(7n/10) + Θ(n)</td>
             <td>9/10</td>
             <td><span class="result">Θ(n)</span></td>
+            <td>Sum < 1 → geometric convergence</td>
           </tr>
           <tr>
             <td>7</td>
             <td>T(n/7) + T(5n/7) + Θ(n)</td>
             <td>6/7</td>
             <td><span class="result">Θ(n)</span></td>
+            <td>Sum < 1 → geometric convergence</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>T(n/9) + T(7n/9) + Θ(n)</td>
+            <td>8/9</td>
+            <td><span class="result">Θ(n)</span></td>
+            <td>Sum < 1 → geometric convergence</td>
+          </tr>
+          <tr>
+            <td>any odd ≥ 5</td>
+            <td>T(n/g) + T((g+1)/(2g) × n) + Θ(n)</td>
+            <td>< 1</td>
+            <td><span class="result">Θ(n)</span></td>
+            <td>Sum < 1 for all odd g ≥ 5</td>
           </tr>
         </table>
 
+        <div class="example">
+          <div class="title">The General Formula for Group Size g (odd):</div>
+          <p>For groups of size g (where g is odd):</p>
+          <p>• We find the median (the (g+1)/2-th smallest) of each group.</p>
+          <p>• At least ⌈n/(2g)⌉ medians are ≤ x (the median of medians).</p>
+          <p>• Each such group contributes at least (g+1)/2 elements ≤ x.</p>
+          <p>• Total elements ≤ x ≥ ((g+1)/2) × ⌈n/(2g)⌉ ≥ (g+1)/(4g) × n.</p>
+          <p>• So the larger side has at most n - (g+1)/(4g) × n = (3g-1)/(4g) × n elements.</p>
+          <p>• For g = 3: (3×3-1)/(4×3) = 8/12 = 2/3. For g = 5: (3×5-1)/(4×5) = 14/20 = 7/10.</p>
+          <p>• The recurrence becomes T(n) = T(n/g) + T((3g-1)/(4g) × n) + Θ(n).</p>
+          <p>• This is Θ(n) when 1/g + (3g-1)/(4g) < 1, i.e., when (3g+3)/(4g) < 1, i.e., when g > 3.</p>
+          <p>So any odd group size g ≥ 5 gives Θ(n), but g = 3 gives Θ(n lg n).</p>
+        </div>
+
         <div class="warning">
-          <strong>Exam Tip:</strong> Groups of 3 is the classic counterexample showing why groups of 5 are the smallest odd group size that yields linear time. Always verify: if n/3 + 2n/3 = 1 → Θ(n lg n). If the sum is less than 1 → Θ(n).
+          <strong>Exam Tip:</strong> Groups of 3 is the classic counterexample showing why groups of 5 are the smallest odd group size that yields linear time. Always verify: if α + β = 1 → Θ(n lg n). If α + β < 1 → Θ(n). The critical threshold is exactly at group size 3. This is a very common exam question — be prepared to derive the recurrence and explain why groups of 3 fail.
+        </div>
+
+        <div class="example">
+          <div class="title">Key Takeaways for the Exam:</div>
+          <p>1. The Select algorithm uses groups of 5 (not 3) to achieve Θ(n) time.</p>
+          <p>2. Groups of 3 give Θ(n lg n) because the fraction sum equals 1 (not less than 1).</p>
+          <p>3. The 3n/10 bound is what makes groups of 5 work — it guarantees the larger side is at most 7n/10.</p>
+          <p>4. The Master Theorem or geometric series argument proves that α + β < 1 implies Θ(n).</p>
+          <p>5. Any odd group size ≥ 5 works, but 5 gives the smallest constant factors.</p>
+          <p>6. The lower bound for comparison-based selection is Ω(n), and the Select algorithm matches it.</p>
         </div>
       </div>
     </div>
