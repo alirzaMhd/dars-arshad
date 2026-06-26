@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fibonacci Heap — Complete Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .warning {
+  color: #ff6600;
+  border-left: 3px solid #ff6600;
+  padding-left: 10px;
+  margin: 10px 0;
+  font-size: 0.9em;
+}
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.btn.danger {
+  background: #2a0a0a;
+  border-color: #ff4444;
+  color: #ff4444;
+}
+.btn.danger:hover {
+  border-color: #ff6666;
+  color: #ff6666;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.heap-canvas {
+  width: 100%;
+  height: 400px;
+  background: #0d0d20;
+  border: 1px solid #333;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+}
+th, td {
+  width: 72px;
+  height: 32px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.72em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+.op-btn {
+  padding: 6px 12px;
+  border: 2px solid #555;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  transition: all 0.3s;
+  margin: 2px;
+}
+.op-btn:hover {
+  border-color: #00ccff;
+  color: #00ccff;
+}
+.op-btn.active {
+  border-color: #ff6600;
+  color: #ff6600;
+  background: #1a0a00;
+}
+.node-legend {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin: 10px 0;
+  font-size: 0.8em;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.code-block {
+  background: #0a0a18;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85em;
+  color: #00ccff;
+  overflow-x: auto;
+  margin: 8px 0;
+  border-left: 3px solid #00ccff;
+  white-space: pre;
+  line-height: 1.5;
+}
+.complexity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+.complexity-card {
+  background: #1a1a2e;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  text-align: center;
+}
+.complexity-card .op-name {
+  color: #00ccff;
+  font-size: 0.8em;
+  margin-bottom: 5px;
+}
+.complexity-card .cost {
+  color: #00ff88;
+  font-weight: bold;
+  font-size: 1em;
+}
+.complexity-card .worst {
+  color: #ff9944;
+  font-size: 0.75em;
+  margin-top: 3px;
+}
+.comparison-table {
+  width: 100%;
+  font-size: 0.72em;
+}
+.comparison-table .good { color: #00ff88; font-weight: bold; }
+.comparison-table .bad { color: #ff9944; }
+</style>
+</head>
+<body>
+
+<h1>FIBONACCI HEAP</h1>
+<p class="subtitle">Data Structures — Complete Interactive Guide</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <canvas class="heap-canvas" id="heapCanvas"></canvas>
+
+    <div class="node-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="border-color:#00ff88; background:#0a1a12;"></div>
+        <span>Root/Min</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="border-color:#ff6600; background:#1a0a00;"></div>
+        <span>Current</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="border-color:#ffff00; background:#1a1a00;"></div>
+        <span>Processing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="border-color:#ff66ff; background:#1a0030;"></div>
+        <span>Marked</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="border-color:#00ccff; background:#0a0a18;"></div>
+        <span>New/Cut</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn danger" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Operation: </span><span class="value" id="opDisplay">—</span>
+      <span style="margin-left:15px;" class="label">Phase: </span><span class="value" id="phaseDisplay">Ready</span>
+      <span style="margin-left:15px;" class="label">Detail: </span><span class="highlight" id="computingDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Root List & Node Details</div>
+      <div class="table-wrapper" id="rootTableWrapper"></div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Consolidate Array (Degrees 0–8)</div>
+      <div class="table-wrapper" id="consolidateTableWrapper"></div>
+    </div>
+
+    <div class="complexity-grid">
+      <div class="complexity-card">
+        <div class="op-name">INSERT</div>
+        <div class="cost">O(1)</div>
+        <div class="worst">actual: O(1)</div>
+      </div>
+      <div class="complexity-card">
+        <div class="op-name">FIND-MIN</div>
+        <div class="cost">O(1)</div>
+        <div class="worst">actual: O(1)</div>
+      </div>
+      <div class="complexity-card">
+        <div class="op-name">UNION</div>
+        <div class="cost">O(1)</div>
+        <div class="worst">actual: O(1)</div>
+      </div>
+      <div class="complexity-card">
+        <div class="op-name">EXTRACT-MIN</div>
+        <div class="cost">O(lg n)</div>
+        <div class="worst">actual: O(n)</div>
+      </div>
+      <div class="complexity-card">
+        <div class="op-name">DECREASE-KEY</div>
+        <div class="cost">O(1)</div>
+        <div class="worst">actual: O(lg n)</div>
+      </div>
+      <div class="complexity-card">
+        <div class="op-name">DELETE</div>
+        <div class="cost">O(lg n)</div>
+        <div class="worst">actual: O(lg n)</div>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>Operation Complete</h2>
+      <p id="resultDisplay"></p>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Fibonacci Heap Structure</h3>
+        <p>A <b>Fibonacci heap</b> is a collection of <span class="dim">min-heap-ordered trees</span> stored in a circular doubly-linked root list.</p>
+        <h3 style="margin-top:10px;">Core Properties</h3>
+        <p>1. Collection of min-heap-ordered trees (not necessarily binomial)</p>
+        <p>2. Trees are rooted and <span class="dim">unordered</span> (children can be in any order)</p>
+        <p>3. Root list is a <span class="dim">circular doubly-linked list</span></p>
+        <p>4. Each node has: key, degree, mark, parent, child, left, right</p>
+        <h3 style="margin-top:10px;">Node Fields</h3>
+        <p>• <span class="dim">key</span>: priority value</p>
+        <p>• <span class="dim">degree</span>: number of children</p>
+        <p>• <span class="dim">mark</span>: has this node lost a child? (boolean)</p>
+        <p>• <span class="dim">parent, child</span>: tree pointers</p>
+        <p>• <span class="dim">left, right</span>: circular doubly-linked list pointers</p>
+        <h3 style="margin-top:10px;">Fibonacci Number Connection</h3>
+        <span class="formula-line">F(0) = 0, F(1) = 1, F(k) = F(k-1) + F(k-2)</span>
+        <p>If a node has degree k, it has at least <span class="dim">F(k+2) ≥ φ^k</span> nodes (φ ≈ 1.618)</p>
+        <p>This bounds maximum degree to <span class="result-line" style="display:inline;">O(lg n)</span></p>
+        <h3 style="margin-top:10px;">Amortized Costs</h3>
+        <span class="formula-line">INSERT: O(1) | FIND-MIN: O(1) | UNION: O(1)</span>
+        <span class="formula-line">EXTRACT-MIN: O(lg n) | DECREASE-KEY: O(1) | DELETE: O(lg n)</span>
+        <p class="note">Press Play or Step to see operations in action.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('heapCanvas');
+const ctx = canvas.getContext('2d');
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let nodeIdCounter = 0;
+
+let heap = { roots: [], min: null, n: 0 };
+let heap2 = null;
+
+class FibNode {
+  constructor(key) {
+    this.key = key;
+    this.degree = 0;
+    this.mark = false;
+    this.parent = null;
+    this.child = null;
+    this.left = this;
+    this.right = this;
+    this.id = nodeIdCounter++;
+    this.x = 0;
+    this.y = 0;
+    this.targetX = 0;
+    this.targetY = 0;
+    this.highlight = '';
+    this.visible = true;
+  }
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+}
+
+window.addEventListener('resize', () => { resizeCanvas(); drawHeap(); });
+
+function initHeap() {
+  heap = { roots: [], min: null, n: 0 };
+  heap2 = null;
+  nodeIdCounter = 0;
+}
+
+function insertNode(key) {
+  const node = new FibNode(key);
+  if (!heap.min) {
+    heap.roots = [node];
+    heap.min = node;
+  } else {
+    node.left = heap.min.left;
+    node.right = heap.min;
+    heap.min.left.right = node;
+    heap.min.left = node;
+    heap.roots.push(node);
+  }
+  if (key < heap.min.key) heap.min = node;
+  heap.n++;
+  return node;
+}
+
+function removeFromRootList(node) {
+  node.left.right = node.right;
+  node.right.left = node.left;
+  heap.roots = heap.roots.filter(n => n !== node);
+}
+
+function addToRootList(node) {
+  node.parent = null;
+  node.mark = false;
+  if (!heap.min) {
+    heap.roots = [node];
+    heap.min = node;
+  } else {
+    node.left = heap.min.left;
+    node.right = heap.min;
+    heap.min.left.right = node;
+    heap.min.left = node;
+    heap.roots.push(node);
+  }
+}
+
+function link(y, x) {
+  removeFromRootList(y);
+  y.parent = x;
+  if (!x.child) {
+    x.child = y;
+    y.left = y;
+    y.right = y;
+  } else {
+    y.left = x.child;
+    y.right = x.child.right;
+    x.child.right.left = y;
+    x.child.right = y;
+  }
+  x.degree++;
+  y.mark = false;
+}
+
+function consolidate() {
+  const maxDeg = Math.ceil(Math.log2(heap.n + 1)) + 2;
+  const A = new Array(maxDeg).fill(null);
+  const rootNodes = [...heap.roots];
+  for (const w of rootNodes) {
+    let x = w;
+    let d = x.degree;
+    while (A[d]) {
+      let y = A[d];
+      if (x.key > y.key) [x, y] = [y, x];
+      link(y, x);
+      A[d] = null;
+      d++;
+    }
+    A[d] = x;
+  }
+  heap.roots = [];
+  heap.min = null;
+  for (const node of A) {
+    if (node) {
+      heap.roots.push(node);
+      if (!heap.min || node.key < heap.min.key) heap.min = node;
+    }
+  }
+}
+
+function cut(x, y) {
+  y.degree--;
+  if (y.child === x) y.child = x.right !== x ? x.right : null;
+  x.left.right = x.right;
+  x.right.left = x.left;
+  x.parent = null;
+  x.mark = false;
+  addToRootList(x);
+}
+
+function cascadingCut(y) {
+  const z = y.parent;
+  if (z) {
+    if (!y.mark) y.mark = true;
+    else { cut(y, z); cascadingCut(z); }
+  }
+}
+
+function decreaseKey(x, k) {
+  if (k > x.key) return false;
+  x.key = k;
+  const y = x.parent;
+  if (y && x.key < y.key) { cut(x, y); cascadingCut(y); }
+  if (x.key < heap.min.key) heap.min = x;
+  return true;
+}
+
+function extractMin() {
+  const z = heap.min;
+  if (!z) return null;
+  if (z.child) {
+    let c = z.child;
+    do { addToRootList(c); c = c.right; } while (c !== z.child);
+  }
+  removeFromRootList(z);
+  heap.n--;
+  if (heap.roots.length === 0) heap.min = null;
+  else { heap.min = heap.roots[0]; consolidate(); }
+  return z;
+}
+
+function findMin() { return heap.min; }
+
+function unionHeaps(h1, h2) {
+  if (!h1.min) return h2;
+  if (!h2.min) return h1;
+  const newHeap = { roots: [...h1.roots, ...h2.roots], min: null, n: h1.n + h2.n };
+  if (newHeap.roots.length > 1) {
+    for (let i = 0; i < newHeap.roots.length - 1; i++) {
+      newHeap.roots[i].right = newHeap.roots[i + 1];
+      newHeap.roots[i + 1].left = newHeap.roots[i];
+    }
+    newHeap.roots[newHeap.roots.length - 1].right = newHeap.roots[0];
+    newHeap.roots[0].left = newHeap.roots[newHeap.roots.length - 1];
+  }
+  newHeap.min = h1.min.key <= h2.min.key ? h1.min : h2.min;
+  return newHeap;
+}
+
+function layoutHeap() {
+  const w = canvas.width / window.devicePixelRatio;
+  const rootY = 60;
+  const treeSpacing = Math.min(120, w / (heap.roots.length + 1));
+  heap.roots.forEach((node, i) => {
+    node.targetX = (w / 2) - (heap.roots.length - 1) * treeSpacing / 2 + i * treeSpacing;
+    node.targetY = rootY;
+    node.x += (node.targetX - node.x) * 0.3;
+    node.y += (node.targetY - node.y) * 0.3;
+    layoutSubtree(node, node.targetX, rootY + 70, 0);
+  });
+}
+
+function layoutSubtree(node, x, y, depth) {
+  if (!node.child || depth > 6) return;
+  const children = [];
+  let c = node.child;
+  do { children.push(c); c = c.right; } while (c !== node.child);
+  const spread = Math.min(80, 400 / (children.length + 1));
+  const startX = x - (children.length - 1) * spread / 2;
+  children.forEach((child, i) => {
+    child.targetX = startX + i * spread;
+    child.targetY = y;
+    child.x += (child.targetX - child.x) * 0.3;
+    child.y += (child.targetY - child.y) * 0.3;
+    layoutSubtree(child, child.targetX, y + 55, depth + 1);
+  });
+}
+
+function drawHeap() {
+  const w = canvas.width / window.devicePixelRatio;
+  const h = canvas.height / window.devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+  layoutHeap();
+  if (heap.roots.length > 1) {
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    heap.roots.forEach((node, i) => {
+      const next = heap.roots[(i + 1) % heap.roots.length];
+      ctx.beginPath();
+      ctx.moveTo(node.x + 20, node.y);
+      ctx.lineTo(next.x - 20, next.y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+  heap.roots.forEach(node => { if (node.child) drawEdges(node); });
+  heap.roots.forEach(node => drawNode(node));
+  ctx.fillStyle = '#888';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(`n = ${heap.n}  |  roots = ${heap.roots.length}  |  min = ${heap.min ? heap.min.key : 'nil'}`, 15, h - 10);
+}
+
+function drawEdges(node) {
+  if (!node.child) return;
+  let c = node.child;
+  do {
+    ctx.beginPath();
+    ctx.moveTo(node.x, node.y + 18);
+    ctx.lineTo(c.x, c.y - 18);
+    ctx.strokeStyle = c.highlight === 'cut' ? '#ff6600' : '#555';
+    ctx.lineWidth = c.highlight === 'cut' ? 2 : 1.5;
+    ctx.stroke();
+    drawEdges(c);
+    c = c.right;
+  } while (c !== node.child);
+}
+
+function drawNode(node) {
+  if (!node.visible) return;
+  const colors = { '': '#00ccff', 'min': '#ff6600', 'current': '#ff6600', 'processing': '#ffff00', 'marked': '#ff66ff', 'new': '#00ccff', 'cut': '#ff6600', 'consolidate': '#00ff88', 'found': '#00ff88' };
+  const color = colors[node.highlight] || '#00ccff';
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = node.highlight ? 12 : 0;
+  ctx.beginPath();
+  ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  if (node.mark) {
+    ctx.beginPath();
+    ctx.arc(node.x + 14, node.y - 14, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff66ff';
+    ctx.fill();
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.fillStyle = color;
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(node.key, node.x, node.y);
+  ctx.fillStyle = '#888';
+  ctx.font = '9px Courier New';
+  ctx.fillText(`d=${node.degree}`, node.x, node.y + 30);
+}
+
+function initTables() {
+  let rootHtml = '<table><tr><th>Root List</th>';
+  heap.roots.forEach((n, i) => {
+    const cls = n.highlight === 'current' ? 'class="current"' : '';
+    rootHtml += `<td id="root${i}" ${cls}>${n.key}</td>`;
+  });
+  if (heap.roots.length === 0) rootHtml += '<td>empty</td>';
+  rootHtml += '</tr><tr><th>Degree</th>';
+  heap.roots.forEach((n, i) => { rootHtml += `<td id="rootDeg${i}">${n.degree}</td>`; });
+  if (heap.roots.length === 0) rootHtml += '<td>—</td>';
+  rootHtml += '</tr><tr><th>Mark</th>';
+  heap.roots.forEach((n, i) => {
+    rootHtml += `<td id="rootMark${i}" ${n.mark ? 'style="color:#ff66ff"' : ''}>${n.mark ? 'T' : 'F'}</td>`;
+  });
+  if (heap.roots.length === 0) rootHtml += '<td>—</td>';
+  rootHtml += '</tr></table>';
+  document.getElementById('rootTableWrapper').innerHTML = rootHtml;
+  const maxDeg = 9;
+  let consHtml = '<table><tr><th>Deg</th>';
+  for (let i = 0; i < maxDeg; i++) consHtml += `<th>${i}</th>`;
+  consHtml += '</tr><tr><td>Node</td>';
+  for (let i = 0; i < maxDeg; i++) consHtml += `<td id="cons${i}">—</td>`;
+  consHtml += '</tr></table>';
+  document.getElementById('consolidateTableWrapper').innerHTML = consHtml;
+}
+
+function clearHighlights() {
+  heap.roots.forEach(n => { n.highlight = ''; });
+  clearSubtreeHighlights(heap.roots);
+}
+
+function clearSubtreeHighlights(nodes) {
+  for (const node of nodes) {
+    if (node.child) {
+      let c = node.child;
+      do { c.highlight = ''; if (c.child) clearSubtreeHighlights([c]); c = c.right; } while (c !== node.child);
+    }
+  }
+}
+
+function highlightSubtree(node, color) {
+  node.highlight = color;
+  if (node.child) {
+    let c = node.child;
+    do { highlightSubtree(c, color); c = c.right; } while (c !== node.child);
+  }
+}
+
+function buildSteps() {
+  steps = [];
+  const operations = [
+    { type: 'insert_batch', keys: [10, 3, 15, 7, 20, 12, 5, 8, 1] },
+    { type: 'findMin' },
+    { type: 'extractMin' },
+    { type: 'insert_batch', keys: [2, 25, 18] },
+    { type: 'decreaseKey', targetKey: 20, newKey: 4 },
+    { type: 'extractMin' },
+    { type: 'union' },
+    { type: 'extractMin' },
+    { type: 'delete', targetKey: 15 }
+  ];
+  operations.forEach(op => {
+    switch(op.type) {
+      case 'insert_batch':
+        op.keys.forEach(key => {
+          steps.push({ type: 'insert_start', key, explanation: buildInsertExplanation(key, 'start') });
+          steps.push({ type: 'insert_done', key, explanation: buildInsertExplanation(key, 'done') });
+        });
+        break;
+      case 'findMin':
+        steps.push({ type: 'findMin', explanation: buildFindMinExplanation() });
+        break;
+      case 'extractMin':
+        steps.push({ type: 'extract_start', explanation: buildExtractMinExplanation('start') });
+        steps.push({ type: 'extract_promote', explanation: buildExtractMinExplanation('promote') });
+        steps.push({ type: 'extract_consolidate_start', explanation: buildExtractMinExplanation('consolidate_start') });
+        steps.push({ type: 'extract_consolidate_link', explanation: buildExtractMinExplanation('consolidate_link') });
+        steps.push({ type: 'extract_consolidate_done', explanation: buildExtractMinExplanation('consolidate_done') });
+        steps.push({ type: 'extract_done', explanation: buildExtractMinExplanation('done') });
+        break;
+      case 'decreaseKey':
+        steps.push({ type: 'decrease_check', targetKey: op.targetKey, newKey: op.newKey, explanation: buildDecreaseKeyExplanation(op.targetKey, op.newKey, 'check') });
+        steps.push({ type: 'decrease_cut', targetKey: op.targetKey, newKey: op.newKey, explanation: buildDecreaseKeyExplanation(op.targetKey, op.newKey, 'cut') });
+        steps.push({ type: 'decrease_cascade', targetKey: op.targetKey, newKey: op.newKey, explanation: buildDecreaseKeyExplanation(op.targetKey, op.newKey, 'cascade') });
+        steps.push({ type: 'decrease_done', targetKey: op.targetKey, newKey: op.newKey, explanation: buildDecreaseKeyExplanation(op.targetKey, op.newKey, 'done') });
+        break;
+      case 'union':
+        steps.push({ type: 'union_setup', explanation: buildUnionExplanation('setup') });
+        steps.push({ type: 'union_concat', explanation: buildUnionExplanation('concat') });
+        steps.push({ type: 'union_done', explanation: buildUnionExplanation('done') });
+        break;
+      case 'delete':
+        steps.push({ type: 'delete_decrease', targetKey: op.targetKey, explanation: buildDeleteExplanation(op.targetKey, 'decrease') });
+        steps.push({ type: 'delete_extract', targetKey: op.targetKey, explanation: buildDeleteExplanation(op.targetKey, 'extract') });
+        steps.push({ type: 'delete_done', targetKey: op.targetKey, explanation: buildDeleteExplanation(op.targetKey, 'done') });
+        break;
+    }
+  });
+}
+
+function buildInsertExplanation(key, phase) {
+  if (phase === 'start') {
+    return `<div class="explain-section active">
+      <h3>INSERT(${key}) — Adding to Root List</h3>
+      <p>Create new node with key <span class="dim">${key}</span> and add to the root list.</p>
+      <span class="formula-line">INSERT(H, x):
+  x.degree = 0
+  x.parent = nil
+  x.child = nil
+  x.mark = false
+  insert x into H's root list
+  if x.key < H.min.key
+      H.min = x</span>
+      <p class="note">Insert is O(1) amortized — just add to root list, no restructuring.</p>
+    </div>`;
+  }
+  return `<div class="explain-section active">
+    <h3>INSERT(${key}) — Complete</h3>
+    <p>Node <span class="dim">${key}</span> added to root list.</p>
+    <span class="formula-line">H.min = min(H.min, x)
+H.n = H.n + 1</span>
+    <p class="note">Lazy strategy — no consolidation during insert.</p>
+  </div>`;
+}
+
+function buildFindMinExplanation() {
+  return `<div class="explain-section active">
+    <h3>FIND-MIN — Return Minimum</h3>
+    <p>Simply return the <span class="dim">min pointer</span>.</p>
+    <span class="formula-line">FIND-MIN(H):
+  return H.min</span>
+    <p>O(1) — always available via the min pointer.</p>
+    <p class="note">Unlike binomial heaps, Fibonacci heap always has O(1) find-min.</p>
+  </div>`;
+}
+
+function buildExtractMinExplanation(phase) {
+  switch(phase) {
+    case 'start':
+      return `<div class="explain-section active">
+        <h3>EXTRACT-MIN — Remove Minimum</h3>
+        <p>Remove and return the node with <span class="dim">minimum key</span>.</p>
+        <span class="formula-line">EXTRACT-MIN(H):
+  z = H.min
+  if z != nil
+      for each child x of z
+          add x to root list
+          x.parent = nil
+      remove z from root list</span>
+        <p class="note">Most complex operation — involves consolidation.</p>
+      </div>`;
+    case 'promote':
+      return `<div class="explain-section active">
+        <h3>EXTRACT-MIN — Promote Children</h3>
+        <p>Move all children of the minimum node to the root list.</p>
+        <span class="formula-line">for each child x of z:
+    add x to root list
+    x.parent = nil</span>
+        <p>Children become new roots — their parent pointers set to nil.</p>
+      </div>`;
+    case 'consolidate_start':
+      return `<div class="explain-section active">
+        <h3>CONSOLIDATE — Start</h3>
+        <p>After removing min, merge trees of the <span class="dim">same degree</span>.</p>
+        <span class="formula-line">CONSOLIDATE(H):
+  let A[0..D(H.n)] be a new array
+  for each node w in root list
+      x = w
+      d = x.degree
+      while A[d] != nil
+          y = A[d]
+          if x.key > y.key, swap x and y
+          LINK(y, x)
+          A[d] = nil
+          d = d + 1
+      A[d] = x</span>
+        <p class="note">Ensures at most one tree per degree.</p>
+      </div>`;
+    case 'consolidate_link':
+      return `<div class="explain-section active">
+        <h3>CONSOLIDATE — Link Trees</h3>
+        <p>When two trees have the same degree, <span class="dim">link</span> them:</p>
+        <span class="formula-line">LINK(y, x):
+  remove y from root list
+  make y a child of x
+  x.degree = x.degree + 1
+  y.mark = false</span>
+        <p>After linking, check next degree — may need further consolidation.</p>
+      </div>`;
+    case 'consolidate_done':
+      return `<div class="explain-section active">
+        <h3>CONSOLIDATE — Complete</h3>
+        <p>Root list now has <span class="dim">at most one tree per degree</span>.</p>
+        <span class="formula-line">D(H.n) ≤ floor(log_φ(n)) = O(lg n)</span>
+        <p class="note">Maximum degree is O(lg n) due to Fibonacci number bound.</p>
+      </div>`;
+    case 'done':
+      return `<div class="explain-section active">
+        <h3>EXTRACT-MIN — Complete</h3>
+        <p>The minimum node has been removed and returned.</p>
+        <span class="formula-line">H.n = H.n - 1
+return z</span>
+        <p class="note">Amortized cost: O(lg n).</p>
+      </div>`;
+  }
+}
+
+function buildDecreaseKeyExplanation(targetKey, newKey, phase) {
+  switch(phase) {
+    case 'check':
+      return `<div class="explain-section active">
+        <h3>DECREASE-KEY — Check Violation</h3>
+        <p>Decrease key of node <span class="dim">${targetKey}</span> to <span class="dim">${newKey}</span>.</p>
+        <span class="formula-line">DECREASE-KEY(H, x, k):
+  if k > x.key, error "new key > current"
+  x.key = k
+  y = x.parent
+  if y != nil and x.key < y.key
+      CUT(H, x, y)
+      CASCADING-CUT(H, y)</span>
+        <p class="note">Decrease-key is O(1) amortized — the key advantage.</p>
+      </div>`;
+    case 'cut':
+      return `<div class="explain-section active">
+        <h3>CUT — Sever from Parent</h3>
+        <p>The node violates min-heap property — <span class="dim">cut</span> it from parent.</p>
+        <span class="formula-line">CUT(H, x, y):
+  remove x from child list of y
+  y.degree = y.degree - 1
+  add x to root list of H
+  x.parent = nil
+  x.mark = false</span>
+        <p>This is O(1) — just pointer updates.</p>
+      </div>`;
+    case 'cascade':
+      return `<div class="explain-section active">
+        <h3>CASCADING-CUT</h3>
+        <p>After cutting, check if parent <span class="dim">y</span> needs to be cut too.</p>
+        <span class="formula-line">CASCADING-CUT(H, y):
+  z = y.parent
+  if z != nil
+      if y.mark == false
+          y.mark = true
+      else
+          CUT(H, y, z)
+          CASCADING-CUT(H, z)</span>
+        <p>A node can lose at most <span class="dim">2 children</span> before being cut itself.</p>
+        <div class="warning">
+          <strong>The Mark Field's Role:</strong> Prevents excessive cascading. A node loses at most 2 children, ensuring O(lg n) degree bound.
+        </div>
+      </div>`;
+    case 'done':
+      return `<div class="explain-section active">
+        <h3>DECREASE-KEY — Complete</h3>
+        <p>Key decreased to <span class="dim">${newKey}</span>.</p>
+        <span class="formula-line">if x.key < H.min.key
+    H.min = x</span>
+        <p class="note">Amortized cost: O(1). This is why Fibonacci heap improves Dijkstra's.</p>
+      </div>`;
+  }
+}
+
+function buildUnionExplanation(phase) {
+  switch(phase) {
+    case 'setup':
+      return `<div class="explain-section active">
+        <h3>UNION — Merge Two Heaps</h3>
+        <p>Merge two Fibonacci heaps by <span class="dim">concatenating root lists</span>.</p>
+        <span class="formula-line">UNION(H1, H2):
+  H = MAKE-FIB-HEAP()
+  Concatenate root list of H1 with root list of H2
+  H.min = (H1.min.key <= H2.min.key) ? H1.min : H2.min
+  H.n = H1.n + H2.n</span>
+        <p class="note">O(1) — just concatenate two circular lists, no restructuring.</p>
+      </div>`;
+    case 'concat':
+      return `<div class="explain-section active">
+        <h3>UNION — Concatenating</h3>
+        <p>Join the two circular doubly-linked root lists.</p>
+        <span class="formula-line">root_list(H) = root_list(H1) ∪ root_list(H2)</span>
+        <p>Update min pointer to the smaller of the two minimums.</p>
+        <p class="note">No tree restructuring needed — main advantage over binomial heaps.</p>
+      </div>`;
+    case 'done':
+      return `<div class="explain-section active">
+        <h3>UNION — Complete</h3>
+        <p>Two heaps merged into one.</p>
+        <p>Total nodes: <span class="dim">H1.n + H2.n</span></p>
+        <span class="formula-line">Amortized cost: O(1)</span>
+        <p class="note">Much better than binomial heap O(lg n) merge.</p>
+      </div>`;
+  }
+}
+
+function buildDeleteExplanation(targetKey, phase) {
+  switch(phase) {
+    case 'decrease':
+      return `<div class="explain-section active">
+        <h3>DELETE — Decrease Key to -∞</h3>
+        <p>Delete node <span class="dim">${targetKey}</span> by first decreasing its key to <span class="dim">-∞</span>.</p>
+        <span class="formula-line">DELETE(H, x):
+  DECREASE-KEY(H, x, -∞)
+  EXTRACT-MIN(H)</span>
+        <p>This ensures the node becomes the minimum and will be extracted.</p>
+        <p class="note">Delete is O(lg n) amortized — decrease-key O(1) + extract-min O(lg n).</p>
+      </div>`;
+    case 'extract':
+      return `<div class="explain-section active">
+        <h3>DELETE — Extract Minimum</h3>
+        <p>Now extract the minimum (which is the deleted node).</p>
+        <span class="formula-line">EXTRACT-MIN(H) removes the -∞ node</span>
+        <p>Consolidation proceeds as normal.</p>
+      </div>`;
+    case 'done':
+      return `<div class="explain-section active">
+        <h3>DELETE — Complete</h3>
+        <p>Node <span class="dim">${targetKey}</span> has been deleted.</p>
+        <span class="formula-line">Amortized cost: O(lg n)</span>
+      </div>`;
+  }
+}
+
+function buildFinishedExplanation() {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ All Operations Complete!</h3>
+    <p>Fibonacci heap operations demonstrated successfully.</p>
+    <h3 style="margin-top:10px;">Key Properties to Remember</h3>
+    <p>1. <span class="dim">Lazy structure</span> — minimal work during insert/merge</p>
+    <p>2. <span class="dim">Consolidate</span> during extract-min — merges trees of same degree</p>
+    <p>3. <span class="dim">Cascading cuts</span> — maintain degree bound O(lg n)</p>
+    <p>4. <span class="dim">Mark field</span> — tracks if node lost a child</p>
+    <p>5. <span class="dim">Circular doubly-linked lists</span> — O(1) insert/delete from any position</p>
+    <h3 style="margin-top:10px;">Amortized Analysis (Potential Method)</h3>
+    <span class="formula-line">Φ(H) = trees(H) + 2 × marks(H)</span>
+    <p>Each cut costs O(1) actual, but reduces Φ by 1.</p>
+    <p>CASCADING-CUT does k cuts, but k are "free" (reduce potential).</p>
+    <h3 style="margin-top:10px;">Degree Bound Proof</h3>
+    <span class="formula-line">If node has degree d → at least F(d+2) ≥ φ^d nodes</span>
+    <span class="formula-line">n ≥ φ^d → d ≤ log_φ(n) = O(lg n)</span>
+    <h3 style="margin-top:10px;">Applications</h3>
+    <span class="formula-line">Dijkstra: O(E + V lg V) vs O(E lg V) with binary heap</span>
+    <span class="formula-line">Prim's MST: O(E + V lg V) vs O(E lg V) with binary heap</span>
+    <h3 style="margin-top:10px;">When to Use</h3>
+    <p>✓ Many decrease-key operations (dense graphs)</p>
+    <p>✓ Need O(1) union</p>
+    <p>✗ Simple implementation needed</p>
+    <p>✗ Small/medium datasets (binary heap often faster in practice)</p>
+    <p class="note">Fibonacci heap has large constant factors and poor cache performance.</p>
+  </div>`;
+}
+
+function applyStep(step) {
+  clearHighlights();
+  switch(step.type) {
+    case 'insert_start': {
+      const node = insertNode(step.key);
+      node.highlight = 'new';
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('opDisplay').textContent = `INSERT(${step.key})`;
+      document.getElementById('phaseDisplay').textContent = 'Adding to root list';
+      document.getElementById('computingDisplay').textContent = `key=${step.key}`;
+      break;
+    }
+    case 'insert_done': {
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Insert complete';
+      break;
+    }
+    case 'findMin': {
+      if (heap.min) heap.min.highlight = 'found';
+      document.getElementById('opDisplay').textContent = 'FIND-MIN';
+      document.getElementById('phaseDisplay').textContent = 'Returning minimum';
+      document.getElementById('computingDisplay').textContent = `min=${heap.min ? heap.min.key : 'nil'}`;
+      break;
+    }
+    case 'extract_start': {
+      if (heap.min) heap.min.highlight = 'current';
+      document.getElementById('opDisplay').textContent = 'EXTRACT-MIN';
+      document.getElementById('phaseDisplay').textContent = 'Identifying minimum';
+      document.getElementById('computingDisplay').textContent = `min=${heap.min ? heap.min.key : 'nil'}`;
+      break;
+    }
+    case 'extract_promote': {
+      const minKey = heap.min ? heap.min.key : null;
+      if (heap.min) {
+        const children = [];
+        if (heap.min.child) {
+          let c = heap.min.child;
+          do { children.push(c); c = c.right; } while (c !== heap.min.child);
+        }
+        extractMin();
+        children.forEach(c => c.highlight = 'new');
+      }
+      document.getElementById('computingDisplay').textContent = `removed=${minKey}`;
+      document.getElementById('phaseDisplay').textContent = 'Children promoted to root list';
+      break;
+    }
+    case 'extract_consolidate_start': {
+      heap.roots.forEach(n => n.highlight = 'processing');
+      document.getElementById('phaseDisplay').textContent = 'Consolidating trees';
+      document.getElementById('computingDisplay').textContent = 'Merging same-degree trees';
+      break;
+    }
+    case 'extract_consolidate_link': {
+      heap.roots.forEach(n => n.highlight = 'processing');
+      document.getElementById('computingDisplay').textContent = 'Linking trees of same degree';
+      break;
+    }
+    case 'extract_consolidate_done': {
+      heap.roots.forEach(n => n.highlight = 'consolidate');
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Consolidation complete';
+      document.getElementById('computingDisplay').textContent = `roots=${heap.roots.length}`;
+      break;
+    }
+    case 'extract_done': {
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Extract-min complete';
+      document.getElementById('computingDisplay').textContent = `heap size=${heap.n}`;
+      break;
+    }
+    case 'decrease_check': {
+      const node = findNodeByKey(step.targetKey);
+      if (node) { node.highlight = 'current'; if (node.parent) node.parent.highlight = 'processing'; }
+      document.getElementById('opDisplay').textContent = 'DECREASE-KEY';
+      document.getElementById('phaseDisplay').textContent = 'Checking heap property';
+      document.getElementById('computingDisplay').textContent = `${step.targetKey} → ${step.newKey}`;
+      break;
+    }
+    case 'decrease_cut': {
+      const node = findNodeByKey(step.targetKey);
+      if (node) { node.highlight = 'cut'; decreaseKey(node, step.newKey); node.highlight = 'new'; }
+      document.getElementById('phaseDisplay').textContent = 'Cut from parent';
+      document.getElementById('computingDisplay').textContent = 'Node moved to root list';
+      break;
+    }
+    case 'decrease_cascade': {
+      heap.roots.forEach(n => { if (n.mark) n.highlight = 'marked'; });
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Cascading cut check';
+      break;
+    }
+    case 'decrease_done': {
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Decrease-key complete';
+      document.getElementById('computingDisplay').textContent = `new key=${step.newKey}`;
+      break;
+    }
+    case 'union_setup': {
+      heap2 = { roots: [], min: null, n: 0 };
+      [50, 40, 60, 35].forEach(k => {
+        const node = new FibNode(k);
+        if (!heap2.min) { heap2.roots = [node]; heap2.min = node; }
+        else {
+          node.left = heap2.min.left;
+          node.right = heap2.min;
+          heap2.min.left.right = node;
+          heap2.min.left = node;
+          heap2.roots.push(node);
+        }
+        if (k < heap2.min.key) heap2.min = node;
+        heap2.n++;
+      });
+      document.getElementById('opDisplay').textContent = 'UNION';
+      document.getElementById('phaseDisplay').textContent = 'Creating second heap';
+      document.getElementById('computingDisplay').textContent = 'H2 = {50, 40, 60, 35}';
+      break;
+    }
+    case 'union_concat': {
+      heap = unionHeaps(heap, heap2);
+      heap2 = null;
+      document.getElementById('phaseDisplay').textContent = 'Concatenating root lists';
+      document.getElementById('computingDisplay').textContent = `Combined ${heap.n} nodes`;
+      break;
+    }
+    case 'union_done': {
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Union complete';
+      document.getElementById('computingDisplay').textContent = `total=${heap.n}`;
+      break;
+    }
+    case 'delete_decrease': {
+      const node = findNodeByKey(step.targetKey);
+      if (node) { node.highlight = 'current'; decreaseKey(node, -Infinity); node.highlight = 'cut'; }
+      document.getElementById('opDisplay').textContent = 'DELETE';
+      document.getElementById('phaseDisplay').textContent = 'Decreasing key to -∞';
+      document.getElementById('computingDisplay').textContent = `${step.targetKey} → -∞`;
+      break;
+    }
+    case 'delete_extract': {
+      extractMin();
+      document.getElementById('phaseDisplay').textContent = 'Extracting minimum (-∞)';
+      break;
+    }
+    case 'delete_done': {
+      if (heap.min) heap.min.highlight = 'min';
+      document.getElementById('phaseDisplay').textContent = 'Delete complete';
+      document.getElementById('computingDisplay').textContent = `removed ${step.targetKey}`;
+      break;
+    }
+  }
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${document.getElementById('phaseDisplay').textContent}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+  initTables();
+  drawHeap();
+}
+
+function findNodeByKey(key) {
+  for (const node of heap.roots) {
+    const found = searchSubtree(node, key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function searchSubtree(node, key) {
+  if (node.key === key) return node;
+  if (node.child) {
+    let c = node.child;
+    do { const found = searchSubtree(c, key); if (found) return found; c = c.right; } while (c !== node.child);
+  }
+  return null;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  initHeap();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('opDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Fibonacci Heap Structure</h3>
+    <p>A <b>Fibonacci heap</b> is a collection of <span class="dim">min-heap-ordered trees</span> stored in a circular doubly-linked root list.</p>
+    <h3 style="margin-top:10px;">Core Properties</h3>
+    <p>1. Collection of min-heap-ordered trees (not necessarily binomial)</p>
+    <p>2. Trees are rooted and <span class="dim">unordered</span></p>
+    <p>3. Root list is a <span class="dim">circular doubly-linked list</span></p>
+    <p>4. Each node has: key, degree, mark, parent, child, left, right</p>
+    <h3 style="margin-top:10px;">Amortized Costs</h3>
+    <span class="formula-line">INSERT: O(1) | FIND-MIN: O(1) | UNION: O(1)</span>
+    <span class="formula-line">EXTRACT-MIN: O(lg n) | DECREASE-KEY: O(1) | DELETE: O(lg n)</span>
+    <p class="note">Press Play or Step to see operations in action.</p>
+  </div>`;
+  clearHighlights();
+  buildSteps();
+  initTables();
+  document.getElementById('totalSteps').textContent = steps.length;
+  drawHeap();
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'All operations done';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultDisplay').innerHTML = `
+    <p style="color:#fff; margin:8px 0;">Heap contains <span style="color:#00ff88; font-weight:bold;">${heap.n}</span> nodes</p>
+    <p style="color:#fff; margin:8px 0;">Minimum key: <span style="color:#ff6600; font-weight:bold;">${heap.min ? heap.min.key : 'nil'}</span></p>
+    <p style="color:#fff; margin:8px 0;">Root count: <span style="color:#00ccff; font-weight:bold;">${heap.roots.length}</span></p>
+    <p style="color:#fff; margin:8px 0;">Max degree bound: <span style="color:#ffcc00; font-weight:bold;">O(lg n) = O(${Math.ceil(Math.log2(heap.n + 1))})</span></p>
+  `;
+  document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+resizeCanvas();
+buildSteps();
+initTables();
+document.getElementById('totalSteps').textContent = steps.length;
+drawHeap();
+</script>
+</body>
+</html>
