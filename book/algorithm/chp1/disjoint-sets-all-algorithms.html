@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disjoint Sets (Union-Find) — Complete Algorithm Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.3s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { margin: 6px 0; padding-left: 15px; border-left: 2px solid #333; }
+    .example .result { color: #00ff88; font-weight: bold; }
+    .example .warning { color: #ff6600; font-style: italic; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card h3 { color: #ffcc00; font-size: 0.9em; margin-bottom: 8px; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning-box { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0a00; padding: 10px; border-radius: 0 8px 8px 0; }
+
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+
+    .tree-box { background: #0d0d1a; border: 1px solid #333; border-radius: 8px; padding: 15px; margin: 10px 0; text-align: center; }
+    .tree-box pre { display: inline-block; text-align: left; color: #00ccff; font-size: 0.9em; }
+
+    .array-display { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+    .array-cell { width: 45px; height: 45px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #0d0d1a; font-size: 0.8em; transition: all 0.3s; }
+    .array-cell .idx { color: #888; font-size: 0.7em; }
+    .array-cell .val { color: #00ccff; font-weight: bold; }
+    .array-cell.root { border-color: #00ff88; background: #0a1a12; }
+    .array-cell.root .val { color: #00ff88; }
+    .array-cell.current { border-color: #ff6600; background: #1a0a00; transform: scale(1.1); }
+    .array-cell.current .val { color: #ff6600; }
+    .array-cell.compressed { border-color: #ffff00; background: #1a1a00; }
+    .array-cell.compressed .val { color: #ffff00; }
+
+    .complexity-table td.best { color: #00ff88; }
+    .complexity-table td.worst { color: #ff6600; }
+    .complexity-table td.optimal { color: #00ff88; font-weight: bold; background: #0a1a12; }
+  </style>
+</head>
+<body>
+  <h1>DISJOINT SETS (UNION-FIND)</h1>
+  <p class="subtitle">Data Structures — Complete Algorithm Guide with Worked Examples</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('tab1')">1. Structure</button>
+      <button class="tab" onclick="showTab('tab2')">2. Make-Set</button>
+      <button class="tab" onclick="showTab('tab3')">3. Find</button>
+      <button class="tab" onclick="showTab('tab4')">4. Union (Naive)</button>
+      <button class="tab" onclick="showTab('tab5')">5. Union by Rank</button>
+      <button class="tab" onclick="showTab('tab6')">6. Path Compression</button>
+      <button class="tab" onclick="showTab('tab7')">7. Both Optimizations</button>
+      <button class="tab" onclick="showTab('tab8')">8. Complexity</button>
+      <button class="tab" onclick="showTab('tab9')">9. Applications</button>
+    </div>
+
+    <!-- TAB 1: Structure -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>1. Disjoint Set Data Structure</h2>
+        <p>A <span class="result">disjoint-set</span> maintains a collection of disjoint dynamic sets. Each set is identified by a <span class="result">representative</span> (the root element).</p>
+
+        <div class="formula">
+          <div class="label">Core Properties:</div>
+          <div class="expr">Each element belongs to exactly one set</div>
+          <div class="desc">Sets are either identical or disjoint — no partial overlap allowed</div>
+        </div>
+
+        <h3>Tree Representation</h3>
+        <p>Each set is a <span class="result">rooted tree</span>. Every node stores a pointer to its parent. The root's parent is itself.</p>
+
+        <div class="tree-box">
+          <pre>
+   Set A: {0, 1, 2, 3}       Set B: {4, 5, 6}
+
+        0 (root)                  4 (root)
+       / \                       / \
+      1   2                     5   6
+       \
+        3
+
+   Parent pointers:            Parent pointers:
+   P[0]=0, P[1]=0              P[4]=4, P[5]=4
+   P[2]=0, P[3]=1              P[6]=4
+          </pre>
+        </div>
+
+        <h3>Array Representation</h3>
+        <p>Store in array <code>P[]</code> where <code>P[i]</code> = parent of element i. Root if <code>P[i] == i</code>.</p>
+
+        <div class="code">
+Index:    0   1   2   3   4   5   6
+P[i]:     0   0   0   1   4   4   4
+          ^   ^   ^       ^   ^
+        root root root   root root
+        </div>
+
+        <div class="warning-box">
+          <strong>⚠ Common Mistake:</strong> <code>P[i]</code> stores the <em>parent</em> of i, NOT which set i belongs to. To find the set, follow parent pointers to the root!
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Make-Set -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>2. MAKE-SET(x)</h2>
+        <p>Creates a new set containing only element x. Makes x its own parent (root of a singleton tree).</p>
+
+        <div class="code">
+MAKE-SET(x):
+    P[x] = x          // x is its own parent (root)
+    Rank[x] = 0       // height = 0 (optional, for union by rank)
+        </div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">O(1) — constant time</div>
+          <div class="desc">Just one array assignment</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example: Creating 5 Elements</h2>
+        <div class="example">
+          <div class="title">Problem: Call MAKE-SET(0), MAKE-SET(1), MAKE-SET(2), MAKE-SET(3), MAKE-SET(4)</div>
+
+          <div class="step">
+            <p><strong>MAKE-SET(0):</strong> P[0] = 0 → <span class="result">Set: {0}</span></p>
+          </div>
+          <div class="step">
+            <p><strong>MAKE-SET(1):</strong> P[1] = 1 → <span class="result">Set: {1}</span></p>
+          </div>
+          <div class="step">
+            <p><strong>MAKE-SET(2):</strong> P[2] = 2 → <span class="result">Set: {2}</span></p>
+          </div>
+          <div class="step">
+            <p><strong>MAKE-SET(3):</strong> P[3] = 3 → <span class="result">Set: {3}</span></p>
+          </div>
+          <div class="step">
+            <p><strong>MAKE-SET(4):</strong> P[4] = 4 → <span class="result">Set: {4}</span></p>
+          </div>
+
+          <div class="array-display">
+            <div class="array-cell root"><span class="idx">0</span><span class="val">0</span></div>
+            <div class="array-cell root"><span class="idx">1</span><span class="val">1</span></div>
+            <div class="array-cell root"><span class="idx">2</span><span class="val">2</span></div>
+            <div class="array-cell root"><span class="idx">3</span><span class="val">3</span></div>
+            <div class="array-cell root"><span class="idx">4</span><span class="val">4</span></div>
+          </div>
+
+          <p class="note">All elements are roots (P[i] = i). Five singleton sets: {0}, {1}, {2}, {3}, {4}</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example: Creating Elements 0-7</h2>
+        <div class="example">
+          <div class="title">Problem: Initialize 8 elements for a union-find problem</div>
+          <div class="step">
+            <p><strong>MAKE-SET(0..7):</strong> Each P[i] = i, Rank[i] = 0</p>
+          </div>
+          <div class="array-display">
+            <div class="array-cell root"><span class="idx">0</span><span class="val">0</span></div>
+            <div class="array-cell root"><span class="idx">1</span><span class="val">1</span></div>
+            <div class="array-cell root"><span class="idx">2</span><span class="val">2</span></div>
+            <div class="array-cell root"><span class="idx">3</span><span class="val">3</span></div>
+            <div class="array-cell root"><span class="idx">4</span><span class="val">4</span></div>
+            <div class="array-cell root"><span class="idx">5</span><span class="val">5</span></div>
+            <div class="array-cell root"><span class="idx">6</span><span class="val">6</span></div>
+            <div class="array-cell root"><span class="idx">7</span><span class="val">7</span></div>
+          </div>
+          <p class="result">8 singleton sets: {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Find -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>3. FIND(x) — Basic</h2>
+        <p>Returns the <span class="result">representative (root)</span> of the set containing x. Follows parent pointers until reaching a root.</p>
+
+        <div class="code">
+FIND(x):
+    while x ≠ P[x]:
+        x = P[x]
+    return x
+        </div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">O(n) worst case — no optimization</div>
+          <div class="desc">May traverse entire chain (e.g., linked list shape)</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Simple Find (No Compression)</h2>
+        <div class="example">
+          <div class="title">Given: P = [2, 3, 2, 3, 3, 4, 5] — Find the set of element 4</div>
+
+          <div class="tree-box">
+            <pre>
+    Tree structure:
+          2 (root)
+         /
+        3
+       / \
+      1   4
+         / \
+        0   5
+           /
+          6
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>FIND(4):</strong></p>
+            <p style="margin-left:15px;">P[4] = 3 ≠ 4 → move to 3</p>
+            <p style="margin-left:15px;">P[3] = 2 ≠ 3 → move to 2</p>
+            <p style="margin-left:15px;">P[2] = 2 = 2 → <span class="result">root found! Return 2</span></p>
+          </div>
+          <p class="note">Path: 4 → 3 → 2 (3 steps). Element 4 belongs to set {2} (represented by root 2).</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Find in Chain (Worst Case)</h2>
+        <div class="example">
+          <div class="title">Given: P = [1, 2, 3, 4, 5, 5] — Find the set of element 0</div>
+
+          <div class="tree-box">
+            <pre>
+    Chain structure:
+    0 → 1 → 2 → 3 → 4 → 5 (root)
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>FIND(0):</strong></p>
+            <p style="margin-left:15px;">P[0] = 1 ≠ 0 → move to 1</p>
+            <p style="margin-left:15px;">P[1] = 2 ≠ 1 → move to 2</p>
+            <p style="margin-left:15px;">P[2] = 3 ≠ 2 → move to 3</p>
+            <p style="margin-left:15px;">P[3] = 4 ≠ 3 → move to 4</p>
+            <p style="margin-left:15px;">P[4] = 5 ≠ 4 → move to 5</p>
+            <p style="margin-left:15px;">P[5] = 5 = 5 → <span class="result">root found! Return 5</span></p>
+          </div>
+          <p class="warning">⚠ O(n) time! Chain of length 6 requires 5 pointer dereferences. This is why we need path compression!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Find Multiple Elements</h2>
+        <div class="example">
+          <div class="title">Given: P = [0, 0, 0, 1, 4, 4, 4] — Find(3), Find(6), Find(5)</div>
+
+          <div class="tree-box">
+            <pre>
+    Tree A: {0,1,2,3}     Tree B: {4,5,6}
+        0 (root)              4 (root)
+       / \                   / \
+      1   2                 5   6
+       \
+        3
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>FIND(3):</strong> P[3]=1≠3 → P[1]=0≠1 → P[0]=0 → <span class="result">Return 0</span></p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(6):</strong> P[6]=4≠6 → P[4]=4 → <span class="result">Return 4</span></p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(5):</strong> P[5]=4≠5 → P[4]=4 → <span class="result">Return 4</span></p>
+          </div>
+          <p class="note">FIND(3) = 0, FIND(6) = FIND(5) = 4. Elements 5 and 6 are in the same set.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Union (Naive) -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>4. UNION(a, b) — Naive</h2>
+        <p>Merges the sets containing a and b. Makes one root point to the other root.</p>
+
+        <div class="code">
+UNION(a, b):
+    rootA = FIND(a)
+    rootB = FIND(b)
+    if rootA ≠ rootB:
+        P[rootA] = rootB    // make rootA a child of rootB
+        </div>
+
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">O(n) per UNION (due to FIND)</div>
+          <div class="desc">FIND can be O(n) in worst case; union itself is O(1)</div>
+        </div>
+
+        <div class="warning-box">
+          <strong>⚠ Danger:</strong> Naive union can create degenerate trees (chains). After n unions, FIND can take O(n) time!
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Sequential Naive Union</h2>
+        <div class="example">
+          <div class="title">Problem: UNION(0,1), UNION(1,2), UNION(2,3), UNION(3,4) with naive union</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [0,1,2,3,4] — five singleton sets</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> FIND(0)=0, FIND(1)=1. P[0]=1</p>
+            <p style="margin-left:15px;">P = [<span style="color:#ff6600">1</span>,1,2,3,4] — Set: {0,1}</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(1,2):</strong> FIND(1)=1, FIND(2)=2. P[1]=2</p>
+            <p style="margin-left:15px;">P = [1,<span style="color:#ff6600">2</span>,2,3,4] — Set: {0,1,2}</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(2,3):</strong> FIND(2)=2, FIND(3)=3. P[2]=3</p>
+            <p style="margin-left:15px;">P = [1,2,<span style="color:#ff6600">3</span>,3,4] — Set: {0,1,2,3}</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(3,4):</strong> FIND(3)=3, FIND(4)=4. P[3]=4</p>
+            <p style="margin-left:15px;">P = [1,2,3,<span style="color:#ff6600">4</span>,4] — Set: {0,1,2,3,4}</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    Final tree (chain!):
+    0 → 1 → 2 → 3 → 4 (root)
+
+    FIND(0) now takes O(5) = O(n) time!
+            </pre>
+          </div>
+          <p class="warning">⚠ Worst case: a sequence of n-1 unions creates a chain of length n.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Naive Union with Finds</h2>
+        <div class="example">
+          <div class="title">Problem: Process UNION(0,1), UNION(2,3), FIND(0), FIND(3), UNION(1,2), FIND(0)</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [0,1,2,3]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> P[0]=1 → P = [<span style="color:#ff6600">1</span>,1,2,3]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(2,3):</strong> P[2]=3 → P = [1,1,<span style="color:#ff6600">3</span>,3]</p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(0):</strong> P[0]=1≠0, P[1]=1 → <span class="result">Return 1</span></p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(3):</strong> P[3]=3 → <span class="result">Return 3</span></p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(1,2):</strong> FIND(1)=1, FIND(2)=3. P[1]=3</p>
+            <p style="margin-left:15px;">P = [1,<span style="color:#ff6600">3</span>,3,3]</p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(0):</strong> P[0]=1≠0, P[1]=3≠1, P[3]=3 → <span class="result">Return 3</span></p>
+            <p class="note">Now FIND(0) takes 3 steps: 0→1→3</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Building a Degenerate Tree</h2>
+        <div class="example">
+          <div class="title">Problem: UNION(0,1), UNION(0,2), UNION(0,3), UNION(0,4) — always attach to existing root</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [0,1,2,3,4]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> Root(0)=0, Root(1)=1. P[1]=0 → P = [0,<span style="color:#ff6600">0</span>,2,3,4]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,2):</strong> Root(0)=0, Root(2)=2. P[2]=0 → P = [0,0,<span style="color:#ff6600">0</span>,3,4]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,3):</strong> Root(0)=0, Root(3)=3. P[3]=0 → P = [0,0,0,<span style="color:#ff6600">0</span>,4]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,4):</strong> Root(0)=0, Root(4)=4. P[4]=0 → P = [0,0,0,0,<span style="color:#ff6600">0</span>]</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    Final tree (star shape — best case for naive!):
+            0 (root)
+           /|\ \ 
+          1 2 3 4
+
+    FIND(1) = O(1), FIND(4) = O(1)
+            </pre>
+          </div>
+          <p class="note">When we always attach smaller trees to the same root, we get a star (good). But naive union doesn't guarantee this!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Union by Rank -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>5. UNION by Rank</h2>
+        <p>Always attach the <span class="result">shorter tree under the root of the taller tree</span>. Rank is an upper bound on height.</p>
+
+        <div class="code">
+MAKE-SET(x):
+    P[x] = x
+    Rank[x] = 0
+
+UNION(a, b):
+    rootA = FIND(a)
+    rootB = FIND(b)
+    if rootA = rootB: return
+
+    if Rank[rootA] < Rank[rootB]:
+        P[rootA] = rootB          // rootA becomes child
+    elif Rank[rootA] > Rank[rootB]:
+        P[rootB] = rootA          // rootB becomes child
+    else:                         // equal ranks
+        P[rootB] = rootA          // make one child
+        Rank[rootA]++             // rank increases by 1
+        </div>
+
+        <div class="formula">
+          <div class="label">Guarantee:</div>
+          <div class="expr">Tree height ≤ lg(n)</div>
+          <div class="desc">Rank only increases when two equal-rank trees merge. A node's rank can increase at most lg(n) times.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Union by Rank — Building a Balanced Tree</h2>
+        <div class="example">
+          <div class="title">Problem: UNION(0,1), UNION(2,3), UNION(0,2), UNION(4,5), UNION(6,7), UNION(4,6), UNION(0,4)</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [0,1,2,3,4,5,6,7], Rank = [0,0,0,0,0,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> Rank[0]=Rank[1]=0. P[1]=0, Rank[0]++</p>
+            <p style="margin-left:15px;">P = [0,<span style="color:#00ff88">0</span>,2,3,4,5,6,7], Rank = [<span style="color:#ff6600">1</span>,0,0,0,0,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(2,3):</strong> Rank[2]=Rank[3]=0. P[3]=2, Rank[2]++</p>
+            <p style="margin-left:15px;">P = [0,0,2,<span style="color:#00ff88">2</span>,4,5,6,7], Rank = [1,0,<span style="color:#ff6600">1</span>,0,0,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,2):</strong> Rank[0]=1, Rank[2]=1. Equal! P[2]=0, Rank[0]++</p>
+            <p style="margin-left:15px;">P = [0,0,<span style="color:#00ff88">0</span>,2,4,5,6,7], Rank = [<span style="color:#ff6600">2</span>,0,1,0,0,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(4,5):</strong> Rank[4]=Rank[5]=0. P[5]=4, Rank[4]++</p>
+            <p style="margin-left:15px;">P = [0,0,0,2,4,<span style="color:#00ff88">4</span>,6,7], Rank = [2,0,1,0,<span style="color:#ff6600">1</span>,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(6,7):</strong> Rank[6]=Rank[7]=0. P[7]=6, Rank[6]++</p>
+            <p style="margin-left:15px;">P = [0,0,0,2,4,4,6,<span style="color:#00ff88">6</span>], Rank = [2,0,1,0,1,0,<span style="color:#ff6600">1</span>,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(4,6):</strong> Rank[4]=1, Rank[6]=1. Equal! P[6]=4, Rank[4]++</p>
+            <p style="margin-left:15px;">P = [0,0,0,2,4,4,<span style="color:#00ff88">4</span>,6], Rank = [2,0,1,0,<span style="color:#ff6600">2</span>,0,1,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,4):</strong> Rank[0]=2, Rank[4]=2. Equal! P[4]=0, Rank[0]++</p>
+            <p style="margin-left:15px;">P = [0,0,0,2,<span style="color:#00ff88">0</span>,4,4,6], Rank = [<span style="color:#ff6600">3</span>,0,1,0,2,0,1,0]</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    Final tree (height 3, but balanced):
+                 0 (root, rank=3)
+               /   \
+              1     4 (rank=2)
+             /     / \
+            2     5   6 (rank=1)
+           /         /
+          3         7
+
+    Height = 3 = lg(8). Much better than chain of 7!
+            </pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Union by Rank vs Naive</h2>
+        <div class="example">
+          <div class="title">Compare: Same unions with naive vs union by rank</div>
+
+          <div class="step">
+            <p><strong>Naive union (UNION(0,1), UNION(1,2), UNION(2,3), UNION(3,4)):</strong></p>
+            <p style="margin-left:15px;">Creates chain: 0→1→2→3→4. Height = 4.</p>
+            <p style="margin-left:15px;">FIND(0) takes 4 steps.</p>
+          </div>
+          <div class="step">
+            <p><strong>Union by rank (same operations):</strong></p>
+            <p style="margin-left:15px;">UNION(0,1): rank equal → P[1]=0, Rank[0]=1</p>
+            <p style="margin-left:15px;">UNION(0,2): Rank[0]=1 > Rank[2]=0 → P[2]=0</p>
+            <p style="margin-left:15px;">UNION(0,3): Rank[0]=1 > Rank[3]=0 → P[3]=0</p>
+            <p style="margin-left:15px;">UNION(0,4): Rank[0]=1 > Rank[4]=0 → P[4]=0</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    Union by Rank result:
+          0 (root, rank=1)
+         /|\ \ 
+        1 2 3 4
+
+    Height = 1. FIND(0) takes 1 step!
+            </pre>
+          </div>
+          <p class="result">Union by rank: height lg(n) vs naive: height O(n)</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Rank Tie-Breaking</h2>
+        <div class="example">
+          <div class="title">Demonstrate: What happens when ranks are equal vs different</div>
+
+          <div class="step">
+            <p><strong>Case 1: Rank[rootA] < Rank[rootB]</strong></p>
+            <p style="margin-left:15px;">Example: Rank[3]=1, Rank[5]=2 → P[3]=5 (smaller tree goes under)</p>
+            <p style="margin-left:15px;">Rank[5] stays 2 (no change)</p>
+          </div>
+          <div class="step">
+            <p><strong>Case 2: Rank[rootA] > Rank[rootB]</strong></p>
+            <p style="margin-left:15px;">Example: Rank[2]=2, Rank[7]=1 → P[7]=2 (smaller tree goes under)</p>
+            <p style="margin-left:15px;">Rank[2] stays 2 (no change)</p>
+          </div>
+          <div class="step">
+            <p><strong>Case 3: Rank[rootA] = Rank[rootB]</strong></p>
+            <p style="margin-left:15px;">Example: Rank[1]=1, Rank[4]=1 → P[4]=1, Rank[1]++ = 2</p>
+            <p style="margin-left:15px;">Only equal-rank merges increase the rank!</p>
+          </div>
+          <p class="note">Rank only increases when two trees of EQUAL rank merge. This guarantees height ≤ lg(n).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: Path Compression -->
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>6. Path Compression</h2>
+        <p>During FIND, make <span class="result">every node on the path point directly to the root</span>. This flattens the tree permanently.</p>
+
+        <div class="code">
+FIND(x):
+    if x ≠ P[x]:
+        P[x] = FIND(P[x])    // path compression (recursive)
+    return P[x]
+        </div>
+
+        <div class="formula">
+          <div class="label">Effect:</div>
+          <div class="expr">After FIND(x), all nodes on path point to root</div>
+          <div class="desc">Future FINDs on those nodes become O(1)</div>
+        </div>
+
+        <div class="warning-box">
+          <strong>⚠ Important:</strong> Path compression is applied only during FIND, NOT during UNION. It permanently modifies the tree structure.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Path Compression on a Chain</h2>
+        <div class="example">
+          <div class="title">Given: P = [1,2,3,4,5,5] — Perform FIND(0)</div>
+
+          <div class="tree-box">
+            <pre>
+    BEFORE FIND(0):
+    0 → 1 → 2 → 3 → 4 → 5 (root)
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>FIND(0) — Recursive:</strong></p>
+            <p style="margin-left:15px;">FIND(0): P[0]=1≠0, call FIND(1)</p>
+            <p style="margin-left:15px;">FIND(1): P[1]=2≠1, call FIND(2)</p>
+            <p style="margin-left:15px;">FIND(2): P[2]=3≠2, call FIND(3)</p>
+            <p style="margin-left:15px;">FIND(3): P[3]=4≠3, call FIND(4)</p>
+            <p style="margin-left:15px;">FIND(4): P[4]=5≠4, call FIND(5)</p>
+            <p style="margin-left:15px;">FIND(5): P[5]=5 → return 5 (root)</p>
+            <p style="margin-left:15px;">Backtrack: P[4]=5, P[3]=5, P[2]=5, P[1]=5, P[0]=5</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    AFTER FIND(0):
+    0 → 5 (root)
+    1 → 5
+    2 → 5
+    3 → 5
+    4 → 5
+
+    P = [5,5,5,5,5,5]
+    All nodes now point directly to root!
+            </pre>
+          </div>
+          <p class="result">FIND(0) now takes O(1) for any subsequent call!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Path Compression on a Tree</h2>
+        <div class="example">
+          <div class="title">Given: Tree with root 1 — Perform FIND(7)</div>
+
+          <div class="tree-box">
+            <pre>
+    BEFORE FIND(7):
+          1 (root)
+         / \
+        2   3
+       / \   \
+      4   5   6
+     /     \
+    7       8
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>Path from 7 to root:</strong> 7 → 4 → 2 → 1</p>
+          </div>
+          <div class="step">
+            <p><strong>AFTER FIND(7):</strong> Nodes 7, 4, 2 all point directly to root 1</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    AFTER FIND(7):
+          1 (root)
+         /|\
+        2 3 4    ← 2 and 4 now point to 1
+       / \ \
+      7   5 6    ← 7 now points to 1
+           \
+            8
+            </pre>
+          </div>
+          <p class="note">Node 5 and 8 are NOT on the path, so they're unchanged. Only nodes on the find path get compressed.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Multiple FINDs with Compression</h2>
+        <div class="example">
+          <div class="title">Start: P = [1,2,3,4,5,5] — Perform FIND(0), then FIND(1), then FIND(2)</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [1,2,3,4,5,5] — chain 0→1→2→3→4→5</p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(0):</strong> Path 0→1→2→3→4→5. After: P = [<span style="color:#ffff00">5</span>,<span style="color:#ffff00">5</span>,<span style="color:#ffff00">5</span>,<span style="color:#ffff00">5</span>,5,5]</p>
+            <p style="margin-left:15px;">All nodes 0-4 now point to 5</p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(1):</strong> P[1]=5 → <span class="result">O(1)! Return 5</span></p>
+            <p style="margin-left:15px;">No compression needed (already compressed)</p>
+          </div>
+          <div class="step">
+            <p><strong>FIND(2):</strong> P[2]=5 → <span class="result">O(1)! Return 5</span></p>
+            <p style="margin-left:15px;">No compression needed (already compressed)</p>
+          </div>
+          <p class="result">After first FIND(0) costs O(n), all subsequent FINDs on those nodes are O(1)!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: Both Optimizations -->
+    <div class="content" id="tab7">
+      <div class="section">
+        <h2>7. Union by Rank + Path Compression</h2>
+        <p>Using <span class="result">both optimizations together</span> gives near-constant amortized time per operation.</p>
+
+        <div class="code">
+MAKE-SET(x):
+    P[x] = x
+    Rank[x] = 0
+
+FIND(x):
+    if x ≠ P[x]:
+        P[x] = FIND(P[x])     // path compression
+    return P[x]
+
+UNION(a, b):
+    rootA = FIND(a)
+    rootB = FIND(b)
+    if rootA = rootB: return
+
+    if Rank[rootA] < Rank[rootB]:
+        P[rootA] = rootB
+    elif Rank[rootA] > Rank[rootB]:
+        P[rootB] = rootA
+    else:
+        P[rootB] = rootA
+        Rank[rootA]++
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Complete Sequence with Both Optimizations</h2>
+        <div class="example">
+          <div class="title">Problem: Process 8 elements with UNION(0,1), UNION(2,3), UNION(4,5), UNION(6,7), UNION(0,2), UNION(4,6), UNION(0,4), then FIND(7)</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> P = [0,1,2,3,4,5,6,7], Rank = [0,0,0,0,0,0,0,0]</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> Rank equal → P[1]=0, Rank[0]=1</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(2,3):</strong> Rank equal → P[3]=2, Rank[2]=1</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(4,5):</strong> Rank equal → P[5]=4, Rank[4]=1</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(6,7):</strong> Rank equal → P[7]=6, Rank[6]=1</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,2):</strong> Rank[0]=1 = Rank[2]=1 → P[2]=0, Rank[0]=2</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(4,6):</strong> Rank[4]=1 = Rank[6]=1 → P[6]=4, Rank[4]=2</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(0,4):</strong> Rank[0]=2 = Rank[4]=2 → P[4]=0, Rank[0]=3</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    BEFORE FIND(7):
+                 0 (rank=3)
+               /   \
+              1     4 (rank=2)
+                    / \
+                   5   6 (rank=1)
+                       /
+                      7
+
+    Path from 7: 7 → 6 → 4 → 0
+            </pre>
+          </div>
+
+          <div class="step">
+            <p><strong>FIND(7) with path compression:</strong></p>
+            <p style="margin-left:15px;">FIND(7): P[7]=6≠7, call FIND(6)</p>
+            <p style="margin-left:15px;">FIND(6): P[6]=4≠6, call FIND(4)</p>
+            <p style="margin-left:15px;">FIND(4): P[4]=0≠4, call FIND(0)</p>
+            <p style="margin-left:15px;">FIND(0): P[0]=0 → return 0</p>
+            <p style="margin-left:15px;">Backtrack: P[4]=0, P[6]=0, P[7]=0</p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    AFTER FIND(7):
+                 0 (rank=3)
+               / | \ \
+              1  4  6 7   ← 4, 6, 7 now point to 0
+                 |
+                 5
+
+    P = [0,0,0,2,0,4,0,0]
+            </pre>
+          </div>
+          <p class="result">Path compression flattened the right side. FIND(6) and FIND(7) are now O(1)!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Kruskal's MST with Union-Find</h2>
+        <div class="example">
+          <div class="title">Problem: Use union-find to detect cycles while building MST</div>
+          <p>Edges (sorted by weight): (0,1,1), (2,3,1), (0,2,2), (1,3,2), (0,3,3)</p>
+
+          <div class="step">
+            <p><strong>Edge (0,1):</strong> FIND(0)=0, FIND(1)=1. Different → UNION. Add to MST.</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (2,3):</strong> FIND(2)=2, FIND(3)=3. Different → UNION. Add to MST.</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (0,2):</strong> FIND(0)=0, FIND(2)=2. Different → UNION. Add to MST.</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (1,3):</strong> FIND(1)=0, FIND(3)=0. Same! <span class="warning">CYCLE — skip edge</span></p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (0,3):</strong> FIND(0)=0, FIND(3)=0. Same! <span class="warning">CYCLE — skip edge</span></p>
+          </div>
+
+          <div class="tree-box">
+            <pre>
+    MST: (0,1), (2,3), (0,2) — total weight = 4
+    Cycle edges rejected: (1,3), (0,3)
+            </pre>
+          </div>
+          <p class="result">Union-find efficiently detects cycles: if FIND(u) == FIND(v), adding edge (u,v) creates a cycle.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Connected Components</h2>
+        <div class="example">
+          <div class="title">Problem: Find connected components in graph with edges (0,1), (1,2), (3,4), (4,5), (2,5)</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> 6 singleton sets: {0}, {1}, {2}, {3}, {4}, {5}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (0,1):</strong> UNION(0,1) → {0,1}, {2}, {3}, {4}, {5}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (1,2):</strong> UNION(1,2) → {0,1,2}, {3}, {4}, {5}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (3,4):</strong> UNION(3,4) → {0,1,2}, {3,4}, {5}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (4,5):</strong> UNION(4,5) → {0,1,2}, {3,4,5}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (2,5):</strong> UNION(2,5) → {0,1,2,3,4,5} — all connected!</p>
+          </div>
+          <p class="result">Final: 1 connected component containing all 6 vertices.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 8: Complexity -->
+    <div class="content" id="tab8">
+      <div class="section">
+        <h2>8. Complexity Analysis</h2>
+
+        <div class="formula">
+          <div class="label">Inverse Ackermann Function:</div>
+          <div class="expr">α(n) = min{i ≥ 1 : A(i, 1) ≥ n}</div>
+          <div class="desc">A(i,j) is the Ackermann function. For all practical n, α(n) ≤ 4.</div>
+        </div>
+
+        <table class="complexity-table">
+          <tr>
+            <th>Approach</th>
+            <th>Make-Set</th>
+            <th>Find</th>
+            <th>Union</th>
+            <th>Total (m ops, n elements)</th>
+          </tr>
+          <tr>
+            <td>Naive</td>
+            <td class="best">O(1)</td>
+            <td class="worst">O(n)</td>
+            <td class="worst">O(n)</td>
+            <td class="worst">O(m·n)</td>
+          </tr>
+          <tr>
+            <td>Union by Rank only</td>
+            <td class="best">O(1)</td>
+            <td>O(lg n)</td>
+            <td>O(lg n)</td>
+            <td>O(m·lg n)</td>
+          </tr>
+          <tr>
+            <td>Path Compression only</td>
+            <td class="best">O(1)</td>
+            <td>O(lg n) amortized</td>
+            <td>O(lg n) amortized</td>
+            <td>O(m·lg n)</td>
+          </tr>
+          <tr>
+            <td>Both optimizations</td>
+            <td class="best">O(1)</td>
+            <td class="optimal">O(α(n)) amortized</td>
+            <td class="optimal">O(α(n)) amortized</td>
+            <td class="optimal">O(m·α(n))</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Ackermann Function Growth</h2>
+        <table>
+          <tr><th>i</th><th>A(i, 1)</th><th>Meaning</th></tr>
+          <tr><td>1</td><td>2</td><td>Addition</td></tr>
+          <tr><td>2</td><td>3</td><td>Multiplication</td></tr>
+          <tr><td>3</td><td>5</td><td>Exponentiation</td></tr>
+          <tr><td>4</td><td>13</td><td> Tetration</td></tr>
+          <tr><td>5</td><td>65533</td><td>Pentation (huge!)</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Practical Implication:</div>
+          <div class="expr">α(n) ≤ 4 for any n ≤ 10^80 (atoms in universe)</div>
+          <div class="desc">Union-find with both optimizations is effectively O(1) per operation!</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example: Comparing Approaches</h2>
+        <div class="example">
+          <div class="title">Problem: 1 million operations on 1 million elements</div>
+
+          <div class="step">
+            <p><strong>Naive:</strong> O(m·n) = O(10^6 × 10^6) = O(10^12) — <span class="warning">too slow!</span></p>
+          </div>
+          <div class="step">
+            <p><strong>Union by rank:</strong> O(m·lg n) = O(10^6 × 20) = O(2×10^7) — <span class="result">fast!</span></p>
+          </div>
+          <div class="step">
+            <p><strong>Both optimizations:</strong> O(m·α(n)) = O(10^6 × 4) = O(4×10^6) — <span class="result">essentially constant!</span></p>
+          </div>
+          <p class="result">Both optimizations: ~2.5 million times faster than naive!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Space Complexity</h2>
+        <div class="formula">
+          <div class="label">Space:</div>
+          <div class="expr">O(n) — two arrays of size n</div>
+          <div class="desc">P[] for parent pointers, Rank[] for ranks (or sizes)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 9: Applications -->
+    <div class="content" id="tab9">
+      <div class="section">
+        <h2>9. Applications of Union-Find</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Kruskal's MST</h3>
+            <p>Detect cycles when adding edges. If <span class="highlight">FIND(u) == FIND(v)</span>, edge (u,v) creates a cycle.</p>
+          </div>
+          <div class="card">
+            <h3>Connected Components</h3>
+            <p>Merge vertices as edges are processed. <span class="highlight">FIND(u) == FIND(v)</span> means u and v are connected.</p>
+          </div>
+          <div class="card">
+            <h3>Equivalence Relations</h3>
+            <p>Maintain equivalence classes. UNION(a,b) means a ≡ b.</p>
+          </div>
+          <div class="card">
+            <h3>Percolation</h3>
+            <p>Model fluid flow through porous material. Connect top/bottom to detect percolation.</p>
+          </div>
+          <div class="card">
+            <h3>Image Processing</h3>
+            <p>Connected component labeling in binary images.</p>
+          </div>
+          <div class="card">
+            <h3>Network Connectivity</h3>
+            <p>Dynamic connectivity queries: are two nodes connected?</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Application 1: Kruskal's MST Algorithm</h2>
+        <div class="example">
+          <div class="title">Find MST of graph with edges: (0,1,4), (0,2,8), (1,2,11), (1,3,8), (2,4,7), (3,4,1), (3,5,4), (4,5,6)</div>
+
+          <div class="step">
+            <p><strong>Sorted edges:</strong> (3,4,1), (0,1,4), (3,5,4), (4,5,6), (2,4,7), (0,2,8), (1,3,8), (1,2,11)</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (3,4,1):</strong> FIND(3)=3, FIND(4)=4. Different → UNION. MST: {(3,4)}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (0,1,4):</strong> FIND(0)=0, FIND(1)=1. Different → UNION. MST: {(3,4), (0,1)}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (3,5,4):</strong> FIND(3)=3, FIND(5)=5. Different → UNION. MST: {(3,4), (0,1), (3,5)}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (4,5,6):</strong> FIND(4)=3, FIND(5)=3. Same → <span class="warning">CYCLE, skip</span></p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (2,4,7):</strong> FIND(2)=2, FIND(4)=3. Different → UNION. MST: {(3,4), (0,1), (3,5), (2,4)}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (0,2,8):</strong> FIND(0)=0, FIND(2)=3. Different → UNION. MST: {(3,4), (0,1), (3,5), (2,4), (0,2)}</p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (1,3,8):</strong> FIND(1)=0, FIND(3)=0. Same → <span class="warning">CYCLE, skip</span></p>
+          </div>
+          <div class="step">
+            <p><strong>Edge (1,2,11):</strong> FIND(1)=0, FIND(2)=0. Same → <span class="warning">CYCLE, skip</span></p>
+          </div>
+
+          <div class="result">MST: {(3,4,1), (0,1,4), (3,5,4), (2,4,7), (0,2,8)} — Total weight = 24</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Application 2: Dynamic Connectivity</h2>
+        <div class="example">
+          <div class="title">Process: UNION(0,1), UNION(2,3), FIND(0,3), UNION(1,2), FIND(0,3)</div>
+
+          <div class="step">
+            <p><strong>UNION(0,1):</strong> Sets: {0,1}, {2}, {3}</p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(2,3):</strong> Sets: {0,1}, {2,3}</p>
+          </div>
+          <div class="step">
+            <p><strong>Query: Are 0 and 3 connected?</strong> FIND(0)=0, FIND(3)=2. Different → <span class="result">NO</span></p>
+          </div>
+          <div class="step">
+            <p><strong>UNION(1,2):</strong> Sets: {0,1,2,3}</p>
+          </div>
+          <div class="step">
+            <p><strong>Query: Are 0 and 3 connected?</strong> FIND(0)=0, FIND(3)=0. Same → <span class="result">YES!</span></p>
+          </div>
+          <p class="note">Union-find answers connectivity queries in near-constant time after each update.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Application 3: Percolation Problem</h2>
+        <div class="example">
+          <div class="title">Model: N×N grid, cells can be open or blocked. System percolates if top connects to bottom.</div>
+
+          <div class="step">
+            <p><strong>Setup:</strong> Create virtual top node (N²) and virtual bottom node (N²+1)</p>
+          </div>
+          <div class="step">
+            <p><strong>Open cell (i,j):</strong> UNION with all adjacent open cells</p>
+          </div>
+          <div class="step">
+            <p><strong>Top row cells:</strong> UNION with virtual top node</p>
+          </div>
+          <div class="step">
+            <p><strong>Bottom row cells:</strong> UNION with virtual bottom node</p>
+          </div>
+          <div class="step">
+            <p><strong>Percolates?</strong> FIND(virtual top) == FIND(virtual bottom)?</p>
+          </div>
+          <p class="result">Union-find efficiently tracks connectivity as cells open dynamically.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Application 4: Equivalence Classes</h2>
+        <div class="example">
+          <div class="title">Problem: Process equivalences: (a,b), (b,c), (d,e), (c,d). Find all equivalence classes.</div>
+
+          <div class="step">
+            <p><strong>Initial:</strong> {a}, {b}, {c}, {d}, {e}</p>
+          </div>
+          <div class="step">
+            <p><strong>(a,b):</strong> UNION(a,b) → {a,b}, {c}, {d}, {e}</p>
+          </div>
+          <div class="step">
+            <p><strong>(b,c):</strong> UNION(b,c) → {a,b,c}, {d}, {e}</p>
+          </div>
+          <div class="step">
+            <p><strong>(d,e):</strong> UNION(d,e) → {a,b,c}, {d,e}</p>
+          </div>
+          <div class="step">
+            <p><strong>(c,d):</strong> UNION(c,d) → {a,b,c,d,e}</p>
+          </div>
+          <p class="result">All elements are equivalent — one equivalence class.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
