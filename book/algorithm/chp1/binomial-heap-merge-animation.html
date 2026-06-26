@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binomial Heap — MERGE Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    canvas {
+      display: block;
+      margin: 10px auto;
+      background: #0a0a1a;
+      border: 1px solid #2a2a44;
+      border-radius: 10px;
+    }
+    .heap-labels {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin: 5px 0 0;
+      font-size: 0.85em;
+    }
+    .heap-label { color: #888; }
+    .heap-label .hl { color: #ffcc00; font-weight: bold; }
+    .root-list-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+      padding: 10px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+    .root-chip {
+      padding: 4px 12px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      font-size: 0.8em;
+      background: #0d0d1a;
+      color: #aaa;
+      transition: all 0.3s;
+    }
+    .root-chip.highlight {
+      border-color: #ff6600;
+      color: #ff6600;
+      background: #1a0a00;
+    }
+    .root-chip.linked {
+      border-color: #00ff88;
+      color: #00ff88;
+      background: #0a1a12;
+    }
+    .root-chip .deg { color: #00ccff; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+
+  <h1>BINOMIAL HEAP — MERGE</h1>
+  <p class="subtitle">Data Structures — Union (Merge) of Two Binomial Heaps</p>
+
+  <div class="layout">
+    <div class="main-panel">
+
+      <canvas id="heapCanvas" width="900" height="420"></canvas>
+
+      <div class="heap-labels">
+        <span class="heap-label"><span class="hl">H1</span> = {B&#x2080;(3), B&#x2082;(7)}</span>
+        <span class="heap-label"><span class="hl">H2</span> = {B&#x2080;(5), B&#x2081;(6), B&#x2083;(1)}</span>
+      </div>
+
+      <div style="text-align:center; margin: 10px 0 0;">
+        <span style="color:#888; font-size:0.85em;">Merged root list (sorted by degree):</span>
+        <div id="rootListBar" class="root-list-bar"></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+        <button class="btn" onclick="pauseAnimation()">&#9646;&#9646; Pause</button>
+        <button class="btn" onclick="stepForward()">&#9197; Step</button>
+        <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+        <span class="label">Current action: </span><span class="highlight" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="result-section" id="resultSection" style="display:none;">
+        <h2>&#10003; Merge Complete!</h2>
+        <p id="resultDisplay" style="color:#fff; font-size:1em;"></p>
+      </div>
+
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>&#128214; Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Binomial Tree Node ──
+    function N(key) {
+      this.key = key;
+      this.degree = 0;
+      this.children = [];
+      this.parent = null;
+    }
+
+    function cloneNode(node) {
+      if (!node) return null;
+      var c = new N(node.key);
+      c.degree = node.degree;
+      c.children = node.children.map(function(ch) {
+        var cc = cloneNode(ch);
+        cc.parent = c;
+        return cc;
+      });
+      return c;
+    }
+
+    // ── Canvas Drawing ──
+    var canvas = document.getElementById('heapCanvas');
+    var ctx = canvas.getContext('2d');
+    var NODE_R = 15;
+    var LEVEL_H = 50;
+
+    function sub(n) {
+      return '\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089'[n] || String(n);
+    }
+
+    function treeWidth(node) {
+      if (!node || node.children.length === 0) return 40;
+      var w = 0;
+      for (var ci = 0; ci < node.children.length; ci++) {
+        w += treeWidth(node.children[ci]);
+      }
+      return Math.max(w, 40);
+    }
+
+    function drawTree(node, cx, cy, color, highlight) {
+      if (!node) return;
+      var totalW = treeWidth(node);
+      var xOff = cx - totalW / 2;
+
+      for (var ci = 0; ci < node.children.length; ci++) {
+        var ch = node.children[ci];
+        var cw = treeWidth(ch);
+        var ccx = xOff + cw / 2;
+        var ccy = cy + LEVEL_H;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + NODE_R);
+        ctx.lineTo(ccx, ccy - NODE_R);
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        drawTree(ch, ccx, ccy, color, highlight);
+        xOff += cw;
+      }
+
+      var isHighlighted = highlight && highlight.has(node.key);
+      ctx.beginPath();
+      ctx.arc(cx, cy, NODE_R, 0, Math.PI * 2);
+      ctx.fillStyle = isHighlighted ? '#1a1020' : '#111';
+      ctx.fill();
+      ctx.strokeStyle = isHighlighted ? '#ff6600' : color;
+      ctx.lineWidth = isHighlighted ? 3 : 2;
+      ctx.stroke();
+
+      if (isHighlighted) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, NODE_R + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ff660044';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = isHighlighted ? '#ff6600' : color;
+      ctx.font = 'bold 12px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(node.key), cx, cy);
+    }
+
+    function drawHeapForest(roots, x1, x2, cy, color, label, highlightSet) {
+      if (roots.length === 0) {
+        ctx.fillStyle = '#555';
+        ctx.font = '12px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('(empty)', (x1 + x2) / 2, cy + 30);
+        return;
+      }
+      var widths = roots.map(treeWidth);
+      var totalW = widths.reduce(function(a, b) { return a + b + 18; }, -18);
+      var x = (x1 + x2) / 2 - totalW / 2;
+
+      for (var i = 0; i < roots.length; i++) {
+        var w = widths[i];
+        var ccx = x + w / 2;
+
+        ctx.fillStyle = '#555';
+        ctx.font = '10px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('B' + sub(roots[i].degree), ccx, cy - NODE_R - 12);
+
+        drawTree(roots[i], ccx, cy, color, highlightSet);
+        x += w + 18;
+      }
+
+      ctx.fillStyle = '#888';
+      ctx.font = '11px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, (x1 + x2) / 2, 390);
+    }
+
+    // ── State ──
+    var phase = 'initial';
+    var displayH1 = [], displayH2 = [];
+    var displayMerged = [];
+    var highlightSet = null;
+    var steps = [], currentStep = 0;
+    var animating = false, animTimer = null;
+
+    // ── Build Initial Heaps ──
+    function buildInitialHeaps() {
+      var n3 = new N(3);
+
+      var b0_6 = new N(6); b0_6.degree = 0;
+      var b1_9 = new N(9); b1_9.degree = 1;
+      b1_9.children = [b0_6]; b0_6.parent = b1_9;
+      var b0_4 = new N(4); b0_4.degree = 0;
+      var n7 = new N(7); n7.degree = 2;
+      n7.children = [b1_9, b0_4]; b1_9.parent = n7; b0_4.parent = n7;
+
+      var n5 = new N(5); n5.degree = 0;
+      var b0_8 = new N(8); b0_8.degree = 0;
+      var b1_6 = new N(6); b1_6.degree = 1;
+      b1_6.children = [b0_8]; b0_8.parent = b1_6;
+
+      var b0_12 = new N(12); b0_12.degree = 0;
+      var b1_14 = new N(14); b1_14.degree = 1;
+      b1_14.children = [b0_12]; b0_12.parent = b1_14;
+      var b0_11 = new N(11); b0_11.degree = 0;
+      var b2_10 = new N(10); b2_10.degree = 2;
+      b2_10.children = [b1_14, b0_11]; b1_14.parent = b2_10; b0_11.parent = b2_10;
+      var b0_15 = new N(15); b0_15.degree = 0;
+      var b1_13 = new N(13); b1_13.degree = 1;
+      b1_13.children = [b0_15]; b0_15.parent = b1_13;
+      var b0_2 = new N(2); b0_2.degree = 0;
+      var n1 = new N(1); n1.degree = 3;
+      n1.children = [b2_10, b1_13, b0_2];
+      b2_10.parent = n1; b1_13.parent = n1; b0_2.parent = n1;
+
+      return {
+        h1: [n3, n7],
+        h2: [n5, b1_6, n1]
+      };
+    }
+
+    // ── Merge Steps ──
+    function buildSteps() {
+      steps = [];
+      var heaps = buildInitialHeaps();
+      var all = [];
+      heaps.h1.forEach(function(t) { all.push({ tree: t, from: 'H1' }); });
+      heaps.h2.forEach(function(t) { all.push({ tree: t, from: 'H2' }); });
+      all.sort(function(a, b) { return a.tree.degree - b.tree.degree; });
+
+      function snapshot() {
+        return all.map(function(r) {
+          return { tree: cloneNode(r.tree), from: r.from };
+        });
+      }
+
+      steps.push({
+        snapshot: snapshot(), hl1: -1, hl2: -1,
+        explanation: buildSortExplanation(all)
+      });
+
+      var i = 0;
+      while (i < all.length - 1) {
+        var curr = all[i], next = all[i + 1];
+        if (curr.tree.degree === next.tree.degree) {
+          var hasThird = i + 2 < all.length && all[i + 2].tree.degree === curr.tree.degree;
+
+          steps.push({
+            snapshot: snapshot(), hl1: i, hl2: i + 1,
+            explanation: buildCompareExplanation(curr, next, i, hasThird)
+          });
+
+          var parent, child;
+          if (curr.tree.key <= next.tree.key) {
+            parent = curr.tree; child = next.tree;
+          } else {
+            parent = next.tree; child = curr.tree;
+          }
+          child.parent = parent;
+          parent.children.push(child);
+          parent.degree++;
+
+          all.splice(i, 2);
+          all.splice(i, 0, { tree: parent, from: curr.from + '+' + next.from });
+
+          steps.push({
+            snapshot: snapshot(), hl1: -1, hl2: -1,
+            explanation: buildLinkExplanation(parent, child, hasThird)
+          });
+        } else {
+          i++;
+        }
+      }
+
+      steps.push({
+        snapshot: snapshot(), hl1: -1, hl2: -1,
+        explanation: buildDoneExplanation(all)
+      });
+    }
+
+    // ── Explanation Builders ──
+    function buildSortExplanation(all) {
+      var list = all.map(function(r) {
+        return 'B' + sub(r.tree.degree) + '(' + r.tree.key + ')';
+      }).join(' , ');
+      return '<div class="explain-section active">' +
+        '<h3>Phase 1: Sort-Merge Root Lists</h3>' +
+        '<p>Combine all roots from <span class="dim">H1</span> and <span class="dim">H2</span>, sorted by degree (ascending).</p>' +
+        '<span class="formula-line">' + list + '</span>' +
+        '<p>Now walk left-to-right. When two adjacent trees share the same <b>degree</b>, they must be <span class="split-info">LINKED</span>.</p>' +
+        '<p class="note">The while loop also detects three consecutive same-degree trees (carry propagation), like binary addition.</p>' +
+        '</div>';
+    }
+
+    function buildCompareExplanation(curr, next, idx, hasThird) {
+      var thirdNote = hasThird
+        ? '<p class="note">A third B' + sub(curr.tree.degree) + ' exists ahead &mdash; this is a carry chain.</p>'
+        : '';
+      var cmp = curr.tree.key <= next.tree.key ? '&le;' : '>';
+      var minKey = Math.min(curr.tree.key, next.tree.key);
+      return '<div class="explain-section active">' +
+        '<h3>Compare: B' + sub(curr.tree.degree) + '(' + curr.tree.key + ') vs B' + sub(next.tree.degree) + '(' + next.tree.key + ')</h3>' +
+        '<p>Both have <span class="dim">degree ' + curr.tree.degree + '</span> &mdash; must LINK!</p>' +
+        thirdNote +
+        '<span class="formula-line">LINK rule: smaller key becomes parent</span>' +
+        '<p>' + curr.tree.key + ' ' + cmp + ' ' + next.tree.key + ' &rarr; root <span class="split-info">' + minKey + '</span> absorbs the other.</p>' +
+        '</div>';
+    }
+
+    function buildLinkExplanation(parent, child, hasThird) {
+      var cascadeNote = hasThird
+        ? '<p class="note">Cascading: check this position again for more same-degree trees.</p>'
+        : '';
+      return '<div class="explain-section active">' +
+        '<h3>LINK: ' + child.key + ' becomes child of ' + parent.key + '</h3>' +
+        '<p>Make <span class="dim">' + child.key + '</span> the <b>leftmost child</b> of <span class="split-info">' + parent.key + '</span>.</p>' +
+        '<p>Parent\'s degree: ' + (parent.degree - 1) + ' &rarr; <span class="result-line" style="display:inline;">' + parent.degree + '</span></p>' +
+        '<span class="formula-line">parent.children = [child, ...previous_children]</span>' +
+        '<p>The result is B' + sub(parent.degree) + '(' + parent.key + ') with ' + parent.degree + ' children.</p>' +
+        cascadeNote +
+        '</div>';
+    }
+
+    function buildDoneExplanation(all) {
+      var list = all.map(function(r) {
+        return 'B' + sub(r.tree.degree) + '(' + r.tree.key + ')';
+      }).join(', ');
+      var totalNodes = all.reduce(function(s, r) {
+        return s + Math.pow(2, r.tree.degree);
+      }, 0);
+      var powers = all.map(function(r) {
+        return '2^' + r.tree.degree;
+      }).join(' + ');
+      return '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+        '<h3>&#10003; Merge Complete!</h3>' +
+        '<p>Final heap: <span class="result-line" style="display:inline;">{' + list + '}</span></p>' +
+        '<h3 style="margin-top:10px;">Binary Representation</h3>' +
+        '<p>Total nodes = ' + totalNodes + '. Degrees present: ' + all.map(function(r) { return r.tree.degree; }).join(', ') + '</p>' +
+        '<p>Binary: ' + powers + ' = ' + totalNodes + '</p>' +
+        '<h3 style="margin-top:10px;">Complexity</h3>' +
+        '<p><span class="dim">Time:</span> O(lg n) &mdash; at most O(lg n) trees in each heap</p>' +
+        '<p><span class="dim">Space:</span> O(1) additional &mdash; only pointer rewiring</p>' +
+        '<p class="note">Each binomial tree maintains min-heap order: parent.key &le; all children\'s keys.</p>' +
+        '</div>';
+    }
+
+    function buildInitialExplanation() {
+      return '<div class="explain-section active">' +
+        '<h3>Problem Setup</h3>' +
+        '<p>Merge two min-ordered binomial heaps into one:</p>' +
+        '<p><span class="dim">H1</span> = {B&#x2080;(3), B&#x2082;(7)} &mdash; trees with degrees 0 and 2</p>' +
+        '<p><span class="dim">H2</span> = {B&#x2080;(5), B&#x2081;(6), B&#x2083;(1)} &mdash; trees with degrees 0, 1, 3</p>' +
+        '<h3 style="margin-top:10px;">Algorithm Steps</h3>' +
+        '<p>1. <b>Sort-merge</b> root lists by degree</p>' +
+        '<p>2. <b>Walk</b> merged list &mdash; link trees of same degree</p>' +
+        '<p>3. Handle <b>cascading links</b> (carry propagation)</p>' +
+        '<span class="formula-line">MERGE(H1, H2) &mdash; O(lg n) time</span>' +
+        '<p class="note">Total nodes: 1 + 4 + 1 + 2 + 8 = 16. Binary 10000 &rarr; result is B&#x2084;.</p>' +
+        '<p class="note">Press Play or Step to begin.</p>' +
+        '</div>';
+    }
+
+    // ── Apply Step ──
+    function applyStep(step) {
+      highlightSet = null;
+      phase = 'merged';
+      displayMerged = step.snapshot.map(function(r) { return r.tree; });
+      displayH1 = [];
+      displayH2 = [];
+
+      if (step.hl1 >= 0) {
+        highlightSet = new Set([
+          step.snapshot[step.hl1].tree.key,
+          step.snapshot[step.hl2].tree.key
+        ]);
+      }
+
+      var barData = step.snapshot.map(function(r) {
+        return { key: r.tree.key, degree: r.tree.degree };
+      });
+      updateRootListBarWithHL(barData, step.hl1, step.hl2);
+    }
+
+    function updateRootListBarWithHL(merged, hl1, hl2) {
+      var bar = document.getElementById('rootListBar');
+      bar.innerHTML = '';
+      for (var i = 0; i < merged.length; i++) {
+        var chip = document.createElement('span');
+        chip.className = 'root-chip';
+        if (i === hl1 || i === hl2) chip.className += ' highlight';
+        chip.innerHTML = 'B<span class="deg">' + sub(merged[i].degree) + '</span>(' + merged[i].key + ')';
+        bar.appendChild(chip);
+      }
+    }
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (phase === 'initial') {
+        drawHeapForest(displayH1, 0, canvas.width / 2, 70, '#00ccff', 'H1', null);
+        drawHeapForest(displayH2, canvas.width / 2, canvas.width, 70, '#ff66ff', 'H2', null);
+      } else {
+        drawHeapForest(displayMerged, 0, canvas.width, 70, '#00ccff', 'Merged root list', highlightSet);
+      }
+    }
+
+    // ── Controls ──
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(function() {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      drawCanvas();
+      currentStep++;
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      phase = 'initial';
+      displayH1 = [];
+      displayH2 = [];
+      displayMerged = [];
+      highlightSet = null;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready \u2014 Press Play';
+      document.getElementById('computingDisplay').textContent = '\u2014';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle \u2014 press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+
+      var heaps = buildInitialHeaps();
+      displayH1 = heaps.h1;
+      displayH2 = heaps.h2;
+      drawCanvas();
+
+      buildSteps();
+      updateRootListBarWithHL([], -1, -1);
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      var last = steps[steps.length - 1];
+      var list = last.snapshot.map(function(r) {
+        return 'B' + sub(r.tree.degree) + '(' + r.tree.key + ')';
+      }).join(', ');
+      document.getElementById('phaseDisplay').textContent = '\u2713 Complete!';
+      document.getElementById('computingDisplay').textContent = '{' + list + '}';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('resultDisplay').innerHTML = 'Merged heap = {' + list + '}';
+      document.getElementById('sidebarPhase').textContent =
+        'Step ' + steps.length + ' / ' + steps.length + ' \u2014 \u2714 Complete';
+      document.getElementById('explainArea').innerHTML = buildDoneExplanation(
+        last.snapshot.map(function(r) { return { tree: r.tree }; })
+      );
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(function() {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    // ── Init ──
+    var heaps = buildInitialHeaps();
+    displayH1 = heaps.h1;
+    displayH2 = heaps.h2;
+    buildSteps();
+    drawCanvas();
+    document.getElementById('totalSteps').textContent = steps.length;
+    document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+  </script>
+</body>
+</html>
