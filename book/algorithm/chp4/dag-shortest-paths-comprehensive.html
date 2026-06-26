@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAG Shortest Paths - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { color: #00ccff; font-size: 0.85em; margin: 5px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .topo-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .topo-node { background: #1a1a2e; border: 2px solid #00ccff; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #00ff88; font-weight: bold; font-size: 1em; }
+    .topo-node.processed { border-color: #00ff88; background: #002a1a; }
+    .topo-arrow { color: #ff6600; font-size: 1.2em; display: flex; align-items: center; }
+    .iteration-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+    .iteration-row .vtx { color: #ffcc00; font-weight: bold; }
+    .iteration-row .edge { color: #00ccff; }
+    .iteration-row .dist { color: #00ff88; font-family: monospace; }
+    .iteration-row .relax-result { color: #888; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <h1>DAG Shortest Paths</h1>
+  <p class="subtitle">&Theta;(V+E) — The Fastest SSSP Algorithm — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Algorithm &amp; Pseudocode</button>
+      <button class="tab" onclick="showSection('tab3')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Comparison Table</button>
+      <button class="tab" onclick="showSection('tab5')">Practice &amp; Edge Cases</button>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Shortest Paths in Directed Acyclic Graphs (DAGs)</h2>
+        <p>A <strong>Directed Acyclic Graph (DAG)</strong> is a directed graph with <strong>no cycles</strong>. Because there are no cycles, there can never be a negative cycle, so <strong>negative edge weights are allowed</strong> without any issue.</p>
+
+        <div class="formula">
+          <div class="label">Definition:</div>
+          <div class="expr">DAG: directed graph G = (V,E) with &exist; topological ordering</div>
+          <div class="desc">A DAG is a directed graph that can be topologically sorted (linear ordering respecting edge directions)</div>
+        </div>
+
+        <h3>Key Insight</h3>
+        <p>In a DAG, shortest paths can be found in <strong>linear time</strong> &Theta;(V+E) by processing vertices in <strong>topological order</strong> and relaxing all outgoing edges from each vertex. This is the <strong>fastest possible</strong> shortest path algorithm.</p>
+
+        <div class="formula">
+          <div class="label">Runtime:</div>
+          <div class="expr">&Theta;(V + E)</div>
+          <div class="desc">Topological sort: &Theta;(V+E) + One pass of relaxations: &Theta;(E) = &Theta;(V+E)</div>
+        </div>
+
+        <h3>Why Only One Pass Works?</h3>
+        <ul style="margin-left:20px;color:#aaa;line-height:1.8;">
+          <li>Processing vertices in <strong>topological order</strong> guarantees that when we relax edges from vertex u, the shortest path to u has <strong>already been finalized</strong></li>
+          <li>Every path from s to v goes through vertices that appear <strong>before</strong> v in topological order</li>
+          <li>Unlike Bellman-Ford which needs |V|-1 passes, DAG shortest paths need <strong>exactly one pass</strong></li>
+        </ul>
+
+        <div class="grid">
+          <div class="card">
+            <h3>What is a DAG?</h3>
+            <p>Directed graph with <span class="highlight">no cycles</span></p>
+            <p class="note">Topological order exists</p>
+          </div>
+          <div class="card">
+            <h3>Edge Weights</h3>
+            <p>Any weights, even <span class="dim">negative</span></p>
+            <p class="note">No negative cycles possible</p>
+          </div>
+          <div class="card">
+            <h3>Complexity</h3>
+            <p><span class="highlight">&Theta;(V+E)</span></p>
+            <p class="note">Optimal — linear time</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Algorithm &amp; Pseudocode</h2>
+
+        <h3>Algorithm Steps</h3>
+        <ol style="margin-left:20px;color:#aaa;line-height:1.8;">
+          <li><strong>Topologically sort</strong> the DAG (using DFS or Kahn's algorithm)</li>
+          <li><strong>Initialize:</strong> d[s] = 0, d[v] = &infin; for all others</li>
+          <li>For each vertex u <strong>in topological order</strong>:
+            <br/>- For each outgoing edge (u,v) from u:
+            <br/>&nbsp;&nbsp;RELAX(u,v): if d[v] > d[u] + w(u,v), update d[v] and &pi;[v]
+          </li>
+        </ol>
+
+        <h3>Pseudocode</h3>
+        <div class="code">DAG-SHORTEST-PATHS(G, W, s)
+1.  Topologically sort the vertices of G
+2.  INITIALIZE(G, s)
+3.  for each vertex u taken in topological order:
+4.      for each vertex v &isin; Adj[u]:
+5.          RELAX(u, v, W)
+
+INITIALIZE(G, s)
+1.  for each vertex v &isin; V:
+2.      d[v] &larr; &infin;
+3.      &pi;[v] &larr; NIL
+4.  d[s] &larr; 0
+
+RELAX(u, v, W)
+1.  if d[v] &gt; d[u] + W(u, v):
+2.      d[v] &larr; d[u] + W(u, v)
+3.      &pi;[v] &larr; u</div>
+
+        <h3>Topological Sort Refresher</h3>
+        <p>Topological sort of a DAG produces a linear ordering of vertices such that for every edge (u,v), u comes <strong>before</strong> v in the ordering.</p>
+
+        <div class="formula">
+          <div class="label">Topological Sort (DFS-based):</div>
+          <div class="expr">Run DFS; output vertices in reverse order of finish times f[v]</div>
+          <div class="desc">The vertex with the largest finish time is placed first in topological order</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Topological Sort (Kahn's algorithm):</div>
+          <div class="expr">Repeatedly remove vertices with in-degree = 0</div>
+          <div class="desc">Also &Theta;(V+E) — uses a queue of zero-indegree vertices</div>
+        </div>
+
+        <div class="warning">
+          <strong>Warning!</strong> The DAG shortest path algorithm only works on <strong>DAGs</strong>. If the graph has cycles, the shortest paths may be incorrect because a later vertex in topological order might have an edge back to an earlier one (which would be ignored).
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <!-- Example 1 -->
+        <div class="example">
+          <div class="title">Example 1: DAG with All Positive Weights</div>
+          <p>DAG with 6 vertices. Topological order: <strong>r, s, t, x, y, z</strong>. Source = <strong>s</strong>.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (r,s)=5, (r,t)=3, (s,t)=2, (s,x)=6, (t,x)=7, (t,y)=4, (t,z)=1, (x,y)=-1, (x,z)=3, (y,z)=5</p>
+
+          <p class="step" style="color:#00ccff;">Initial: d[r]=&infin;, d[s]=0, d[t]=&infin;, d[x]=&infin;, d[y]=&infin;, d[z]=&infin;</p>
+
+          <table>
+            <tr><th>Vertex (topo order)</th><th>Outgoing edges</th><th>Relaxation results</th><th>d values after</th></tr>
+            <tr><td>r</td><td>(r,s),(r,t)</td><td>d[s]&le;5, d[t]&le;3</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:5, t:3, x:&infin;, y:&infin;, z:&infin;</td></tr>
+            <tr><td>s</td><td>(s,t),(s,x)</td><td>d[t]&le;min(3,0+2=2)=2, d[x]=6</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:0, t:2, x:6, y:&infin;, z:&infin;</td></tr>
+            <tr><td>t</td><td>(t,x),(t,y),(t,z)</td><td>d[x]&le;min(6,2+7=9)=6, d[y]=6, d[z]=3</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:0, t:2, x:6, y:6, z:3</td></tr>
+            <tr><td>x</td><td>(x,y),(x,z)</td><td>d[y]&le;min(6,6+(-1)=5)=5, d[z]&le;min(3,6+3=9)=3</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:0, t:2, x:6, y:5, z:3</td></tr>
+            <tr><td>y</td><td>(y,z)</td><td>d[z]&le;min(3,5+5=10)=3</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:0, t:2, x:6, y:5, z:3</td></tr>
+            <tr><td>z</td><td>none</td><td>-</td><td style="font-family:monospace;font-size:0.8em;">r:&infin;, s:0, t:2, x:6, y:5, z:3</td></tr>
+          </table>
+          <p class="result">Final distances: s:0, t:2, x:6, y:5, z:3, r:&infin; (unreachable from s)</p>
+          <p class="note">Note that r appears before s in topological order, so when processing r, d[s] was set to 5, but later when processing s (the source), d[s] was properly reset to 0. The path s&rarr;t&rarr;z = 2+1=3 is the shortest to z.</p>
+        </div>
+
+        <!-- Example 2 -->
+        <div class="example">
+          <div class="title">Example 2: DAG with Negative Edge Weights</div>
+          <p>DAG with 7 vertices. Topological order: <strong>a, b, c, d, e, f, g</strong>. Source = <strong>a</strong>.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (a,b)=3, (a,c)=6, (b,c)=2, (b,d)=4, (c,d)=1, (c,e)=-2, (d,e)=3, (d,f)=5, (e,f)=-4, (e,g)=2, (f,g)=1</p>
+
+          <p>The edge (c,e)=-2 and (e,f)=-4 are <strong>negative</strong>. Since this is a DAG, they are NOT a problem.</p>
+
+          <table>
+            <tr><th>u</th><th>Edge relaxations</th><th>d after processing u</th></tr>
+            <tr><td>Init</td><td>-</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:&infin;, c:&infin;, d:&infin;, e:&infin;, f:&infin;, g:&infin;</td></tr>
+            <tr><td>a</td><td>(a,b): d[b]=3, (a,c): d[c]=6</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:6, d:&infin;, e:&infin;, f:&infin;, g:&infin;</td></tr>
+            <tr><td>b</td><td>(b,c): d[c]=min(6,3+2=5)=5, (b,d): d[d]=7</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:7, e:&infin;, f:&infin;, g:&infin;</td></tr>
+            <tr><td>c</td><td>(c,d): d[d]=min(7,5+1=6)=6, (c,e): d[e]=5+(-2)=3</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:6, e:3, f:&infin;, g:&infin;</td></tr>
+            <tr><td>d</td><td>(d,e): d[e]=min(3,6+3=9)=3, (d,f): d[f]=11</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:6, e:3, f:11, g:&infin;</td></tr>
+            <tr><td>e</td><td>(e,f): d[f]=min(11,3+(-4)=-1)=-1, (e,g): d[g]=5</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:6, e:3, f:-1, g:5</td></tr>
+            <tr><td>f</td><td>(f,g): d[g]=min(5,-1+1=0)=0</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:6, e:3, f:-1, g:0</td></tr>
+            <tr><td>g</td><td>none</td><td style="font-family:monospace;font-size:0.75em;">a:0, b:3, c:5, d:6, e:3, f:-1, g:0</td></tr>
+          </table>
+
+          <p class="result">Final distances: a:0, b:3, c:5, d:6, e:3, f:-1, g:0</p>
+          <p class="note">Negative edges resulted in distances like f:-1 and g:0! The path a&rarr;b&rarr;c&rarr;e&rarr;f = 3+2+(-2)+(-4) = -1. Even though d[f] is negative, the distances are correct and well-defined because there are no cycles.</p>
+
+          <div class="warning">
+            <strong>Exam Tip:</strong> This example shows that DAG shortest paths can handle negative edges naturally. Bellman-Ford also handles them but is slower. Dijkstra would <strong>fail</strong> on this graph.
+          </div>
+        </div>
+
+        <!-- Example 3 -->
+        <div class="example">
+          <div class="title">Example 3: DAG Where Some Vertices Are Unreachable</div>
+          <p>DAG with 8 vertices. Topological order: <strong>p, q, r, s, t, u, v, w</strong>. Source = <strong>s</strong>.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (p,q)=4, (q,r)=2, (r,s)=3, (s,t)=1, (s,u)=5, (t,u)=2, (t,v)=6, (u,v)=3, (u,w)=4, (v,w)=1</p>
+
+          <p><strong>Note:</strong> Vertices p, q, r appear before s in topological order. They are <strong>unreachable</strong> from s because there is no path from s back to them (directed graph).</p>
+
+          <table>
+            <tr><th>u</th><th>Edges relaxed</th><th>d after</th></tr>
+            <tr><td>p</td><td>(p,q): d[q]=4</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:&infin;, s:0, t:&infin;, u:&infin;, v:&infin;, w:&infin;</td></tr>
+            <tr><td>q</td><td>(q,r): d[r]=6</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:&infin;, u:&infin;, v:&infin;, w:&infin;</td></tr>
+            <tr><td>r</td><td>(r,s): d[s]=min(0,6+3=9)=0</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:&infin;, u:&infin;, v:&infin;, w:&infin;</td></tr>
+            <tr><td>s</td><td>(s,t): d[t]=1, (s,u): d[u]=5</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:1, u:5, v:&infin;, w:&infin;</td></tr>
+            <tr><td>t</td><td>(t,u): d[u]=min(5,1+2=3)=3, (t,v): d[v]=7</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:1, u:3, v:7, w:&infin;</td></tr>
+            <tr><td>u</td><td>(u,v): d[v]=min(7,3+3=6)=6, (u,w): d[w]=7</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:1, u:3, v:6, w:7</td></tr>
+            <tr><td>v</td><td>(v,w): d[w]=min(7,6+1=7)=7</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:1, u:3, v:6, w:7</td></tr>
+            <tr><td>w</td><td>none</td><td style="font-family:monospace;font-size:0.75em;">p:&infin;, q:4, r:6, s:0, t:1, u:3, v:6, w:7</td></tr>
+          </table>
+
+          <p class="result">Final distances from s: s:0, t:1, u:3, v:6, w:7</p>
+          <p class="result">Unreachable from s: p:&infin;, q:&infin;, r:&infin;</p>
+          <p class="note">Notice that d[p], d[q], d[r] remain at &infin;. Even though (r,s) was relaxed and d[s] didn't change (it was already 0), this is correct — there is no path from s to any of {p,q,r}.</p>
+
+          <div class="warning">
+            <strong>Key point:</strong> The topological order placing p,q,r before s does not mean they are reachable from s. The relaxation of edge (r,s) does not establish a path from s to r. The algorithm only computes distances <strong>from</strong> s, not <strong>to</strong> s.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Comparison -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Comparison: DAG-SP vs Bellman-Ford vs Dijkstra</h2>
+
+        <table>
+          <tr><th>Property</th><th>DAG Shortest Paths</th><th>Bellman-Ford</th><th>Dijkstra</th></tr>
+          <tr><td>Graph type</td><td><span style="color:#ffcc00">DAG only</span></td><td><span style="color:#00ff88">Any directed graph</span></td><td><span style="color:#00ff88">Any directed graph</span></td></tr>
+          <tr><td>Negative edges</td><td><span style="color:#00ff88">Yes</span></td><td><span style="color:#00ff88">Yes</span></td><td><span style="color:#ff3333">No</span></td></tr>
+          <tr><td>Negative cycles</td><td><span style="color:#ffcc00">N/A (no cycles)</span></td><td><span style="color:#00ff88">Detects</span></td><td><span style="color:#ff3333">Cannot handle</span></td></tr>
+          <tr><td>Runtime</td><td><span class="highlight">&Theta;(V+E)</span></td><td>O(VE)</td><td>O(E log V) or O(V&sup2;)</td></tr>
+          <tr><td>Passes needed</td><td><strong>1</strong></td><td><strong>V-1</strong></td><td>V (extract-min each)</td></tr>
+          <tr><td>Data structure</td><td>Topological order list</td><td>Edge list (any order)</td><td>Min-priority queue</td></tr>
+          <tr><td>Initialization</td><td>Standard</td><td>Standard</td><td>Standard</td></tr>
+          <tr><td>Preprocessing</td><td><span style="color:#ffcc00">Topological sort</span></td><td>None</td><td>None</td></tr>
+          <tr><td>Greedy?</td><td><span style="color:#ff3333">No</span></td><td><span style="color:#ff3333">No</span></td><td><span style="color:#00ff88">Yes</span></td></tr>
+          <tr><td>Optimal for</td><td><span class="highlight">DAGs with any weights</span></td><td>Small graphs with negative weights</td><td>Graphs with non-negative weights</td></tr>
+        </table>
+
+        <h3>Complexity Comparison</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>DAG-SP</h3>
+            <p><span class="highlight">&Theta;(V + E)</span></p>
+            <p class="note">Linear time</p>
+            <p>Topo sort + relax all edges once</p>
+          </div>
+          <div class="card">
+            <h3>Bellman-Ford</h3>
+            <p><span class="highlight">O(V &middot; E)</span></p>
+            <p class="note">O(V&sup3;) with matrix</p>
+            <p>Relax all edges V-1 times</p>
+          </div>
+          <div class="card">
+            <h3>Dijkstra</h3>
+            <p><span class="highlight">O(E log V)</span></p>
+            <p class="note">O(V&sup2;) with matrix</p>
+            <p>Each vertex extracted once</p>
+          </div>
+        </div>
+
+        <h3>When to Use Each?</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>DAG-SP</h3>
+            <p>• Graph is a DAG <span class="dim">(guaranteed)</span></p>
+            <p>• Negative edges present</p>
+            <p>• Maximum speed needed</p>
+            <p>• Any edge weights</p>
+          </div>
+          <div class="card">
+            <h3>Bellman-Ford</h3>
+            <p>• Graph has cycles</p>
+            <p>• Negative edges present</p>
+            <p>• Need to detect negative cycles</p>
+            <p>• Small to moderate V</p>
+          </div>
+          <div class="card">
+            <h3>Dijkstra</h3>
+            <p>• All weights non-negative</p>
+            <p>• Large graph (fast)</p>
+            <p>• No cycle concerns</p>
+            <p>• Greedy algorithm needed</p>
+          </div>
+        </div>
+
+        <h3>Summary Table: Algorithm Selection Guide</h3>
+        <table>
+          <tr><th>Scenario</th><th>Recommended Algorithm</th><th>Reason</th></tr>
+          <tr><td>DAG, any weights</td><td><span style="color:#00ff88">DAG-SP</span></td><td>&Theta;(V+E), fastest possible</td></tr>
+          <tr><td>Negative edges, possibly cycles</td><td><span style="color:#ffcc00">Bellman-Ford</span></td><td>Only one that detects negative cycles</td></tr>
+          <tr><td>Non-negative weights, sparse</td><td><span style="color:#00ff88">Dijkstra (binary heap)</span></td><td>O(E log V)</td></tr>
+          <tr><td>Non-negative weights, dense</td><td><span style="color:#00ff88">Dijkstra (matrix)</span></td><td>O(V&sup2;)</td></tr>
+          <tr><td>Unweighted graph</td><td><span style="color:#00ff88">BFS</span></td><td>O(V+E), simplest</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 5: Practice -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Practice &amp; Edge Cases</h2>
+
+        <h3>Key Properties &amp; Intuition</h3>
+        <div class="formula">
+          <div class="label">Correctness Invariant:</div>
+          <div class="expr">When processing u in topological order, d[u] = &delta;(s,u)</div>
+          <div class="desc">The distance to u is already the shortest possible distance, because all predecessors of u have already been processed</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Path Bound in DAG:</div>
+          <div class="expr">maximum |V| - 1 edges in any path &le; |V| - 1</div>
+          <div class="desc">The longest simple path in a DAG has at most V-1 edges (no cycles)</div>
+        </div>
+
+        <h3>Edge Cases</h3>
+
+        <div class="example">
+          <div class="title">Edge Case 1: Source Not First in Topological Order</div>
+          <p>If the source s is not the first vertex in topological order, vertices that appear before s will have d = &infin; when processed. Their relaxations may set distances for other pre-s vertices but will never affect distances from s because there is no path from s to vertices appearing before it in topological order.</p>
+          <p class="note">This is handled naturally: the algorithm still works correctly. Pre-s vertices remain at &infin; (unreachable from s).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Edge Case 2: DAG with All Negative Weights</div>
+          <p>Even if all edges have negative weights, the algorithm works correctly. Consider a DAG with edges: (s,a)=-2, (a,b)=-3, (b,c)=-1. Topological order: s, a, b, c.</p>
+          <p>Processing: s: d[a]=-2, a: d[b]=-5, b: d[c]=-6.</p>
+          <p class="result">Final: s:0, a:-2, b:-5, c:-6</p>
+          <p class="note">All distances are negative except the source. This is perfectly valid.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Edge Case 3: Disconnected DAG</div>
+          <p>A DAG may have multiple components all unreachable from the source. The distances for vertices in other components remain at &infin;. No problem — the algorithm processes them but their d values stay &infin;.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Edge Case 4: Source with No Outgoing Edges</div>
+          <p>If the source has no outgoing edges, the algorithm just initializes d[s]=0 and all others stay at &infin;. No relaxations occur from s. Result: only s is reachable.</p>
+        </div>
+
+        <h3>Common Mistakes</h3>
+        <div class="warning">
+          <strong>Mistake 1:</strong> Applying DAG-SP to a graph that is <strong>not</strong> a DAG. If the graph has cycles, the topological ordering does not exist, and the algorithm fails.
+        </div>
+        <div class="warning">
+          <strong>Mistake 2:</strong> Thinking DAG-SP cannot handle negative edges. <strong>It can!</strong> Since there are no cycles, there cannot be negative cycles, so negative edges are perfectly safe.
+        </div>
+        <div class="warning">
+          <strong>Mistake 3:</strong> Forgetting that topological sort is <strong>required as a first step</strong>. The algorithm does not work without it.
+        </div>
+        <div class="warning">
+          <strong>Mistake 4:</strong> Confusing &Theta;(V+E) with O(V+E). The DAG-SP algorithm processes <strong>every</strong> vertex and <strong>every</strong> edge exactly once, so it's &Theta;(V+E), not just O(V+E).
+        </div>
+        <div class="warning">
+          <strong>Mistake 5:</strong> Thinking the topological sort contributes extra complexity. Topological sort is also &Theta;(V+E), so the total remains &Theta;(V+E).
+        </div>
+
+        <h3>Quick Reference Card</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Step 1</h3>
+            <p><span class="highlight">Topological Sort</span></p>
+            <p class="note">DFS or Kahn's algorithm</p>
+            <p>&Theta;(V+E)</p>
+          </div>
+          <div class="card">
+            <h3>Step 2</h3>
+            <p><span class="highlight">Initialize</span></p>
+            <p class="note">d[s]=0, d[v]=&infin;</p>
+            <p>&pi;[v]=NIL</p>
+          </div>
+          <div class="card">
+            <h3>Step 3</h3>
+            <p><span class="highlight">Process in order</span></p>
+            <p class="note">For each vertex u in topo order:</p>
+            <p>Relax all outgoing edges</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

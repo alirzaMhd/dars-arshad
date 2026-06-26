@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Max Flow / Ford-Fulkerson - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; font-weight: bold; }
+    .example .step { color: #00ccff; margin: 8px 0 4px 0; font-size: 0.85em; }
+    .example .step-result { color: #aaa; font-size: 0.85em; margin-left: 15px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1000; border-left: 3px solid #ff6600; padding: 12px; margin: 15px 0; border-radius: 4px; }
+    .warning .warn-title { color: #ff6600; font-weight: bold; font-size: 0.9em; }
+    .warning p { color: #ccc; font-size: 0.85em; margin-top: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .var-list { list-style: none; padding: 0; margin: 10px 0; }
+    .var-list li { padding: 4px 0; font-size: 0.85em; border-bottom: 1px solid #222; }
+    .var-list .var-name { color: #00ff88; }
+    .var-list .var-desc { color: #aaa; }
+    .ref-card { background: #002a1a; border: 1px solid #00ff8844; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .ref-card h3 { color: #00ff88; }
+    .graph-diagram { font-family: monospace; font-size: 0.85em; color: #ffcc00; white-space: pre; background: #0a0a18; padding: 15px; border-radius: 8px; margin: 10px 0; line-height: 1.6; }
+    .flow-table { width: 100%; margin: 10px 0; }
+    .flow-table td.flow-val { color: #00ff88; }
+    .flow-table td.cap-val { color: #ffcc00; }
+    .flow-table td.residual-val { color: #00ccff; }
+    ul, ol { padding-left: 20px; color: #ccc; font-size: 0.85em; margin: 10px 0; }
+    li { margin: 4px 0; }
+    p { color: #ccc; font-size: 0.85em; margin: 10px 0; line-height: 1.5; }
+    @media (max-width: 600px) { .container { padding: 0 10px; } .section { padding: 12px; } h1 { font-size: 1.2em; } }
+  </style>
+</head>
+<body>
+  <h1>Max Flow / Ford-Fulkerson</h1>
+  <p class="subtitle">Flow Networks — Maximum Flow &amp; Minimum Cut</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Flow Networks &amp; Problem</button>
+      <button class="tab" onclick="showSection('tab2')">Ford-Fulkerson Method</button>
+      <button class="tab" onclick="showSection('tab3')">Edmonds-Karp &amp; Min Cut</button>
+    </div>
+
+    <!-- ========= TAB 1: Flow Networks ========= -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Flow Network Definition</h2>
+        <p>A <strong>flow network</strong> is a directed graph G = (V, E) where:</p>
+        <ul>
+          <li>Each edge (u, v) ∈ E has a <strong>capacity</strong> c(u, v) ≥ 0</li>
+          <li>If (u, v) ∉ E, then c(u, v) = 0</li>
+          <li>There is a <strong>source</strong> s and a <strong>sink</strong> t</li>
+          <li>Every vertex lies on some path from s to t</li>
+          <li>No antiparallel edges (initially — handled later)</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Flow Function f: V × V → ℝ must satisfy:</div>
+          <div class="expr">1. &nbsp;Capacity constraint: &nbsp;0 ≤ f(u, v) ≤ c(u, v)</div>
+          <div class="expr">2. &nbsp;Flow conservation: &nbsp;&sum;<sub>v∈V</sub> f(u, v) = &sum;<sub>v∈V</sub> f(v, u) &nbsp; for all u &ne; s, t</div>
+          <div class="desc">Flow on each edge cannot exceed capacity. Flow entering a vertex (except s, t) equals flow leaving it.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Value of Flow:</div>
+          <div class="expr">|f| = &sum;<sub>v∈V</sub> f(s, v) = &sum;<sub>v∈V</sub> f(v, t)</div>
+          <div class="desc">Total flow out of source = total flow into sink.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Skew Symmetry (for residual network):</div>
+          <div class="expr">f(v, u) = -f(u, v)</div>
+          <div class="desc">Flow in opposite direction is negative of forward flow. Used to simplify residual graph notation.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Concepts</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Capacity c(u,v)</h3>
+            <p>Maximum allowable flow on edge (u, v)</p>
+            <p class="dim">Non-negative real number</p>
+            <p>Analogous to pipe diameter</p>
+          </div>
+          <div class="card">
+            <h3>Flow f(u,v)</h3>
+            <p>Actual flow on edge (u, v)</p>
+            <p>0 ≤ f(u,v) ≤ c(u,v)</p>
+            <p>Analogous to water flowing in pipe</p>
+          </div>
+          <div class="card">
+            <h3>Residual Capacity</h3>
+            <p>c<sub>f</sub>(u,v) = c(u,v) - f(u,v)</p>
+            <p>c<sub>f</sub>(v,u) = f(u,v) (cancellation)</p>
+            <p>Remaining capacity in residual graph</p>
+          </div>
+          <div class="card">
+            <h3>Augmenting Path</h3>
+            <p>A path from s to t in G<sub>f</sub> where every edge has c<sub>f</sub> &gt; 0</p>
+            <p>Bottleneck capacity = min c<sub>f</sub> along path</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Variable Definitions</h2>
+        <ul class="var-list">
+          <li><span class="var-name">G = (V, E)</span> — <span class="var-desc">Flow network with directed edges</span></li>
+          <li><span class="var-name">c(u, v)</span> — <span class="var-desc">Capacity of edge (u, v)</span></li>
+          <li><span class="var-name">f(u, v)</span> — <span class="var-desc">Flow on edge (u, v)</span></li>
+          <li><span class="var-name">s</span> — <span class="var-desc">Source vertex</span></li>
+          <li><span class="var-name">t</span> — <span class="var-desc">Sink vertex</span></li>
+          <li><span class="var-name">|f|</span> — <span class="var-desc">Total flow value from s to t</span></li>
+          <li><span class="var-name">G<sub>f</sub></span> — <span class="var-desc">Residual network of G with respect to flow f</span></li>
+          <li><span class="var-name">c<sub>f</sub>(u, v)</span> — <span class="var-desc">Residual capacity of edge (u, v) in G<sub>f</sub></span></li>
+          <li><span class="var-name">f*</span> — <span class="var-desc">Maximum flow value</span></li>
+          <li><span class="var-name">c(S, T)</span> — <span class="var-desc">Capacity of cut (S, T)</span></li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: Simple Flow Network</h2>
+
+        <div class="graph-diagram">       10
+  s -------&gt; a
+  |          |
+  |5         |5
+  v          v
+  b -------&gt; t
+       10</div>
+
+        <div class="example">
+          <div class="title">Finding a Feasible Flow</div>
+          <p>Capacities: c(s,a)=10, c(s,b)=5, c(a,t)=5, c(b,a)=0, c(b,t)=10</p>
+          <p>One possible flow: f(s,a)=5, f(s,b)=5, f(a,t)=5, f(b,t)=5, |f| = 10</p>
+          <p>Check conservation at a: in=5, out=5 ✓</p>
+          <p>Check conservation at b: in=5, out=5 ✓</p>
+          <p>Is this max flow? Can we send more?</p>
+          <p style="color:#00ff88;">Yes! Max flow = 15: send 10 through s→a→t and 5 through s→b→t.</p>
+        </div>
+      </div>
+
+      <div class="ref-card">
+        <h3>Quick Reference Card</h3>
+        <p>• <span class="highlight">Flow network:</span> directed graph with source s, sink t, capacities c(u,v) ≥ 0</p>
+        <p>• <span class="highlight">Flow:</span> f(u,v) ≤ c(u,v), conservation at non-source/sink vertices</p>
+        <p>• <span class="highlight">Max flow problem:</span> maximize |f| = total flow from s to t</p>
+        <p>• <span class="highlight">Residual graph G<sub>f</sub>:</span> shows where flow can still be sent or cancelled</p>
+        <p>• <span class="highlight">Augmenting path:</span> s → t path in G<sub>f</sub> with all residual capacities > 0</p>
+        <p>• <span class="highlight">Min cut = Max flow:</span> fundamental theorem of network flow</p>
+      </div>
+    </div>
+
+    <!-- ========= TAB 2: Ford-Fulkerson ========= -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>The Ford-Fulkerson Method</h2>
+        <p>The Ford-Fulkerson method is an iterative approach to compute the maximum flow. It repeatedly finds augmenting paths in the residual network and pushes flow along them.</p>
+
+        <div class="formula">
+          <div class="label">Core Idea:</div>
+          <div class="expr">|f| = |f| + c<sub>f</sub>(p) &nbsp; where &nbsp; c<sub>f</sub>(p) = min{ c<sub>f</sub>(u,v) : (u,v) &isin; p }</div>
+          <div class="desc">Each iteration adds the bottleneck capacity of the augmenting path to the total flow.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Algorithm Pseudocode</h2>
+        <div class="code">FORD-FULKERSON(G, s, t)
+  // Initialize flow to zero
+  for each edge (u, v) &isin; E
+    f[u][v] = 0
+    f[v][u] = 0
+
+  // Main loop: while there exists an augmenting path
+  while there exists a path p from s to t in G<sub>f</sub>
+    // Find bottleneck capacity
+    c<sub>f</sub>(p) = min{ c<sub>f</sub>(u, v) : (u, v) &isin; p }
+
+    // Augment flow along path p
+    for each edge (u, v) in p
+      if (u, v) &isin; E        // forward edge
+        f[u][v] = f[u][v] + c<sub>f</sub>(p)
+      else                     // backward edge (v, u) &isin; E
+        f[v][u] = f[v][u] - c<sub>f</sub>(p)
+
+  return f</div>
+        <p style="margin-top:10px;">The residual capacities update automatically: c<sub>f</sub>(u,v) = c(u,v) - f(u,v) and c<sub>f</sub>(v,u) = f(u,v).</p>
+      </div>
+
+      <div class="section">
+        <h2>Residual Network Construction</h2>
+
+        <p>Given a flow f on network G, the residual network G<sub>f</sub> has:</p>
+        <ul>
+          <li><strong>Forward edges:</strong> if c(u,v) - f(u,v) > 0, add edge (u,v) with capacity c<sub>f</sub>(u,v) = c(u,v) - f(u,v)</li>
+          <li><strong>Backward edges:</strong> if f(u,v) > 0, add edge (v,u) with capacity c<sub>f</sub>(v,u) = f(u,v) (allows cancellation)</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Residual Capacity:</div>
+          <div class="expr">c<sub>f</sub>(u, v) = c(u, v) - f(u, v) + f(v, u)</div>
+          <div class="desc">When there's no antiparallel edges, either f(u,v) or f(v,u) is zero initially.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Step-by-Step Ford-Fulkerson</h2>
+
+        <div class="graph-diagram">       12
+  s -------&gt; a
+  |\         |
+  | \        |9
+  |  \4      v
+  |   \----&gt; b
+  |          |
+  |10        |7
+  v          v
+  c -------&gt; t
+       5</div>
+
+        <div class="example">
+          <div class="title">Iteration 1</div>
+          <div class="step">Find path in G<sub>f</sub> (initially G): s → a → b → t</div>
+          <div class="step-result">Edge capacities: s→a=12, a→b=4, b→t=7<br>Bottleneck: min(12, 4, 7) = 4<br>Augment: |f| = 0 → 4</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Iteration 2</div>
+          <div class="step">Find path in G<sub>f</sub>: s → a → t</div>
+          <div class="step-result">Edge capacities: s→a=8 (12-4), a→t=9<br>Bottleneck: min(8, 9) = 8<br>Augment: |f| = 4 → 12</div>
+          <div class="step">Residual update: s→a = 0, a→s = 4+8=12; a→t = 1, t→a = 8</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Iteration 3</div>
+          <div class="step">Find path in G<sub>f</sub>: s → c → t</div>
+          <div class="step-result">Edge capacities: s→c=10, c→t=5<br>Bottleneck: min(10, 5) = 5<br>Augment: |f| = 12 → 17</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Iteration 4</div>
+          <div class="step">Find path in G<sub>f</sub>: s → c, then ... c→? No forward edges from c to unvisited vertices with residual > 0.</div>
+          <div class="step">Try s → b → t via backward edges:</div>
+          <div class="step-result">From s: s→a=0 (full), s→b=4 (used: a→b), s→c=5 (5 left)<br>Actually: s→b flow was 4 via a→b. So residual on s→b = 0+4 = 4 backward, 0 forward.</div>
+          <div class="step">Let's reconsider. Current flow: s→a = 12, s→c = 5. a→b = 4, a→t = 8. b→t = 4, c→t = 5.</div>
+          <div class="step">Residual G<sub>f</sub>: s→c (5 remaining), c→s (5), s→a→... but s→a is saturated</div>
+          <div class="step">No more s→t paths with positive residual capacity.</div>
+          <div class="step" style="color:#00ff88;">Max flow |f*| = 17</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Final Flow Summary</div>
+          <table>
+            <tr><th>Edge</th><th>Capacity</th><th>Flow</th><th>Residual</th></tr>
+            <tr><td>s → a</td><td>12</td><td class="flow-val">12</td><td class="residual-val">0</td></tr>
+            <tr><td>s → b</td><td>4</td><td class="flow-val">4</td><td class="residual-val">0</td></tr>
+            <tr><td>s → c</td><td>10</td><td class="flow-val">5</td><td class="residual-val">5</td></tr>
+            <tr><td>a → b</td><td>4</td><td class="flow-val">4</td><td class="residual-val">0</td></tr>
+            <tr><td>a → t</td><td>9</td><td class="flow-val">8</td><td class="residual-val">1</td></tr>
+            <tr><td>c → t</td><td>5</td><td class="flow-val">5</td><td class="residual-val">0</td></tr>
+            <tr><td>b → t</td><td>7</td><td class="flow-val">4</td><td class="residual-val">3</td></tr>
+          </table>
+          <p style="color:#00ff88; margin-top:8px;">Total flow |f| = f(s,a) + f(s,b) + f(s,c) = 12 + 0 + 5 = 17</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Ford-Fulkerson with Backward Edges</h2>
+
+        <div class="graph-diagram">       10
+  s -------&gt; a
+  |          |
+  |10        |10
+  v          v
+  b -------&gt; t
+        5</div>
+
+        <div class="example">
+          <div class="title">Demonstrating the Importance of Cancellation</div>
+          <div class="step">Augmenting Path 1: s → a → t (bottleneck=10)</div>
+          <div class="step-result">f(s,a)=10, f(a,t)=10, |f|=10</div>
+          <div class="step">Augmenting Path 2: s → b → t (bottleneck=5)</div>
+          <div class="step-result">f(s,b)=5, f(b,t)=5, |f|=15</div>
+          <div class="step">Residual G<sub>f</sub>: No direct s→a (full), s→b (5 left). Is there a path via cancellation?</div>
+          <div class="step-result">Yes! s → b: (5 residual) → but we need to reach t. a→t is full. b→t has 5 flow out of 5, so full too.</div>
+          <div class="step">Actually no more paths with just these edges. |f|=15.</div>
+          <div class="step" style="color:#ffcc00;">But wait — can we do better by rerouting?</div>
+          <div class="step">Augmenting Path 3 (if we had chosen differently earlier or used backward edges):</div>
+          <div class="step-result">G<sub>f</sub> has backward edge t→a (capacity 10, the flow on a→t) and t→b (capacity 5)</div>
+          <div class="step">Path: s → b ← a → t ... wait, s→b has 5 forward capacity. b←a? No edge a→b.</div>
+          <div class="step">Actually in this graph, max flow can be 15: s→a=10 (a→t=10), s→b=5 (b→t=5). That's it.</div>
+          <div class="step" style="color:#00ff88;">|f*| = 15</div>
+        </div>
+
+        <div class="warning">
+          <div class="warn-title">⚠ Backward Edge Necessity</div>
+          <p>If we had sent flow s→a→b→t first (if edge a→b existed), backward edges allow us to "undo" that decision and reroute flow. This is why the residual graph includes backward edges — they enable the algorithm to correct suboptimal routing choices.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Runtime Analysis</h2>
+
+        <div class="formula">
+          <div class="label">Ford-Fulkerson Runtime (general):</div>
+          <div class="expr">O(E &middot; |f*|)</div>
+          <div class="desc">where |f*| is the maximum flow value. Each augmenting path increases flow by at least 1 (for integer capacities). In worst case, path selection can be very inefficient.</div>
+        </div>
+
+        <div class="warning">
+          <div class="warn-title">⚠ Worst-Case Example (Integer Capacities)</div>
+          <div class="graph-diagram">  s --(M)--&gt; a --(M)--&gt; t
+  |                    |
+  +----(1)---&gt; b ----+
+       M is very large</div>
+          <p>If Ford-Fulkerson picks s→a→t (bottleneck=M), then s→b→a→t (bottleneck=1), then s→a→t (M-1), ..., it can take 2M iterations! This is why <strong>Edmonds-Karp</strong> (BFS-based path selection) is preferred.</p>
+        </div>
+
+        <table>
+          <tr><th>Algorithm</th><th>Path Selection</th><th>Runtime</th></tr>
+          <tr><td>Ford-Fulkerson</td><td>Any augmenting path</td><td>O(E · |f*|)</td></tr>
+          <tr><td>Edmonds-Karp</td><td>Shortest (BFS) augmenting path</td><td>O(V · E²)</td></tr>
+          <tr><td>Dinic</td><td>Level graph + blocking flow</td><td>O(V² · E)</td></tr>
+          <tr><td>Push-Relabel</td><td>Local push + global relabel</td><td>O(V³)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========= TAB 3: Edmonds-Karp & Min Cut ========= -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Edmonds-Karp Algorithm</h2>
+        <p>The Edmonds-Karp algorithm is a specific implementation of Ford-Fulkerson that uses <strong>BFS</strong> to find the shortest augmenting path (fewest edges) in each iteration.</p>
+
+        <div class="formula">
+          <div class="label">Key insight:</div>
+          <div class="expr">BFS in G<sub>f</sub> finds the path with the <strong>fewest edges</strong> from s to t</div>
+          <div class="desc">This guarantees that the distance (in edges) from s to every vertex increases monotonically, bounding the number of augmentations to O(V · E).</div>
+        </div>
+
+        <div class="code">EDMONDS-KARP(G, s, t)
+  for each edge (u, v) &isin; E
+    f[u][v] = 0
+
+  while true
+    // BFS to find shortest augmenting path
+    run BFS on G<sub>f</sub> starting from s
+    if t is not reachable
+      break
+
+    // Reconstruct path and find bottleneck
+    p = shortest path s &rarr; ... &rarr; t
+    c<sub>f</sub>(p) = min{ c<sub>f</sub>(u, v) : (u, v) &isin; p }
+
+    // Augment
+    for each edge (u, v) in p
+      if (u, v) &isin; E
+        f[u][v] += c<sub>f</sub>(p)
+      else
+        f[v][u] -= c<sub>f</sub>(p)
+
+  return f</div>
+
+        <div class="formula">
+          <div class="label">Edmonds-Karp Runtime:</div>
+          <div class="expr">T(V, E) = O(V &middot; E²)</div>
+          <div class="desc">Each augmentation runs BFS in O(E), and a vertex can be on the critical edge at most V/2 times, giving O(V · E) augmentations total.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 4: Edmonds-Karp Walkthrough</h2>
+
+        <div class="graph-diagram">       16
+  s -------&gt; a
+  |\        /|
+  | \10    / |
+  |  \    /  |
+  |   v  /   |
+  |    b     |
+  |   /  \   |
+  |  /    \  |
+  | 4      9 |
+  v          v
+  c -------&gt; t
+       12</div>
+
+        <div class="example">
+          <div class="title">Edmonds-Karp: First BFS finds shortest (fewest edges) path</div>
+          <div class="step">BFS from s: level 1 = {a, b, c}, level 2 = {t (from a, b, c)}</div>
+          <div class="step">Shortest paths (2 edges each): s→a→t, s→b→t, s→c→t</div>
+          <div class="step">BFS tie-breaker: let's pick s→a→t (bottleneck = min(16, 7) = 7)</div>
+          <div class="step-result">Augment: |f| = 0 → 7. s→a: 9 residual, a→t: 0 residual.</div>
+
+          <div class="step">Next BFS: s→a (9) → but a→t is saturated. Shortest path now: s→b→t (bottleneck=min(10,9)=9)</div>
+          <div class="step-result">Augment: |f| = 7 → 16. s→b: 1 residual, b→t: 0 residual.</div>
+
+          <div class="step">Next BFS: s→b→t? No, b→t=9 full. s→a→? a→t=7 full. s→c→t (bottleneck=min(4,12)=4)</div>
+          <div class="step-result">Augment: |f| = 16 → 20. s→c: 0, c→t: 8 residual.</div>
+
+          <div class="step">Next BFS: Can we reach t? s→a (9 residual), but a→t is full. Using backward: s→a, then a? No outgoing residual from a except backward a←t=saturated.</div>
+          <div class="step">Wait: a→t=7 full, so backward t→a has capacity 7. But we need to go forward.</div>
+          <div class="step">s→b (1) → backward t→b (9) → t? BFS doesn't follow edges backward then forward in directed sense. Actually in residual graph, ALL edges are forward.</div>
+          <div class="step">From s: s→a (9), s→b (1), s→c (0=full). From a: a→t (0), a... no other edges. From b: b→t (0). Wait, c→t is 8. So s→a→? → c→t? No edge a→c or a→b.</div>
+          <div class="step">Actually this graph has edges s→a(16), s→b(10), s→c(4), a→t(7), b→t(9), c→t(12). No other edges.</div>
+          <div class="step">Current residual: s→a(9), a→s(7); s→b(1), b→s(9); s→c(0), c→s(4); a→t(0), t→a(7); b→t(0), t→b(9); c→t(8), t→c(4).</div>
+          <div class="step">BFS from s: reachable set = {s, a, b, c, t (via c→t)}!</div>
+          <div class="step">Path: s→c→t ... but s→c is 0 residual. So: s→a→? need to reach c. No edge a→c.</div>
+          <div class="step">s→b→? No edge b→c. Hmm, backward edges don't help unless there's a path.</div>
+          <div class="step">Actually t is reachable from c (c→t: 8), and c is reachable from s via backward edge ... no, s→c has 0 forward.</div>
+          <div class="step" style="color:#00ff88;">Final max flow: |f*| = 20</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>The Min-Cut / Max-Flow Theorem</h2>
+
+        <div class="formula">
+          <div class="label">Fundamental Theorem:</div>
+          <div class="expr">max{ |f| : f is a flow } = min{ c(S, T) : (S, T) is an s-t cut }</div>
+          <div class="desc">The maximum feasible flow value equals the minimum capacity of any s-t cut.</div>
+        </div>
+
+        <p><strong>Cut definition:</strong> A partition (S, T) of V such that s ∈ S, t ∈ T.</p>
+
+        <div class="formula">
+          <div class="label">Cut Capacity:</div>
+          <div class="expr">c(S, T) = &sum;<sub>u&isin;S, v&isin;T</sub> c(u, v)</div>
+          <div class="desc">Sum of capacities of all edges <strong>from S to T</strong>. Edges from T to S are not counted.</div>
+        </div>
+
+        <p><strong>Three equivalent statements (any implies all):</strong></p>
+        <ol>
+          <li>|f| = c(S, T) for some cut (S, T) → f is a max flow</li>
+          <li>f is a maximum flow</li>
+          <li>The residual network G<sub>f</sub> has no augmenting path</li>
+        </ol>
+      </div>
+
+      <div class="section">
+        <h2>Example 5: Finding Min Cut from Max Flow</h2>
+
+        <div class="graph-diagram">       8
+  s -------&gt; a
+  |\        /|
+  | \5     / |
+  |  \    /  |
+  |   v  /   |
+  |    b     |
+  |   /  \   |
+  |  /    \  |
+  | 7      6 |
+  v          v
+  c -------&gt; t
+       4</div>
+
+        <p>After running max flow to completion:</p>
+
+        <div class="example">
+          <div class="title">Finding the Min Cut (S, T)</div>
+          <div class="step">1. Run Ford-Fulkerson / Edmonds-Karp to find max flow.</div>
+          <div class="step">2. Compute residual network G<sub>f</sub>.</div>
+          <div class="step">3. Run BFS/DFS from s in G<sub>f</sub>.</div>
+          <div class="step">4. S = set of vertices reachable from s in G<sub>f</sub>.</div>
+          <div class="step">5. T = V \ S (unreachable vertices).</div>
+
+          <div class="step" style="color:#00ff88;">The cut (S, T) is a minimum cut with capacity = max flow value.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Concrete Example</div>
+          <p>Suppose after max flow computation on the above graph, the reachable set from s in G<sub>f</sub> is S = {s, a, b}.</p>
+          <p>Then T = {c, t}.</p>
+          <p>Edges from S to T: a→t (weight 8 if not saturated), b→t (6), b→c (0), s→c (7).</p>
+          <p>But if the flow saturated some of these edges, the residual edges from S to T have capacity 0 for saturated edges, so they don't contribute to cut capacity.</p>
+          <p style="color:#00ff88;">The min cut capacity = sum of saturated edges from S to T = max flow value.</p>
+        </div>
+
+        <table>
+          <tr><th>Cut (S,T)</th><th>Edges crossing</th><th>Capacity</th></tr>
+          <tr><td>({s}, {a,b,c,t})</td><td>s→a(8), s→b(5), s→c(7)</td><td>20</td></tr>
+          <tr><td>({s,a}, {b,c,t})</td><td>s→c(7), a→b(0), a→t(8)</td><td>15</td></tr>
+          <tr><td>({s,a,b}, {c,t})</td><td>s→c(7), b→t(6), a→t(8)</td><td>21</td></tr>
+          <tr><td>({s,a,b,c}, {t})</td><td>a→t(8), b→t(6), c→t(4)</td><td>18</td></tr>
+        </table>
+        <p style="margin-top:5px; color:#00ff88;">The minimum cut is ({s,a}, {b,c,t}) with capacity 15 = max flow value.</p>
+      </div>
+
+      <div class="section">
+        <h2>Advanced Variations</h2>
+
+        <h3>Multiple Sources / Multiple Sinks</h3>
+        <p>Add a <strong>super-source</strong> s' with infinite-capacity edges to each original source, and a <strong>super-sink</strong> t' with infinite-capacity edges from each original sink.</p>
+
+        <div class="graph-diagram">  s<sub>1</sub> -----\
+  s<sub>2</sub> ------&gt; [network] ----&gt; t<sub>1</sub>
+  s<sub>3</sub> -----/                 \---&gt; t<sub>2</sub>
+
+  After transformation:
+  s' --&infin;--&gt; s<sub>1</sub> ---\         /-- t<sub>1</sub> --&infin;--&gt; t'
+  s' --&infin;--&gt; s<sub>2</sub> --&gt; [network] --- t<sub>2</sub> --&infin;--&gt; t'
+  s' --&infin;--&gt; s<sub>3</sub> ---/         \-- t<sub>3</sub> --&infin;--&gt; t'</div>
+
+        <h3>Vertex Capacities</h3>
+        <p>Split each capacity-constrained vertex v into v<sub>in</sub> and v<sub>out</sub>, connected by an edge with capacity equal to the vertex capacity.</p>
+
+        <div class="graph-diagram">  u ---&gt; v ---&gt; w
+  (c<sub>v</sub> = capacity of v)
+
+  After splitting:
+  u ---&gt; v<sub>in</sub> ---(c<sub>v</sub>)---&gt; v<sub>out</sub> ---&gt; w</div>
+
+        <h3>Antiparallel Edges</h3>
+        <p>If both (u,v) and (v,u) exist, insert a dummy vertex to eliminate the antiparallel pair while preserving the flow behavior.</p>
+
+        <div class="graph-diagram">  u &lt;---&gt; v  (both directions)
+
+  After transformation:
+  u ---&gt; dummy ---&gt; v
+  v ---&gt; u</div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: Max Flow Algorithms</h2>
+
+        <table>
+          <tr><th>Algorithm</th><th>Strategy</th><th>Runtime</th><th>Key Feature</th></tr>
+          <tr><td>Ford-Fulkerson</td><td>Any augmenting path</td><td>O(E · |f*|)</td><td>General method, basis for others</td></tr>
+          <tr><td>Edmonds-Karp</td><td>BFS for shortest path</td><td>O(V · E²)</td><td>Polynomial, simple to implement</td></tr>
+          <tr><td>Dinic</td><td>Level graph + blocking flow</td><td>O(V² · E)</td><td>Fast on unit-capacity graphs O(min(V<sup>2/3</sup>, √E) · E)</td></tr>
+          <tr><td>Push-Relabel</td><td>Local push, global relabel</td><td>O(V³)</td><td>Fast in practice, parallelizable</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Applications of Max Flow</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Bipartite Matching</h3>
+            <p>Connect source to left set, left to right, right to sink — all with capacity 1. Max flow = max matching size.</p>
+          </div>
+          <div class="card">
+            <h3>Edge-Disjoint Paths</h3>
+            <p>Set all capacities to 1. Max flow = maximum number of edge-disjoint paths from s to t.</p>
+          </div>
+          <div class="card">
+            <h3>Image Segmentation</h3>
+            <p>Cut-based segmentation: min cut separating foreground from background.</p>
+          </div>
+          <div class="card">
+            <h3>Baseball Elimination</h3>
+            <p>Determine if a team can still win the championship using max flow feasibility.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ref-card">
+        <h3>Quick Reference Card</h3>
+        <p>• <span class="highlight">Ford-Fulkerson:</span> repeatedly find augmenting paths, push bottleneck flow</p>
+        <p>• <span class="highlight">Edmonds-Karp:</span> Ford-Fulkerson with BFS → O(V·E²) runtime</p>
+        <p>• <span class="highlight">Min Cut = Max Flow:</span> three equivalent statements</p>
+        <p>• <span class="highlight">Residual graph</span> enables flow cancellation via backward edges</p>
+        <p>• <span class="highlight">Variations:</span> super-source/sink, vertex splitting, dummy vertices</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

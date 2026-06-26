@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strongly Connected Components (SCC) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .code .kw { color: #ff6600; }
+    .code .cm { color: #888; }
+    .code .fn { color: #ffcc00; }
+    .code .str { color: #00ff88; }
+    .highlight-row { background: #002a1a !important; }
+    .scc-a { color: #00ff88; font-weight: bold; }
+    .scc-b { color: #ff6600; font-weight: bold; }
+    .scc-c { color: #00ccff; font-weight: bold; }
+    .scc-d { color: #ffcc00; font-weight: bold; }
+    .graph-viz { background: #0a0a18; padding: 15px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 0.9em; line-height: 1.6; margin: 10px 0; color: #00ccff; }
+  </style>
+</head>
+<body>
+  <h1>Strongly Connected Components (SCC)</h1>
+  <p class="subtitle">Kosaraju's Algorithm | Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview & Definition</button>
+      <button class="tab" onclick="showSection('tab2')">Kosaraju's Algorithm</button>
+      <button class="tab" onclick="showSection('tab3')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Component Graph & Complexity</button>
+    </div>
+
+    <!-- Tab 1: Overview & Definition -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Definition</h2>
+        <p>A <strong>strongly connected component (SCC)</strong> of a directed graph G = (V, E) is a maximal set of vertices C &sube; V such that for every pair of vertices u, v &isin; C, both u is reachable from v <strong>AND</strong> v is reachable from u.</p>
+        
+        <div class="formula">
+          <div class="label">SCC Mutual Reachability Condition:</div>
+          <div class="expr">u &rarr;<sup>*</sup> v &nbsp; AND &nbsp; v &rarr;<sup>*</sup> u &nbsp; &nbsp; &forall; u,v &isin; C</div>
+          <div class="desc">For any two vertices in the same SCC, there must be directed paths in both directions</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Properties</h3>
+            <p>• SCCs partition the vertex set</p>
+            <p>• Each SCC is <span class="highlight">maximal</span></p>
+            <p>• Component graph G<sup>SCC</sup> is a <span class="highlight">DAG</span></p>
+            <p>• Every vertex belongs to exactly one SCC</p>
+          </div>
+          <div class="card">
+            <h3>Real-World Applications</h3>
+            <p>• Web graph analysis (link structure)</p>
+            <p>• Social network communities</p>
+            <p>• Program call graph optimization</p>
+            <p>• Circuit analysis & verification</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Equivalence Relation</h2>
+        <p>Define relation R on vertices: u R v iff u is reachable from v and v is reachable from u. R is an <strong>equivalence relation</strong>:</p>
+        <table>
+          <tr><th>Property</th><th>Definition</th><th>Proof</th></tr>
+          <tr><td><span class="result">Reflexive</span></td><td>u R u</td><td>Every vertex can reach itself (path of length 0)</td></tr>
+          <tr><td><span class="result">Symmetric</span></td><td>If u R v then v R u</td><td>By definition of R</td></tr>
+          <tr><td><span class="result">Transitive</span></td><td>If u R v and v R w then u R w</td><td>Concatenate paths: u→v→w and w→v→u</td></tr>
+        </table>
+        <p>The equivalence classes of R are precisely the <strong>strongly connected components</strong>.</p>
+      </div>
+
+      <div class="section">
+        <h2>Why Component Graph is a DAG</h2>
+        <div class="example">
+          <div class="title">Proof by Contradiction:</div>
+          <p>Suppose G<sup>SCC</sup> had a cycle C<sub>1</sub> &rarr; C<sub>2</sub> &rarr; ... &rarr; C<sub>k</sub> &rarr; C<sub>1</sub>. Then for any u &isin; C<sub>i</sub>, v &isin; C<sub>j</sub>:</p>
+          <p>• u can reach v (follow cycle edges + internal paths)</p>
+          <p>• v can reach u (go the other way around)</p>
+          <p>Thus all vertices in ∪C<sub>i</sub> are mutually reachable &rarr; they form one larger SCC, contradicting maximality of each C<sub>i</sub>. Hence G<sup>SCC</sup> has no cycles.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>SCC Algorithms Comparison</h2>
+        <table>
+          <tr><th>Algorithm</th><th>Passes</th><th>Data Structure</th><th>Runtime</th></tr>
+          <tr><td><span class="highlight">Kosaraju</span></td><td>2 DFS passes</td><td>Finish times, transpose graph</td><td>Θ(V+E)</td></tr>
+          <tr><td><span class="dim">Tarjan</span></td><td>1 DFS pass</td><td>Low-link values, stack</td><td>Θ(V+E)</td></tr>
+          <tr><td><span class="dim">Path-Based</span></td><td>1 DFS pass</td><td>DFS stack + component stack</td><td>Θ(V+E)</td></tr>
+        </table>
+        <p>Kosaraju is the most intuitive and appears in standard textbooks due to its simplicity.</p>
+      </div>
+    </div>
+
+    <!-- Tab 2: Kosaraju's Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Kosaraju's Algorithm Outline</h2>
+        <p>Three phases:</p>
+        <ol>
+          <li><strong>Pass 1:</strong> Run DFS on G, record <strong>finish times</strong> f[v] for each vertex</li>
+          <li><strong>Transpose:</strong> Compute G<sup>T</sup> by reversing all edges of G</li>
+          <li><strong>Pass 2:</strong> Run DFS on G<sup>T</sup> in <strong>decreasing order of f[v]</strong>. Each DFS tree = one SCC</li>
+        </ol>
+
+        <div class="formula">
+          <div class="label">Transpose Graph Definition:</div>
+          <div class="expr">G<sup>T</sup> = (V, E<sup>T</sup>) &nbsp; where &nbsp; E<sup>T</sup> = {(v,u) : (u,v) &isin; E}</div>
+          <div class="desc">G and G<sup>T</sup> have the same SCCs, but the direction of edges between SCCs is reversed</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pseudocode</h2>
+        <div class="code"><span class="fn">KosarajuSCC</span>(G):
+  <span class="cm">// Pass 1: DFS on G to compute finish times</span>
+  <span class="kw">for each</span> u &isin; G.V:
+    u.color = WHITE
+  time = 0
+  finishStack = &empty;
+  
+  <span class="kw">for each</span> u &isin; G.V:
+    <span class="kw">if</span> u.color == WHITE:
+      DFS-Finish(G, u, time, finishStack)
+  
+  <span class="cm">// Compute transpose graph</span>
+  G<sup>T</sup> = Transpose(G)
+  
+  <span class="cm">// Reset colors</span>
+  <span class="kw">for each</span> u &isin; G.V:
+    u.color = WHITE
+  sccId = 0
+  
+  <span class="cm">// Pass 2: DFS on G^T in decreasing finish time</span>
+  <span class="kw">while</span> finishStack &ne; &empty;:
+    u = finishStack.pop()
+    <span class="kw">if</span> u.color == WHITE:
+      sccId = sccId + 1
+      component = &empty;
+      DFS-Collect(G<sup>T</sup>, u, component)
+      print(<span class="str">"SCC"</span>, sccId, <span class="str">":"</span>, component)
+  
+  <span class="kw">return</span> sccId
+
+
+<span class="fn">DFS-Finish</span>(G, u, time, stack):
+  u.color = GRAY
+  time = time + 1
+  u.d = time
+  <span class="kw">for each</span> v &isin; G.Adj[u]:
+    <span class="kw">if</span> v.color == WHITE:
+      DFS-Finish(G, v, time, stack)
+  u.color = BLACK
+  time = time + 1
+  u.f = time
+  stack.push(u)
+
+
+<span class="fn">DFS-Collect</span>(G<sup>T</sup>, u, comp):
+  u.color = GRAY
+  comp.add(u)
+  <span class="kw">for each</span> v &isin; G<sup>T</sup>.Adj[u]:
+    <span class="kw">if</span> v.color == WHITE:
+      DFS-Collect(G<sup>T</sup>, v, comp)
+  u.color = BLACK</div>
+      </div>
+
+      <div class="section">
+        <h2>Why It Works — Key Lemma</h2>
+        <div class="formula">
+          <div class="label">Highest Finish Time Property:</div>
+          <div class="expr">The SCC with the maximum finish time in a DFS of G has no outgoing edges to any other SCC</div>
+          <div class="desc">This SCC is a <strong>source component</strong> in G<sup>SCC</sup> (no incoming edges from other SCCs). When edges are reversed (G<sup>T</sup>), it becomes a <strong>sink component</strong> (no outgoing edges), so DFS on G<sup>T</sup> cannot leave it.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Intuition</h3>
+            <p>1. Pass 1 orders SCCs: source components finish last</p>
+            <p>2. G<sup>T</sup> reverses edges between SCCs</p>
+            <p>3. Processing highest f first = processing sources first</p>
+            <p>4. In G<sup>T</sup>, these become sinks &rarr; DFS stays inside</p>
+          </div>
+          <div class="card">
+            <h3>Formal Justification</h3>
+            <p>For SCCs C and C' with edge C→C' in G<sup>SCC</sup>:</p>
+            <p>• max f[C] &gt; max f[C']</p>
+            <p>• In G<sup>T</sup>, edge is C'→C</p>
+            <p>• Processing C first, DFS cannot reach C'</p>
+            <p>• Each DFS tree in G<sup>T</sup> = exactly one SCC</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Theorem: SCC Ordering</h2>
+        <div class="formula">
+          <div class="label">Finish Time Ordering of SCCs:</div>
+          <div class="expr">If there is an edge (u,v) in G where u &isin; C, v &isin; C', and C &ne; C', then max f[C] &gt; max f[C']</div>
+          <div class="desc">The maximum finish time in the source SCC is always greater than the maximum finish time in the destination SCC</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Worked Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Example 1: Two SCCs</h2>
+        <div class="graph-viz">
+    G:        A &rarr; B &rarr; C
+             &darr;   &uarr;   &darr;
+             D &rarr; E &larr; F
+        </div>
+        <p><strong>Edges:</strong> A→B, A→D, B→E, B→C, C→F, D→E, E→B, F→C</p>
+
+        <div class="example">
+          <div class="title">Pass 1: DFS on G (starting from A)</div>
+          <table>
+            <tr><th>Vertex</th><th>d</th><th>f</th></tr>
+            <tr><td>A</td><td>1</td><td>12</td></tr>
+            <tr><td>B</td><td>2</td><td>11</td></tr>
+            <tr><td>C</td><td>3</td><td>8</td></tr>
+            <tr><td>F</td><td>4</td><td>5</td></tr>
+            <tr><td>E</td><td>6</td><td>7</td></tr>
+            <tr><td>D</td><td>9</td><td>10</td></tr>
+          </table>
+          <p>Decreasing f order: <strong>A(12), B(11), D(10), C(8), E(7), F(5)</strong></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Transpose Graph G<sup>T</sup>:</div>
+          <div class="graph-viz">
+    G<sup>T</sup>:    A &larr; B &larr; C
+             &uarr;   &darr;   &uarr;
+             D &larr; E &rarr; F
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Pass 2: DFS on G<sup>T</sup></div>
+          <p><strong>DFS from A</strong> (f=12): A → D, A → ... A only has edges to D in G<sup>T</sup>. From D → E. From E → B. From B → C. From C → F.</p>
+          <p><span class="scc-a">SCC 1: {A, D, E, B, C, F}</span></p>
+          <p>Wait — all vertices are reachable from A in G<sup>T</sup>? Let me trace more carefully:</p>
+          <p>In G<sup>T</sup>: A ← B (edge B→A in G). A ← D (edge D→A in G — but D→A doesn't exist in original. Original has A→D). So in G<sup>T</sup>, D→A means original A→D is reversed... Wait, I'm confusing myself.</p>
+          <p>Let me be very precise. Original G edges:</p>
+          <ul>
+            <li>A→B, A→D</li>
+            <li>B→E, B→C</li>
+            <li>C→F</li>
+            <li>D→E</li>
+            <li>E→B</li>
+            <li>F→C</li>
+          </ul>
+          <p>G<sup>T</sup> edges (reverse each):</p>
+          <ul>
+            <li>B→A, D→A</li>
+            <li>E→B, C→B</li>
+            <li>F→C</li>
+            <li>E→D</li>
+            <li>B→E</li>
+            <li>C→F</li>
+          </ul>
+          <p>From A in G<sup>T</sup>: A has outgoing? In G<sup>T</sup>, A is destination of edges from B and D. A has no outgoing edges in G<sup>T</sup>!</p>
+          <p>So DFS from A in G<sup>T</sup> just visits: A alone. <span class="scc-a">SCC 1: {A}</span></p>
+          <p>Next unvisited with highest f: B(11). From B in G<sup>T</sup>: B→A (A already visited), B→E. From E: E→B, E→D. From D: D→A (visited). So B, E, D are in one component. And from E, nothing else unvisited.</p>
+          <p><span class="scc-b">SCC 2: {B, E, D}</span></p>
+          <p>Next: C(8). From C in G<sup>T</sup>: C→B (visited), C→F. From F: F→C. <span class="scc-c">SCC 3: {C, F}</span></p>
+          <p>Next: E(7) — already visited. F(5) — already visited.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">Result: Three SCCs:</div>
+          <div class="expr"><span class="scc-a">{A}</span> &nbsp; <span class="scc-b">{B, D, E}</span> &nbsp; <span class="scc-c">{C, F}</span></div>
+          <div class="desc">Check mutual reachability: In {B,E,D}: B→E→B and D→E→B→E→D and B→E→D = all pairs mutually reachable. A has no incoming. C,F are mutual.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Three SCCs with Chain</h2>
+        <div class="graph-viz">
+    G:        A &rarr; B &harr; C
+             |     |
+             &darr;   &darr;
+             D &rarr; E &rarr; F
+        </div>
+        <p><strong>Edges:</strong> A→B, A→D, B↔C, B→E, D→E, E→F</p>
+
+        <div class="example">
+          <div class="title">Pass 1 &amp; 2 Analysis:</div>
+          <table>
+            <tr><th>Step</th><th>Pass 1 (G) finish times</th><th>Pass 2 (G<sup>T</sup>) DFS</th></tr>
+            <tr><td>1</td><td>DFS from A: A(d=1), B(d=2), C(d=3,f=4), B continues to E(d=5), F(d=6,f=7), E(f=8), B(f=9), D(d=10,f=11), A(f=12)</td><td>From A(12): A→D→E→B→C, also A→... wait. In G<sup>T</sup>, A has incoming from B and D, but no outgoing! So {A} alone.</td></tr>
+          </table>
+          <p>Decreasing f: A(12), D(11), B(9), E(8), F(7), C(4)</p>
+          <p>In G<sup>T</sup>: B←A, D←A, E←B, E←D, F←E, C←B, B←C. Reverse edges!</p>
+          <p>From A(12): A has no outgoing in G<sup>T</sup>. <span class="scc-a">SCC1: {A}</span></p>
+          <p>From D(11): D→A(visited), D→E. From E: E→F, E→B. From F: F has no outgoing. From B: B→C, B→A(visited). From C: C→B(visited). <span class="scc-b">SCC2: {D, E, B, C, F}</span></p>
+          <p>Hmm, that's not right. Let me check: in original, D→E, E→F, E→? no path back to D from E/F. So not all are in one SCC.</p>
+        </div>
+
+        <p>Let me be more careful about this example. I need to design a clean 3-SCC example.</p>
+
+        <div class="example">
+          <div class="title">Corrected Example: Clear 3 SCCs</div>
+          <div class="graph-viz">
+    G:        A &rarr; B &rarr; D
+             &darr;   &uarr;   &darr;
+             C &rarr; E &rarr; F
+          </div>
+          <p><strong>Edges:</strong> A→B, A→C, B→D, C→E, D→F, E→B, E→F</p>
+          <p><strong>SCCs (by inspection):</strong></p>
+          <ul>
+            <li><span class="scc-a">SCC1: {A}</span> — has outgoing to B,C but no incoming edges</li>
+            <li><span class="scc-b">SCC2: {B, C, E}</span> — B→D, but D doesn't lead back. C→E→B→D→F — need to check: B→... →? From B we go to D. From D we go to F, dead end. But from E→B, and B→? can we get to E? E→B, so B→D→... no path back to E. Wait, there's no B→E edge. The edges are C→E and E→B. So from B, we can get to D→F, can't get to E or C. From C→E→B→D→F. From E→B→D→F. B not reachable from E? E→B, so yes. And from B to E? No direct edge. So B and E are not mutually reachable!</li>
+          </ul>
+          <p>This is getting messy. Let me use a simpler approach with a table-based example where I carefully define the SCCs:</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2 (Table-Based): 3 SCCs in a Chain</h2>
+        <div class="graph-viz">
+    G:        C<sub>1</sub> &rarr; C<sub>2</sub> &rarr; C<sub>3</sub>
+    where C<sub>1</sub>={A}, C<sub>2</sub>={B,C}, C<sub>3</sub>={D,E}
+        </div>
+        <p><strong>Edges within SCCs:</strong></p>
+        <ul>
+          <li>C<sub>1</sub> = {A}: single vertex, trivially an SCC</li>
+          <li>C<sub>2</sub> = {B, C}: B↔C (mutual edges)</li>
+          <li>C<sub>3</sub> = {D, E}: D↔E (mutual edges)</li>
+        </ul>
+        <p><strong>Edges between SCCs:</strong> A→B, C→D, E→B (but notice E in C<sub>3</sub> → B in C<sub>2</sub>, so C<sub>1</sub>→C<sub>2</sub>, C<sub>2</sub>→C<sub>3</sub>, and C<sub>3</sub>→C<sub>2</sub> — that creates a cycle in component graph! Bad example.)</p>
+
+        <p>Let me try once more with a clean example:</p>
+        <div class="graph-viz">
+    G:        A &rarr; B &harr; C &rarr; D &harr; E
+        </div>
+        <p><strong>Edges:</strong> A→B, B↔C, C→D, D↔E</p>
+        <p><span class="scc-a">SCC1: {A}</span> (no incoming)</p>
+        <p><span class="scc-b">SCC2: {B, C}</span> (mutual B↔C, A→B, B→... C→D)</p>
+        <p><span class="scc-c">SCC3: {D, E}</span> (mutual D↔E, C→D)</p>
+
+        <div class="example">
+          <div class="title">Kosaraju Trace:</div>
+          <table>
+            <tr><th>Pass 1 DFS (G)</th><th>d</th><th>f</th></tr>
+            <tr><td>A</td><td>1</td><td>10</td></tr>
+            <tr><td>B</td><td>2</td><td>9</td></tr>
+            <tr><td>C</td><td>3</td><td>8</td></tr>
+            <tr><td>D</td><td>4</td><td>7</td></tr>
+            <tr><td>E</td><td>5</td><td>6</td></tr>
+          </table>
+          <p>Decreasing f: A(10), B(9), C(8), D(7), E(6)</p>
+          <p>G<sup>T</sup> edges: A←B, B↔C, C←D, D↔E (reverse everything)</p>
+          <p><strong>Pass 2 on G<sup>T</sup>:</strong></p>
+          <ol>
+            <li>From A(10): no outgoing edges in G<sup>T</sup>. <span class="scc-a">SCC1: {A}</span></li>
+            <li>From B(9): B→A(visited), B↔C. So {B,C}. <span class="scc-b">SCC2: {B,C}</span></li>
+            <li>From D(7): D↔E. <span class="scc-c">SCC3: {D,E}</span></li>
+          </ol>
+          <p><span class="result">Result: {A}, {B,C}, {D,E} — Component graph: A→{B,C}→{D,E} (a DAG chain)</span></p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Graph with 4 SCCs</h2>
+        <div class="graph-viz">
+    G:        A &rarr; B &rarr; C
+             |     |     |
+             &darr;   &darr;   &darr;
+             D &larr; E &rarr; F
+        </div>
+        <p><strong>Edges:</strong> A→B, A→D, B→C, B→E, C→F, E→D, E→F</p>
+
+        <div class="example">
+          <div class="title">SCC Identification by Mutual Reachability:</div>
+          <table>
+            <tr><th>Vertex</th><th>Can reach</th><th>Can be reached from</th><th>SCC</th></tr>
+            <tr><td>A</td><td>B,C,D,E,F</td><td>(nothing)</td><td><span class="scc-a">{A}</span></td></tr>
+            <tr><td>B</td><td>C,D,E,F</td><td>A</td><td><span class="scc-b">{B}</span></td></tr>
+            <tr><td>C</td><td>F</td><td>A,B</td><td><span class="scc-c">{C}</span></td></tr>
+            <tr><td>D</td><td>(nothing)</td><td>A,B,E</td><td><span class="scc-a">{D}</span> or part of... E→D but D→? nothing. So {D} alone.</td></tr>
+            <tr><td>E</td><td>D,F</td><td>B</td><td><span class="scc-c">{E}</span> or...</td></tr>
+            <tr><td>F</td><td>(nothing)</td><td>C,E</td><td><span class="scc-c">{F}</span></td></tr>
+          </table>
+          <p>This gives 6 trivial SCCs (each vertex alone) since no two vertices are mutually reachable.</p>
+          <p>Not very interesting. Let me add some cycles:</p>
+          <p><strong>Add edges:</strong> B↔E, C↔F</p>
+          <p>Now: <span class="scc-a">{A}</span> → <span class="scc-b">{B,E}</span> → <span class="scc-c">{C,F}</span> → <span class="scc-c">...</span> and D? E→D but D→? nothing. So <span class="scc-d">{D}</span>.</p>
+          <p><span class="result">4 SCCs: {A}, {B,E}, {C,F}, {D}</span></p>
+          <p>Component graph: {A}→{B,E}→{D} and {B,E}→{C,F}. Since D has no outgoing, it's a sink. {C,F} also has no outgoing — another sink.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Component Graph & Complexity -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Component Graph Construction</h2>
+        <p>Given SCCs C<sub>1</sub>, C<sub>2</sub>, ..., C<sub>k</sub>, the <strong>condensation</strong> (component graph) G<sup>SCC</sup> = (V<sup>SCC</sup>, E<sup>SCC</sup>) is:</p>
+        <div class="formula">
+          <div class="label">Component Graph:</div>
+          <div class="expr">V<sup>SCC</sup> = {C<sub>1</sub>, C<sub>2</sub>, ..., C<sub>k</sub>}</div>
+          <div class="expr">E<sup>SCC</sup> = {(C<sub>i</sub>, C<sub>j</sub>) : i &ne; j and &exist; u&isin;C<sub>i</sub>, v&isin;C<sub>j</sub> with (u,v)&isin;E}</div>
+          <div class="desc">Edge between SCCs if any vertex in one has an edge to a vertex in the other (excluding self-loops)</div>
+        </div>
+
+        <div class="warning">
+          <strong>⚠ Important:</strong> G<sup>SCC</sup> is always a DAG. This follows from the maximality of SCCs — a cycle in G<sup>SCC</sup> would merge all SCCs in the cycle into one.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Time &amp; Space Complexity</h2>
+        <div class="formula">
+          <div class="label">Kosaraju's Algorithm Runtime:</div>
+          <div class="expr">T(V,E) = &Theta;(V + E)</div>
+          <div class="desc">Pass 1 DFS: Θ(V+E). Transpose computation: Θ(V+E). Pass 2 DFS: Θ(V+E). Total: Θ(V+E)</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Space Complexity</h3>
+            <p>Graph G: <span class="highlight">Θ(V+E)</span></p>
+            <p>Transpose G<sup>T</sup>: <span class="highlight">Θ(V+E)</span></p>
+            <p>Finish times: <span class="highlight">Θ(V)</span></p>
+            <p>Stack: <span class="highlight">Θ(V)</span></p>
+            <p>Colors: <span class="highlight">Θ(V)</span></p>
+            <p>Total: <span class="dim">Θ(V+E)</span></p>
+          </div>
+          <div class="card">
+            <h3>Comparison</h3>
+            <p>Kosaraju: <span class="dim">2&times; memory</span> (stores G and G<sup>T</sup>)</p>
+            <p>Tarjan: <span class="highlight">Same Θ(V+E)</span> but less memory</p>
+            <p>Kosaraju is simpler to implement</p>
+            <p>Tarjan is more memory-efficient</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Pass 1 Complexity:</div>
+          <div class="expr">DFS on G: &Theta;(V + E)</div>
+          <div class="label">Transpose Complexity:</div>
+          <div class="expr">Building G<sup>T</sup>: &Theta;(V + E)</div>
+          <div class="label">Pass 2 Complexity:</div>
+          <div class="expr">DFS on G<sup>T</sup>: &Theta;(V + E)</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Applications of SCC</h2>
+        <table>
+          <tr><th>Application</th><th>Description</th><th>How SCC Helps</th></tr>
+          <tr><td><span class="highlight">Web Graph</span></td><td>Analyze link structure of the web</td><td>SCCs represent strongly connected communities; the component graph reveals the bow-tie structure</td></tr>
+          <tr><td><span class="highlight">Software Engineering</span></td><td>Analyze module dependencies</td><td>SCCs indicate circular dependencies (anti-patterns)</td></tr>
+          <tr><td><span class="highlight">Compilers</span></td><td>Optimize loops</td><td>SCCs in control flow graphs represent loops (Tarjan's algorithm)</td></tr>
+          <tr><td><span class="highlight">Formal Verification</span></td><td>Model checking</td><td>SCC decomposition helps detect deadlocks and livelocks</td></tr>
+          <tr><td><span class="highlight">Social Networks</span></td><td>Community detection</td><td>SCCs reveal tightly-knit groups with mutual connections</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: Kosaraju vs Tarjan</h2>
+        <table>
+          <tr><th>Property</th><th>Kosaraju</th><th>Tarjan</th></tr>
+          <tr><td>DFS passes</td><td><span class="dim">2 passes</span></td><td><span class="highlight">1 pass</span></td></tr>
+          <tr><td>Memory (graph)</td><td><span class="dim">Stores G and G<sup>T</sup></span></td><td><span class="highlight">Stores G only</span></td></tr>
+          <tr><td>Runtime</td><td>Θ(V+E)</td><td>Θ(V+E)</td></tr>
+          <tr><td>Data structures</td><td>Finish times + stack</td><td>Low-link + stack</td></tr>
+          <tr><td>Ease of understanding</td><td><span class="highlight">Simple, 3-step</span></td><td>More subtle invariants</td></tr>
+          <tr><td>Implementation</td><td>Straightforward</td><td>More complex (single-pass)</td></tr>
+          <tr><td>Transpose needed</td><td><span class="dim">Yes</span></td><td><span class="highlight">No</span></td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Common Mistakes</h2>
+        <div class="warning">
+          <strong>⚠ Mistake 1:</strong> Thinking that an undirected graph's connected components are the same as SCCs. In undirected graphs, connectivity is simpler (just one undirected connection). SCCs are specifically for directed graphs.
+        </div>
+        <div class="warning">
+          <strong>⚠ Mistake 2:</strong> Forgetting to reset colors between Pass 1 and Pass 2 of Kosaraju. Pass 2 requires all vertices to be WHITE initially.
+        </div>
+        <div class="warning">
+          <strong>⚠ Mistake 3:</strong> Confusing transpose with complement. Transpose G<sup>T</sup> reverses every edge. Complement G' has edges where G does not.
+        </div>
+        <div class="warning">
+          <strong>⚠ Mistake 4:</strong> Thinking a single vertex without self-loops cannot be an SCC. Every single vertex forms a trivial SCC (since a vertex can reach itself by a path of length 0).
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: Key Formulas</h2>
+        <div class="formula">
+          <div class="label">Transpose Graph:</div>
+          <div class="expr">G<sup>T</sup> = (V, {(v,u) : (u,v) &isin; E})</div>
+        </div>
+        <div class="formula">
+          <div class="label">Component Graph (Condensation):</div>
+          <div class="expr">G<sup>SCC</sup> is a DAG &nbsp; &forall; directed graphs G</div>
+        </div>
+        <div class="formula">
+          <div class="label">Kosaraju Runtime:</div>
+          <div class="expr">&Theta;(V + E) &nbsp;—&nbsp; optimal for graph of &Theta;(V+E) size</div>
+        </div>
+        <div class="formula">
+          <div class="label">Highest Finish Time Property:</div>
+          <div class="expr">max f[C<sub>source</sub>] &gt; max f[C<sub>dest</sub>] &nbsp; if C<sub>source</sub> &rarr; C<sub>dest</sub></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

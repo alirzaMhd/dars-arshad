@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduling with Deadlines — Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .section h4 { color: #00ccff; font-size: 0.9em; margin: 12px 0 6px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; font-weight: bold; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0f00; padding: 10px; border-radius: 4px; }
+    .success { border-left: 3px solid #00ff88; padding-left: 10px; margin: 10px 0; background: #001a0f; padding: 10px; border-radius: 4px; }
+    .failure { border-left: 3px solid #ff4444; padding-left: 10px; margin: 10px 0; background: #1a0000; padding: 10px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    tr.opt td { background: #002a1a; color: #00ff88; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; margin: 10px 0; border: 1px solid #222; }
+    .step { margin: 10px 0; padding: 12px; background: #0d0d1a; border-radius: 6px; border-left: 3px solid #555; }
+    .step.feasible { border-left-color: #00ff88; }
+    .step.infeasible { border-left-color: #ff4444; }
+    .step .step-label { color: #ffcc00; font-size: 0.85em; margin-bottom: 5px; }
+    .pseudocode { counter-reset: line; background: #0a0a18; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85em; color: #e0e0e0; border: 1px solid #333; margin: 10px 0; }
+    .pseudocode .line { padding: 2px 0; }
+    .pseudocode .line:before { counter-increment: line; content: counter(line); color: #555; width: 25px; display: inline-block; text-align: right; margin-right: 12px; }
+    .pseudocode .keyword { color: #00ccff; }
+    .pseudocode .comment { color: #666; font-style: italic; }
+    .pseudocode .var { color: #ffcc00; }
+    .pseudocode .str { color: #ff9944; }
+    .pseudocode .op { color: #ff6600; }
+    ul, ol { padding-left: 20px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    p { margin: 6px 0; }
+    .step-table { margin: 8px 0; }
+    .step-table td { padding: 6px 10px; font-size: 0.9em; }
+    .step-table th { padding: 6px 10px; font-size: 0.9em; }
+    .comparison-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+    .badge-opt { background: #002a1a; color: #00ff88; border: 1px solid #00ff88; }
+    .badge-sub { background: #1a1a00; color: #ffcc00; border: 1px solid #ffcc00; }
+    @media (max-width: 600px) { .tab { font-size: 0.75em; padding: 6px 10px; } }
+  </style>
+</head>
+<body>
+  <h1>Scheduling with Deadlines</h1>
+  <p class="subtitle">Greedy Algorithms — Complete Guide with Worked Examples</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Problem Definition</button>
+      <button class="tab" onclick="showSection('tab2')">Greedy Algorithm</button>
+      <button class="tab" onclick="showSection('tab3')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Union-Find Optimization</button>
+      <button class="tab" onclick="showSection('tab5')">Complexity</button>
+    </div>
+
+    <!-- ==================== TAB 1: Problem Definition ==================== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Problem Definition</h2>
+        <p>Given a set of <strong>n jobs</strong>, where each job has a <strong>deadline</strong> and a <strong>profit</strong>, we must schedule a subset of jobs on a <strong>single processor</strong> to maximize total profit. Each job takes exactly <strong>1 unit of time</strong> to process.</p>
+
+        <div class="warning">
+          ⚠ <strong>Important Assumption:</strong> Each job takes exactly 1 unit of time. This is a key constraint — without it, the greedy approach discussed here would not apply directly.
+        </div>
+
+        <div class="formula">
+          <div class="label">Formal Definition</div>
+          <div class="expr">Given: J = { (d₁, p₁), (d₂, p₂), ..., (dₙ, pₙ) }</div>
+          <div class="desc">
+            dᵢ = deadline (job must finish at or before time dᵢ)<br>
+            pᵢ = profit (earned only if job completed by its deadline)<br>
+            Each job requires 1 time unit. Find subset S ⊆ J maximizing Σpᵢ where S is feasible.
+          </div>
+        </div>
+
+        <h3>Feasibility Condition</h3>
+        <p>A set of jobs is <strong>feasible</strong> if there exists a schedule (ordering) such that every job finishes by its deadline. Since each job takes 1 unit, a set of k jobs is feasible iff after sorting jobs by ascending deadline, we have:</p>
+        <div class="formula">
+          <div class="label">Feasibility Test</div>
+          <div class="expr">deadline<sub>(i)</sub> ≥ i &nbsp; for all i = 1, 2, ..., k</div>
+          <div class="desc">Where jobs are sorted by deadline and i is the position in the schedule.</div>
+        </div>
+
+        <h3>Key Properties</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>Single Processor</h4>
+            <p>Only one job at a time. No parallel execution.</p>
+          </div>
+          <div class="card">
+            <h4>Unit Processing Time</h4>
+            <p>Every job takes exactly 1 time unit, regardless of job.</p>
+          </div>
+          <div class="card">
+            <h4>Deadline Constraint</h4>
+            <p>Job must complete at or before its deadline (time ≤ dᵢ).</p>
+          </div>
+          <div class="card">
+            <h4>Profit Maximization</h4>
+            <p>Goal: maximize sum of profits of scheduled jobs.</p>
+          </div>
+        </div>
+
+        <h3>Optimal Substructure</h3>
+        <p>If J is an optimal feasible set of jobs, then J − {j} (removing any job) is also an optimal feasible set for the remaining jobs. This property enables greedy construction of the solution.</p>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: Greedy Algorithm ==================== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Greedy Algorithm with Feasibility Checking</h2>
+
+        <h3>Algorithm Overview</h3>
+        <p>The greedy algorithm builds a feasible job set incrementally. It processes jobs in <strong>decreasing order of profit</strong>. For each job, it tentatively adds it to the selected set and checks feasibility. If the set remains feasible, the job is kept; otherwise, it is discarded.</p>
+
+        <div class="warning">
+          <strong>Important:</strong> To check feasibility of a set, we only need to examine jobs sorted by <strong>ascending deadline</strong>. There is no need to check all possible permutations — the deadline-sorted order is the canonical feasible order.
+        </div>
+
+        <h3>Pseudocode</h3>
+        <div class="code">
+          <div class="line"><span class="keyword">function</span> SCHEDULE_WITH_DEADLINES(J, d, p):</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs by decreasing profit → list L</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;S ← ∅  <span class="comment">▷ Selected feasible set</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> each job j <span class="keyword">in</span> L:</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S' ← S ∪ {j}</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> IS_FEASIBLE(S') <span class="keyword">then</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S ← S'</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> S</div>
+          <div class="line">&nbsp;</div>
+          <div class="line"><span class="keyword">function</span> IS_FEASIBLE(S):</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs in S by ascending deadline</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> i = 1 <span class="keyword">to</span> |S|:</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> deadline(S[i]) &lt; i <span class="keyword">then</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">false</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">true</span></div>
+        </div>
+
+        <h3>Why Only One Feasibility Check?</h3>
+        <p>For a given set of jobs, if <strong>any</strong> schedule orders them by deadline and this order is feasible, then the set is feasible. This is because:</p>
+        <ul>
+          <li>If there <em>exists</em> some feasible schedule, sorting by deadlines always yields a feasible schedule</li>
+          <li>The deadline-sorted order minimizes the completion time of each job, giving the highest chance of feasibility</li>
+          <li>No other permutation can satisfy deadlines if the deadline-sorted order fails</li>
+        </ul>
+
+        <h3>Step-by-Step Feasibility Check</h3>
+        <p>Given a candidate set S, the feasibility check works as follows:</p>
+        <ol>
+          <li>Sort jobs in S by ascending deadline</li>
+          <li>Assign job[1] to time 1, job[2] to time 2, ..., job[k] to time k</li>
+          <li>If for any job[i], deadline[i] &lt; i, the set is infeasible</li>
+        </ol>
+
+        <div class="example">
+          <div class="title">Feasibility Example</div>
+          <p>Suppose S has jobs with deadlines {3, 1, 2}.</p>
+          <p>Sorted by deadline: [d=1, d=2, d=3]</p>
+          <p>At position 1: deadline 1 ≥ 1 ✓<br>
+             At position 2: deadline 2 ≥ 2 ✓<br>
+             At position 3: deadline 3 ≥ 3 ✓</p>
+          <p class="result">→ Feasible ✓</p>
+        </div>
+        <div class="example">
+          <div class="title">Infeasibility Example</div>
+          <p>Suppose S has jobs with deadlines {1, 1, 3}.</p>
+          <p>Sorted by deadline: [d=1, d=1, d=3]</p>
+          <p>At position 1: deadline 1 ≥ 1 ✓<br>
+             At position 2: deadline 1 &lt; 2 ✗ → INFEASIBLE</p>
+          <p class="result" style="color:#ff4444;">→ Infeasible ✗</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: Worked Examples ==================== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <!-- EXAMPLE 1 (Example 6 from textbook) -->
+        <h3>Example 1: Four Jobs with Varying Profits</h3>
+        <div class="example">
+          <div class="title">Textbook Example 6 — n=4</div>
+          <table>
+            <tr><th>Job</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+            <tr><th>Profit pᵢ</th><td>100</td><td>10</td><td>15</td><td>27</td></tr>
+            <tr><th>Deadline dᵢ</th><td>2</td><td>1</td><td>2</td><td>1</td></tr>
+          </table>
+          <p>Jobs sorted by decreasing profit: 1 (100), 4 (27), 3 (15), 2 (10)</p>
+
+          <div class="step feasible">
+            <div class="step-label">Step 1: Try Job 1 (p=100, d=2)</div>
+            <p>S = {1}. Sorted by deadline: [d=2]. Position 1: 2 ≥ 1 ✓</p>
+            <p class="result">→ Feasible. Keep job 1.</p>
+          </div>
+
+          <div class="step feasible">
+            <div class="step-label">Step 2: Try Job 4 (p=27, d=1)</div>
+            <p>S = {1, 4}. Sorted by deadline: [4(d=1), 1(d=2)].</p>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓</p>
+            <p class="result">→ Feasible. Keep job 4.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 3: Try Job 3 (p=15, d=2)</div>
+            <p>S = {1, 4, 3}. Sorted by deadline: [4(d=1), 1(d=2), 3(d=2)].</p>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 2 &lt; 3 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 4: Try Job 2 (p=10, d=1)</div>
+            <p>S = {1, 4, 2}. Sorted by deadline: [4(d=1), 2(d=1), 1(d=2)].</p>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 2.</p>
+          </div>
+
+          <p class="result">Final Optimal Set: J = {1, 4} with total profit = 100 + 27 = <strong>127</strong></p>
+          <p>Valid schedules: [4, 1] (job 4 at time 1, job 1 at time 2)</p>
+        </div>
+
+        <h4>Comparison of All Possible Schedules</h4>
+        <table>
+          <tr><th>Schedule</th><th>Jobs</th><th>Total Profit</th><th>Feasible?</th></tr>
+          <tr><td>[1, 3] or [3, 1]</td><td>1, 3</td><td>115</td><td>✓</td></tr>
+          <tr><td>[2, 1] or [1, 2]</td><td>1, 2</td><td>110</td><td>✓</td></tr>
+          <tr><td>[4, 1] or [1, 4]</td><td>1, 4</td><td>127</td><td>✓ <span class="comparison-badge badge-opt">OPTIMAL</span></td></tr>
+          <tr><td>[4, 3] or [3, 4]</td><td>3, 4</td><td>42</td><td>✓</td></tr>
+          <tr><td>[2, 3] or [3, 2]</td><td>2, 3</td><td>25</td><td>✓</td></tr>
+          <tr><td>[2, 4]</td><td>2, 4</td><td>37</td><td>✗ (both deadline 1)</td></tr>
+          <tr><td>[1]</td><td>1</td><td>100</td><td>✓</td></tr>
+          <tr><td>[2]</td><td>2</td><td>10</td><td>✓</td></tr>
+          <tr><td>[3]</td><td>3</td><td>15</td><td>✓</td></tr>
+          <tr><td>[4]</td><td>4</td><td>27</td><td>✓</td></tr>
+          <tr><td>∅</td><td>none</td><td>0</td><td>✓</td></tr>
+        </table>
+
+        <!-- EXAMPLE 2 (Example 7 from textbook) -->
+        <h3>Example 2: Seven Jobs (Pre-sorted by Profit)</h3>
+        <div class="example">
+          <div class="title">Textbook Example 7 — n=7 (already sorted by decreasing profit)</div>
+          <table>
+            <tr><th>Job</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+            <tr><th>Profit pᵢ</th><td>40</td><td>35</td><td>30</td><td>25</td><td>20</td><td>15</td><td>10</td></tr>
+            <tr><th>Deadline dᵢ</th><td>3</td><td>1</td><td>1</td><td>3</td><td>1</td><td>3</td><td>2</td></tr>
+          </table>
+          <p>Jobs are already in decreasing profit order: 1, 2, 3, 4, 5, 6, 7.</p>
+
+          <div class="step feasible">
+            <div class="step-label">Step 1: J = {1} — deadline sorted: [1(d=3)]</div>
+            <p>Position 1: 3 ≥ 1 ✓</p>
+            <p class="result">→ Feasible. Keep job 1.</p>
+          </div>
+
+          <div class="step feasible">
+            <div class="step-label">Step 2: J = {1, 2} — deadline sorted: [2(d=1), 1(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓</p>
+            <p class="result">→ Feasible. Keep job 2.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 3: J = {1, 2, 3} — deadline sorted: [3(d=1), 2(d=1), 1(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3.</p>
+          </div>
+
+          <div class="step feasible">
+            <div class="step-label">Step 4: J = {1, 2, 4} — deadline sorted: [2(d=1), 1(d=3), 4(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓</p>
+            <p class="result">→ Feasible. Keep job 4.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 5: J = {1, 2, 4, 5} — deadline sorted: [2(d=1), 5(d=1), 1(d=3), 4(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 5.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 6: J = {1, 2, 4, 6} — deadline sorted: [2(d=1), 1(d=3), 4(d=3), 6(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;|&nbsp; Position 4: 3 &lt; 4 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 6.</p>
+          </div>
+
+          <div class="step infeasible">
+            <div class="step-label">Step 7: J = {1, 2, 4, 7} — deadline sorted: [2(d=1), 7(d=2), 1(d=3), 4(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;|&nbsp; Position 4: 3 &lt; 4 ✗</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 7.</p>
+          </div>
+
+          <p class="result">Final Optimal Set: J = {1, 2, 4} with total profit = 40 + 35 + 25 = <strong>100</strong></p>
+          <p>Valid schedules: [2, 1, 4] or [2, 4, 1] (deadlines: [1, 3, 3])</p>
+        </div>
+
+        <!-- EXAMPLE 3: Custom -->
+        <h3>Example 3: Five Jobs — Ties in Deadlines</h3>
+        <div class="example">
+          <div class="title">Custom Example — n=5 with Tight Deadlines</div>
+          <table>
+            <tr><th>Job</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>
+            <tr><th>Profit pᵢ</th><td>50</td><td>40</td><td>30</td><td>20</td><td>10</td></tr>
+            <tr><th>Deadline dᵢ</th><td>2</td><td>1</td><td>2</td><td>3</td><td>1</td></tr>
+          </table>
+          <p>Jobs sorted by decreasing profit: A(50), B(40), C(30), D(20), E(10)</p>
+
+          <div class="step feasible">
+            <div class="step-label">Step 1: J = {A} — [A(d=2)]</div>
+            <p>Position 1: 2 ≥ 1 ✓ &nbsp;→ Keep A</p>
+          </div>
+          <div class="step feasible">
+            <div class="step-label">Step 2: J = {A, B} — [B(d=1), A(d=2)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;→ Keep B</p>
+          </div>
+          <div class="step infeasible">
+            <div class="step-label">Step 3: J = {A, B, C} — [B(d=1), A(d=2), C(d=2)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 2 &lt; 3 ✗ → Discard C</p>
+          </div>
+          <div class="step feasible">
+            <div class="step-label">Step 4: J = {A, B, D} — [B(d=1), A(d=2), D(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;→ Keep D</p>
+          </div>
+          <div class="step infeasible">
+            <div class="step-label">Step 5: J = {A, B, D, E} — [B(d=1), E(d=1), A(d=2), D(d=3)]</div>
+            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗ → Discard E</p>
+          </div>
+
+          <p class="result">Final Set: J = {A, B, D} with profit = 50 + 40 + 20 = <strong>110</strong></p>
+          <p>Schedule: [B, A, D] or [B, D, A] (for D at time 2, A at time 3 — both work since deadlines A=2, D=3 or swapped)</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparing All Approaches</h2>
+        <table>
+          <tr><th>Approach</th><th>Time Complexity</th><th>Space Complexity</th><th>Notes</th></tr>
+          <tr><td>Brute Force (all subsets)</td><td>O(2ⁿ · n)</td><td>O(n)</td><td>Impractical for n &gt; 20</td></tr>
+          <tr><td>Greedy (basic)</td><td>O(n²)</td><td>O(n)</td><td>Simple, clear feasibility check</td></tr>
+          <tr><td>Greedy + Union-Find</td><td>O(n log n)</td><td>O(m) m=max deadline</td><td>Best for large n</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: Union-Find Optimization ==================== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Union-Find Optimization</h2>
+
+        <h3>Motivation</h3>
+        <p>The basic greedy algorithm checks feasibility from scratch each time (O(k) per job, O(n²) total). Using a <strong>Union-Find (Disjoint Set Union)</strong> data structure, we can reduce this to nearly O(1) per job.</p>
+
+        <h3>Core Idea</h3>
+        <p>Instead of checking deadlines for the entire set, we maintain time slots from 1 to the maximum deadline. For each job (processed in decreasing profit order):</p>
+        <ol>
+          <li>Find the latest free time slot ≤ deadline of the job</li>
+          <li>If a free slot exists, assign the job to that slot</li>
+          <li>Merge the assigned slot with the slot immediately before it (so future lookups skip occupied slots)</li>
+        </ol>
+
+        <h3>Data Structure</h3>
+        <p>We maintain an array <code>parent[]</code> where <code>parent[t]</code> points to the next available slot before t. Initially, <code>parent[t] = t</code> for all t. When slot t is occupied, we set <code>parent[t] = find(t-1)</code>.</p>
+
+        <div class="formula">
+          <div class="label">Union-Find Operations</div>
+          <div class="expr">find(t) = latest free slot ≤ t</div>
+          <div class="desc">
+            If slot t is free, returns t. Otherwise, recursively finds an earlier free slot.<br>
+            After occupying slot t: union(t, t-1) so parent[t] points to t-1's parent.
+          </div>
+        </div>
+
+        <h3>Optimized Algorithm</h3>
+        <div class="code">
+          <div class="line"><span class="keyword">function</span> SCHEDULE_UF(J, d, p):</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs by decreasing profit</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;m ← max deadline among all jobs</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;parent[0..m] initialized: parent[t] = t</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;slot[1..m] ← empty</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;total_profit ← 0</div>
+          <div class="line">&nbsp;</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> each job j <span class="keyword">in</span> sorted order:</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;t ← find(min(d[j], m))</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> t &gt; 0:</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slot[t] ← j  <span class="comment">▷ Assign job to slot t</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;total_profit ← total_profit + p[j]</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;parent[t] ← find(t - 1)  <span class="comment">▷ Merge with previous</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> slot[1..m], total_profit</div>
+        </div>
+
+        <h3>Path Compression</h3>
+        <p>With path compression, each <code>find</code> operation runs in nearly O(1) time (amortized inverse Ackermann function α(n)). The entire scheduling becomes O(n log n + n α(m)) = O(n log n).</p>
+
+        <h3>Worked Example with Union-Find</h3>
+        <div class="example">
+          <div class="title">Example 7 revisited with Union-Find</div>
+          <table>
+            <tr><th>Job</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+            <tr><th>Profit</th><td>40</td><td>35</td><td>30</td><td>25</td><td>20</td><td>15</td><td>10</td></tr>
+            <tr><th>Deadline</th><td>3</td><td>1</td><td>1</td><td>3</td><td>1</td><td>3</td><td>2</td></tr>
+          </table>
+          <p>max deadline m = 3. parent = [0→0, 1→1, 2→2, 3→3]</p>
+          <table>
+            <tr><th>Step</th><th>Job</th><th>d</th><th>find(d)</th><th>Assign</th><th>parent after</th></tr>
+            <tr><td>1</td><td>1 (40)</td><td>3</td><td>3</td><td>slot[3]=1</td><td>parent[3]=find(2)=2</td></tr>
+            <tr><td>2</td><td>2 (35)</td><td>1</td><td>1</td><td>slot[1]=2</td><td>parent[1]=find(0)=0</td></tr>
+            <tr><td>3</td><td>3 (30)</td><td>1</td><td>find(1)→find(parent[1]=0)→0</td><td>0 → skip</td><td>—</td></tr>
+            <tr><td>4</td><td>4 (25)</td><td>3</td><td>find(3)→find(parent[3]=2)→2</td><td>slot[2]=4</td><td>parent[2]=find(1)=0</td></tr>
+            <tr><td>5</td><td>5 (20)</td><td>1</td><td>find(1)→0</td><td>0 → skip</td><td>—</td></tr>
+            <tr><td>6</td><td>6 (15)</td><td>3</td><td>find(3)→find(2)→find(parent[2]=0)→0</td><td>0 → skip</td><td>—</td></tr>
+            <tr><td>7</td><td>7 (10)</td><td>2</td><td>find(2)→0</td><td>0 → skip</td><td>—</td></tr>
+          </table>
+          <p class="result">Result: slot[1]=Job 2, slot[2]=Job 4, slot[3]=Job 1 → schedule [2, 4, 1], profit = 100</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 5: Complexity ==================== -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Complexity Analysis</h2>
+
+        <h3>Basic Greedy Algorithm</h3>
+        <div class="formula">
+          <div class="label">Time Complexity: O(n²)</div>
+          <div class="expr">T(n) = O(n log n) + O(n²) = O(n²)</div>
+          <div class="desc">
+            n log n for sorting jobs by profit + n jobs × O(k) for feasibility checks (k ≤ n).
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Phase</th><th>Operation</th><th>Cost</th></tr>
+          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td></tr>
+          <tr><td>Loop</td><td>For each of n jobs</td><td>O(n)</td></tr>
+          <tr><td>Feasibility Check</td><td>Sort + verify k jobs (k up to n)</td><td>O(k log k) ≈ O(n)</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n²)</strong></td></tr>
+        </table>
+
+        <h3>Union-Find Optimized Algorithm</h3>
+        <div class="formula">
+          <div class="label">Time Complexity: O(n log n)</div>
+          <div class="expr">T(n) = O(n log n) + n × O(α(m)) = O(n log n)</div>
+          <div class="desc">
+            n log n for sorting + n find/union operations, each amortized O(α(m)) ≈ O(1).
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Phase</th><th>Operation</th><th>Cost</th></tr>
+          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td></tr>
+          <tr><td>Initialize</td><td>Create parent array of size m (max deadline)</td><td>O(m)</td></tr>
+          <tr><td>Loop</td><td>For each of n jobs</td><td>O(n)</td></tr>
+          <tr><td>Find/Union</td><td>Path-compressed find, union</td><td>O(α(m)) ≈ O(1) each</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n log n)</strong></td></tr>
+        </table>
+
+        <h3>Space Complexity</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>Basic Algorithm</h4>
+            <p>O(n) — stores the selected job set and deadlines/profits</p>
+          </div>
+          <div class="card">
+            <h4>Union-Find Algorithm</h4>
+            <p>O(m) — parent array of size m (max deadline), plus job metadata O(n)</p>
+          </div>
+        </div>
+
+        <h3>Comparison Summary</h3>
+        <table>
+          <tr><th>Criterion</th><th>Basic Greedy</th><th>Greedy + Union-Find</th></tr>
+          <tr><td>Preprocessing</td><td>Sort by profit: O(n log n)</td><td>Sort by profit: O(n log n)</td></tr>
+          <tr><td>Per-job cost</td><td>O(k) feasibility check (k current set size)</td><td>O(α(m)) find+union — nearly O(1)</td></tr>
+          <tr><td>Total time</td><td>O(n²)</td><td>O(n log n)</td></tr>
+          <tr><td>Extra space</td><td>O(n)</td><td>O(m) where m = max deadline</td></tr>
+          <tr><td>Implementation complexity</td><td>Simple</td><td>Moderate (needs DSU)</td></tr>
+          <tr><td>Best for</td><td>Small n, teaching</td><td>Large n, production</td></tr>
+        </table>
+
+        <h3>When to Use Each</h3>
+        <ul>
+          <li><strong>Basic Greedy (O(n²)):</strong> Suitable when n ≤ 10³, or when simplicity and readability matter more than performance.</li>
+          <li><strong>Union-Find (O(n log n)):</strong> Essential when n is large (10⁵+), or when jobs have a wide range of deadlines.</li>
+        </ul>
+
+        <div class="note">
+          <strong>Note:</strong> α(n) is the inverse Ackermann function, which grows extremely slowly. For all practical values of n (even up to 10⁹), α(n) ≤ 5. This makes Union-Find operations effectively O(1) in practice.
+        </div>
+
+        <h3>Proof of Optimality (Sketch)</h3>
+        <p>The greedy algorithm is optimal for the scheduling-with-deadlines problem under the 1-unit time assumption. The proof uses an <strong>exchange argument</strong>:</p>
+        <ol>
+          <li>Let G be the greedy solution and O be any optimal solution.</li>
+          <li>Sort both sets by deadline. Let the first position where they differ be k.</li>
+          <li>Greedy chose a higher-profit job at position k than any feasible alternative could.</li>
+          <li>By swapping jobs, O can be transformed into G without decreasing profit.</li>
+          <li>Therefore, G is at least as good as O → G is optimal.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

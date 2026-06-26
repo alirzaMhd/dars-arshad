@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assembly Line Scheduling - Dynamic Programming</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Assembly Line Scheduling</h1>
+  <p class="subtitle">Dynamic Programming — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Problem Definition</button>
+      <button class="tab" onclick="showSection('tab2')">DP Solution</button>
+      <button class="tab" onclick="showSection('tab3')">Examples &amp; Complexity</button>
+      <button class="tab" onclick="showSection('tab4')">Exercises</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Assembly Line Scheduling Problem</h2>
+        <p>A car factory has two assembly lines, each with n stations. A chassis enters one of the two lines, goes through all n stations (in order), and exits. The goal is to find the fastest route through the factory.</p>
+
+        <h3>Components</h3>
+        <ul>
+          <li><strong>Two lines:</strong> Line 1 and Line 2, each with n stations (S<sub>1,1</sub>, S<sub>1,2</sub>, ..., S<sub>1,n</sub> and S<sub>2,1</sub>, S<sub>2,2</sub>, ..., S<sub>2,n</sub>)</li>
+          <li><strong>Entry costs:</strong> e<sub>1</sub> (enter line 1), e<sub>2</sub> (enter line 2)</li>
+          <li><strong>Station costs:</strong> a<sub>1,j</sub> (station j on line 1), a<sub>2,j</sub> (station j on line 2)</li>
+          <li><strong>Transfer costs:</strong> t<sub>1,j</sub> (transfer from line 1 to line 2 after station j), t<sub>2,j</sub> (transfer from line 2 to line 1 after station j)</li>
+          <li><strong>Exit costs:</strong> x<sub>1</sub> (exit from line 1), x<sub>2</sub> (exit from line 2)</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Objective:</div>
+          <div class="expr">Minimize total time from entry to exit through the factory</div>
+          <div class="desc">At each station, the chassis can either stay on the same line or transfer to the other line (with additional cost)</div>
+        </div>
+
+        <div class="warning">
+          <strong>Warning:</strong> Transfers between lines have additional costs — don't forget to include them! Forgetting t<sub>i,j-1</sub> when computing f<sub>i</sub>[j] is a common mistake.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Input Parameters</h3>
+            <p>&bull; n: number of stations per line</p>
+            <p>&bull; e<sub>1</sub>, e<sub>2</sub>: entry costs</p>
+            <p>&bull; a<sub>i,j</sub>: station costs</p>
+            <p>&bull; t<sub>i,j</sub>: transfer costs</p>
+            <p>&bull; x<sub>1</sub>, x<sub>2</sub>: exit costs</p>
+          </div>
+          <div class="card">
+            <h3>Key Property</h3>
+            <p>Optimal substructure: the fastest way through station j depends only on the fastest ways through station j-1 on both lines.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Dynamic Programming Solution</h2>
+
+        <h3>Recurrence Relations</h3>
+        <p>Let f<sub>1</sub>[j] = fastest time to reach station j on line 1,<br>
+        f<sub>2</sub>[j] = fastest time to reach station j on line 2.</p>
+
+        <div class="formula">
+          <div class="label">Base Cases (j = 1):</div>
+          <div class="expr">f<sub>1</sub>[1] = e<sub>1</sub> + a<sub>1,1</sub></div>
+          <div class="expr">f<sub>2</sub>[1] = e<sub>2</sub> + a<sub>2,1</sub></div>
+          <div class="desc">Entry cost + first station cost on each line</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Recurrence for j &ge; 2:</div>
+          <div class="expr">
+            f<sub>1</sub>[j] = min(f<sub>1</sub>[j-1] + a<sub>1,j</sub>, f<sub>2</sub>[j-1] + t<sub>2,j-1</sub> + a<sub>1,j</sub>)<br><br>
+            f<sub>2</sub>[j] = min(f<sub>2</sub>[j-1] + a<sub>2,j</sub>, f<sub>1</sub>[j-1] + t<sub>1,j-1</sub> + a<sub>2,j</sub>)
+          </div>
+          <div class="desc">Stay on same line (no transfer) vs. transfer from other line</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Final Answer:</div>
+          <div class="expr">f* = min(f<sub>1</sub>[n] + x<sub>1</sub>, f<sub>2</sub>[n] + x<sub>2</sub>)</div>
+          <div class="desc">Fastest time to complete all stations + exit cost</div>
+        </div>
+
+        <h3>Path Tracking</h3>
+        <p>Arrays L<sub>1</sub>[j] and L<sub>2</sub>[j] store which line was used to reach station j optimally:</p>
+        <ul>
+          <li>L<sub>1</sub>[j] = 1 if the optimal path to S<sub>1,j</sub> came from line 1, or 2 if from line 2</li>
+          <li>L<sub>2</sub>[j] = 1 or 2 indicating the source line for the optimal path to S<sub>2,j</sub></li>
+        </ul>
+
+        <h3>Algorithm: FASTEST-WAY</h3>
+        <div class="code">
+          FASTEST-WAY(a, t, e, x, n):<br>
+          &nbsp;&nbsp;f<sub>1</sub>[1] = e<sub>1</sub> + a<sub>1,1</sub><br>
+          &nbsp;&nbsp;f<sub>2</sub>[1] = e<sub>2</sub> + a<sub>2,1</sub><br>
+          &nbsp;&nbsp;for j = 2 to n:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;if f<sub>1</sub>[j-1] + a<sub>1,j</sub> &le; f<sub>2</sub>[j-1] + t<sub>2,j-1</sub> + a<sub>1,j</sub>:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f<sub>1</sub>[j] = f<sub>1</sub>[j-1] + a<sub>1,j</sub>; L<sub>1</sub>[j] = 1<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;else:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f<sub>1</sub>[j] = f<sub>2</sub>[j-1] + t<sub>2,j-1</sub> + a<sub>1,j</sub>; L<sub>1</sub>[j] = 2<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;if f<sub>2</sub>[j-1] + a<sub>2,j</sub> &le; f<sub>1</sub>[j-1] + t<sub>1,j-1</sub> + a<sub>2,j</sub>:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f<sub>2</sub>[j] = f<sub>2</sub>[j-1] + a<sub>2,j</sub>; L<sub>2</sub>[j] = 2<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;else:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f<sub>2</sub>[j] = f<sub>1</sub>[j-1] + t<sub>1,j-1</sub> + a<sub>2,j</sub>; L<sub>2</sub>[j] = 1<br>
+          &nbsp;&nbsp;if f<sub>1</sub>[n] + x<sub>1</sub> &le; f<sub>2</sub>[n] + x<sub>2</sub>:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;f* = f<sub>1</sub>[n] + x<sub>1</sub>; L* = 1<br>
+          &nbsp;&nbsp;else:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;f* = f<sub>2</sub>[n] + x<sub>2</sub>; L* = 2
+        </div>
+
+        <h3>Algorithm: PRINT-STATIONS</h3>
+        <div class="code">
+          PRINT-STATIONS(L, L*, n):<br>
+          &nbsp;&nbsp;i = L*<br>
+          &nbsp;&nbsp;print "Line " i ", Station " n<br>
+          &nbsp;&nbsp;for j = n down to 2:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;i = L<sub>i</sub>[j]<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;print "Line " i ", Station " j-1
+        </div>
+
+        <div class="formula">
+          <div class="label">Complexity:</div>
+          <div class="expr">FASTEST-WAY: O(n), Space: O(n)</div>
+          <div class="expr">PRINT-STATIONS: O(n)</div>
+          <div class="desc">Linear time — both algorithms process n stations once</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: 3 Stations Each Line — Compute All f Values</div>
+          <p>Input parameters:</p>
+          <table>
+            <tr><th>Station j</th><th>a<sub>1,j</sub></th><th>a<sub>2,j</sub></th><th>t<sub>1,j</sub></th><th>t<sub>2,j</sub></th></tr>
+            <tr><td>1</td><td>4</td><td>3</td><td>2</td><td>1</td></tr>
+            <tr><td>2</td><td>5</td><td>6</td><td>3</td><td>2</td></tr>
+            <tr><td>3</td><td>3</td><td>4</td><td>-</td><td>-</td></tr>
+          </table>
+          <p>Entry: e<sub>1</sub>=2, e<sub>2</sub>=4 &nbsp;&nbsp; Exit: x<sub>1</sub>=3, x<sub>2</sub>=2</p>
+          <p><strong>Step 1 — Base case:</strong></p>
+          <p>f<sub>1</sub>[1] = e<sub>1</sub> + a<sub>1,1</sub> = 2 + 4 = 6<br>f<sub>2</sub>[1] = e<sub>2</sub> + a<sub>2,1</sub> = 4 + 3 = 7</p>
+          <p><strong>Step 2 — j=2:</strong></p>
+          <p>f<sub>1</sub>[2] = min(f<sub>1</sub>[1] + a<sub>1,2</sub>, f<sub>2</sub>[1] + t<sub>2,1</sub> + a<sub>1,2</sub>)<br>
+          &nbsp;&nbsp;= min(6 + 5, 7 + 1 + 5) = min(11, 13) = <span class="highlight">11</span> (stay on line 1)</p>
+          <p>f<sub>2</sub>[2] = min(f<sub>2</sub>[1] + a<sub>2,2</sub>, f<sub>1</sub>[1] + t<sub>1,1</sub> + a<sub>2,2</sub>)<br>
+          &nbsp;&nbsp;= min(7 + 6, 6 + 2 + 6) = min(13, 14) = <span class="highlight">13</span> (stay on line 2)</p>
+          <p><strong>Step 3 — j=3:</strong></p>
+          <p>f<sub>1</sub>[3] = min(11 + 3, 13 + 2 + 3) = min(14, 18) = <span class="highlight">14</span> (stay on line 1)</p>
+          <p>f<sub>2</sub>[3] = min(13 + 4, 11 + 3 + 4) = min(17, 18) = <span class="highlight">17</span> (stay on line 2)</p>
+          <p><strong>Step 4 — Final answer:</strong></p>
+          <p>f* = min(f<sub>1</sub>[3] + x<sub>1</sub>, f<sub>2</sub>[3] + x<sub>2</sub>) = min(14 + 3, 17 + 2) = min(17, 19) = <span class="highlight">17</span></p>
+          <p class="result">Fastest time: 17 units, using Line 1 through all 3 stations with exit x<sub>1</sub>.</p>
+          <p>Path: Enter Line 1 &rarr; S<sub>1,1</sub> &rarr; S<sub>1,2</sub> &rarr; S<sub>1,3</sub> &rarr; Exit Line 1</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: 5 Stations — Show Path Reconstruction</div>
+          <p>Given data (n=5):</p>
+          <table>
+            <tr><th>j</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+            <tr><td>a<sub>1,j</sub></td><td>7</td><td>9</td><td>3</td><td>4</td><td>8</td></tr>
+            <tr><td>a<sub>2,j</sub></td><td>8</td><td>5</td><td>6</td><td>7</td><td>5</td></tr>
+            <tr><td>t<sub>1,j</sub></td><td>2</td><td>3</td><td>1</td><td>2</td><td>-</td></tr>
+            <tr><td>t<sub>2,j</sub></td><td>3</td><td>1</td><td>2</td><td>3</td><td>-</td></tr>
+          </table>
+          <p>e<sub>1</sub>=3, e<sub>2</sub>=2, x<sub>1</sub>=2, x<sub>2</sub>=3</p>
+          <p><strong>Computation table:</strong></p>
+          <table>
+            <tr><th>j</th><th>f<sub>1</sub>[j]</th><th>L<sub>1</sub>[j]</th><th>f<sub>2</sub>[j]</th><th>L<sub>2</sub>[j]</th></tr>
+            <tr><td>1</td><td>3+7=10</td><td>-</td><td>2+8=10</td><td>-</td></tr>
+            <tr><td>2</td><td>min(10+9,10+3+9)=<span class="highlight">19</span></td><td>1</td><td>min(10+5,10+2+5)=<span class="highlight">15</span></td><td>2</td></tr>
+            <tr><td>3</td><td>min(19+3,15+1+3)=<span class="highlight">19</span></td><td>2</td><td>min(15+6,19+3+6)=<span class="highlight">21</span></td><td>2</td></tr>
+            <tr><td>4</td><td>min(19+4,21+2+4)=<span class="highlight">23</span></td><td>1</td><td>min(21+7,19+1+7)=<span class="highlight">27</span></td><td>1</td></tr>
+            <tr><td>5</td><td>min(23+8,27+3+8)=<span class="highlight">31</span></td><td>1</td><td>min(27+5,23+2+5)=<span class="highlight">30</span></td><td>2</td></tr>
+          </table>
+          <p>f* = min(31+2, 30+3) = min(33, 33) = <span class="highlight">33</span></p>
+          <p>Both lines give 33. Let's reconstruct using line 2 (L*=2):</p>
+          <p>Station 5: Line 2 &rarr; L<sub>2</sub>[5]=2 (came from line 2)<br>
+          Station 4: Line 2 &rarr; L<sub>2</sub>[4]=1 (transferred from line 1!)<br>
+          Station 3: Line 1 &rarr; L<sub>1</sub>[3]=2 (transferred from line 2!)<br>
+          Station 2: Line 2 &rarr; L<sub>2</sub>[2]=2 (came from line 2)<br>
+          Station 1: Line 2</p>
+          <p class="result">Path: Enter L2 &rarr; S<sub>2,1</sub> &rarr; S<sub>2,2</sub> &rarr; transfer to S<sub>1,3</sub> &rarr; S<sub>1,4</sub> &rarr; transfer to S<sub>2,5</sub> &rarr; Exit L2</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Comparing Different Entry/Exit Costs</div>
+          <p>Same station costs (n=4) but different entry/exit scenarios:</p>
+          <table>
+            <tr><th>j</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+            <tr><td>a<sub>1,j</sub></td><td>5</td><td>4</td><td>6</td><td>3</td></tr>
+            <tr><td>a<sub>2,j</sub></td><td>6</td><td>5</td><td>4</td><td>5</td></tr>
+            <tr><td>t<sub>1,j</sub></td><td>2</td><td>1</td><td>3</td><td>-</td></tr>
+            <tr><td>t<sub>2,j</sub></td><td>3</td><td>2</td><td>1</td><td>-</td></tr>
+          </table>
+          <p><strong>Scenario A:</strong> e<sub>1</sub>=1, e<sub>2</sub>=5, x<sub>1</sub>=1, x<sub>2</sub>=2</p>
+          <p>f<sub>1</sub>[1]=6, f<sub>2</sub>[1]=11<br>
+          f<sub>1</sub>[2]=min(6+4,11+3+4)=min(10,18)=<span class="highlight">10</span><br>
+          f<sub>2</sub>[2]=min(11+5,6+2+5)=min(16,13)=<span class="highlight">13</span> (transfer!)<br>
+          f<sub>1</sub>[3]=min(10+6,13+2+6)=min(16,21)=<span class="highlight">16</span><br>
+          f<sub>2</sub>[3]=min(13+4,10+1+4)=min(17,15)=<span class="highlight">15</span> (transfer!)<br>
+          f<sub>1</sub>[4]=min(16+3,15+1+3)=min(19,19)=<span class="highlight">19</span><br>
+          f<sub>2</sub>[4]=min(15+5,16+3+5)=min(20,24)=<span class="highlight">20</span><br>
+          f*=min(19+1,20+2)=min(20,22)=<span class="highlight">20</span> (Line 1 exit)</p>
+          <p><strong>Scenario B:</strong> e<sub>1</sub>=5, e<sub>2</sub>=1, x<sub>1</sub>=2, x<sub>2</sub>=1</p>
+          <p>f<sub>1</sub>[1]=10, f<sub>2</sub>[1]=7<br>
+          f<sub>1</sub>[2]=min(10+4,7+3+4)=min(14,14)=14<br>
+          f<sub>2</sub>[2]=min(7+5,10+2+5)=min(12,17)=12<br>
+          f<sub>1</sub>[3]=min(14+6,12+2+6)=min(20,20)=20<br>
+          f<sub>2</sub>[3]=min(12+4,14+1+4)=min(16,19)=16<br>
+          f<sub>1</sub>[4]=min(20+3,16+1+3)=min(23,20)=20 (transfer!)<br>
+          f<sub>2</sub>[4]=min(16+5,20+3+5)=min(21,28)=21<br>
+          f*=min(20+2,21+1)=min(22,22)=22</p>
+          <p class="result">Scenario A gives 20 (faster by 2 units), showing entry costs significantly affect the optimal path.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Exam Tip:</strong> Common pitfalls:
+          <br>&bull; Forgetting transfer costs t<sub>i,j-1</sub> in recurrence
+          <br>&bull; Using t<sub>i,j</sub> instead of t<sub>i,j-1</sub> (transfer happens AFTER station j-1)
+          <br>&bull; Not adding exit costs x<sub>1</sub> or x<sub>2</sub> in final answer
+          <br>&bull; Misreading L arrays during path reconstruction
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Exercises -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Space Optimization Exercise</h2>
+
+        <div class="formula">
+          <div class="label">Current Space Usage:</div>
+          <div class="expr">f₁[1..n], f₂[1..n], L₁[2..n], L₂[2..n] = 4n - 2 cells</div>
+          <div class="desc">Two arrays of size n for f-values, two arrays of size n-1 for L-values.</div>
+        </div>
+
+        <div class="warning">
+          <strong>Textbook Exercise (Page 413):</strong> The tables Lⱼ[i] and fⱼ[i] together contain <span class="highlight">4n - 2</span> cells. Show how to reduce the space to <span class="highlight">2n + 2</span> cells while still being able to compute f* and print the optimal path.
+        </div>
+
+        <div class="example">
+          <div class="title">Solution Approach</div>
+          <p><strong>Key observation:</strong> To compute f₁[j] and f₂[j], we only need f₁[j-1] and f₂[j-1]. We don't need the full arrays!</p>
+          <p><strong>Reduction plan:</strong></p>
+          <p>1. Keep only <span class="highlight">2 variables</span> for current f₁ and f₂ (instead of arrays of size n)</p>
+          <p>2. However, to reconstruct the path, we still need L arrays</p>
+          <p>3. Instead of L₁[2..n] and L₂[2..n] (2n-2 cells), keep a single <span class="highlight">decision array D[2..n]</span> (n-1 cells) where D[j] = line number after station j</p>
+          <p>4. Then we only need: f₁ (scalar), f₂ (scalar), L* (scalar), decision[n]</p>
+          <p><strong>New space:</strong> f* (1) + f_current (2) + D[2..n] (n-1) + L* (1) = <span class="highlight">n + 3</span> cells (which is ≤ 2n + 2 for n ≥ 1)</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Before Optimization</h3>
+            <p>f₁[n]: n cells</p>
+            <p>f₂[n]: n cells</p>
+            <p>L₁[2..n]: n-1 cells</p>
+            <p>L₂[2..n]: n-1 cells</p>
+            <p><span class="dim">Total: 4n - 2</span></p>
+          </div>
+          <div class="card">
+            <h3>After Optimization</h3>
+            <p>f*: 1 cell</p>
+            <p>f_current[2]: 2 cells</p>
+            <p>D[2..n]: n-1 cells</p>
+            <p>L*: 1 cell</p>
+            <p><span class="highlight">Total: n + 3 ≤ 2n + 2</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

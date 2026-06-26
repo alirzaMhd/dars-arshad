@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bellman-Ford Algorithm - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { color: #00ccff; font-size: 0.85em; margin: 5px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .danger { color: #ff3333; border-left: 3px solid #ff3333; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .dist-table { font-family: monospace; font-size: 0.8em; }
+    .dist-table td { padding: 6px 10px; }
+    .dist-table .updated { color: #00ff88; font-weight: bold; }
+    .dist-table .unchanged { color: #888; }
+    .dist-table .inf { color: #ff6600; }
+    .step-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .step-box { background: #0d0d1a; border: 1px solid #444; border-radius: 6px; padding: 8px; flex: 1; min-width: 140px; text-align: center; }
+    .step-box .s-title { color: #ffcc00; font-size: 0.75em; }
+    .step-box .s-vals { color: #00ccff; font-size: 0.75em; font-family: monospace; margin-top: 4px; }
+    .step-box .s-action { color: #aaa; font-size: 0.7em; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <h1>Bellman-Ford Algorithm</h1>
+  <p class="subtitle">Single-Source Shortest Paths with Negative Edges — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview &amp; Definitions</button>
+      <button class="tab" onclick="showSection('tab2')">Algorithm &amp; Pseudocode</button>
+      <button class="tab" onclick="showSection('tab3')">Step-by-Step Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Negative Cycle Detection</button>
+      <button class="tab" onclick="showSection('tab5')">Practice &amp; Edge Cases</button>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is the Bellman-Ford Algorithm?</h2>
+        <p>Bellman-Ford finds the <strong>shortest paths</strong> from a single source vertex to all other vertices in a weighted directed graph. Unlike Dijkstra's algorithm, it <strong>handles negative edge weights</strong> and can <strong>detect negative cycles</strong>.</p>
+
+        <div class="formula">
+          <div class="label">Problem:</div>
+          <div class="expr">&delta;(s,v) = min{ w(p) : p is a path from s to v }</div>
+          <div class="desc">Shortest path weight from source s to vertex v</div>
+        </div>
+
+        <h3>Key Features</h3>
+        <ul style="margin-left:20px;color:#aaa;line-height:1.8;">
+          <li>Works with <strong>negative edge weights</strong></li>
+          <li><strong>Detects negative cycles</strong> reachable from the source</li>
+          <li>Returns <strong>TRUE</strong> if no negative cycle, <strong>FALSE</strong> otherwise</li>
+          <li>Slower than Dijkstra but more general</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Runtime (Adjacency List):</div>
+          <div class="expr">&Theta;(V &middot; E)</div>
+          <div class="desc">V-1 iterations, each relaxing all E edges</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Runtime (Adjacency Matrix):</div>
+          <div class="expr">&Theta;(V&sup3;)</div>
+          <div class="desc">V-1 iterations, each scanning V&sup2; matrix entries</div>
+        </div>
+
+        <h3>The RELAX Operation</h3>
+        <p>The core operation: check if going through vertex u gives a shorter path to v.</p>
+
+        <div class="formula">
+          <div class="label">RELAX(u, v, w):</div>
+          <div class="expr">if d[v] &gt; d[u] + w(u,v): update d[v] = d[u] + w(u,v), &pi;[v] = u</div>
+          <div class="desc">If the path s&rarr;...&rarr;u&rarr;v is shorter than current d[v], update</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Edge Relaxation</h3>
+            <p><span class="highlight">d[v] > d[u] + w(u,v)</span></p>
+            <p class="note">Update found: path through u is better</p>
+          </div>
+          <div class="card">
+            <h3>No Change</h3>
+            <p><span class="dim">d[v] &le; d[u] + w(u,v)</span></p>
+            <p class="note">Current d[v] is already optimal</p>
+          </div>
+          <div class="card">
+            <h3>Negative Cycle</h3>
+            <p><span class="dim">d[v] > d[u] + w(u,v)</span> <span style="color:#ff3333;">after V-1 passes</span></p>
+            <p class="note">Cycle detected!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Pseudocode -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Algorithm &amp; Pseudocode</h2>
+
+        <h3>Algorithm Steps</h3>
+        <ol style="margin-left:20px;color:#aaa;line-height:1.8;">
+          <li><strong>Initialize:</strong> d[s] = 0, d[v] = &infin; for all other v, &pi;[v] = NIL</li>
+          <li><strong>Repeat |V|-1 times:</strong> Relax EVERY edge (u,v) in the graph</li>
+          <li><strong>Check for negative cycles:</strong> For each edge (u,v), if d[v] > d[u] + w(u,v), then a negative cycle exists &rArr; return FALSE</li>
+          <li><strong>Return TRUE</strong> if no negative cycle found</li>
+        </ol>
+
+        <h3>Pseudocode</h3>
+        <div class="code">INITIALIZE(G, s)
+1.  for each vertex v &isin; V:
+2.      d[v] &larr; &infin;
+3.      &pi;[v] &larr; NIL
+4.  d[s] &larr; 0
+
+RELAX(u, v, W)
+1.  if d[v] &gt; d[u] + W(u, v):
+2.      d[v] &larr; d[u] + W(u, v)
+3.      &pi;[v] &larr; u
+
+BELLMAN-FORD(G, W, s)
+1.  INITIALIZE(G, s)
+2.  for i &larr; 1 to |V| - 1:
+3.      for each edge (u, v) &isin; E:
+4.          RELAX(u, v, W)
+5.  for each edge (u, v) &isin; E:
+6.      if d[v] &gt; d[u] + W(u, v):
+7.          return FALSE   // negative cycle detected
+8.  return TRUE            // shortest paths found</div>
+
+        <h3>Why |V|-1 Iterations?</h3>
+        <p>A shortest path can have at most <strong>|V|-1 edges</strong> (no cycles). After k iterations, the algorithm has found all shortest paths using at most k edges. So after |V|-1 iterations, all shortest paths are found.</p>
+
+        <div class="formula">
+          <div class="label">Iteration Bound:</div>
+          <div class="expr">longest shortest path has at most |V| - 1 edges</div>
+          <div class="desc">No shortest path contains a cycle (positive or zero cycles can be removed, negative cycles make paths undefined)</div>
+        </div>
+
+        <h3>Edge Order Independence</h3>
+        <p><strong>Important:</strong> The edges can be processed in <strong>any order</strong> within each iteration. The final distances after |V|-1 iterations will be correct regardless of order. However, the order may affect <strong>intermediate</strong> values and how quickly convergence happens.</p>
+
+        <div class="warning">
+          <strong>Exam Tip:</strong> The Bellman-Ford algorithm returns TRUE/FALSE (whether a negative cycle exists), but the distances d[v] are only valid when TRUE is returned.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Step-by-Step Worked Examples</h2>
+
+        <!-- Example 1 -->
+        <div class="example">
+          <div class="title">Example 1: Basic Bellman-Ford with 5 Vertices</div>
+          <p>Graph with vertices {s, t, x, y, z}. Source = <strong>s</strong>.</p>
+          <p style="color:#aaa;margin:8px 0;">Edge list (any order within each pass): (s,t)=6, (s,y)=7, (t,x)=5, (t,y)=8, (t,z)=-4, (x,t)=-2, (y,x)=-3, (y,z)=9, (z,x)=7, (z,s)=2</p>
+
+          <p class="step">Initial: d=[s:0, t:&infin;, x:&infin;, y:&infin;, z:&infin;]</p>
+
+          <table class="dist-table">
+            <tr><th>Pass</th><th>Edge</th><th>d[s]</th><th>d[t]</th><th>d[x]</th><th>d[y]</th><th>d[z]</th></tr>
+            <tr><td>0</td><td>Init</td><td>0</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>(s,t)</td><td>0</td><td class="updated">6</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>(s,y)</td><td>0</td><td>6</td><td class="inf">&infin;</td><td class="updated">7</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>(t,z)</td><td>0</td><td>6</td><td class="inf">&infin;</td><td>7</td><td class="updated">2</td></tr>
+            <tr><td>2</td><td>(t,x)</td><td>0</td><td>6</td><td class="updated">11</td><td>7</td><td>2</td></tr>
+            <tr><td>2</td><td>(y,x)</td><td>0</td><td>6</td><td class="updated">4</td><td>7</td><td>2</td></tr>
+            <tr><td>3</td><td>(x,t)</td><td>0</td><td class="updated">2</td><td>4</td><td>7</td><td>2</td></tr>
+            <tr><td>3</td><td>(t,z)</td><td>0</td><td>2</td><td>4</td><td>7</td><td class="updated">-2</td></tr>
+            <tr><td>4</td><td>(x,t)</td><td>0</td><td>2</td><td>4</td><td>7</td><td>-2</td></tr>
+            <tr><td>4</td><td>No change</td><td>0</td><td>2</td><td>4</td><td>7</td><td>-2</td></tr>
+          </table>
+          <p class="result">Final distances after 4 passes: s:0, t:2, x:4, y:7, z:-2</p>
+          <p class="note">Notice that d[z] became negative (-2) through path s&rarr;t&rarr;z with total = 6+(-4)=2 in pass 1, then improved to -2 in pass 3 via s&rarr;t&rarr;z where d[t] had dropped to 2.</p>
+        </div>
+
+        <!-- Example 2 -->
+        <div class="example">
+          <div class="title">Example 2: Bellman-Ford with All Edge Weights Positive</div>
+          <p>Graph with 5 vertices, source = <strong>s</strong>. No negative edges.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (s,a)=2, (s,b)=4, (a,b)=1, (a,c)=3, (b,c)=1, (b,d)=5, (c,d)=2</p>
+
+          <table class="dist-table">
+            <tr><th>Pass</th><th>d[s]</th><th>d[a]</th><th>d[b]</th><th>d[c]</th><th>d[d]</th></tr>
+            <tr><td>0</td><td>0</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>0</td><td class="updated">2</td><td class="updated">4</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>0</td><td>2</td><td class="updated">3</td><td class="updated">5</td><td class="updated">9</td></tr>
+            <tr><td>3</td><td>0</td><td>2</td><td>3</td><td class="updated">4</td><td class="updated">6</td></tr>
+            <tr><td>4</td><td>0</td><td>2</td><td>3</td><td>4</td><td>6</td></tr>
+          </table>
+          <p class="result">Final: s:0, a:2, b:3, c:4, d:6</p>
+          <p class="note">Even with all positive weights, Bellman-Ford works correctly (though Dijkstra would be faster). Distance to d is min(s&rarr;a&rarr;c&rarr;d = 2+3+2=7, s&rarr;b&rarr;d = 4+5=9, corrected to s&rarr;a&rarr;b&rarr;d = 2+1+5=8, then finally s&rarr;a&rarr;b&rarr;c&rarr;d = 2+1+1+2=6).</p>
+        </div>
+
+        <!-- Example 3 -->
+        <div class="example">
+          <div class="title">Example 3: Bellman-Ford with Negative Edges (No Negative Cycle)</div>
+          <p>Graph with 4 vertices, source = <strong>s</strong>. Contains negative edges but no negative cycle.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (s,a)=3, (s,b)=5, (a,b)=-2, (a,c)=6, (b,c)=2, (b,d)=4, (c,d)=-1</p>
+
+          <p>This graph has negative edges: (a,b)=-2 and (c,d)=-1. But there is no negative cycle (no cycle at all in fact).</p>
+
+          <table class="dist-table">
+            <tr><th>Pass</th><th>d[s]</th><th>d[a]</th><th>d[b]</th><th>d[c]</th><th>d[d]</th></tr>
+            <tr><td>0</td><td>0</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>0</td><td class="updated">3</td><td class="updated">5</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>0</td><td>3</td><td class="updated">1</td><td class="updated">9</td><td class="updated">9</td></tr>
+            <tr><td>3</td><td>0</td><td>3</td><td>1</td><td class="updated">3</td><td class="updated">8</td></tr>
+            <tr><td>4</td><td>0</td><td>3</td><td>1</td><td>3</td><td class="updated">2</td></tr>
+          </table>
+          <p class="result">Final: s:0, a:3, b:1, c:3, d:2</p>
+          <p class="note">The negative edge (a,b)=-2 caused d[b] to drop from 5 to 1 (path s&rarr;a&rarr;b = 3+(-2)=1). Then d[c] improved to 3 (s&rarr;a&rarr;b&rarr;c = 3+(-2)+2=3), and d[d] improved to 2 (s&rarr;a&rarr;b&rarr;c&rarr;d = 3+(-2)+2+(-1)=2).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Negative Cycle Detection -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Negative Cycle Detection</h2>
+        <p>After |V|-1 relaxation passes, if any edge can <strong>still be relaxed</strong>, then a negative cycle exists that is reachable from the source. In that case, shortest paths are <strong>undefined</strong> (they can be made arbitrarily negative by traversing the cycle repeatedly).</p>
+
+        <div class="formula">
+          <div class="label">Negative Cycle Condition:</div>
+          <div class="expr">&exist;(u,v) &isin; E: d[v] &gt; d[u] + w(u,v) after |V|-1 passes</div>
+          <div class="desc">If true, shortest paths are undefined (value = -&infin; for vertices reachable from the cycle)</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Detecting a Negative Cycle</div>
+          <p>Graph with 4 vertices, source = <strong>s</strong>. Contains a negative cycle: s&rarr;a&rarr;b&rarr;s.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (s,a)=2, (a,b)=1, (b,s)=-4, (a,c)=3</p>
+          <p style="color:#ff6600;">The cycle s&rarr;a&rarr;b&rarr;s has total weight = 2+1+(-4) = -1 (NEGATIVE!)</p>
+
+          <table class="dist-table">
+            <tr><th>Pass</th><th>d[s]</th><th>d[a]</th><th>d[b]</th><th>d[c]</th></tr>
+            <tr><td>0</td><td>0</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>0</td><td class="updated">2</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>(a,b)</td><td>0</td><td>2</td><td class="updated">3</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>(b,s)</td><td class="updated">-1</td><td>2</td><td>3</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>(s,a)</td><td>-1</td><td class="updated">1</td><td>3</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>(a,b)</td><td>-1</td><td>1</td><td class="updated">2</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>(b,s)</td><td class="updated">-2</td><td>1</td><td>2</td><td class="inf">&infin;</td></tr>
+            <tr><td>3</td><td>(s,a)</td><td>-2</td><td class="updated">0</td><td>2</td><td class="inf">&infin;</td></tr>
+          </table>
+
+          <p>After |V|-1 = 3 passes, check each edge:</p>
+          <ul style="margin-left:20px;color:#aaa;line-height:1.6;">
+            <li>Check (b,s): d[s] = -2, d[b]+w(b,s) = 2+(-4) = -2. d[s] &le; -2 &rArr; OK</li>
+            <li>Wait — actually we need to check further...</li>
+          </ul>
+
+          <p class="step">On the <strong>4th pass</strong> (i.e., the V-th iteration):</p>
+          <ul style="margin-left:20px;color:#aaa;line-height:1.6;">
+            <li>Relax (s,a): d[a] = -2 + 2 = 0 &rArr; still updated</li>
+            <li>Relax (a,b): d[b] = 0 + 1 = 1 &rArr; still updated</li>
+            <li>Relax (b,s): d[s] = 1 + (-4) = -3 &rArr; <span style="color:#ff3333;">STILL UPDATING!</span></li>
+          </ul>
+
+          <p class="danger" style="color:#ff3333;">The distances keep decreasing with each pass! The algorithm returns FALSE because a negative cycle reachable from s exists.</p>
+
+          <div class="danger">
+            <strong>Important:</strong> When a negative cycle exists, the shortest paths to vertices reachable from the cycle are <strong>undefined</strong> (they go to -&infin;). Bellman-Ford does NOT compute meaningful distances in this case — it only detects the cycle and returns FALSE.
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Negative Cycle Not Reachable from Source</div>
+          <p>Graph with 5 vertices, source = <strong>s</strong>. A negative cycle exists but is NOT reachable from s.</p>
+          <p style="color:#aaa;margin:8px 0;">Edges: (s,a)=3, (a,b)=2, (c,d)=1, (d,e)=-3, (e,c)=1</p>
+          <p style="color:#ff6600;">The cycle c&rarr;d&rarr;e&rarr;c has total weight = 1+(-3)+1 = -1 (negative!) but it is NOT reachable from s.</p>
+
+          <table class="dist-table">
+            <tr><th>Iter</th><th>d[s]</th><th>d[a]</th><th>d[b]</th><th>d[c]</th><th>d[d]</th><th>d[e]</th></tr>
+            <tr><td>0</td><td>0</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>1</td><td>0</td><td class="updated">3</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>2</td><td>0</td><td>3</td><td class="updated">5</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+            <tr><td>3-5</td><td>0</td><td>3</td><td>5</td><td class="inf">&infin;</td><td class="inf">&infin;</td><td class="inf">&infin;</td></tr>
+          </table>
+
+          <p>The negative cycle is completely disconnected from the source component. In the check phase:</p>
+          <ul style="margin-left:20px;color:#aaa;line-height:1.6;">
+            <li>Edges from s,a,b: no relaxation possible &rArr; OK</li>
+            <li>Edges (c,d),(d,e),(e,c): d values are still &infin;, so d[d] &le; d[c]+1 holds (&infin; &le; &infin; + 1 &rArr; TRUE)</li>
+          </ul>
+          <p class="result">All edges pass the check &rArr; return TRUE (the negative cycle does not affect distances from s)</p>
+          <p class="note">Bellman-Ford only detects negative cycles <strong>reachable from the source</strong>. Unreachable negative cycles are harmless.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Practice -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Practice &amp; Edge Cases</h2>
+
+        <h3>Comparison with Other SSSP Algorithms</h3>
+        <table>
+          <tr><th>Property</th><th>Bellman-Ford</th><th>Dijkstra</th><th>DAG Shortest Paths</th></tr>
+          <tr><td>Negative edges</td><td><span style="color:#00ff88">Yes</span></td><td><span style="color:#ff3333">No</span></td><td><span style="color:#00ff88">Yes</span></td></tr>
+          <tr><td>Negative cycle detection</td><td><span style="color:#00ff88">Yes</span></td><td><span style="color:#ff3333">No</span></td><td><span style="color:#ffcc00">N/A (no cycles)</span></td></tr>
+          <tr><td>Runtime</td><td>O(VE)</td><td>O(E log V) or O(V&sup2;)</td><td>&Theta;(V+E)</td></tr>
+          <tr><td>Graph type</td><td>Any digraph</td><td>Non-negative weights</td><td>DAG</td></tr>
+          <tr><td>Greedy?</td><td><span style="color:#ff3333">No</span></td><td><span style="color:#00ff88">Yes</span></td><td><span style="color:#ff3333">No</span></td></tr>
+          <tr><td>Requires sorting?</td><td><span style="color:#ff3333">No</span></td><td><span style="color:#ff3333">No</span></td><td><span style="color:#ffcc00">Topological sort</span></td></tr>
+        </table>
+
+        <h3>When to Use Bellman-Ford?</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Use Bellman-Ford</h3>
+            <p>• <span class="dim">Negative edge weights exist</span></p>
+            <p>• <span class="dim">Need to detect negative cycles</span></p>
+            <p>• <span class="dim">Graph is small (V &lt; 1000)</span></p>
+            <p>• <span class="dim">Exam asks for it specifically</span></p>
+          </div>
+          <div class="card">
+            <h3>Don't Use Bellman-Ford</h3>
+            <p>• <span class="dim">All weights are non-negative</span> (use Dijkstra)</p>
+            <p>• <span class="dim">Graph is a DAG</span> (use DAG-SP &Theta;(V+E))</p>
+            <p>• <span class="dim">Graph is very large</span> (O(VE) is too slow)</p>
+          </div>
+        </div>
+
+        <h3>Common Mistakes</h3>
+        <div class="warning">
+          <strong>Mistake 1:</strong> Forgetting that Bellman-Ford returns <strong>TRUE/FALSE</strong>. The distances are only valid when the return value is TRUE.
+        </div>
+        <div class="warning">
+          <strong>Mistake 2:</strong> Thinking edges must be processed in a specific order. <strong>Any order works</strong> — the algorithm converges after |V|-1 passes regardless.
+        </div>
+        <div class="warning">
+          <strong>Mistake 3:</strong> Confusing the runtime: O(VE) for adjacency lists, O(V&sup3;) for adjacency matrices. Make sure to identify which representation is used.
+        </div>
+        <div class="warning">
+          <strong>Mistake 4:</strong> Assuming Bellman-Ford can handle <strong>positive cycles</strong>. It can — positive cycles are harmless (they never improve distances). The issue is only with <strong>negative</strong> cycles.
+        </div>
+        <div class="warning">
+          <strong>Mistake 5:</strong> The negative cycle must be <strong>reachable from the source</strong> to cause problems. An unreachable negative cycle is ignored.
+        </div>
+
+        <h3>Quick Reference Card</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Initialize</h3>
+            <p>d[s] = <span class="highlight">0</span></p>
+            <p>d[v] = <span class="dim">&infin;</span></p>
+            <p>&pi;[v] = <span class="dim">NIL</span></p>
+          </div>
+          <div class="card">
+            <h3>Relax |V|-1 times</h3>
+            <p><span class="highlight">if d[v] &gt; d[u] + w(u,v):</span></p>
+            <p>d[v] = d[u] + w(u,v)</p>
+            <p>&pi;[v] = u</p>
+          </div>
+          <div class="card">
+            <h3>Check pass</h3>
+            <p><span class="highlight">if d[v] &gt; d[u] + w(u,v):</span></p>
+            <p>return <span style="color:#ff3333;">FALSE</span></p>
+            <p>else return <span style="color:#00ff88;">TRUE</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
