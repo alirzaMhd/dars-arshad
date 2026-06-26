@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVL-DELETE Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+
+/* === LAYOUT === */
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .bf-val { color: #00ccff; font-weight: bold; }
+.explain-section .rot-info { color: #ff66ff; font-weight: bold; }
+
+/* === INFO PANEL === */
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+/* === TREE CANVAS === */
+.tree-container {
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+.tree-container canvas {
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #0a0a12;
+}
+
+/* === BF LEGEND === */
+.bf-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 6px 0 2px;
+  font-size: 0.75em;
+  flex-wrap: wrap;
+}
+.bf-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #aaa;
+}
+.bf-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.bf-dot-balanced { border-color: #00ff88; background: #0a1a12; }
+.bf-dot-ok { border-color: #ffcc00; background: #1a1a00; }
+.bf-dot-unbalanced { border-color: #ff4444; background: #1a0000; }
+.bf-dot-current { border-color: #ff6600; background: #1a0a00; box-shadow: 0 0 8px #ff660044; }
+
+/* === CASE TABLE === */
+.case-table {
+  margin: 15px auto;
+  font-size: 0.82em;
+  border-collapse: collapse;
+}
+.case-table th, .case-table td {
+  padding: 5px 10px;
+  border: 1px solid #333;
+  text-align: left;
+}
+.case-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+}
+.case-table td {
+  background: #111;
+  color: #ccc;
+}
+.case-table tr.active-case td {
+  background: #1a0a00;
+  color: #ff6600;
+  border-color: #ff6600;
+}
+
+/* === CONTROLS === */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+/* === RESULT === */
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-section pre {
+  color: #fff;
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin: 8px 0;
+  white-space: pre-wrap;
+  text-align: left;
+  display: inline-block;
+}
+.result-section .legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 12px 0 5px;
+  flex-wrap: wrap;
+}
+.result-section .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: #ccc;
+}
+.result-section .legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>AVL-DELETE</h1>
+<p class="subtitle">Balanced Tree — AVL Tree Deletion</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="tree-container">
+      <canvas id="treeCanvas" width="720" height="380"></canvas>
+    </div>
+
+    <div class="bf-legend">
+      <div class="bf-legend-item"><div class="bf-legend-dot bf-dot-balanced"></div> BF = 0</div>
+      <div class="bf-legend-item"><div class="bf-legend-dot bf-dot-ok"></div> BF = ±1 (OK)</div>
+      <div class="bf-legend-item"><div class="bf-legend-dot bf-dot-unbalanced"></div> BF = ±2 (Unbalanced)</div>
+      <div class="bf-legend-item"><div class="bf-legend-dot bf-dot-current"></div> Current / Focus</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div><span class="label">Algorithm:</span> <span class="highlight">AVL-DELETE</span></div>
+      <div><span class="label">Delete Key:</span> <span class="value" id="deleteKeyDisplay">10</span></div>
+      <div><span class="label">Current Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+      <div><span class="label">Node Info:</span> <span class="value" id="computingDisplay">—</span></div>
+    </div>
+
+    <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>★ AVL Tree After Deletion</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#111; border-color:#00ccff;"></div> Balanced Node (BF ∈ {-1,0,1})</div>
+      </div>
+      <pre id="treeDisplay"></pre>
+    </div>
+
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>Delete key <span class="dim">10</span> from an <b>AVL Tree</b> while maintaining the AVL balance property.</p>
+        <p>Insertion order: <span class="dim">[30, 20, 50, 10, 40, 60, 55]</span></p>
+        <h3 style="margin-top:10px;">AVL Property</h3>
+        <p>For every node, <span class="dim">|BF| ≤ 1</span> where <span class="bf-val">BF = height(left) − height(right)</span>.</p>
+        <h3 style="margin-top:10px;">Deletion Process</h3>
+        <p>1. Standard BST delete (leaf / one child / two children)</p>
+        <p>2. Walk up from the parent, update heights, check BF</p>
+        <p>3. If <span class="dim">|BF| = 2</span>, apply the appropriate rotation</p>
+        <h3 style="margin-top:10px;">Rotation Cases</h3>
+        <table class="case-table">
+          <tr><th>Case</th><th>BF Pattern</th><th>Action</th></tr>
+          <tr><td style="color:#ff6600;">LL</td><td>BF(P)=+2, BF(L)≥0</td><td>Right rotate at P</td></tr>
+          <tr><td style="color:#ff6600;">LR</td><td>BF(P)=+2, BF(L)<0</td><td>Left rotate at L, then right at P</td></tr>
+          <tr><td style="color:#ff6600;">RR</td><td>BF(P)=−2, BF(R)≤0</td><td>Left rotate at P</td></tr>
+          <tr><td style="color:#ff6600;">RL</td><td>BF(P)=−2, BF(R)>0</td><td>Right rotate at R, then left at P</td></tr>
+        </table>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const INSERT_KEYS = [30, 20, 50, 10, 40, 60, 55];
+const DELETE_KEY = 10;
+
+function createNode(key) {
+  return { key, left: null, right: null, parent: null, height: 1 };
+}
+
+function height(n) { return n ? n.height : 0; }
+
+function getBalance(n) { return n ? height(n.left) - height(n.right) : 0; }
+
+function updateHeight(n) {
+  if (!n) return;
+  n.height = Math.max(height(n.left), height(n.right)) + 1;
+}
+
+function rightRotate(y) {
+  let x = y.left;
+  let T2 = x.right;
+  x.right = y;
+  y.left = T2;
+  if (T2) T2.parent = x;
+  x.parent = y.parent;
+  y.parent = x;
+  updateHeight(y);
+  updateHeight(x);
+  return x;
+}
+
+function leftRotate(x) {
+  let y = x.right;
+  let T2 = y.left;
+  y.left = x;
+  x.right = T2;
+  if (T2) T2.parent = x;
+  y.parent = x.parent;
+  x.parent = y;
+  updateHeight(x);
+  updateHeight(y);
+  return y;
+}
+
+function insert(root, key) {
+  if (!root) return createNode(key);
+  if (key < root.key) {
+    root.left = insert(root.left, key);
+    root.left.parent = root;
+  } else if (key > root.key) {
+    root.right = insert(root.right, key);
+    root.right.parent = root;
+  } else return root;
+  updateHeight(root);
+  let bf = getBalance(root);
+  if (bf > 1 && key < root.left.key) return rightRotate(root);
+  if (bf < -1 && key > root.right.key) return leftRotate(root);
+  if (bf > 1 && key > root.left.key) {
+    root.left = leftRotate(root.left);
+    return rightRotate(root);
+  }
+  if (bf < -1 && key < root.right.key) {
+    root.right = rightRotate(root.right);
+    return leftRotate(root);
+  }
+  return root;
+}
+
+function treeMinimum(x) {
+  while (x && x.left) x = x.left;
+  return x;
+}
+
+function cloneTree(root) {
+  if (!root) return null;
+  let n = createNode(root.key);
+  n.height = root.height;
+  n.left = cloneTree(root.left);
+  n.right = cloneTree(root.right);
+  if (n.left) n.left.parent = n;
+  if (n.right) n.right.parent = n;
+  return n;
+}
+
+function treeStructureStr(root, indent) {
+  if (!root) return indent + 'null';
+  let h = root.height;
+  let bf = getBalance(root);
+  let s = indent + root.key + ' (h=' + h + ', bf=' + (bf >= 0 ? '+' : '') + bf + ')\n';
+  s += treeStructureStr(root.left, indent + '  L: ');
+  s += treeStructureStr(root.right, indent + '  R: ');
+  return s;
+}
+
+// --- Step tracking state ---
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let initialTreeRoot = null;
+let finalTreeRoot = null;
+
+// --- Explanation Builders ---
+
+function buildInitExplanation(root) {
+  let struct = treeStructureStr(root, '');
+  return `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>Delete key <span class="dim">${DELETE_KEY}</span> from an <b>AVL Tree</b>.</p>
+      <p>Insertion order: <span class="dim">[${INSERT_KEYS.join(', ')}]</span></p>
+      <h3 style="margin-top:10px;">Initial Tree Structure</h3>
+      <pre style="color:#fff; font-size:0.82em; line-height:1.5; margin:6px 0; white-space:pre-wrap;">${struct}</pre>
+      <h3 style="margin-top:10px;">AVL Delete Process</h3>
+      <p>1. <b>BST delete</b>: Remove the key and restructure</p>
+      <p>2. <b>Rebalance walk</b>: Walk up ancestors, update heights, check <span class="bf-val">BF</span></p>
+      <p>3. <b>Rotate</b>: If <span class="dim">|BF| = 2</span>, apply LL/RR/LR/RL rotation</p>
+      <p class="note">Since the left subtree is shallower than the right, deleting from the left may trigger a rebalance.</p>
+    </div>`;
+}
+
+function buildSearchExplanation(key, path) {
+  let pathStr = path.map(n => n.key).join(' → ');
+  return `
+    <div class="explain-section active">
+      <h3>🔍 Searching for Key ${key}</h3>
+      <p>BST search from root: <span class="dim">${pathStr}</span></p>
+      <p>At each node, compare: if <span class="dim">${key}</span> &lt; node.key → go left, else → go right.</p>
+      <p>Key <span class="dim">${DELETE_KEY}</span> found in the tree.</p>
+      <p class="note">Now we determine the deletion case based on its children.</p>
+    </div>`;
+}
+
+function buildFoundExplanation(node) {
+  let caseDesc = '';
+  if (!node.left && !node.right) caseDesc = 'leaf node (0 children) — simple removal';
+  else if (!node.left || !node.right) caseDesc = '1 child — transplant child into position';
+  else caseDesc = '2 children — find in-order successor';
+  return `
+    <div class="explain-section active">
+      <h3>📍 Key ${DELETE_KEY} Found</h3>
+      <p>Node <span class="dim">${DELETE_KEY}</span> is a <b>${caseDesc}</b>.</p>
+      <p>Height: <span class="dim">${node.height}</span>, BF: <span class="bf-val">${getBalance(node) >= 0 ? '+' : ''}${getBalance(node)}</span></p>
+      <p class="note">For AVL deletion, we handle the BST removal first, then rebalance walking upward.</p>
+    </div>`;
+}
+
+function buildLeafDeleteExplanation(parentKey) {
+  return `
+    <div class="explain-section active">
+      <h3>🗑️ Remove Leaf Node ${DELETE_KEY}</h3>
+      <p>Since <span class="dim">${DELETE_KEY}</span> has no children, we simply remove it from its parent.</p>
+      <p>Parent <span class="dim">${parentKey}</span> loses its left child.</p>
+      <span class="formula-line">delete(${parentKey}.left = null)</span>
+      <p class="note">Now we walk up from ${parentKey} to update heights and check balance factors.</p>
+    </div>`;
+}
+
+function buildHeightUpdateExplanation(nodeKey, newHeight, bf, isBalanced) {
+  let bfStr = (bf >= 0 ? '+' : '') + bf;
+  let status = isBalanced ? '✓ Balanced' : '⚠ Unbalanced!';
+  let statusColor = isBalanced ? '#00ff88' : '#ff6600';
+  return `
+    <div class="explain-section active">
+      <h3>📐 Update Node ${nodeKey}</h3>
+      <p>Rebalancing walk: visiting node <span class="dim">${nodeKey}</span>.</p>
+      <p>New height = <span class="dim">${newHeight}</span> (max(child heights) + 1)</p>
+      <span class="formula-line">h(${nodeKey}) = max(h(left), h(right)) + 1 = ${newHeight}</span>
+      <p>Balance Factor: <span class="bf-val">BF(${nodeKey}) = ${bfStr}</span> — <b style="color:${statusColor};">${status}</b></p>
+      ${!isBalanced ? '<p class="note">A rotation is needed to restore the AVL property!</p>' : '<p class="note">Node is still within AVL bounds (|BF| ≤ 1). Continue walking up.</p>'}
+    </div>`;
+}
+
+function buildRotationExplanation(pivotKey, childKey, caseName, bfPivot, bfChild) {
+  let caseDesc = '';
+  let rotationAction = '';
+  if (caseName === 'LL') {
+    caseDesc = 'Pivot is +2, left child is ≥0 (left-heavy)';
+    rotationAction = 'rightRotate(pivot)';
+  } else if (caseName === 'RR') {
+    caseDesc = 'Pivot is −2, right child is ≤0 (right-heavy)';
+    rotationAction = 'leftRotate(pivot)';
+  } else if (caseName === 'LR') {
+    caseDesc = 'Pivot is +2, left child is <0 (left-right)';
+    rotationAction = 'leftRotate(leftChild) → rightRotate(pivot)';
+  } else if (caseName === 'RL') {
+    caseDesc = 'Pivot is −2, right child is >0 (right-left)';
+    rotationAction = 'rightRotate(rightChild) → leftRotate(pivot)';
+  }
+  return `
+    <div class="explain-section active">
+      <h3>🔄 ${caseName} Rotation at ${pivotKey}</h3>
+      <p>Node <span class="dim">${pivotKey}</span> has BF = ${bfPivot}. ${caseDesc}.</p>
+      <p>Child <span class="dim">${childKey}</span> has BF = ${bfChild >= 0 ? '+' : ''}${bfChild}.</p>
+      <span class="formula-line">Apply: ${rotationAction}</span>
+      <p class="note">After rotation, the subtree height is reduced by 1, restoring balance.</p>
+    </div>`;
+}
+
+function buildRotationDoneExplanation(newRootKey) {
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ Rotation Complete</h3>
+      <p><span class="rot-info">${newRootKey}</span> is now the new root of this subtree.</p>
+      <p>All nodes in the subtree now satisfy <span class="bf-val">|BF| ≤ 1</span>.</p>
+      <p>Continue walking up the tree to verify all ancestors are balanced.</p>
+    </div>`;
+}
+
+function buildDoneExplanation(root, delKey) {
+  let struct = treeStructureStr(root, '');
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ AVL-DELETE Complete!</h3>
+      <p>Key <span class="result-line" style="display:inline;">${delKey}</span> has been removed and the tree rebalanced.</p>
+      <h3 style="margin-top:10px;">Final Tree Structure</h3>
+      <pre style="color:#fff; font-size:0.82em; line-height:1.5; margin:6px 0; white-space:pre-wrap;">${struct}</pre>
+      <h3 style="margin-top:10px;">Properties Verified</h3>
+      <p>✓ BST property maintained (left < root < right)</p>
+      <p>✓ All <span class="bf-val">|BF| ≤ 1</span> (AVL balance property)</p>
+      <p>✓ All heights correctly updated</p>
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Time:</span> O(log n) — height of AVL tree</p>
+      <p><span class="dim">Space:</span> O(log n) — recursion stack for rebalancing</p>
+    </div>`;
+}
+
+// --- Step computation ---
+
+function getGlobalRoot(node) {
+  while (node && node.parent) node = node.parent;
+  return node;
+}
+
+function computeSteps() {
+  steps = [];
+
+  // 1. Build initial tree
+  let root = null;
+  for (let k of INSERT_KEYS) root = insert(root, k);
+  initialTreeRoot = cloneTree(root);
+  finalTreeRoot = null;
+
+  steps.push({
+    type: 'init',
+    tree: cloneTree(root),
+    explanation: buildInitExplanation(root)
+  });
+
+  // 2. Search for DELETE_KEY
+  let path = [];
+  let curr = root;
+  while (curr && curr.key !== DELETE_KEY) {
+    path.push(curr);
+    if (DELETE_KEY < curr.key) curr = curr.left;
+    else curr = curr.right;
+  }
+  if (!curr) return;
+
+  steps.push({
+    type: 'find',
+    tree: cloneTree(root),
+    focusKey: DELETE_KEY,
+    explanation: buildSearchExplanation(DELETE_KEY, path)
+  });
+
+  steps.push({
+    type: 'found',
+    tree: cloneTree(root),
+    focusKey: DELETE_KEY,
+    explanation: buildFoundExplanation(curr)
+  });
+
+  // 3. Perform deletion with step recording
+  // Use a wrapper so we can pass the full root context
+  function recordStep(type, currentRoot, focusKey, bf, rotationCase, explanation) {
+    let fullRoot = getGlobalRoot(currentRoot);
+    steps.push({
+      type: type,
+      tree: cloneTree(fullRoot),
+      focusKey: focusKey,
+      bf: bf,
+      rotationCase: rotationCase,
+      explanation: explanation
+    });
+  }
+
+  function avlDelete(node, key) {
+    if (!node) return null;
+
+    if (key < node.key) {
+      node.left = avlDelete(node.left, key);
+      if (node.left) node.left.parent = node;
+    } else if (key > node.key) {
+      node.right = avlDelete(node.right, key);
+      if (node.right) node.right.parent = node;
+    } else {
+      // Found the key to delete
+      if (!node.left && !node.right) {
+        let parentKey = node.parent ? node.parent.key : 'root';
+        recordStep('delete_leaf', node, key, null, null,
+          buildLeafDeleteExplanation(parentKey));
+        return null;
+      } else if (!node.left) {
+        let child = node.right;
+        recordStep('delete_onechild', node, key, null, null,
+          buildOneChildExplanation(key, child.key, 'right'));
+        if (child) child.parent = node.parent;
+        return child;
+      } else if (!node.right) {
+        let child = node.left;
+        recordStep('delete_onechild', node, key, null, null,
+          buildOneChildExplanation(key, child.key, 'left'));
+        if (child) child.parent = node.parent;
+        return child;
+      } else {
+        let succ = treeMinimum(node.right);
+        recordStep('find_successor', node, succ.key, null, null,
+          buildSuccessorExplanation(key, succ.key));
+        let succKey = succ.key;
+        node.key = succKey;
+        node.right = avlDelete(node.right, succKey);
+        if (node.right) node.right.parent = node;
+        recordStep('replace_successor', node, node.key, null, null,
+          buildReplaceExplanation(key, succKey));
+      }
+    }
+
+    updateHeight(node);
+    let bf = getBalance(node);
+    let isBalanced = Math.abs(bf) <= 1;
+    recordStep('rebalance_check', node, node.key, bf, null,
+      buildHeightUpdateExplanation(node.key, node.height, bf, isBalanced));
+
+    if (bf > 1 && getBalance(node.left) >= 0) {
+      recordStep('rotation', node, node.key, bf, 'LL',
+        buildRotationExplanation(node.key, node.left.key, 'LL', bf, getBalance(node.left)));
+      let newRoot = rightRotate(node);
+      recordStep('rotation_done', newRoot, newRoot.key, null, null,
+        buildRotationDoneExplanation(newRoot.key));
+      return newRoot;
+    }
+    if (bf > 1 && getBalance(node.left) < 0) {
+      recordStep('rotation', node, node.key, bf, 'LR',
+        buildRotationExplanation(node.key, node.left.key, 'LR', bf, getBalance(node.left)));
+      node.left = leftRotate(node.left);
+      let newRoot = rightRotate(node);
+      recordStep('rotation_done', newRoot, newRoot.key, null, null,
+        buildRotationDoneExplanation(newRoot.key));
+      return newRoot;
+    }
+    if (bf < -1 && getBalance(node.right) <= 0) {
+      recordStep('rotation', node, node.key, bf, 'RR',
+        buildRotationExplanation(node.key, node.right.key, 'RR', bf, getBalance(node.right)));
+      let newRoot = leftRotate(node);
+      recordStep('rotation_done', newRoot, newRoot.key, null, null,
+        buildRotationDoneExplanation(newRoot.key));
+      return newRoot;
+    }
+    if (bf < -1 && getBalance(node.right) > 0) {
+      recordStep('rotation', node, node.key, bf, 'RL',
+        buildRotationExplanation(node.key, node.right.key, 'RL', bf, getBalance(node.right)));
+      node.right = rightRotate(node.right);
+      let newRoot = leftRotate(node);
+      recordStep('rotation_done', newRoot, newRoot.key, null, null,
+        buildRotationDoneExplanation(newRoot.key));
+      return newRoot;
+    }
+
+    return node;
+  }
+
+  let resultRoot = avlDelete(root, DELETE_KEY);
+  finalTreeRoot = cloneTree(resultRoot);
+}
+
+function buildOneChildExplanation(delKey, childKey, side) {
+  return `
+    <div class="explain-section active">
+      <h3>🗑️ Remove ${delKey} — One Child</h3>
+      <p>Node <span class="dim">${delKey}</span> has only a <b>${side}</b> child: <span class="dim">${childKey}</span>.</p>
+      <p>Replace ${delKey} with its child ${childKey} (transplant).</p>
+      <span class="formula-line">transplant(T, ${delKey}, ${childKey})</span>
+      <p class="note">After transplant, walk up from ${childKey} to rebalance.</p>
+    </div>`;
+}
+
+function buildSuccessorExplanation(delKey, succKey) {
+  return `
+    <div class="explain-section active">
+      <h3>🔎 Find In-Order Successor</h3>
+      <p>Node <span class="dim">${delKey}</span> has <b>two children</b>. Find the in-order successor.</p>
+      <p>Go right once (to right subtree), then all the way left: successor = <span class="split-info">${succKey}</span></p>
+      <span class="formula-line">successor(${delKey}) = min(right subtree of ${delKey}) = ${succKey}</span>
+      <p class="note">The successor replaces ${delKey}, preserving BST order.</p>
+    </div>`;
+}
+
+function buildReplaceExplanation(delKey, succKey) {
+  return `
+    <div class="explain-section active">
+      <h3>🔄 Replace ${delKey} → ${succKey}</h3>
+      <p>Copy successor's key into the deleted node's position.</p>
+      <span class="formula-line">${delKey}.key = ${succKey}</span>
+      <p>Now delete the successor from its original position in the right subtree.</p>
+      <p class="note">After replacement, walk up from the successor's original parent to rebalance.</p>
+    </div>`;
+}
+
+// --- Canvas Drawing ---
+
+function drawTree(snapshot, focusKey, focusKey2) {
+  let canvas = document.getElementById('treeCanvas');
+  let ctx = canvas.getContext('2d');
+  canvas.width = 720;
+  canvas.height = 380;
+  ctx.clearRect(0, 0, 720, 380);
+
+  if (!snapshot) return;
+
+  function subtreeWidth(node) {
+    if (!node) return 1;
+    return subtreeWidth(node.left) + subtreeWidth(node.right);
+  }
+
+  function getNodeColor(node, isFocus, isFocus2) {
+    if (isFocus) return '#ff6600';
+    if (isFocus2) return '#ffff00';
+    let bf = getBalance(node);
+    if (Math.abs(bf) >= 2) return '#ff4444';
+    if (Math.abs(bf) === 1) return '#ffcc00';
+    return '#00ff88';
+  }
+
+  function drawEdge(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 + 20);
+    ctx.lineTo(x2, y2 - 20);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawNode(x, y, key, bf, color, isFocus, isFocus2) {
+    let radius = 19;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = isFocus ? '#1a0a00' : (isFocus2 ? '#1a1a00' : '#111');
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isFocus ? 3 : 2;
+    if (isFocus) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 15;
+    } else if (isFocus2) {
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 10;
+    } else if (Math.abs(bf) >= 2) {
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Key text
+    ctx.fillStyle = isFocus ? '#ff6600' : (isFocus2 ? '#ffff00' : color);
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(key, x, y - 1);
+
+    // BF label above
+    let bfStr = (bf >= 0 ? '+' : '') + bf;
+    ctx.fillStyle = Math.abs(bf) >= 2 ? '#ff4444' : (Math.abs(bf) === 1 ? '#ffcc00' : '#00ff88');
+    ctx.font = '10px Courier New';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('BF' + bfStr, x, y - radius - 3);
+  }
+
+  function draw(node, x, y, spread, focusK1, focusK2) {
+    if (!node) return;
+    let isFocus = (focusK1 !== undefined && focusK1 !== null && node.key === focusK1);
+    let isFocus2 = (focusK2 !== undefined && focusK2 !== null && node.key === focusK2 && !isFocus);
+    let nodeColor = getNodeColor(node, isFocus, isFocus2);
+    let bf = getBalance(node);
+    drawNode(x, y, node.key, bf, nodeColor, isFocus, isFocus2);
+
+    if (node.left) {
+      let lx = x - spread;
+      let ly = y + 65;
+      drawEdge(x, y, lx, ly);
+      draw(node.left, lx, ly, spread * 0.5, focusK1, focusK2);
+    }
+    if (node.right) {
+      let rx = x + spread;
+      let ry = y + 65;
+      drawEdge(x, y, rx, ry);
+      draw(node.right, rx, ry, spread * 0.5, focusK1, focusK2);
+    }
+  }
+
+  let w = subtreeWidth(snapshot);
+  let startX = 360;
+  let startY = 38;
+  let spread = Math.min(170, 720 / (w + 0.5));
+  draw(snapshot, startX, startY, spread, focusKey, focusKey2);
+}
+
+// --- Apply / Animate ---
+
+function applyStep(step) {
+  drawTree(step.tree, step.focusKey, null);
+
+  let phase = '';
+  let nodeInfo = '';
+  switch (step.type) {
+    case 'init':
+      phase = 'Initial Tree';
+      nodeInfo = 'AVL tree built, ready for deletion';
+      break;
+    case 'find':
+      phase = 'Searching for key ' + DELETE_KEY;
+      nodeInfo = 'BST search in progress';
+      break;
+    case 'found':
+      phase = 'Found key ' + DELETE_KEY;
+      nodeInfo = 'Determining deletion case';
+      break;
+    case 'descend':
+      phase = 'Traversing to key...';
+      nodeInfo = 'Comparing at node ' + step.focusKey;
+      break;
+    case 'delete_leaf':
+      phase = 'Deleting leaf ' + DELETE_KEY;
+      nodeInfo = 'Leaf node removed';
+      break;
+    case 'delete_onechild':
+      phase = 'Deleting ' + DELETE_KEY + ' (one child)';
+      nodeInfo = 'Transplant in progress';
+      break;
+    case 'find_successor':
+      phase = 'Finding successor';
+      nodeInfo = 'Successor = ' + step.focusKey;
+      break;
+    case 'replace_successor':
+      phase = 'Replacing with successor';
+      nodeInfo = 'Key copied, now removing successor';
+      break;
+    case 'rebalance_check':
+      phase = 'Rebalancing walk';
+      nodeInfo = 'Node ' + step.focusKey + ', BF = ' + (step.bf >= 0 ? '+' : '') + step.bf;
+      break;
+    case 'rotation':
+      phase = step.rotationCase + ' Rotation at ' + step.focusKey;
+      nodeInfo = 'Applying ' + step.rotationCase + ' rotation';
+      break;
+    case 'rotation_done':
+      phase = 'Rotation complete';
+      nodeInfo = 'Subtree rebalanced, new root = ' + step.focusKey;
+      break;
+    case 'done':
+      phase = '✓ Complete!';
+      nodeInfo = 'Key ' + DELETE_KEY + ' deleted, tree rebalanced';
+      break;
+  }
+
+  document.getElementById('phaseDisplay').textContent = phase;
+  document.getElementById('computingDisplay').textContent = nodeInfo;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  let display = '';
+  if (finalTreeRoot) {
+    display = treeStructureStr(finalTreeRoot, '');
+    drawTree(finalTreeRoot, null, null);
+  }
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'Key ' + DELETE_KEY + ' deleted';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('treeDisplay').textContent = display;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation(finalTreeRoot, DELETE_KEY);
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>Delete key <span class="dim">${DELETE_KEY}</span> from an <b>AVL Tree</b> while maintaining the AVL balance property.</p>
+      <p>Insertion order: <span class="dim">[${INSERT_KEYS.join(', ')}]</span></p>
+      <h3 style="margin-top:10px;">AVL Property</h3>
+      <p>For every node, <span class="dim">|BF| ≤ 1</span> where <span class="bf-val">BF = height(left) − height(right)</span>.</p>
+      <h3 style="margin-top:10px;">Deletion Process</h3>
+      <p>1. Standard BST delete (leaf / one child / two children)</p>
+      <p>2. Walk up from the parent, update heights, check BF</p>
+      <p>3. If <span class="dim">|BF| = 2</span>, apply the appropriate rotation</p>
+      <h3 style="margin-top:10px;">Rotation Cases</h3>
+      <table class="case-table">
+        <tr><th>Case</th><th>BF Pattern</th><th>Action</th></tr>
+        <tr><td style="color:#ff6600;">LL</td><td>BF(P)=+2, BF(L)≥0</td><td>Right rotate at P</td></tr>
+        <tr><td style="color:#ff6600;">LR</td><td>BF(P)=+2, BF(L)<0</td><td>Left rotate at L, then right at P</td></tr>
+        <tr><td style="color:#ff6600;">RR</td><td>BF(P)=−2, BF(R)≤0</td><td>Left rotate at P</td></tr>
+        <tr><td style="color:#ff6600;">RL</td><td>BF(P)=−2, BF(R)>0</td><td>Right rotate at R, then left at P</td></tr>
+      </table>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+  computeSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+  if (initialTreeRoot) drawTree(initialTreeRoot, null, null);
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+computeSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+if (initialTreeRoot) drawTree(initialTreeRoot, null, null);
+</script>
+</body>
+</html>
