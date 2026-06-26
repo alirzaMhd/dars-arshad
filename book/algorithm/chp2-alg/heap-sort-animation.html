@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heap Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+    }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px 0; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 40px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.75em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.parent { background: #1a0a1a; border-color: #ff66ff; color: #ff66ff; }
+    .bar.child { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.swapping { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.heap-root { background: #0a0a30; border-color: #00ccff; color: #00ccff; }
+    .bar.heapify { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.swapping { border-color: #ff6600; background: #1a0a00; color: #ff6600; }
+    .array-item.heap-root { border-color: #00ccff; background: #0a0a30; color: #00ccff; }
+    .array-item.parent { border-color: #ff66ff; background: #1a0a1a; color: #ff66ff; }
+    .array-item.heapify { border-color: #ff66ff; background: #1a0030; color: #ff66ff; }
+    .heap-indices { display: flex; justify-content: center; gap: 6px; margin: 4px 0 10px; font-size: 0.75em; }
+    .heap-idx { width: 40px; text-align: center; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Heap Sort</h1>
+  <p class="subtitle">Sorting Algorithm — Comparison-Based (Max-Heap)</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div id="algoDisplay">
+        <div class="chart-container" id="chartContainer"></div>
+        <div class="heap-indices" id="heapIndices"></div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Heap Sort (Max-Heap)</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+        <div><span class="label">Heap Size:</span> <span class="value" id="heapSizeDisplay">8</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Sorting Complete!</h2>
+        <p>Sorted Array: <span id="finalArray" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></span></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Heap Sort (Max-Heap)</b>.</p>
+          <p>Input array: <span class="dim" id="initArrayDisplay">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Build a max-heap from the array, then repeatedly extract the maximum element (root) and place it at the end, sifting down to restore the heap property.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    let heapSize = arr.length;
+
+    function precomputeAll() { return [...arr].sort((a,b)=>a-b); }
+
+    function hsBuildSteps() {
+      steps = [];
+      let a = [...initialArr];
+      let n = a.length;
+      let heapSz = n;
+
+      function swap(i, j) { let t = a[i]; a[i] = a[j]; a[j] = t; }
+
+      function parent(i) { return Math.floor((i-1)/2); }
+      function left(i) { return 2*i + 1; }
+      function right(i) { return 2*i + 2; }
+
+      function siftDown(i, sz, phaseName) {
+        let largest = i;
+        let l = left(i);
+        let r = right(i);
+        if (l < sz) {
+          steps.push({
+            type: 'compare_child',
+            arr: [...a],
+            heapSize: sz, parentIdx: i, childIdx: l, largestIdx: largest,
+            highlights: [{idx: i, cls: 'parent'}, {idx: l, cls: 'child'}],
+            phase: `${phaseName}: Compare a[${i}]=${a[i]} with left child a[${l}]=${a[l]}`,
+            phaseTitle: phaseName === 'Build Heap' ? '🏗️ Build Heap' : (phaseName === 'Extract' ? '📤 Extract' : '🔽 Sift Down'),
+            action: `Compare a[${i}] (${a[i]}) vs a[${l}] (${a[l]})`,
+            explanation: `<div class="explain-section active"><h3>${phaseName}: Compare Parent & Left Child</h3><p>Parent: a[${i}] = <span class="dim">${a[i]}</span>, Left: a[${l}] = <span class="dim">${a[l]}</span></p><p>${a[l] > a[i] ? `a[${l}] > a[${i}], largest = ${l}` : `a[${l}] ≤ a[${i}], largest = ${i}`}</p></div>`
+          });
+          if (a[l] > a[largest]) largest = l;
+        }
+        if (r < sz) {
+          steps.push({
+            type: 'compare_child',
+            arr: [...a],
+            heapSize: sz, parentIdx: i, childIdx: r, largestIdx: largest,
+            highlights: [{idx: i, cls: 'parent'}, {idx: r, cls: 'child'}],
+            phase: `${phaseName}: Compare a[${largest}]=${a[largest]} with right child a[${r}]=${a[r]}`,
+            phaseTitle: phaseName === 'Build Heap' ? '🏗️ Build Heap' : (phaseName === 'Extract' ? '📤 Extract' : '🔽 Sift Down'),
+            action: `Compare a[${largest}] (${a[largest]}) vs a[${r}] (${a[r]})`,
+            explanation: `<div class="explain-section active"><h3>${phaseName}: Compare Largest & Right Child</h3><p>Current largest: a[${largest}] = <span class="dim">${a[largest]}</span>, Right: a[${r}] = <span class="dim">${a[r]}</span></p><p>${a[r] > a[largest] ? `a[${r}] > a[${largest}], largest = ${r}` : `a[${r}] ≤ a[${largest}], largest = ${largest}`}</p></div>`
+          });
+          if (a[r] > a[largest]) largest = r;
+        }
+        if (largest !== i) {
+          swap(i, largest);
+          steps.push({
+            type: 'swap',
+            arr: [...a],
+            heapSize: sz, parentIdx: i, childIdx: largest, largestIdx: -1,
+            highlights: [{idx: i, cls: 'swapping'}, {idx: largest, cls: 'swapping'}],
+            phase: `${phaseName}: Swap a[${i}] ↔ a[${largest}]`,
+            phaseTitle: phaseName === 'Build Heap' ? '🏗️ Build Heap' : (phaseName === 'Extract' ? '📤 Extract' : '🔽 Sift Down'),
+            action: `Swap a[${i}] (${a[i]}) ↔ a[${largest}] (${a[largest]})`,
+            explanation: `<div class="explain-section active"><h3>${phaseName}: Swap</h3><p>a[${i}] = <span class="dim">${a[i]}</span> ↔ a[${largest}] = <span class="dim">${a[largest]}</span></p><p class="note">Sifting down to restore heap property.</p></div>`
+          });
+          siftDown(largest, sz, phaseName);
+        } else {
+          steps.push({
+            type: 'heapify_done',
+            arr: [...a],
+            heapSize: sz, parentIdx: i, childIdx: -1, largestIdx: -1,
+            highlights: [{idx: i, cls: 'parent'}],
+            phase: `${phaseName}: a[${i}]=${a[i]} satisfies heap property`,
+            phaseTitle: phaseName === 'Build Heap' ? '🏗️ Build Heap' : (phaseName === 'Extract' ? '📤 Extract' : '🔽 Sift Down'),
+            action: `a[${i}] is largest among children`,
+            explanation: `<div class="explain-section active"><h3>${phaseName}: Heap Property OK</h3><p>a[${i}] = <span class="dim">${a[i]}</span> is ≥ its children (or leaf node).</p><p class="note">No swap needed.</p></div>`
+          });
+        }
+      }
+
+      // Build max-heap
+      for (let i = Math.floor(n/2) - 1; i >= 0; i--) {
+        siftDown(i, n, 'Build Heap');
+      }
+      steps.push({
+        type: 'heap_built',
+        arr: [...a],
+        heapSize: n, parentIdx: -1, childIdx: -1, largestIdx: -1,
+        highlights: a.map((_,i) => ({idx: i, cls: 'heapify'})),
+        phase: 'Max-Heap Built!',
+        phaseTitle: '✅ Heap Built',
+        action: `Array is now a max-heap`,
+        explanation: `<div class="explain-section active"><h3>✅ Max-Heap Built</h3><p>The array now satisfies the max-heap property.</p><p>Heap: [${a.join(', ')}]</p><p>Root (max): <span class="dim">${a[0]}</span></p><p class="note">Now we extract elements one by one.</p></div>`
+      });
+
+      // Extract phase
+      for (let i = n - 1; i > 0; i--) {
+        steps.push({
+          type: 'swap_root',
+          arr: [...a],
+          heapSize: i, parentIdx: 0, childIdx: i, largestIdx: -1,
+          highlights: [{idx: 0, cls: 'heap-root'}, {idx: i, cls: 'swapping'}],
+          phase: `Extract: Swap root a[0]=${a[0]} with a[${i}]=${a[i]}`,
+          phaseTitle: '📤 Extract Max',
+          action: `Root ${a[0]} → a[${i}]`,
+          explanation: `<div class="explain-section active"><h3>📤 Extract Maximum</h3><p>Swap root a[0] = <span class="dim">${a[0]}</span> (max) with a[${i}] = <span class="dim">${a[i]}</span></p><p>a[${i}] is now in its <b>final sorted position</b>.</p></div>`
+        });
+        swap(0, i);
+        siftDown(0, i, 'Extract');
+      }
+      steps.push({
+        type: 'done',
+        arr: [...a],
+        heapSize: 0, parentIdx: -1, childIdx: -1, largestIdx: -1,
+        highlights: [],
+        phase: 'All sorted!',
+        phaseTitle: '✓ Complete',
+        action: 'Array sorted',
+        explanation: ''
+      });
+    }
+
+    function clearHighlights() {
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      });
+    }
+
+    function applyStep(step) {
+      arr = [...step.arr];
+      heapSize = step.heapSize;
+      clearHighlights();
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      document.getElementById('heapSizeDisplay').textContent = step.heapSize;
+      if (step.highlights) {
+        step.highlights.forEach(h => {
+          const bar = document.getElementById('bar-' + h.idx);
+          const item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (item) item.textContent = arr[i];
+        if (bar) {
+          const maxVal = Math.max(...arr);
+          bar.style.height = (arr[i] / maxVal * 200) + 'px';
+          bar.textContent = arr[i];
+        }
+        if (i >= heapSize) {
+          const bar = document.getElementById('bar-' + i);
+          const item = document.getElementById('arr-item-' + i);
+          if (bar) { bar.className = 'bar sorted'; bar.style.height = (arr[i] / Math.max(...arr) * 200) + 'px'; bar.textContent = arr[i]; }
+          if (item) { item.className = 'array-item sorted'; item.textContent = arr[i]; }
+        }
+      }
+      document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      if (step.type === 'done') {
+        document.getElementById('explainArea').innerHTML = `
+          <div class="explain-section active" style="border-left-color:#00ff88;">
+            <h3>✅ Algorithm Complete!</h3>
+            <p>The array has been sorted using <b>Heap Sort (Max-Heap)</b>.</p>
+            <p class="result-line">Sorted: [${step.arr.join(', ')}]</p>
+            <h3 style="margin-top:10px;">Complexity</h3>
+            <p><span class="dim">Time:</span> O(n log n)</p>
+            <p><span class="dim">Space:</span> O(1) in-place</p>
+          </div>`;
+      } else {
+        document.getElementById('explainArea').innerHTML = step.explanation;
+      }
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      heapSize = arr.length;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('heapSizeDisplay').textContent = arr.length;
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Heap Sort (Max-Heap)</b>.</p>
+          <p>Input array: <span class="dim">[${initialArr.join(', ')}]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Build a max-heap from the array, then repeatedly extract the maximum element (root) and place it at the end, sifting down to restore the heap property.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+      clearHighlights();
+      initDisplay();
+      hsBuildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const sorted = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'Array sorted';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalArray').textContent = '[' + sorted.join(', ') + ']';
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar sorted';
+        if (item) item.className = 'array-item sorted';
+      });
+      document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>The array has been sorted using <b>Heap Sort (Max-Heap)</b>.</p>
+          <p class="result-line">Sorted: [${sorted.join(', ')}]</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n log n)</p>
+          <p><span class="dim">Space:</span> O(1) in-place</p>
+        </div>`;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function initDisplay() {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      arr.forEach((val, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (val / maxVal * 200) + 'px';
+        bar.textContent = val;
+        container.appendChild(bar);
+      });
+      const idxDiv = document.getElementById('heapIndices');
+      idxDiv.innerHTML = '';
+      arr.forEach((_, i) => {
+        const idx = document.createElement('div');
+        idx.className = 'heap-idx';
+        idx.textContent = i;
+        idxDiv.appendChild(idx);
+      });
+      const ad = document.getElementById('arrayDisplay');
+      ad.innerHTML = '';
+      arr.forEach((val, i) => {
+        const item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = val;
+        ad.appendChild(item);
+      });
+      document.getElementById('initArrayDisplay').textContent = '[' + initialArr.join(', ') + ']';
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    hsBuildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>General Tree Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.result-section .big-result { font-size: 1.4em; color: #00ff88; font-weight: bold; margin: 12px 0; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+.result-card { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px; text-align: center; }
+.result-card .label { color: #888; font-size: 0.8em; }
+.result-card .value { color: #ffcc00; font-size: 1.2em; font-weight: bold; }
+.traversal-display { background: #111; border: 1px solid #333; border-radius: 10px; padding: 12px 18px; margin: 15px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.traversal-label { color: #00ccff; font-weight: bold; font-size: 0.9em; min-width: 55px; }
+.visit-item { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; font-weight: bold; font-size: 0.82em; border: 2px solid #555; background: #0d0d1a; color: #888; transition: all 0.4s; }
+.visit-item.current { border-color: #ff6600; color: #ff6600; background: #1a0a00; box-shadow: 0 0 10px #ff660044; transform: scale(1.1); }
+.visit-item.visited { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+.visit-arrow { color: #555; font-size: 0.9em; }
+.legend { display: flex; justify-content: center; gap: 14px; margin: 8px 0 4px; font-size: 0.75em; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #555; }
+.swatch-default { background: #0d0d1a; border-color: #555; }
+.swatch-active { background: #1a0a00; border-color: #ff6600; }
+.swatch-visited { background: #0a1a12; border-color: #00ff88; }
+.swatch-highlight { background: #1a0020; border-color: #ff66ff; }
+</style>
+</head>
+<body>
+<h1>GENERAL TREE (N-ARY)</h1>
+<p class="subtitle">Tree Data Structures — Multiple Children, Traversals &amp; Operations</p>
+<div class="layout">
+<div class="main-panel">
+  <canvas id="treeCanvas" width="750" height="400"></canvas>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch swatch-default"></span> Default</span>
+    <span class="legend-item"><span class="legend-swatch swatch-active"></span> Current / Active</span>
+    <span class="legend-item"><span class="legend-swatch swatch-visited"></span> Visited</span>
+    <span class="legend-item"><span class="legend-swatch swatch-highlight"></span> Found / Target</span>
+  </div>
+  <div class="traversal-display" id="traversalDisplay">
+    <span class="traversal-label">Visit:</span>
+    <span id="traversalItems" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;color:#555;">∅</span>
+  </div>
+  <div class="controls">
+    <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+    <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+    <button class="btn" onclick="stepForward()">⏭ Step</button>
+    <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+    <div class="speed-control">
+      <label>Speed:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span id="speedLabel">5x</span>
+    </div>
+  </div>
+  <div class="info-panel">
+    <div><span class="label">Algorithm:</span> <span class="value" id="algoLabel">General Tree</span></div>
+    <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+    <div><span class="label">Current:</span> <span class="value" id="computingDisplay">—</span></div>
+    <div><span class="label">Result:</span> <span class="value" id="resultDisplay">—</span></div>
+  </div>
+  <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+  <div class="result-section" id="resultSection">
+    <h2>✅ Complete!</h2>
+    <div class="big-result" id="finalResult">—</div>
+    <div id="resultExtra"></div>
+  </div>
+</div>
+<div class="sidebar" id="sidebar">
+  <h2>📖 Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Idle — press Play or Step to begin.</div>
+  <div id="explainArea">
+    <div class="explain-section active">
+      <h3>General Tree (N-ary Tree)</h3>
+      <p>A <b>general tree</b> is a tree where each node can have <span class="dim">any number of children</span>, unlike a binary tree which limits to two.</p>
+      <p>Example tree: Root <b>A</b> with children <span class="dim">[B, C, D]</span>.</p>
+      <p style="margin-left:8px;">• B has children <span class="dim">[E, F]</span></p>
+      <p style="margin-left:8px;">• C has child <span class="dim">[G]</span></p>
+      <p style="margin-left:8px;">• D has children <span class="dim">[H, I]</span></p>
+      <p style="margin-left:8px;">• F has child <span class="dim">[J]</span></p>
+      <p>We'll demonstrate: <b>Preorder</b>, <b>Postorder</b>, <b>Level-order</b> traversals, plus <b>Depth</b>, <b>Height</b>, and <b>Find Node</b> operations.</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+// Tree data: each node has a name, children array, and display properties
+const treeData = {
+  name: 'A', children: [
+    { name: 'B', children: [
+      { name: 'E', children: [] },
+      { name: 'F', children: [
+        { name: 'J', children: [] }
+      ]}
+    ]},
+    { name: 'C', children: [
+      { name: 'G', children: [] }
+    ]},
+    { name: 'D', children: [
+      { name: 'H', children: [] },
+      { name: 'I', children: [] }
+    ]}
+  ]
+};
+
+let allNodes = [];
+let nodeMap = {};
+
+function flattenTree(node, parentName, depth) {
+  let id = allNodes.length;
+  let entry = { id, name: node.name, parent: parentName, children: [], depth: depth || 0, nodeRef: node };
+  allNodes.push(entry);
+  nodeMap[node.name] = entry;
+  for (let child of node.children) {
+    let childId = flattenTree(child, node.name, (depth || 0) + 1);
+    entry.children.push(childId);
+  }
+  return id;
+}
+flattenTree(treeData, null, 0);
+
+const totalNodes = allNodes.length;
+const NODE_R = 20;
+const LEVEL_H = 70;
+const MAX_SPREAD = 140;
+
+function computeLayout() {
+  function countLeaves(nodeIdx) {
+    let entry = allNodes[nodeIdx];
+    if (entry.children.length === 0) return 1;
+    let sum = 0;
+    for (let c of entry.children) sum += countLeaves(c);
+    return sum;
+  }
+  function assignX(nodeIdx, left, right) {
+    let entry = allNodes[nodeIdx];
+    let leaves = countLeaves(nodeIdx);
+    let mid = (left + right) / 2;
+    entry.x = mid;
+    entry.y = entry.depth * LEVEL_H + 60;
+    if (entry.children.length === 0) return;
+    let childLeaves = entry.children.map(c => countLeaves(c));
+    let totalLeaves = childLeaves.reduce((a,b) => a+b, 0);
+    let curLeft = left;
+    for (let i = 0; i < entry.children.length; i++) {
+      let c = entry.children[i];
+      let span = childLeaves[i] / totalLeaves * (right - left);
+      assignX(c, curLeft, curLeft + span);
+      curLeft += span;
+    }
+  }
+  assignX(0, 50, 700);
+}
+computeLayout();
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+function drawEdge(x1, y1, x2, y2, color, lw) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 + NODE_R);
+  ctx.lineTo(x2, y2 - NODE_R);
+  ctx.strokeStyle = color || '#555';
+  ctx.lineWidth = lw || 1.5;
+  ctx.stroke();
+}
+
+function drawNode(x, y, text, strokeColor, fillColor, textColor, glow) {
+  ctx.beginPath();
+  ctx.arc(x, y, NODE_R, 0, Math.PI * 2);
+  ctx.fillStyle = fillColor || '#0d0d1a';
+  ctx.fill();
+  ctx.strokeStyle = strokeColor || '#555';
+  ctx.lineWidth = glow ? 3 : 2;
+  if (glow) { ctx.shadowColor = strokeColor; ctx.shadowBlur = 12; }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = textColor || '#e0e0e0';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
+
+function drawTree(nodeColors, nodeGlows, activeEdges) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#333';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('N-ary Tree: Root=A, 10 nodes total', 10, 8);
+  for (let ei = 0; ei < allNodes.length; ei++) {
+    let e = allNodes[ei];
+    for (let c of e.children) {
+      let child = allNodes[c];
+      let eColor = '#555';
+      if (activeEdges) {
+        if (activeEdges[e.id] && activeEdges[e.id][c]) eColor = activeEdges[e.id][c];
+      }
+      drawEdge(e.x, e.y, child.x, child.y, eColor, eColor !== '#555' ? 3 : 1.5);
+    }
+  }
+  for (let i = 0; i < allNodes.length; i++) {
+    let n = allNodes[i];
+    let nc = nodeColors || {};
+    let ng = nodeGlows || {};
+    let st = nc[i] ? nc[i].stroke : undefined;
+    let fl = nc[i] ? nc[i].fill : undefined;
+    let tx = nc[i] ? nc[i].text : undefined;
+    drawNode(n.x, n.y, n.name, st, fl, tx, ng[i]);
+  }
+}
+
+function buildPhase(name, details) {
+  let phaseStr = name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return phaseStr + (details ? ': ' + details : '');
+}
+
+function getNodeColorMap(step) {
+  let colors = {};
+  let glows = {};
+  if (!step) return { colors, glows };
+  if (step.highlight && step.highlight.length > 0) {
+    for (let h of step.highlight) {
+      colors[h] = { stroke: '#ff6600', fill: '#1a0a00', text: '#ff6600' };
+      glows[h] = true;
+    }
+  }
+  if (step.visited && step.visited.length > 0) {
+    for (let v of step.visited) {
+      if (!colors[v] || colors[v].stroke === '#555') {
+        colors[v] = { stroke: '#00ff88', fill: '#0a1a12', text: '#00ff88' };
+      }
+    }
+  }
+  if (step.target !== undefined && step.target !== null) {
+    colors[step.target] = { stroke: '#ff66ff', fill: '#1a0020', text: '#ff66ff' };
+    glows[step.target] = true;
+  }
+  return { colors, glows };
+}
+
+function getActiveEdges(step) {
+  let edges = {};
+  if (!step) return edges;
+  if (step.edgePath && step.edgePath.length > 1) {
+    for (let i = 0; i < step.edgePath.length - 1; i++) {
+      let a = step.edgePath[i], b = step.edgePath[i+1];
+      let aNode = nodeMap[step.edgePath[i]];
+      let bNode = nodeMap[step.edgePath[i+1]];
+      if (aNode && bNode) {
+        if (!edges[aNode.id]) edges[aNode.id] = {};
+        edges[aNode.id][bNode.id] = bNode.name === step.edgeTarget ? '#ff66ff' : '#00ff88';
+      }
+    }
+  }
+  return edges;
+}
+
+function renderTraversal(step) {
+  let container = document.getElementById('traversalItems');
+  if (!step || !step.visitOrder || step.visitOrder.length === 0) {
+    container.innerHTML = '<span style="color:#555;">∅</span>';
+    return;
+  }
+  let currentVisit = step.visitIdx !== undefined ? step.visitIdx : -1;
+  let html = '';
+  for (let i = 0; i < step.visitOrder.length; i++) {
+    let cls = 'visit-item';
+    if (i === currentVisit) cls += ' current';
+    else if (i < currentVisit) cls += ' visited';
+    html += '<span class="' + cls + '">' + step.visitOrder[i] + '</span>';
+    if (i < step.visitOrder.length - 1) html += '<span class="visit-arrow">→</span>';
+  }
+  container.innerHTML = html;
+}
+
+function buildSteps() {
+  steps = [];
+  let showStructure = function() {
+    steps.push({
+      type: 'show_structure',
+      phase: 'Tree Structure',
+      action: 'Shows the full n-ary tree layout',
+      highlight: [],
+      visited: [],
+      visitOrder: [],
+      visitIdx: -1,
+      target: null,
+      edgePath: [],
+      resultText: '',
+      explanation: `<div class="explain-section active"><h3>Tree Structure</h3><p>The tree has <b>10 nodes</b> with root <span class="dim">A</span>.</p><p>Children stored as an <b>array</b> per node. Each node can have any number of children.</p><p style="margin-left:8px;">• Root A → <span class="dim">[B, C, D]</span></p><p style="margin-left:8px;">• B → <span class="dim">[E, F]</span></p><p style="margin-left:8px;">• C → <span class="dim">[G]</span></p><p style="margin-left:8px;">• D → <span class="dim">[H, I]</span></p><p style="margin-left:8px;">• F → <span class="dim">[J]</span></p><p class="note">This is a <b>general (n-ary)</b> tree — maximum children per node is not bounded.</p></div>`
+    });
+  };
+  showStructure();
+
+  // --- PREORDER traversal ---
+  let preorderList = [];
+  (function preorder(nodeName) {
+    preorderList.push(nodeName);
+    let entry = nodeMap[nodeName];
+    for (let c of entry.children) preorder(allNodes[c].name);
+  })('A');
+
+  for (let i = 0; i < preorderList.length; i++) {
+    let visited = preorderList.slice(0, i);
+    steps.push({
+      type: 'preorder_traverse',
+      phase: 'Preorder Traversal',
+      action: 'Visit node ' + preorderList[i],
+      highlight: [nodeMap[preorderList[i]].id],
+      visited: visited.map(n => nodeMap[n].id),
+      visitOrder: preorderList,
+      visitIdx: i,
+      target: null,
+      edgePath: i > 0 ? [preorderList[i-1], preorderList[i]] : [preorderList[i]],
+      resultText: 'Preorder: ' + preorderList.slice(0, i+1).join(' → '),
+      explanation: `<div class="explain-section active"><h3>Preorder Traversal — Step ${i+1}</h3><p>Visit <span class="dim">${preorderList[i]}</span> now.</p><p><b>Preorder:</b> Visit parent <b>before</b> children (Root → Left → Right style).</p><span class="formula-line">Visit Node → Recurse on each child left-to-right</span><p>Sequence: <span class="split-info">${preorderList.slice(0, i+1).join(' → ')}</span></p><p class="note">Preorder is useful for <b>copying</b> a tree or evaluating prefix expressions.</p></div>`
+    });
+  }
+
+  // --- POSTORDER traversal ---
+  let postorderList = [];
+  (function postorder(nodeName) {
+    let entry = nodeMap[nodeName];
+    for (let c of entry.children) postorder(allNodes[c].name);
+    postorderList.push(nodeName);
+  })('A');
+
+  for (let i = 0; i < postorderList.length; i++) {
+    let visited = postorderList.slice(0, i);
+    steps.push({
+      type: 'postorder_traverse',
+      phase: 'Postorder Traversal',
+      action: 'Visit node ' + postorderList[i],
+      highlight: [nodeMap[postorderList[i]].id],
+      visited: visited.map(n => nodeMap[n].id),
+      visitOrder: postorderList,
+      visitIdx: i,
+      target: null,
+      edgePath: [],
+      resultText: 'Postorder: ' + postorderList.slice(0, i+1).join(' → '),
+      explanation: `<div class="explain-section active"><h3>Postorder Traversal — Step ${i+1}</h3><p>Visit <span class="dim">${postorderList[i]}</span> now.</p><p><b>Postorder:</b> Visit children <b>before</b> the parent (Left → Right → Root style).</p><span class="formula-line">Recurse on each child left-to-right → Visit Node</span><p>Sequence: <span class="split-info">${postorderList.slice(0, i+1).join(' → ')}</span></p><p class="note">Postorder is used for <b>deleting</b> a tree (delete children before parent).</p></div>`
+    });
+  }
+
+  // --- LEVEL-ORDER traversal (BFS) ---
+  let levelorderList = [];
+  let queue = ['A'];
+  while (queue.length > 0) {
+    let cur = queue.shift();
+    levelorderList.push(cur);
+    let entry = nodeMap[cur];
+    for (let c of entry.children) queue.push(allNodes[c].name);
+  }
+
+  for (let i = 0; i < levelorderList.length; i++) {
+    let visited = levelorderList.slice(0, i);
+    steps.push({
+      type: 'levelorder',
+      phase: 'Level-Order Traversal',
+      action: 'Visit node ' + levelorderList[i],
+      highlight: [nodeMap[levelorderList[i]].id],
+      visited: visited.map(n => nodeMap[n].id),
+      visitOrder: levelorderList,
+      visitIdx: i,
+      target: null,
+      edgePath: [],
+      resultText: 'Level-order: ' + levelorderList.slice(0, i+1).join(' → '),
+      explanation: `<div class="explain-section active"><h3>Level-Order (BFS) Traversal — Step ${i+1}</h3><p>Visit <span class="dim">${levelorderList[i]}</span> now.</p><p><b>Level-order:</b> Visit nodes <b>level by level</b> (breadth-first), processing all nodes at depth d before depth d+1.</p><span class="formula-line">Use a queue: Enqueue root → Dequeue & visit → Enqueue all children</span><p>Sequence: <span class="split-info">${levelorderList.slice(0, i+1).join(' → ')}</span></p><p class="note">Level-order traversal requires a <b>queue</b> (FIFO). It's used for finding the shortest path in unweighted trees.</p></div>`
+    });
+  }
+
+  // --- COMPUTE DEPTH ---
+  let depths = {};
+  (function calcDepth(nodeName, d) {
+    depths[nodeName] = d;
+    let entry = nodeMap[nodeName];
+    for (let c of entry.children) calcDepth(allNodes[c].name, d + 1);
+  })('A', 0);
+
+  let depthKeys = Object.keys(depths);
+  for (let i = 0; i < depthKeys.length; i++) {
+    let n = depthKeys[i];
+    let visitedBefore = depthKeys.slice(0, i);
+    let depth = depths[n];
+    let isMax = depth === Math.max(...Object.values(depths));
+    steps.push({
+      type: 'compute_depth',
+      phase: 'Compute Depth',
+      action: n + ' depth = ' + depth,
+      highlight: [nodeMap[n].id],
+      visited: visitedBefore.map(x => nodeMap[x].id),
+      visitOrder: depthKeys,
+      visitIdx: i,
+      target: isMax ? nodeMap[n].id : null,
+      edgePath: [],
+      resultText: n + ' depth = ' + depth,
+      explanation: `<div class="explain-section active"><h3>Compute Depth — Node ${n}</h3><p><b>Depth</b> of a node = distance from root (number of edges from root).</p><p>Root <span class="dim">A</span> has depth <span class="dim">0</span>. Each child level adds 1.</p><span class="formula-line">depth(${n}) = ${depth}</span><p>Depth of root is 0. Depth increases by 1 at each level.</p>${isMax ? '<p class="result-line">Maximum depth in tree = ' + depth + '</p>' : ''}<p class="note">Depth is a <b>path metric</b> — measured from the top down.</p></div>`
+    });
+  }
+
+  // --- COMPUTE HEIGHT ---
+  let heights = {};
+  (function calcHeight(nodeName) {
+    let entry = nodeMap[nodeName];
+    if (entry.children.length === 0) { heights[nodeName] = 0; return 0; }
+    let maxChildH = 0;
+    for (let c of entry.children) maxChildH = Math.max(maxChildH, calcHeight(allNodes[c].name));
+    heights[nodeName] = maxChildH + 1;
+    return maxChildH + 1;
+  })('A');
+
+  let postorderForHeight = Object.keys(heights).reverse();
+  for (let i = 0; i < postorderForHeight.length; i++) {
+    let n = postorderForHeight[i];
+    let done = postorderForHeight.slice(0, i);
+    steps.push({
+      type: 'compute_height',
+      phase: 'Compute Height',
+      action: n + ' height = ' + heights[n],
+      highlight: [nodeMap[n].id],
+      visited: done.map(x => nodeMap[x].id),
+      visitOrder: postorderForHeight,
+      visitIdx: i,
+      target: n === 'A' ? nodeMap[n].id : null,
+      edgePath: [],
+      resultText: n + ' height = ' + heights[n],
+      explanation: `<div class="explain-section active"><h3>Compute Height — Node ${n}</h3><p><b>Height</b> of a node = longest path from that node down to a leaf (number of edges).</p><span class="formula-line">height(${n}) = 1 + max(height(child)) for all children, or 0 if leaf</span><p>Results for this node: <span class="split-info">height(${n}) = ${heights[n]}</span></p>${n === 'A' ? '<p class="result-line">Tree height (root height) = ' + heights['A'] + '</p>' : ''}<p class="note">Height is measured from the <b>bottom up</b> — leaves have height 0.</p></div>`
+    });
+  }
+
+  // --- FIND NODE ---
+  let searchTarget = 'J';
+  let searchOrder = [];
+  (function bfsFind(root) {
+    let q = [root];
+    while (q.length > 0) {
+      let cur = q.shift();
+      searchOrder.push(cur);
+      if (cur === searchTarget) return;
+      let entry = nodeMap[cur];
+      for (let c of entry.children) q.push(allNodes[c].name);
+    }
+  })('A');
+
+  for (let i = 0; i < searchOrder.length; i++) {
+    let n = searchOrder[i];
+    let visited = searchOrder.slice(0, i);
+    let found = n === searchTarget;
+    steps.push({
+      type: 'find_node',
+      phase: 'Find Node',
+      action: found ? 'Found node ' + n + '!' : 'Searching: ' + n,
+      highlight: [nodeMap[n].id],
+      visited: visited.map(x => nodeMap[x].id),
+      visitOrder: searchOrder,
+      visitIdx: i,
+      target: found ? nodeMap[n].id : null,
+      edgePath: [],
+      resultText: found ? 'Found J!' : 'Checking ' + n + '...',
+      explanation: `<div class="explain-section active"><h3>Find Node "${searchTarget}" — ${found ? '✓ Found!' : 'Checking ' + n}</h3><p>We're searching for node <span class="dim">${searchTarget}</span> using <b>level-order (BFS)</b> search.</p>${found ? '<span class="formula-line">Node ${searchTarget} found! Path: A → B → F → J</span><p class="result-line">✅ J has been located.</p>' : '<p>Currently examining node <span class="dim">${n}</span>. Not the target.</p>'}<p class="note">BFS finds the shortest path in terms of edges (depth levels).</p></div>`
+    });
+  }
+}
+
+function applyStep(step) {
+  let idx = steps.indexOf(step);
+  document.getElementById('stepNum').textContent = idx + 1;
+  document.getElementById('phaseDisplay').textContent = buildPhase(step.phase, step.action);
+  document.getElementById('computingDisplay').textContent = step.action || '';
+  document.getElementById('resultDisplay').textContent = step.resultText || '—';
+  document.getElementById('sidebarPhase').textContent = 'Step ' + (idx + 1) + ' / ' + steps.length + ' — ' + step.phase;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  let nc = getNodeColorMap(step);
+  let ae = getActiveEdges(step);
+  drawTree(nc.colors, nc.glows, ae);
+  renderTraversal(step);
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation(); currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('resultDisplay').textContent = '—';
+  document.getElementById('finalResult').textContent = '';
+  document.getElementById('resultExtra').innerHTML = '';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active"><h3>General Tree (N-ary Tree)</h3><p>A <b>general tree</b> where each node can have <span class="dim">any number of children</span>.</p><p>Root <b>A</b> with children <span class="dim">[B, C, D]</span>, 10 nodes total.</p><p>Operations: Preorder, Postorder, Level-order traversals, Depth, Height, Find Node.</p><p class="note">Press Play or Step to begin.</p></div>`;
+  buildSteps();
+  let firstStep = steps.length > 0 ? steps[0] : null;
+  if (firstStep) { applyStep(firstStep); currentStep = 0; }
+  document.getElementById('totalSteps').textContent = steps.length;
+  renderTraversal(null);
+}
+
+function finishAnimation() {
+  animating = false;
+  let lastIdx = steps.length - 1;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalResult').textContent = 'All traversals and operations demonstrated!';
+  document.getElementById('resultExtra').innerHTML = `<div class="result-grid">
+    <div class="result-card"><div class="label">Nodes</div><div class="value">10 (A–J)</div></div>
+    <div class="result-card"><div class="label">Tree Height</div><div class="value">${heights['A']}</div></div>
+    <div class="result-card"><div class="label">Max Depth</div><div class="value">${Math.max(...Object.values(depths))}</div></div>
+    <div class="result-card"><div class="label">Found Node</div><div class="value">J (yes)</div></div>
+  </div>`;
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Complete!</h3><p>All general tree operations demonstrated.</p><p><span class="dim">Preorder:</span> A → B → E → F → J → C → G → D → H → I</p><p><span class="dim">Postorder:</span> E → J → F → B → G → C → H → I → D → A</p><p><span class="dim">Level-order:</span> A → B → C → D → E → F → G → H → I → J</p><p><span class="dim">Tree Height:</span> ${heights['A']} (from root A to deepest leaf)</p><p><span class="dim">Max Depth:</span> ${Math.max(...Object.values(depths))}</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(n) for each traversal / operation</p><p><span class="dim">Space:</span> O(n) worst-case (recursion stack or queue)</p></div>`;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) { clearInterval(animTimer); animTimer = setInterval(() => { if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; } processStep(); }, getSpeed()); }
+});
+
+buildSteps();
+if (steps.length > 0) { applyStep(steps[0]); currentStep = 0; }
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

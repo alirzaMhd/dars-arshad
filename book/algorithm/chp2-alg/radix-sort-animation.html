@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radix Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px 0; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 40px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.75em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.comparing { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.swapping { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.current { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .bar.digit-info { background: #0a0a2a; border-color: #00ccff; color: #00ccff; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.current { border-color: #ff66ff; background: #1a0030; color: #ff66ff; }
+    .array-item.digit-info { border-color: #00ccff; background: #0a0a2a; color: #00ccff; }
+    .bucket-title { text-align: center; color: #00ccff; font-size: 0.85em; margin: 15px 0 8px; }
+    .bucket-row { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
+    .bucket { width: 52px; min-height: 60px; border: 1px solid #444; border-radius: 6px; background: #0d0d1a; display: flex; flex-direction: column; align-items: center; padding: 4px 2px; gap: 2px; }
+    .bucket .bucket-label { font-size: 0.7em; color: #888; margin-bottom: 2px; }
+    .bucket .bucket-val { font-size: 0.65em; color: #ccc; background: #1a1a2e; width: 100%; text-align: center; border-radius: 3px; padding: 1px 0; }
+    .bucket.active { border-color: #ff6600; background: #1a1020; }
+  </style>
+</head>
+<body>
+  <h1>Radix Sort</h1>
+  <p class="subtitle">Sorting — LSD Radix Sort (Base 10)</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="bucket-title" id="bucketTitle">Buckets (0-9)</div>
+      <div id="bucketArea"></div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Radix Sort (LSD)</span></div>
+        <div><span class="label">Pass:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Sorted!</h2>
+        <p id="resultText" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p><b>Radix Sort</b> sorts numbers by processing individual digits from least significant to most significant.</p>
+          <p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p>Base 10, max = 48 (2 digits) → 2 passes needed.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function precomputeAll() { return [...initialArr].sort((a,b)=>a-b); }
+
+    function initDisplay() {
+      const container = document.getElementById('chartContainer');
+      const adisp = document.getElementById('arrayDisplay');
+      container.innerHTML = '';
+      adisp.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (arr[i] / maxVal * 200) + 'px';
+        bar.textContent = arr[i];
+        container.appendChild(bar);
+        const item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = arr[i];
+        adisp.appendChild(item);
+      }
+      updateBuckets([]);
+    }
+
+    function updateBuckets(buckets) {
+      const area = document.getElementById('bucketArea');
+      area.innerHTML = '';
+      if (!buckets || buckets.length === 0) {
+        for (let b = 0; b < 10; b++) {
+          const bk = document.createElement('div');
+          bk.className = 'bucket';
+          bk.id = 'bucket-' + b;
+          bk.innerHTML = '<div class="bucket-label">' + b + '</div>';
+          area.appendChild(bk);
+        }
+        return;
+      }
+      for (let b = 0; b < 10; b++) {
+        const bk = document.createElement('div');
+        bk.className = 'bucket';
+        bk.id = 'bucket-' + b;
+        let html = '<div class="bucket-label">' + b + '</div>';
+        if (buckets[b] && buckets[b].length > 0) {
+          buckets[b].forEach(v => { html += '<div class="bucket-val">' + v + '</div>'; });
+        }
+        bk.innerHTML = html;
+        area.appendChild(bk);
+      }
+    }
+
+    function clearHighlights() {
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      }
+      document.querySelectorAll('.bucket').forEach(el => el.classList.remove('active'));
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      if (step.arr) arr = [...step.arr];
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      if (step.highlights) {
+        step.highlights.forEach(h => {
+          const bar = document.getElementById('bar-' + h.idx);
+          const item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      const maxVal = Math.max(...arr);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) {
+          bar.style.height = (arr[i] / maxVal * 200) + 'px';
+          bar.textContent = arr[i];
+        }
+        if (item) item.textContent = arr[i];
+      }
+      if (step.type === 'extract') {
+        step.digitVals.forEach((dv, i) => {
+          const bar = document.getElementById('bar-' + i);
+          const item = document.getElementById('arr-item-' + i);
+          if (bar) { bar.classList.add('digit-info'); bar.textContent = dv; }
+          if (item) { item.classList.add('digit-info'); item.textContent = arr[i] + '(' + dv + ')'; }
+        });
+      }
+      if (step.buckets) updateBuckets(step.buckets);
+      document.getElementById('sidebarPhase').textContent = step.phase;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active"><h3>Problem Setup</h3><p><b>Radix Sort</b> sorts numbers by processing individual digits from least significant to most significant.</p><p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p><p>Base 10, max = 48 (2 digits) → 2 passes needed.</p><p class="note">Press Play or Step to begin.</p></div>';
+      clearHighlights();
+      initDisplay();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const result = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('resultText').textContent = 'Sorted: [' + result.join(', ') + ']';
+      document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Radix Sort Complete!</h3><p class="result-line">[' + result.join(', ') + ']</p><h3 style="margin-top:10px;">Key Points</h3><p>• Sorts by processing digits from LSD to MSD</p><p>• Uses 10 buckets (0-9) per pass</p><p>• Each pass is <span class="dim">O(n + k)</span> where k=10 (base)</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(d · (n + k)) = O(2 · (8 + 10)) = O(36) operations</p><p><span class="dim">Space:</span> O(n + k) for buckets</p></div>';
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function buildExtractExplanation(arr, d, digitVals) {
+      const place = d === 0 ? 'units' : 'tens';
+      let list = '';
+      for (let i = 0; i < arr.length; i++) {
+        list += '<span class="dim">' + arr[i] + '</span> → ' + digitVals[i] + '<br>';
+      }
+      return '<div class="explain-section active"><h3>Pass ' + (d+1) + ': Extract ' + place.charAt(0).toUpperCase() + place.slice(1) + ' Digits</h3><p>Extract the <span class="dim">' + place + '</span> digit from each element:</p>' + list + '<p class="note">These digits determine which bucket each element goes into.</p></div>';
+    }
+
+    function buildDistributeExplanation(val, bucket) {
+      return '<div class="explain-section active"><h3>Distribute: ' + val + ' → Bucket ' + bucket + '</h3><p>Place <span class="dim">' + val + '</span> into bucket <span class="dim">' + bucket + '</span> based on its extracted digit.</p><p class="note">Elements with the same digit go into the same bucket, maintaining relative order (stable).</p></div>';
+    }
+
+    function buildCollectExplanation(sorted) {
+      let s = '';
+      for (let i = 0; i < sorted.length; i++) s += '<span class="dim">' + sorted[i] + '</span> ';
+      return '<div class="explain-section active"><h3>Collect: Concatenate Buckets</h3><p>Concatenate all buckets in order (0 to 9) to form the new array:</p><p>' + s + '</p><p class="note">After this pass, the array is sorted by the processed least-significant digits.</p></div>';
+    }
+
+    function buildPassDoneExplanation(arr, pass, total) {
+      let s = '';
+      for (let i = 0; i < arr.length; i++) s += '<span class="dim">' + arr[i] + '</span> ';
+      return '<div class="explain-section active"><h3>Pass ' + pass + ' of ' + total + ' Complete</h3><p>Array after pass ' + pass + ':</p><p>' + s + '</p><p class="note">' + (pass < total ? 'Proceeding to next digit position.' : 'All passes complete!') + '</p></div>';
+    }
+
+    function buildSteps() {
+      steps = [];
+      arr = [...initialArr];
+      const maxVal = Math.max(...arr);
+      const maxDigits = maxVal.toString().length;
+      const digit = 10;
+
+      for (let d = 0; d < maxDigits; d++) {
+        const placeVal = Math.pow(digit, d);
+        const digitVals = arr.map(x => Math.floor(x / placeVal) % digit);
+
+        steps.push({
+          type: 'extract', arr: [...arr], digitVals: [...digitVals],
+          digitPlace: d, buckets: null, highlights: [],
+          phase: 'Pass ' + (d+1) + ' — Extract ' + (d===0?'Units':'Tens') + ' Digits',
+          phaseTitle: 'Pass ' + (d+1) + ': Extract',
+          action: 'Extracting ' + (d===0?'units':'tens') + ' digit from each element',
+          explanation: buildExtractExplanation(arr, d, digitVals)
+        });
+
+        const buckets = Array.from({length: digit}, () => []);
+        for (let i = 0; i < arr.length; i++) {
+          const bIdx = Math.floor(arr[i] / placeVal) % digit;
+          buckets[bIdx].push(arr[i]);
+          steps.push({
+            type: 'distribute', arr: [...arr], idx: i, val: arr[i], toBucket: bIdx,
+            buckets: buckets.map(b => [...b]),
+            highlights: [{idx: i, cls: 'current'}],
+            phase: 'Pass ' + (d+1) + ' — Distribute arr[' + i + '] = ' + arr[i] + ' → bucket[' + bIdx + ']',
+            phaseTitle: 'Pass ' + (d+1) + ': Distribute',
+            action: 'arr[' + i + '] = ' + arr[i] + ' → bucket[' + bIdx + ']',
+            explanation: buildDistributeExplanation(arr[i], bIdx)
+          });
+        }
+
+        let sorted = [];
+        for (let b = 0; b < digit; b++) { sorted.push(...buckets[b]); }
+
+        steps.push({
+          type: 'collect', arr: [...arr], sorted: [...sorted],
+          buckets: buckets.map(b => [...b]), highlights: [],
+          phase: 'Pass ' + (d+1) + ' — Collect from Buckets',
+          phaseTitle: 'Pass ' + (d+1) + ': Collect',
+          action: 'Concatenating buckets 0→9',
+          explanation: buildCollectExplanation(sorted)
+        });
+
+        arr = [...sorted];
+
+        steps.push({
+          type: 'pass_done', arr: [...arr], buckets: null,
+          highlights: arr.map((_, i) => ({idx: i, cls: 'sorted'})),
+          phase: 'Pass ' + (d+1) + ' — Pass Complete',
+          phaseTitle: 'Pass ' + (d+1) + ': Done',
+          action: 'Array after ' + (d+1) + ' pass' + (d===0?'':'es'),
+          explanation: buildPassDoneExplanation(arr, d+1, maxDigits)
+        });
+      }
+
+      steps.push({
+        type: 'done', arr: [...arr], buckets: null,
+        highlights: arr.map((_, i) => ({idx: i, cls: 'sorted'})),
+        phase: '✅ Complete — Array Sorted',
+        phaseTitle: '✓ Sorted!',
+        action: 'All ' + maxDigits + ' passes complete',
+        explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Sorted!</h3><p class="result-line">[' + arr.join(', ') + ']</p><p>Using LSD Radix Sort with <span class="dim">' + maxDigits + ' digit passes</span>.</p></div>'
+      });
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linear Selection Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px 0; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 40px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.75em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.comparing { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.current { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .bar.minimum { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .bar.maximum { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.minmax { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.current { border-color: #ff66ff; background: #1a0030; color: #ff66ff; }
+    .array-item.minimum { border-color: #00ff88; background: #002a1a; color: #00ff88; }
+    .array-item.maximum { border-color: #ff6600; background: #1a0a00; color: #ff6600; }
+    .array-item.minmax { border-color: #00ff88; background: #002a1a; color: #00ff88; }
+    .tracker { display: flex; justify-content: center; gap: 40px; margin: 15px 0; }
+    .tracker-box { text-align: center; padding: 12px 24px; background: #111; border: 2px solid #444; border-radius: 10px; min-width: 140px; }
+    .tracker-box .tracker-label { color: #888; font-size: 0.8em; margin-bottom: 4px; }
+    .tracker-box .tracker-value { font-size: 1.8em; font-weight: bold; }
+    .tracker-box.min-box { border-color: #00ff88; }
+    .tracker-box.min-box .tracker-value { color: #00ff88; }
+    .tracker-box.max-box { border-color: #ff6600; }
+    .tracker-box.max-box .tracker-value { color: #ff6600; }
+    .tracker-box.current-box { border-color: #ff66ff; }
+    .tracker-box.current-box .tracker-value { color: #ff66ff; }
+  </style>
+</head>
+<body>
+  <h1>Linear Selection</h1>
+  <p class="subtitle">Selection — Find Minimum and Maximum</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="tracker">
+        <div class="tracker-box min-box">
+          <div class="tracker-label">Minimum</div>
+          <div class="tracker-value" id="minDisplay">?</div>
+        </div>
+        <div class="tracker-box current-box">
+          <div class="tracker-label">Comparing</div>
+          <div class="tracker-value" id="currentDisplay">—</div>
+        </div>
+        <div class="tracker-box max-box">
+          <div class="tracker-label">Maximum</div>
+          <div class="tracker-value" id="maxDisplay">?</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Linear Selection (Min &amp; Max)</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Complete!</h2>
+        <p id="resultText" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p><b>Linear Selection</b> finds both the minimum and maximum elements in an unsorted array in a single linear scan.</p>
+          <p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p>Initialize min = max = <span class="dim">arr[0]</span>, then scan the rest.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function precomputeAll() {
+      return { min: Math.min(...initialArr), max: Math.max(...initialArr) };
+    }
+
+    function initDisplay() {
+      const container = document.getElementById('chartContainer');
+      const adisp = document.getElementById('arrayDisplay');
+      container.innerHTML = '';
+      adisp.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (arr[i] / maxVal * 200) + 'px';
+        bar.textContent = arr[i];
+        container.appendChild(bar);
+        const item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = arr[i];
+        adisp.appendChild(item);
+      }
+      document.getElementById('minDisplay').textContent = '?';
+      document.getElementById('maxDisplay').textContent = '?';
+      document.getElementById('currentDisplay').textContent = '—';
+    }
+
+    function clearHighlights() {
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      }
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      if (step.highlights) {
+        step.highlights.forEach(h => {
+          const bar = document.getElementById('bar-' + h.idx);
+          const item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      if (step.min !== undefined) document.getElementById('minDisplay').textContent = step.min;
+      if (step.max !== undefined) document.getElementById('maxDisplay').textContent = step.max;
+      if (step.currentVal !== undefined) document.getElementById('currentDisplay').textContent = step.currentVal;
+      document.getElementById('sidebarPhase').textContent = step.phase;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active"><h3>Problem Setup</h3><p><b>Linear Selection</b> finds both the minimum and maximum elements in an unsorted array in a single linear scan.</p><p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p><p>Initialize min = max = <span class="dim">arr[0]</span>, then scan the rest.</p><p class="note">Press Play or Step to begin.</p></div>';
+      clearHighlights();
+      initDisplay();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const result = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('resultText').textContent = 'Min = ' + result.min + ', Max = ' + result.max;
+      document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Selection Complete!</h3><p><span class="dim">Minimum:</span> <span class="result-line">' + result.min + '</span></p><p><span class="dim">Maximum:</span> <span class="result-line">' + result.max + '</span></p><h3 style="margin-top:10px;">Key Points</h3><p>• Single linear scan: <span class="dim">O(n)</span> time</p><p>• Two comparisons per element (if both min and max need updating)</p><p>• Total: <span class="dim">2n − 2 = ' + (2 * arr.length - 2) + '</span> comparisons in worst case</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(n)</p><p><span class="dim">Space:</span> O(1)</p></div>';
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function buildSteps() {
+      steps = [];
+      arr = [...initialArr];
+
+      let curMin = arr[0];
+      let curMax = arr[0];
+
+      steps.push({
+        type: 'init', highlights: [{idx: 0, cls: 'minmax'}],
+        min: curMin, max: curMax, currentVal: arr[0],
+        phase: 'Initialize — min = max = arr[0] = ' + arr[0],
+        phaseTitle: 'Initialize',
+        action: 'Set min = max = ' + arr[0],
+        explanation: '<div class="explain-section active"><h3>Initialize</h3><p>Start with <span class="dim">min = max = arr[0] = ' + arr[0] + '</span></p><p>Now scan the rest of the array (indices 1 to ' + (arr.length - 1) + ').</p></div>'
+      });
+
+      for (let i = 1; i < arr.length; i++) {
+        const val = arr[i];
+
+        steps.push({
+          type: 'compare', idx: i, val: val,
+          min: curMin, max: curMax, currentVal: val,
+          highlights: [{idx: i, cls: 'comparing'}, {idx: 0, cls: 'minmax'}],
+          phase: 'Compare — arr[' + i + '] = ' + val + ' vs min=' + curMin + ', max=' + curMax,
+          phaseTitle: 'Compare',
+          action: 'Is ' + val + ' < ' + curMin + ' or > ' + curMax + '?',
+          explanation: '<div class="explain-section active"><h3>Compare arr[' + i + '] = ' + val + '</h3><p>Current: <span class="dim">min = ' + curMin + '</span>, <span class="dim">max = ' + curMax + '</span></p><p>Comparing <span class="dim">' + val + '</span> with both min and max.</p></div>'
+        });
+
+        let updated = false;
+        if (val < curMin) { curMin = val; updated = true; }
+        if (val > curMax) { curMax = val; updated = true; }
+
+        if (updated) {
+          const highlights = [{idx: i, cls: 'minimum'}, {idx: 0, cls: 'minmax'}];
+          if (curMin === val && curMax === val) {
+            highlights[0].cls = 'minmax';
+          } else if (curMin === val) {
+            highlights[0].cls = 'minimum';
+          } else {
+            highlights[0].cls = 'maximum';
+          }
+          steps.push({
+            type: 'update', idx: i, val: val,
+            min: curMin, max: curMax, currentVal: val,
+            highlights: highlights,
+            phase: 'Update — ' + (val === curMin && val === curMax ? 'Both' : val === curMin ? 'New Min' : 'New Max') + ' = ' + val,
+            phaseTitle: 'Update',
+            action: (val === curMin && val === curMax ? 'New min AND max = ' + val : val === curMin ? 'New minimum = ' + val : 'New maximum = ' + val),
+            explanation: '<div class="explain-section active"><h3>' + (val === curMin && val === curMax ? 'Updated Both' : val === curMin ? 'Updated Minimum' : 'Updated Maximum') + '</h3><p><span class="result-line">' + val + '</span> is ' + (val === curMin && val === curMax ? 'both a new minimum and maximum' : val === curMin ? 'a new minimum' : 'a new maximum') + '.</p><p>Current: <span class="dim">min = ' + curMin + '</span>, <span class="dim">max = ' + curMax + '</span></p></div>'
+          });
+        }
+      }
+
+      steps.push({
+        type: 'done', highlights: [{idx: 0, cls: 'minmax'}],
+        min: curMin, max: curMax, currentVal: '—',
+        phase: '✅ Complete — Min = ' + curMin + ', Max = ' + curMax,
+        phaseTitle: '✓ Done',
+        action: 'All elements compared',
+        explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Selection Complete!</h3><p class="result-line">Minimum: ' + curMin + '</p><p class="result-line">Maximum: ' + curMax + '</p><p>Scanned <span class="dim">' + arr.length + '</span> elements in <span class="dim">O(n)</span> time.</p></div>'
+      });
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

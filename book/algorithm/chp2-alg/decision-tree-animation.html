@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Tree — Sorting Lower Bound Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+
+.leaf-list { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.leaf-item { padding: 6px 10px; border: 1px solid #444; border-radius: 6px; background: #111; font-size: 0.8em; color: #aaa; transition: all 0.3s; }
+.leaf-item.active { border-color: #ff6600; background: #1a0a00; color: #ff6600; }
+.leaf-item.done { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+.path-display { text-align: center; margin: 10px 0; padding: 10px; background: #111; border-radius: 8px; border: 1px solid #333; }
+.path-step { display: inline-block; padding: 4px 10px; margin: 2px; border: 1px solid #555; border-radius: 4px; font-size: 0.8em; color: #888; }
+.path-step.active { border-color: #ff6600; color: #ff6600; background: #1a0a00; }
+.path-step.done { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+</style>
+</head>
+<body>
+<h1>Decision Tree — Sorting Lower Bound</h1>
+<p class="subtitle">Comparison-Based Sorting — Ω(n log n) Lower Bound for n=3</p>
+<div class="layout">
+<div class="main-panel">
+<canvas id="treeCanvas" width="700" height="500"></canvas>
+<div id="pathDisplay" class="path-display"></div>
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+<div class="info-panel">
+<div><span class="label">Topic:</span> <span class="value">Decision Tree Lower Bound</span></div>
+<div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+<div><span class="label">Current:</span> <span class="value" id="computingDisplay">—</span></div>
+</div>
+<div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+<div class="result-section" id="resultSection">
+<h2>✅ Complete!</h2>
+<p id="resultText" style="color:#00ff88;font-size:1.1em;font-weight:bold;"></p>
+</div>
+</div>
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Idle — press Play or Step to begin.</div>
+<div id="explainArea">
+<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>For sorting <b>n=3</b> elements <span class="dim">[a, b, c]</span>, any comparison-based sorting algorithm can be modeled as a <b>decision tree</b>.</p>
+<p>Each internal node compares two elements. Each leaf represents a sorted permutation.</p>
+<p>There are <span class="dim">3! = 6</span> possible permutations → at least 6 leaves needed.</p>
+<p>Tree height <span class="dim">h</span> satisfies: <span class="dim">2<sup>h</sup> ≥ 6</span> → <span class="dim">h ≥ ⌈log₂ 6⌉ = 3</span></p>
+<span class="formula-line">Ω(log n!) = Ω(n log n)</span>
+<p class="note">Press Play or Step to follow one comparison path from root to leaf.</p>
+</div>
+</div>
+</div>
+</div>
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+const items = ['a', 'b', 'c'];
+
+const tree = {
+  val: 'a : b',
+  left: {
+    val: 'a : c',
+    left: {
+      val: 'b : c',
+      left: { val: 'a < b < c', leaf: true },
+      right: { val: 'a < c < b', leaf: true }
+    },
+    right: {
+      val: 'b : c',
+      left: { val: 'c < a < b', leaf: true },
+      right: { val: 'a < c < b', leaf: true }
+    }
+  },
+  right: {
+    val: 'a : c',
+    left: {
+      val: 'b : c',
+      left: { val: 'b < a < c', leaf: true },
+      right: { val: 'b < c < a', leaf: true }
+    },
+    right: {
+      val: 'b : c',
+      left: { val: 'c < a < b', leaf: true },
+      right: { val: 'c < b < a', leaf: true }
+    }
+  }
+};
+
+let allLeaves = [];
+
+function collectLeaves(node) {
+  if (!node) return;
+  if (node.leaf) { allLeaves.push(node.val); return; }
+  collectLeaves(node.left);
+  collectLeaves(node.right);
+}
+collectLeaves(tree);
+
+let leafStates = [];
+
+let pathSteps = [];
+
+function traversePath(node, nodePath, color) {
+  if (!node) return;
+  nodePath.push(node);
+  if (node.leaf) {
+    for (let i = 0; i < nodePath.length; i++) {
+      pathSteps.push({ node: nodePath[i], isLeaf: i === nodePath.length - 1, pathIndex: i, totalPath: nodePath.length, leafValue: node.val });
+    }
+    return;
+  }
+  traversePath(node.left, [...nodePath], 'left');
+  traversePath(node.right, [...nodePath], 'right');
+}
+
+const pathDescriptions = [];
+
+function buildPathDescriptions(node, path, direction) {
+  if (!node) return;
+  if (node.leaf) {
+    pathDescriptions.push({ path: [...path], leaf: node.val });
+    return;
+  }
+  path.push({ node: node, dir: 'left', label: node.val + ' → <' });
+  buildPathDescriptions(node.left, [...path], 'left');
+  path.pop();
+  path.push({ node: node, dir: 'right', label: node.val + ' → >' });
+  buildPathDescriptions(node.right, [...path], 'right');
+  path.pop();
+}
+
+buildPathDescriptions(tree, []);
+
+function getLeafColor(leafVal) {
+  if (!leafVal) return '#555';
+  const idx = allLeaves.indexOf(leafVal);
+  if (idx === -1) return '#555';
+  return leafStates[idx] || '#555';
+}
+
+let canvas, ctx;
+
+function drawTree(highlightNode) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  function drawNodeRec(node, x, y, xOffset, level, pathActive) {
+    const isHighlighted = highlightNode && node === highlightNode;
+    const color = isHighlighted ? (node.leaf ? '#00ff88' : '#ff6600') : (node.leaf ? '#ff66ff' : '#00ccff');
+    const borderColor = isHighlighted ? (node.leaf ? '#00ff88' : '#ff6600') : (node.leaf ? '#ff66ff' : '#00ccff');
+    const bgColor = isHighlighted ? (node.leaf ? '#0a1a12' : '#1a0a00') : '#0d0d1a';
+
+    if (node.left) {
+      const childX = x - xOffset;
+      const childY = y + 60;
+      const eColor = (highlightNode && (node.left === highlightNode || node.right === highlightNode)) ? '#ff6600' : '#555';
+      ctx.beginPath();
+      ctx.moveTo(x, y + 18);
+      ctx.lineTo(childX, childY - 18);
+      ctx.strokeStyle = eColor;
+      ctx.lineWidth = (highlightNode && (node.left === highlightNode)) ? 2.5 : 1.5;
+      ctx.stroke();
+      drawNodeRec(node.left, childX, childY, xOffset * 0.55, level + 1, pathActive);
+    }
+    if (node.right) {
+      const childX = x + xOffset;
+      const childY = y + 60;
+      const eColor = (highlightNode && (node.right === highlightNode)) ? '#ff6600' : '#555';
+      ctx.beginPath();
+      ctx.moveTo(x, y + 18);
+      ctx.lineTo(childX, childY - 18);
+      ctx.strokeStyle = eColor;
+      ctx.lineWidth = (highlightNode && (node.right === highlightNode)) ? 2.5 : 1.5;
+      ctx.stroke();
+      drawNodeRec(node.right, childX, childY, xOffset * 0.55, level + 1, pathActive);
+    }
+
+    if (node.leaf) {
+      const r = 35;
+      const bx = x - r, by = y - 12;
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = isHighlighted ? 3 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(bx + 6, by);
+      ctx.lineTo(bx + r * 2 - 6, by);
+      ctx.quadraticCurveTo(bx + r * 2, by, bx + r * 2, by + 6);
+      ctx.lineTo(bx + r * 2, by + 24 - 6);
+      ctx.quadraticCurveTo(bx + r * 2, by + 24, bx + r * 2 - 6, by + 24);
+      ctx.lineTo(bx + 6, by + 24);
+      ctx.quadraticCurveTo(bx, by + 24, bx, by + 24 - 6);
+      ctx.lineTo(bx, by + 6);
+      ctx.quadraticCurveTo(bx, by, bx + 6, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.val, x, by + 12);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = isHighlighted ? 3 : 2;
+      if (isHighlighted) {
+        ctx.shadowColor = '#ff6600';
+        ctx.shadowBlur = 12;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = color;
+      ctx.font = 'bold 12px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.val, x, y);
+    }
+  }
+
+  drawNodeRec(tree, 350, 40, 190, 1);
+}
+
+function buildSteps() {
+  steps = [];
+  pathDescriptions.forEach((pd, pathIdx) => {
+    const p = pd.path;
+    p.forEach((stepInfo, stepIdx) => {
+      const isLast = stepIdx === p.length - 1;
+      const comp = stepInfo.node.val;
+      let pathStr = '';
+      for (let i = 0; i < stepIdx; i++) {
+        pathStr += p[i].label + ' → ';
+      }
+      pathStr += stepInfo.label;
+
+      steps.push({
+        type: isLast ? 'leaf' : 'comparison',
+        comp: comp,
+        dir: stepInfo.dir,
+        pathLabel: stepInfo.label,
+        node: stepInfo.node,
+        leafValue: isLast ? pd.leaf : null,
+        pathSoFar: pathStr,
+        pathIndex: pathIdx,
+        stepInPath: stepIdx,
+        totalInPath: p.length,
+        explanation: buildExplanation(isLast, comp, stepInfo.dir, pd.leaf, pathStr, stepIdx, p.length)
+      });
+    });
+  });
+}
+
+function buildExplanation(isLeaf, comp, dir, leafVal, pathStr, stepIdx, totalLen) {
+  if (isLeaf) {
+    let leafArr = leafVal.split(' < ');
+    return `<div class="explain-section active">
+      <h3>✅ Leaf Reached — Sorted Order Found</h3>
+      <p>The comparison path ends at leaf: <span class="result-line">${leafVal}</span></p>
+      <p>This means for this particular input ordering, the sorted output is:</p>
+      <p style="text-align:center;font-size:1.2em;margin:8px 0;"><span class="split-info">${leafArr[0]} < ${leafArr[1]} < ${leafArr[2]}</span></p>
+      <p>The decision tree has shown one possible execution path of a comparison sort.</p>
+      <h3 style="margin-top:10px;">Lower Bound Argument</h3>
+      <p>For n=3, there are <span class="dim">3! = 6</span> permutations (leaves).</p>
+      <p>A binary tree of height <span class="dim">h</span> has at most <span class="dim">2<sup>h</sup></span> leaves.</p>
+      <span class="formula-line">h ≥ ⌈log₂(6)⌉ = 3 comparisons in worst case</span>
+      <p>In general: <span class="dim">Ω(log n!) = Ω(n log n)</span> comparisons needed.</p>
+      <p class="note">Therefore, no comparison-based sort can beat O(n log n) in the worst case.</p>
+    </div>`;
+  }
+  return `<div class="explain-section active">
+    <h3>Comparison: ${comp}</h3>
+    <p>Algorithms compares <span class="dim">${comp}</span>.</p>
+    <p>If <span class="dim">${dir === 'left' ? comp.replace(' : ', ' < ') : comp.replace(' : ', ' > ')}</span>, go <b>${dir === 'left' ? 'left' : 'right'}</b>.</p>
+    <h3 style="margin-top:8px;">Path so far</h3>
+    <p style="color:#ccc;">${pathStr}</p>
+    <p class="note">Step ${stepIdx + 1} of ${totalLen} on this path.</p>
+    <h3 style="margin-top:10px;">Why This Matters</h3>
+    <p>The height of this tree represents the worst-case number of comparisons.</p>
+    <p>With 6 leaves, minimum possible height = <span class="dim">⌈log₂ 6⌉ = 3</span>.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Lower Bound Proved!</h3>
+    <p>Any comparison-based sorting algorithm requires at least <span class="result-line">Ω(n log n)</span> comparisons in the worst case.</p>
+    <p>The decision tree model shows that with <span class="dim">n!</span> possible outputs, the tree height must be at least <span class="dim">log₂(n!)</span>.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> Ω(n log n) (lower bound)</p>
+    <p><span class="dim">Space:</span> O(1) (in-place comparisons)</p>
+    <p class="note">MergeSort, HeapSort achieve this bound. QuickSort achieves O(n log n) expected.</p>
+  </div>`;
+}
+
+function applyStep(step) {
+  document.getElementById('phaseDisplay').textContent = step.type === 'leaf' ? '✓ Leaf Found!' : 'Comparison';
+  document.getElementById('computingDisplay').textContent = step.type === 'leaf' ? 'Sorted: ' + step.leafValue : step.comp;
+  document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.type === 'leaf' ? '✅ Leaf' : '🔍 ' + step.comp}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  drawTree(step.node);
+
+  const pd = document.getElementById('pathDisplay');
+  pd.innerHTML = '<div style="font-size:0.85em;color:#888;margin-bottom:6px;">Comparison Path:</div>';
+  const pathDesc = step.pathSoFar;
+  pd.innerHTML += `<div style="font-size:0.85em;color:#ffcc00;">${pathDesc}</div>`;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  leafStates = allLeaves.map(() => null);
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>For sorting <b>n=3</b> elements <span class="dim">[a, b, c]</span>, any comparison-based sorting algorithm can be modeled as a <b>decision tree</b>.</p>
+    <p>Each internal node compares two elements. Each leaf represents a sorted permutation.</p>
+    <p>There are <span class="dim">3! = 6</span> possible permutations → at least 6 leaves needed.</p>
+    <p>Tree height <span class="dim">h</span> satisfies: <span class="dim">2<sup>h</sup> ≥ 6</span> → <span class="dim">h ≥ ⌈log₂ 6⌉ = 3</span></p>
+    <span class="formula-line">Ω(log n!) = Ω(n log n)</span>
+    <p class="note">Press Play or Step to follow one comparison path from root to leaf.</p>
+  </div>`;
+  document.getElementById('pathDisplay').innerHTML = '';
+  drawTree(null);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'Ω(n log n)';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultText').textContent = 'Lower Bound: Ω(n log n) — No comparison sort can beat this!';
+  document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+canvas = document.getElementById('treeCanvas');
+ctx = canvas.getContext('2d');
+drawTree(null);
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select (Median-of-Medians) Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px 0; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 40px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.75em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.comparing { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.current { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.pivot { background: #2a0a00; border-color: #ff6600; color: #ff6600; box-shadow: 0 0 15px #ff660044; }
+    .bar.group0 { border-color: #00ccff; background: #0a0a2a; }
+    .bar.group1 { border-color: #ffcc00; background: #1a1a00; }
+    .bar.group2 { border-color: #ff66ff; background: #1a0030; }
+    .bar.less { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .bar.equal { background: #2a1a00; border-color: #ffcc00; color: #ffcc00; }
+    .bar.greater { background: #2a0000; border-color: #ff4444; color: #ff4444; }
+    .bar.median { background: #0a0a30; border-color: #00ccff; color: #00ccff; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.current { border-color: #ff66ff; background: #1a0030; color: #ff66ff; }
+    .array-item.pivot { border-color: #ff6600; background: #2a0a00; color: #ff6600; }
+    .array-item.group0 { border-color: #00ccff; color: #00ccff; }
+    .array-item.group1 { border-color: #ffcc00; color: #ffcc00; }
+    .array-item.group2 { border-color: #ff66ff; color: #ff66ff; }
+    .array-item.less { border-color: #00ff88; background: #002a1a; color: #00ff88; }
+    .array-item.equal { border-color: #ffcc00; background: #2a1a00; color: #ffcc00; }
+    .array-item.greater { border-color: #ff4444; background: #2a0000; color: #ff4444; }
+    .array-item.median { border-color: #00ccff; color: #00ccff; }
+    .groups-title { text-align: center; color: #00ccff; font-size: 0.85em; margin: 15px 0 8px; }
+    .groups-area { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .group-row { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #0d0d1a; border: 1px solid #333; border-radius: 8px; }
+    .group-label { font-size: 0.75em; color: #888; min-width: 50px; }
+    .group-val { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 4px; background: #111; font-size: 0.75em; font-weight: bold; transition: all 0.3s; }
+    .group-val.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .group-val.median { border-color: #00ccff; background: #0a0a30; color: #00ccff; }
+    .group-val.pivot { border-color: #ff6600; background: #2a0a00; color: #ff6600; }
+    .partition-info { display: flex; justify-content: center; gap: 20px; margin: 12px 0; }
+    .partition-box { padding: 8px 16px; background: #111; border: 1px solid #333; border-radius: 8px; text-align: center; }
+    .partition-box .p-label { color: #888; font-size: 0.75em; }
+    .partition-box .p-val { font-size: 0.85em; font-weight: bold; margin-top: 2px; }
+    .partition-box.less-box { border-color: #00ff88; }
+    .partition-box.less-box .p-val { color: #00ff88; }
+    .partition-box.equal-box { border-color: #ffcc00; }
+    .partition-box.equal-box .p-val { color: #ffcc00; }
+    .partition-box.greater-box { border-color: #ff4444; }
+    .partition-box.greater-box .p-val { color: #ff4444; }
+  </style>
+</head>
+<body>
+  <h1>Select (Median-of-Medians)</h1>
+  <p class="subtitle">Selection — k-th Order Statistic (Blum-Floyd-Pratt-Rivest-Tarjan)</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="groups-title" id="groupsTitle">Groups of 5</div>
+      <div id="groupsArea"></div>
+      <div id="partitionInfo"></div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Median-of-Medians Select</span></div>
+        <div><span class="label">k:</span> <span class="value">3 (finding 3rd smallest)</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Found!</h2>
+        <p id="resultText" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p><b>Median-of-Medians</b> (Blum-Floyd-Pratt-Rivest-Tarjan) finds the <span class="dim">k-th smallest</span> element in <b>O(n)</b> worst-case time.</p>
+          <p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p>Find the <span class="dim">3rd smallest</span> element (k=3).</p>
+          <p>Steps: Group by 5 → Sort each group → Find medians → Recursive select on medians → Partition → Recurse.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    const K = 3;
+
+    function precomputeAll() {
+      const s = [...initialArr].sort((a,b)=>a-b);
+      return { sorted: s, answer: s[K-1], k: K };
+    }
+
+    function getGroupColor(g) {
+      const colors = ['group0', 'group1', 'group2'];
+      return colors[g % colors.length];
+    }
+
+    function initDisplay() {
+      const container = document.getElementById('chartContainer');
+      const adisp = document.getElementById('arrayDisplay');
+      container.innerHTML = '';
+      adisp.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (arr[i] / maxVal * 200) + 'px';
+        bar.textContent = arr[i];
+        container.appendChild(bar);
+        const item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = arr[i];
+        adisp.appendChild(item);
+      }
+      document.getElementById('groupsArea').innerHTML = '';
+      document.getElementById('partitionInfo').innerHTML = '';
+    }
+
+    function assignBarGroup(groups) {
+      for (let g = 0; g < groups.length; g++) {
+        const cls = getGroupColor(g);
+        for (const idx of groups[g].indices) {
+          const bar = document.getElementById('bar-' + idx);
+          const item = document.getElementById('arr-item-' + idx);
+          if (bar) bar.classList.add(cls);
+          if (item) item.classList.add(cls);
+        }
+      }
+    }
+
+    function clearHighlights() {
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      }
+    }
+
+    function renderGroups(groups) {
+      const area = document.getElementById('groupsArea');
+      area.innerHTML = '';
+      for (let g = 0; g < groups.length; g++) {
+        const row = document.createElement('div');
+        row.className = 'group-row';
+        const cls = getGroupColor(g);
+        let html = '<span class="group-label" style="color:' + (g===0?'#00ccff':g===1?'#ffcc00':'#ff66ff') + '">G' + g + ':</span>';
+        const grp = groups[g];
+        for (let i = 0; i < grp.vals.length; i++) {
+          const styles = [];
+          if (grp.sortedIdxs && grp.sortedIdxs.includes(i)) styles.push('sorted');
+          if (grp.medianIdx === i) styles.push('median');
+          if (grp.pivotIdx === i) styles.push('pivot');
+          html += '<div class="group-val ' + styles.join(' ') + '" style="border-color:' + (g===0?'#00ccff':g===1?'#ffcc00':'#ff66ff') + '">' + grp.vals[i] + '</div>';
+        }
+        row.innerHTML = html;
+        area.appendChild(row);
+      }
+    }
+
+    function renderPartition(less, equal, greater) {
+      const area = document.getElementById('partitionInfo');
+      area.innerHTML = '<div class="partition-info">' +
+        '<div class="partition-box less-box"><div class="p-label">&lt; pivot</div><div class="p-val">' + (less.length ? '[' + less.join(', ') + ']' : '∅') + '</div></div>' +
+        '<div class="partition-box equal-box"><div class="p-label">= pivot</div><div class="p-val">' + (equal.length ? '[' + equal.join(', ') + ']' : '∅') + '</div></div>' +
+        '<div class="partition-box greater-box"><div class="p-label">&gt; pivot</div><div class="p-val">' + (greater.length ? '[' + greater.join(', ') + ']' : '∅') + '</div></div>' +
+        '</div>';
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      if (step.arr) arr = [...step.arr];
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      if (step.highlights) {
+        step.highlights.forEach(h => {
+          const bar = document.getElementById('bar-' + h.idx);
+          const item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      const maxVal = Math.max(...arr, 1);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) { bar.style.height = (arr[i] / maxVal * 200) + 'px'; bar.textContent = arr[i]; }
+        if (item) item.textContent = arr[i];
+      }
+      if (step.groups) { assignBarGroup(step.groups); renderGroups(step.groups); }
+      if (step.partition) renderPartition(step.partition.less, step.partition.equal, step.partition.greater);
+      if (step.clearPartition) document.getElementById('partitionInfo').innerHTML = '';
+      document.getElementById('sidebarPhase').textContent = step.phase;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active"><h3>Problem Setup</h3><p><b>Median-of-Medians</b> (Blum-Floyd-Pratt-Rivest-Tarjan) finds the <span class="dim">k-th smallest</span> element in <b>O(n)</b> worst-case time.</p><p>Input: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p><p>Find the <span class="dim">3rd smallest</span> element (k=3).</p><p>Steps: Group by 5 → Sort each group → Find medians → Recursive select on medians → Partition → Recurse.</p><p class="note">Press Play or Step to begin.</p></div>';
+      clearHighlights();
+      initDisplay();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const result = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('resultText').textContent = 'The ' + K + (K===1?'st':K===2?'nd':K===3?'rd':'th') + ' smallest element is ' + result.answer;
+      document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Found k-th Smallest!</h3><p>k = <span class="dim">' + K + '</span></p><p class="result-line">Answer: ' + result.answer + '</p><p>Sorted array: <span class="dim">[' + result.sorted.join(', ') + ']</span></p><p>The ' + K + (K===1?'st':K===2?'nd':K===3?'rd':'th') + ' smallest is <span class="result-line">' + result.answer + '</span></p><h3 style="margin-top:10px;">Key Points</h3><p>• Guarantees <span class="dim">O(n)</span> worst-case by choosing a good pivot</p><p>• Groups of 5 ensure the pivot eliminates at least 30% of elements</p><p>• Recurrence: T(n) ≤ T(n/5) + T(7n/10) + O(n) = O(n)</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(n) worst-case</p><p><span class="dim">Space:</span> O(log n) recursion stack</p></div>';
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function buildSteps() {
+      steps = [];
+      arr = [...initialArr];
+      const k = K;
+
+      steps.push({
+        type: 'init', arr: [...arr], highlights: [], clearPartition: true,
+        groups: null,
+        phase: 'Initialize — Array of ' + arr.length + ' elements, k=' + k,
+        phaseTitle: 'Initialize',
+        action: 'Array ready, k=' + k,
+        explanation: '<div class="explain-section active"><h3>Initialize</h3><p>Array: <span class="dim">[' + arr.join(', ') + ']</span></p><p>Goal: Find the <span class="dim">' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + '</span> smallest element.</p><p class="note">We use divide-and-conquer with median-of-medians pivot selection.</p></div>'
+      });
+
+      const groupSize = 5;
+      const groups = [];
+      let idx = 0;
+      let gid = 0;
+      while (idx < arr.length) {
+        const g = { gid: gid, vals: [], indices: [], sortedIdxs: [], medianIdx: -1, pivotIdx: -1 };
+        for (let j = 0; j < groupSize && idx < arr.length; j++) {
+          g.vals.push(arr[idx]);
+          g.indices.push(idx);
+          idx++;
+        }
+        groups.push(g);
+        gid++;
+      }
+
+      let highlights = [];
+      groups.forEach(g => { g.indices.forEach(i => { highlights.push({idx: i, cls: getGroupColor(g.gid)}); }); });
+      steps.push({
+        type: 'group', arr: [...arr], highlights: highlights, clearPartition: true,
+        groups: groups.map(g => ({vals: [...g.vals], indices: [...g.indices], sortedIdxs: [], medianIdx: -1, pivotIdx: -1})),
+        phase: 'Group — Divide into ' + groups.length + ' groups of ≤' + groupSize,
+        phaseTitle: 'Group Phase',
+        action: groups.length + ' groups formed',
+        explanation: '<div class="explain-section active"><h3>Divide into Groups of ' + groupSize + '</h3><p>' + groups.length + ' groups formed:</p>' +
+          groups.map((g, i) => '<p>Group ' + i + ': <span class="dim" style="color:' + (i===0?'#00ccff':i===1?'#ffcc00':'#ff66ff') + '">[' + g.vals.join(', ') + ']</span></p>').join('') +
+          '<p class="note">Each group has at most 5 elements for the median calculation.</p></div>'
+      });
+
+      for (let g = 0; g < groups.length; g++) {
+        const grp = groups[g];
+        const sortedVals = [...grp.vals].sort((a, bb) => a - bb);
+        const medIdxInGroup = Math.floor((grp.vals.length - 1) / 2);
+        const medianVal = sortedVals[medIdxInGroup];
+        const sortedIdxs = [];
+        const tmpGroup = {vals: [...grp.vals], indices: [...grp.indices], sortedIdxs: [], medianIdx: -1, pivotIdx: -1};
+
+        steps.push({
+          type: 'sort_group', arr: [...arr],
+          highlights: grp.indices.map(i => ({idx: i, cls: getGroupColor(g)})), clearPartition: true,
+          groups: (() => {
+            const gs = groups.map((gg, ii) => {
+              if (ii === g) return {vals: [...sortedVals], indices: [...gg.indices], sortedIdxs: Array.from({length: sortedVals.length}, (_, kk) => kk), medianIdx: medIdxInGroup, pivotIdx: -1};
+              const prev = steps.filter(s => s.type === 'sort_group' || s.type === 'group');
+              const last = prev[prev.length - 1];
+              return {vals: [...gg.vals], indices: [...gg.indices], sortedIdxs: [], medianIdx: -1, pivotIdx: -1};
+            });
+            return gs;
+          })(),
+          phase: 'Sort Group ' + g + ' — [' + grp.vals.join(', ') + '] → [' + sortedVals.join(', ') + '], median=' + medianVal,
+          phaseTitle: 'Sort Group ' + g,
+          action: 'Group ' + g + ' sorted, median=' + medianVal,
+          explanation: '<div class="explain-section active"><h3>Sort Group ' + g + '</h3><p>Before: <span class="dim" style="color:' + (g===0?'#00ccff':g===1?'#ffcc00':'#ff66ff') + '">[' + grp.vals.join(', ') + ']</span></p><p>After:  <span class="dim" style="color:' + (g===0?'#00ccff':g===1?'#ffcc00':'#ff66ff') + '">[' + sortedVals.join(', ') + ']</span></p><p>Median (index ' + medIdxInGroup + '): <span class="result-line">' + medianVal + '</span></p></div>'
+        });
+
+        grp.vals = [...sortedVals];
+        grp.medianIdx = medIdxInGroup;
+        grp.sortedIdxs = Array.from({length: sortedVals.length}, (_, kk) => kk);
+      }
+
+      const medians = groups.map(g => g.vals[g.medianIdx]);
+      const medianGroups = [];
+      let mmIdx = 0;
+      let mmGid = 0;
+      while (mmIdx < medians.length) {
+        const mg = {vals: [], indices: [], sortedIdxs: [], medianIdx: -1, pivotIdx: -1, gid: mmGid};
+        mg.vals.push(medians[mmIdx]);
+        mg.indices.push(mmIdx);
+        medianGroups.push(mg);
+        mmGid++;
+        mmIdx++;
+      }
+
+      const pivotGroup = medianGroups[0];
+      const pivotSorted = [...pivotGroup.vals].sort((a, bb) => a - bb);
+      const pivotIdxInGroup = Math.floor((pivotGroup.vals.length - 1) / 2);
+      const pivot = pivotSorted[pivotIdxInGroup];
+
+      steps.push({
+        type: 'median_of_medians', arr: [...arr], clearPartition: true,
+        highlights: (() => {
+          const hs = [];
+          for (let g = 0; g < groups.length; g++) {
+            if (groups[g].medianIdx >= 0) {
+              const actualIdx = groups[g].indices[groups[g].medianIdx];
+              hs.push({idx: actualIdx, cls: 'median'});
+            }
+          }
+          return hs;
+        })(),
+        groups: (() => {
+          const gs = groups.map(gg => ({vals: [...gg.vals], indices: [...gg.indices], sortedIdxs: [...gg.sortedIdxs], medianIdx: gg.medianIdx, pivotIdx: -1}));
+          return gs;
+        })(),
+        phase: 'Find Median of Medians — pivot=' + pivot,
+        phaseTitle: 'Median of Medians',
+        action: 'Medians: [' + medians.join(', ') + '], selecting pivot=' + pivot,
+        explanation: '<div class="explain-section active"><h3>Find Median of Medians (Pivot)</h3><p>Medians from each group: <span class="dim">[' + medians.join(', ') + ']</span></p><p>Median of medians (our pivot): <span class="result-line">' + pivot + '</span></p><p class="note">This pivot guarantees at least 30% of elements are on each side.</p></div>'
+      });
+
+      let pivotDisplayIdx = -1;
+      for (let g = 0; g < groups.length; g++) {
+        const grp = groups[g];
+        for (let i = 0; i < grp.vals.length; i++) {
+          if (grp.vals[i] === pivot) {
+            pivotDisplayIdx = grp.indices[i];
+            break;
+          }
+        }
+        if (pivotDisplayIdx >= 0) break;
+      }
+      if (pivotDisplayIdx < 0) pivotDisplayIdx = 0;
+
+      steps.push({
+        type: 'pivot', arr: [...arr], clearPartition: true,
+        highlights: [{idx: pivotDisplayIdx, cls: 'pivot'}],
+        groups: (() => {
+          const gs = groups.map(gg => ({vals: [...gg.vals], indices: [...gg.indices], sortedIdxs: [...gg.sortedIdxs], medianIdx: gg.medianIdx, pivotIdx: -1}));
+          for (let g = 0; g < groups.length; g++) {
+            const grp = groups[g];
+            for (let i = 0; i < grp.vals.length; i++) {
+              if (grp.vals[i] === pivot) {
+                gs[g].pivotIdx = i;
+              }
+            }
+          }
+          return gs;
+        })(),
+        phase: 'Pivot Selected — pivot=' + pivot,
+        phaseTitle: 'Pivot',
+        action: 'Pivot = ' + pivot,
+        explanation: '<div class="explain-section active"><h3>Pivot Selected: ' + pivot + '</h3><p>Using the median of medians as the pivot for partitioning.</p><p>Highlighted in <span class="dim" style="color:#ff6600">orange</span>.</p><p class="note">Now we partition the array around this pivot.</p></div>'
+      });
+
+      const less = arr.filter(x => x < pivot);
+      const equal = arr.filter(x => x === pivot);
+      const greater = arr.filter(x => x > pivot);
+
+      const lessIdxs = []; const equalIdxs = []; const greaterIdxs = [];
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i] < pivot) lessIdxs.push(i);
+        else if (arr[i] === pivot) equalIdxs.push(i);
+        else greaterIdxs.push(i);
+      }
+
+      steps.push({
+        type: 'partition', arr: [...arr], clearPartition: false,
+        partition: {less: [...less], equal: [...equal], greater: [...greater]},
+        highlights: [
+          ...lessIdxs.map(i => ({idx: i, cls: 'less'})),
+          ...equalIdxs.map(i => ({idx: i, cls: 'equal'})),
+          ...greaterIdxs.map(i => ({idx: i, cls: 'greater'}))
+        ],
+        groups: null,
+        phase: 'Partition — Less: [' + less.join(', ') + '] | Eq: [' + equal.join(', ') + '] | Gt: [' + greater.join(', ') + ']',
+        phaseTitle: 'Partition',
+        action: 'Partitioned around pivot=' + pivot,
+        explanation: '<div class="explain-section active"><h3>Partition Around Pivot = ' + pivot + '</h3><p><span class="dim" style="color:#00ff88;">Less than pivot:</span> [' + (less.length ? less.join(', ') : '') + '] (count=' + less.length + ')</p><p><span class="dim" style="color:#ffcc00;">Equal to pivot:</span> [' + (equal.length ? equal.join(', ') : '') + '] (count=' + equal.length + ')</p><p><span class="dim" style="color:#ff4444;">Greater than pivot:</span> [' + (greater.length ? greater.join(', ') : '') + '] (count=' + greater.length + ')</p></div>'
+      });
+
+      let answer = null;
+      let foundPhase = '';
+      if (k <= less.length) {
+        foundPhase = 'k ≤ |less| → recurse on left partition with k=' + k;
+        answer = 'Recurse on left: k=' + k + ' in [' + less.join(', ') + ']';
+      } else if (k <= less.length + equal.length) {
+        answer = pivot;
+        foundPhase = 'k = ' + k + ' = ' + less.length + ' + 1 → pivot is the answer!';
+        steps.push({
+          type: 'found', arr: [...arr], clearPartition: false,
+          partition: {less: [...less], equal: [...equal], greater: [...greater]},
+          highlights: [{idx: pivotDisplayIdx, cls: 'pivot'}],
+          groups: null,
+          phase: '✅ Found! k=' + k + ', answer=' + pivot,
+          phaseTitle: '✓ Found!',
+          action: '3rd smallest = ' + pivot,
+          explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Found the ' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + ' Smallest!</h3><p>|Less| = ' + less.length + ', |Equal| = ' + equal.length + '</p><p>k = ' + k + ', and ' + less.length + ' < ' + k + ' ≤ ' + (less.length + equal.length) + '</p><p>So the answer is the pivot: <span class="result-line">' + pivot + '</span></p><p>Sorted position ' + k + ': <span class="result-line">' + pivot + '</span></p></div>'
+        });
+      } else {
+        foundPhase = 'k > |less| + |equal| → recurse on right partition with k=' + (k - less.length - equal.length);
+        answer = 'Recurse on right: k=' + (k - less.length - equal.length) + ' in [' + greater.join(', ') + ']';
+      }
+
+      if (answer !== pivot) {
+        steps.push({
+          type: 'recurse', arr: [...arr], clearPartition: true,
+          highlights: [], groups: null,
+          phase: foundPhase,
+          phaseTitle: 'Recurse',
+          action: answer,
+          explanation: '<div class="explain-section active"><h3>Recursive Step</h3><p>' + foundPhase + '</p><p class="note">In our case, k=3 and |less|=2, so 3 = 2+1 → the pivot is the answer!</p></div>'
+        });
+        steps.push({
+          type: 'found', arr: [...arr], clearPartition: false,
+          partition: {less: [...less], equal: [...equal], greater: [...greater]},
+          highlights: [{idx: pivotDisplayIdx, cls: 'pivot'}],
+          groups: null,
+          phase: '✅ Found! k=' + k + ', answer=' + pivot,
+          phaseTitle: '✓ Found!',
+          action: '3rd smallest = ' + pivot,
+          explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ Found the ' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + ' Smallest!</h3><p>|Less| = ' + less.length + ', |Equal| = ' + equal.length + '</p><p>k = ' + k + ', and ' + less.length + ' < ' + k + ' ≤ ' + (less.length + equal.length) + '</p><p>So the answer is the pivot: <span class="result-line">' + pivot + '</span></p><p>Sorted position ' + k + ': <span class="result-line">' + pivot + '</span></p></div>'
+        });
+      }
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

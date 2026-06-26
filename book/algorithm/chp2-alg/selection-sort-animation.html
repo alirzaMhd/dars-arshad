@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selection Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+    .chart-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 6px;
+      height: 250px;
+      margin: 20px 0;
+      padding: 15px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+    }
+    .bar {
+      width: 40px;
+      transition: all 0.3s;
+      border-radius: 4px 4px 0 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 5px;
+      font-size: 0.75em;
+      color: #e0e0e0;
+      font-weight: bold;
+      background: #1a1a2e;
+      border: 1px solid #444;
+    }
+    .bar.comparing { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.swapping { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.current { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+
+    .table-section { margin: 20px 0; }
+    .table-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      width: 72px;
+      height: 38px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.78em;
+      transition: all 0.3s;
+    }
+    th {
+      background: #1a1a2e;
+      color: #00ccff;
+      font-weight: bold;
+    }
+    td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    td.current {
+      background: #1a0a00 !important;
+      color: #ff6600 !important;
+      border-color: #ff6600 !important;
+      box-shadow: 0 0 15px #ff660044;
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+    td.computing {
+      background: #1a1a00 !important;
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .array-display {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+    .array-item {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #444;
+      border-radius: 6px;
+      background: #111;
+      font-weight: bold;
+      font-size: 0.85em;
+    }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.swapping { border-color: #ff6600; background: #1a0a00; color: #ff6600; }
+  </style>
+</head>
+<body>
+  <h1>Selection Sort</h1>
+  <p class="subtitle">Sorting Algorithm — Selection Sort</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div class="chart-container" id="chartContainer"></div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Selection Sort</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Sorting Complete!</h2>
+        <p>Sorted Array: <span id="finalArray" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></span></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Selection Sort</b>.</p>
+          <p>Input array: <span class="dim" id="initArrayDisplay"></span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Divide the array into a sorted region (left) and unsorted region (right). Repeatedly find the smallest element in the unsorted region and swap it with the leftmost unsorted element.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function precomputeAll() { return [...arr].sort((a,b)=>a-b); }
+
+    function buildSteps() {
+      steps = [];
+      let a = [...initialArr];
+      const n = a.length;
+
+      for (let i = 0; i < n - 1; i++) {
+        let minIdx = i;
+
+        for (let j = i + 1; j < n; j++) {
+          let explain = `<div class="explain-section active">
+            <h3>Scanning for Minimum — Pass ${i+1}</h3>
+            <p>Comparing current minimum at index <span class="dim">${minIdx}</span> (value <span class="dim">${a[minIdx]}</span>) with element at index <span class="dim">${j}</span> (value <span class="dim">${a[j]}</span>).</p>
+            <p style="margin-top:6px;">The sorted region currently covers positions <b>0..${i-1}</b>. We are scanning the unsorted region <b>${i}..${n-1}</b> to find the smallest element.</p>`;
+          if (a[j] < a[minIdx]) {
+            explain += `<p><span class="split-info">→ ${a[j]} &lt; ${a[minIdx]}</span>, so position ${j} becomes the new minimum candidate.</p>`;
+          } else {
+            explain += `<p>→ ${a[j]} ≥ ${a[minIdx]}, so current minimum stays at position ${minIdx}.</p>`;
+          }
+          explain += `<p class="note">We compare each unsorted element with the current minimum, keeping track of the smallest seen so far.</p></div>`;
+
+          steps.push({
+            type: 'compare', i: minIdx, j: j,
+            phase: `Finding minimum — comparing positions ${minIdx} and ${j}`,
+            explanation: explain,
+            highlights: [{idx: minIdx, cls: 'comparing'}, {idx: j, cls: 'comparing'}]
+          });
+          if (a[j] < a[minIdx]) minIdx = j;
+        }
+
+        if (minIdx !== i) {
+          let explain = `<div class="explain-section active">
+            <h3>Swapping — Pass ${i+1}</h3>
+            <p>Swap the minimum element <span class="dim">${a[minIdx]}</span> (at index ${minIdx}) with the element at the boundary of the sorted region <span class="dim">${a[i]}</span> (at index ${i}).</p>
+            <p style="margin-top:6px;">The minimum of the unsorted region <b>${i}..${n-1}</b> is <span class="dim">${a[minIdx]}</span>. After swapping, it will be placed at position <b>${i}</b>, extending the sorted region.</p>
+            <span class="formula-line">arr[${i}] ↔ arr[${minIdx}] : ${a[i]} ↔ ${a[minIdx]}</span>
+            <p class="note">After this swap, positions 0..${i} will contain the ${i+1} smallest elements in sorted order.</p></div>`;
+          steps.push({
+            type: 'swap', i: i, j: minIdx,
+            v1: a[i], v2: a[minIdx],
+            phase: `Swap arr[${i}] (${a[i]}) ↔ arr[${minIdx}] (${a[minIdx]})`,
+            explanation: explain,
+            highlights: [{idx: i, cls: 'swapping'}, {idx: minIdx, cls: 'swapping'}]
+          });
+          [a[i], a[minIdx]] = [a[minIdx], a[i]];
+        }
+
+        let explain = `<div class="explain-section active">
+          <h3>Position ${i} Sorted</h3>
+          <p>Position <b>${i}</b> now contains its final sorted value: <span class="dim" style="color:#00ff88;">${a[i]}</span>.</p>
+          <p style="margin-top:6px;">The sorted region has grown to <b>0..${i}</b>. The unsorted region is now <b>${i+1}..${n-1}</b>.</p>
+          <p class="note">Selection Sort maintains the invariant that all elements to the left of the boundary are in their final sorted positions.</p></div>`;
+        steps.push({
+          type: 'sorted', i: i,
+          phase: `Position ${i} is now sorted`,
+          explanation: explain,
+          highlights: [{idx: i, cls: 'sorted'}]
+        });
+      }
+
+      let explain = `<div class="explain-section active">
+        <h3>Position ${n-1} Sorted</h3>
+        <p>Position <b>${n-1}</b> is the last remaining element. When all other positions are sorted, this one is automatically in its correct place.</p>
+        <p class="result-line">Sorted: [${a.join(', ')}]</p>
+        <p class="note">The array is now fully sorted in ascending order.</p></div>`;
+      steps.push({
+        type: 'sorted', i: n-1,
+        phase: 'All positions sorted',
+        explanation: explain,
+        highlights: [{idx: n-1, cls: 'sorted'}]
+      });
+    }
+
+    function initDisplay() {
+      buildSteps();
+      renderBars();
+      renderArrayDisplay();
+      document.getElementById('totalSteps').textContent = steps.length;
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('initArrayDisplay').textContent = '[' + initialArr.join(', ') + ']';
+    }
+
+    function renderBars() {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      arr.forEach((val, idx) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + idx;
+        bar.style.height = (val / maxVal * 200) + 'px';
+        bar.textContent = val;
+        container.appendChild(bar);
+      });
+    }
+
+    function renderArrayDisplay() {
+      const container = document.getElementById('arrayDisplay');
+      container.innerHTML = '';
+      arr.forEach((val, idx) => {
+        const el = document.createElement('div');
+        el.className = 'array-item';
+        el.id = 'arr-item-' + idx;
+        el.textContent = val;
+        container.appendChild(el);
+      });
+    }
+
+    function clearHighlights() {
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      });
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      if (step.type === 'compare') {
+        document.getElementById('phaseDisplay').textContent = 'Comparing';
+        document.getElementById('computingDisplay').textContent = `Comparing arr[${step.i}] (${arr[step.i]}) and arr[${step.j}] (${arr[step.j]})`;
+      } else if (step.type === 'swap') {
+        document.getElementById('phaseDisplay').textContent = 'Swapping';
+        document.getElementById('computingDisplay').textContent = `Swap arr[${step.i}] (${step.v1}) ↔ arr[${step.j}] (${step.v2})`;
+        [arr[step.i], arr[step.j]] = [arr[step.j], arr[step.i]];
+      } else if (step.type === 'sorted') {
+        document.getElementById('phaseDisplay').textContent = 'Sorted';
+        document.getElementById('computingDisplay').textContent = `Position ${step.i} is now sorted`;
+      }
+      if (step.highlights) {
+        step.highlights.forEach(h => {
+          const bar = document.getElementById('bar-' + h.idx);
+          const item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      for (let i = 0; i < arr.length; i++) {
+        const item = document.getElementById('arr-item-' + i);
+        if (item) item.textContent = arr[i];
+        const bar = document.getElementById('bar-' + i);
+        if (bar) {
+          const maxVal = Math.max(...arr);
+          bar.style.height = (arr[i] / maxVal * 200) + 'px';
+          bar.textContent = arr[i];
+        }
+      }
+      document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Selection Sort</b>.</p>
+          <p>Input array: <span class="dim">[${initialArr.join(', ')}]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Divide the array into a sorted region (left) and unsorted region (right). Repeatedly find the smallest element in the unsorted region and swap it with the leftmost unsorted element.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+      clearHighlights();
+      renderBars();
+      renderArrayDisplay();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const sorted = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'Array sorted';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalArray').textContent = '[' + sorted.join(', ') + ']';
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar sorted';
+        if (item) item.className = 'array-item sorted';
+      });
+      document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>The array has been sorted using <b>Selection Sort</b>.</p>
+          <p class="result-line">Sorted: [${sorted.join(', ')}]</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n²) — two nested loops over n elements. For each position i, we scan n-i-1 elements to find the minimum.</p>
+          <p><span class="dim">Space:</span> O(1) — sorts in place using only a constant amount of extra memory.</p>
+        </div>`;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+  </script>
+</body>
+</html>

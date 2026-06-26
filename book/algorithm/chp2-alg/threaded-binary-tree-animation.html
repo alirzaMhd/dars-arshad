@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threaded Binary Tree Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.out-array { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.out-item { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.8em; transition: all 0.3s; }
+.out-item.visited { border-color: #ff6600; background: #1a0a00; color: #ff6600; animation: popIn 0.3s ease; }
+.out-item.done { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+@keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<h1>Threaded Binary Tree — Inorder Traversal</h1>
+<p class="subtitle">Tree Algorithms — Inorder traversal using threads (no recursion / no stack)</p>
+<div class="layout">
+<div class="main-panel">
+<canvas id="treeCanvas" width="700" height="450"></canvas>
+<div style="margin:10px 0;"><div style="color:#888;font-size:0.85em;margin-bottom:6px;text-align:center;">Inorder Traversal Result:</div><div class="out-array" id="outputArray"></div></div>
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+<div class="info-panel">
+<div><span class="label">Topic:</span> <span class="value">Threaded Binary Tree</span></div>
+<div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+<div><span class="label">Current:</span> <span class="value" id="computingDisplay">—</span></div>
+</div>
+<div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+<div class="result-section" id="resultSection">
+<h2>✅ Traversal Complete!</h2>
+<p id="resultText" style="color:#00ff88;font-size:1.1em;font-weight:bold;"></p>
+</div>
+</div>
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Idle — press Play or Step to begin.</div>
+<div id="explainArea">
+<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>A <b>threaded binary tree</b> adds thread pointers (dotted lines) to leaf nodes, pointing to the <span class="dim">inorder successor</span>.</p>
+<p>This enables <b>inorder traversal without recursion or explicit stack</b>.</p>
+<p>Tree built from <span class="dim">[14, 10, 37, 13, 29, 33, 48, 22]</span>.</p>
+<p>Threads shown as <span style="color:#ff66ff;">dotted magenta lines</span>.</p>
+<p>Algorithm: go to leftmost node, then repeatedly follow threads or go right.</p>
+<p class="note">Press Play or Step to begin the threaded inorder traversal.</p>
+</div>
+</div>
+</div>
+</div>
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+const values = [14, 10, 37, 13, 29, 33, 48, 22];
+
+class ThreadNode {
+  constructor(val) {
+    this.val = val;
+    this.left = null;
+    this.right = null;
+    this.isThreaded = false;
+  }
+}
+
+function buildThreadedTree(arr) {
+  const nodes = arr.map(v => new ThreadNode(v));
+  const root = nodes[0];
+  for (let i = 1; i < nodes.length; i++) {
+    let curr = root;
+    while (true) {
+      if (nodes[i].val < curr.val) {
+        if (!curr.left) { curr.left = nodes[i]; break; }
+        curr = curr.left;
+      } else {
+        if (!curr.right) { curr.right = nodes[i]; break; }
+        curr = curr.right;
+      }
+    }
+  }
+
+  function inorderCollect(node, list) {
+    if (!node) return;
+    inorderCollect(node.left, list);
+    list.push(node);
+    inorderCollect(node.right, list);
+  }
+
+  const inorderList = [];
+  inorderCollect(root, inorderList);
+
+  for (let i = 0; i < inorderList.length; i++) {
+    if (!inorderList[i].right) {
+      inorderList[i].isThreaded = true;
+      inorderList[i].right = (i + 1 < inorderList.length) ? inorderList[i + 1] : null;
+    }
+  }
+
+  return root;
+}
+
+const root = buildThreadedTree(values);
+
+function computePositions(node, canvasW) {
+  const positions = new Map();
+  function assignPos(node, x, y, xOff) {
+    if (!node) return;
+    positions.set(node, { x, y });
+    assignPos(node.left, x - xOff, y + 60, xOff * 0.5);
+    assignPos(node.right, x + xOff, y + 60, xOff * 0.5);
+  }
+  assignPos(node, canvasW / 2, 40, 200);
+  return positions;
+}
+
+let nodePositions;
+
+function drawTree(highlightNode, visitedNodes, threadActive) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  nodePositions = computePositions(root, W);
+
+  function getInorderList(node) {
+    const list = [];
+    function inorder(node) {
+      if (!node) return;
+      inorder(node.left);
+      list.push(node);
+      inorder(node.right);
+    }
+    inorder(node);
+    return list;
+  }
+
+  const inorderNodes = getInorderList(root);
+
+  for (let i = 0; i < inorderNodes.length; i++) {
+    const n = inorderNodes[i];
+    const pos = nodePositions.get(n);
+    if (n.isThreaded && n.right) {
+      const nextPos = nodePositions.get(n.right);
+      ctx.beginPath();
+      ctx.setLineDash([5, 5]);
+      ctx.moveTo(pos.x, pos.y + 18);
+      ctx.lineTo(nextPos.x, nextPos.y - 18);
+      ctx.strokeStyle = threadActive && n === highlightNode ? '#ff66ff' : '#ff66ff88';
+      ctx.lineWidth = threadActive && n === highlightNode ? 3 : 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function drawNode(node) {
+    if (!node) return;
+    const pos = nodePositions.get(node);
+    const isHighlight = highlightNode === node;
+    const isVisited = visitedNodes && visitedNodes.has(node);
+    const color = isHighlight ? '#ff6600' : (isVisited ? '#00ff88' : '#00ccff');
+    const bg = isHighlight ? '#1a0a00' : (isVisited ? '#0a1a12' : '#0d0d1a');
+
+    if (node.left) {
+      const lp = nodePositions.get(node.left);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y + 20);
+      ctx.lineTo(lp.x, lp.y - 20);
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawNode(node.left);
+    }
+    if (node.right && !node.isThreaded) {
+      const rp = nodePositions.get(node.right);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y + 20);
+      ctx.lineTo(rp.x, rp.y - 20);
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawNode(node.right);
+    }
+  }
+  drawNode(root);
+
+  function drawNodeCircle(node) {
+    if (!node) return;
+    const pos = nodePositions.get(node);
+    const isHighlight = highlightNode === node;
+    const isVisited = visitedNodes && visitedNodes.has(node);
+    const color = isHighlight ? '#ff6600' : (isVisited ? '#00ff88' : '#00ccff');
+    const bg = isHighlight ? '#1a0a00' : (isVisited ? '#0a1a12' : '#0d0d1a');
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isHighlight ? 3.5 : 2;
+    if (isHighlight) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 15;
+    } else if (isVisited) {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 8;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.val.toString(), pos.x, pos.y);
+
+    if (node.isThreaded) {
+      ctx.fillStyle = '#ff66ff';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('↴', pos.x, pos.y + 18);
+    }
+
+    drawNodeCircle(node.left);
+    if (!node.isThreaded) drawNodeCircle(node.right);
+  }
+  drawNodeCircle(root);
+
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('Dotted lines = threads (inorder successor pointers)', W / 2, H - 10);
+}
+
+function addOutput(val) {
+  const container = document.getElementById('outputArray');
+  const div = document.createElement('div');
+  div.className = 'out-item visited';
+  div.textContent = val;
+  container.appendChild(div);
+}
+
+function clearOutput() {
+  document.getElementById('outputArray').innerHTML = '';
+}
+
+function buildSteps() {
+  steps = [];
+
+  const inorderResult = [];
+  function inorderCollect(node) {
+    if (!node) return;
+    inorderCollect(node.left);
+    inorderResult.push(node.val);
+    inorderCollect(node.right);
+  }
+  inorderCollect(root);
+
+  const visitedSet = new Set();
+
+  function leftmost(node) {
+    while (node && node.left) node = node.left;
+    return node;
+  }
+
+  let curr = leftmost(root);
+  while (curr) {
+    visitedSet.add(curr);
+    steps.push({
+      type: 'visit',
+      node: curr,
+      val: curr.val,
+      visitedSet: new Set(visitedSet),
+      actionText: curr.isThreaded ? 'Via thread → ' + (curr.right ? curr.right.val : 'null') : 'Go right from ' + curr.val,
+      explanation: buildVisitExplanation(curr, visitedSet.size, inorderResult.length, curr.isThreaded)
+    });
+    if (curr.right) {
+      curr = curr.right;
+    } else {
+      break;
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    inorderResult: inorderResult,
+    explanation: buildDoneExplanation(inorderResult)
+  });
+}
+
+function buildVisitExplanation(node, idx, total, isThreaded) {
+  if (isThreaded) {
+    return `<div class="explain-section active">
+      <h3>✅ Visited ${node.val}</h3>
+      <p>Node <span class="dim">${node.val}</span> has no right child, but has a <b>thread</b> to <span class="dim">${node.right ? node.right.val : 'null'}</span>.</p>
+      <p>Following the thread <span style="color:#ff66ff;">(dotted pointer)</span> to the inorder successor.</p>
+      <p>Step <span class="dim">${idx}</span> of <span class="dim">${total}</span> in inorder traversal.</p>
+      <p>This is the key advantage: <b>no recursion or stack needed</b>.</p>
+    </div>`;
+  }
+  return `<div class="explain-section active">
+    <h3>✅ Visited ${node.val}</h3>
+    <p>Node <span class="dim">${node.val}</span> has a right child. Moving to right subtree.</p>
+    <p>Step <span class="dim">${idx}</span> of <span class="dim">${total}</span> in inorder traversal.</p>
+    <p>Regular pointer — following solid line arrow.</p>
+  </div>`;
+}
+
+function buildDoneExplanation(result) {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Inorder Traversal Complete!</h3>
+    <p>Final inorder sequence: <span class="formula-line">[${result.join(', ')}]</span></p>
+    <h3 style="margin-top:10px;">Key Insights</h3>
+    <p>• Threaded binary trees allow traversal with <b>O(1) extra space</b>.</p>
+    <p>• Threads replace <span class="dim">null</span> right pointers with inorder successor links.</p>
+    <p>• <b>Morris traversal</b> uses similar ideas without modifying the tree.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(n) — each node visited once</p>
+    <p><span class="dim">Space:</span> O(1) — no stack or recursion!</p>
+  </div>`;
+}
+
+function applyStep(step) {
+  if (step.type === 'visit') {
+    document.getElementById('phaseDisplay').textContent = 'Inorder Traversal';
+    document.getElementById('computingDisplay').textContent = 'Visiting ' + step.val;
+    drawTree(step.node, step.visitedSet, step.node.isThreaded);
+    addOutput(step.val);
+  } else if (step.type === 'done') {
+    finishAnimation();
+    return;
+  }
+
+  document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>A <b>threaded binary tree</b> adds thread pointers (dotted lines) to leaf nodes, pointing to the <span class="dim">inorder successor</span>.</p>
+    <p>This enables <b>inorder traversal without recursion or explicit stack</b>.</p>
+    <p>Tree built from <span class="dim">[14, 10, 37, 13, 29, 33, 48, 22]</span>.</p>
+    <p>Threads shown as <span style="color:#ff66ff;">dotted magenta lines</span>.</p>
+    <p>Algorithm: go to leftmost node, then repeatedly follow threads or go right.</p>
+    <p class="note">Press Play or Step to begin the threaded inorder traversal.</p>
+  </div>`;
+  clearOutput();
+  drawTree(null, new Set(), false);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'Inorder done';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultText').textContent = 'Inorder traversal using threads completed with O(1) space!';
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+drawTree(null, new Set(), false);
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

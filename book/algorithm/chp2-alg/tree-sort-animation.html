@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+    }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; max-width: 100%; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 250px; margin: 20px 0; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 40px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.75em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.inserting { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.traversing { background: #0a0a30; border-color: #00ccff; color: #00ccff; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.inserting { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.traversing { border-color: #00ccff; background: #0a0a30; color: #00ccff; }
+    .tree-caption { text-align: center; color: #888; font-size: 0.8em; margin: 5px 0 10px; }
+  </style>
+</head>
+<body>
+  <h1>Tree Sort</h1>
+  <p class="subtitle">Sorting Algorithm — Binary Search Tree + Inorder Traversal</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div id="algoDisplay">
+        <canvas id="treeCanvas" width="750" height="300"></canvas>
+        <p class="tree-caption">BST Visualization</p>
+        <div class="chart-container" id="chartContainer"></div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Tree Sort (BST)</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+        <div><span class="label">Inserted:</span> <span class="value" id="insertedDisplay">0 / 8</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Sorting Complete!</h2>
+        <p>Sorted Array: <span id="finalArray" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></span></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Tree Sort</b>.</p>
+          <p>Input array: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Insert each element into a <b>Binary Search Tree</b> (BST), then perform an <b>inorder traversal</b> to read elements in sorted order.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    let treeNodes = [];
+
+    function precomputeAll() { return [...arr].sort((a,b)=>a-b); }
+
+    class TreeNode {
+      constructor(val) {
+        this.val = val;
+        this.left = null;
+        this.right = null;
+        this.x = 0;
+        this.y = 0;
+      }
+    }
+
+    function drawTree(ctx, root, highlightVal, highlightColor) {
+      ctx.clearRect(0, 0, 750, 300);
+      if (!root) return;
+      function calcPositions(node, depth, l, r) {
+        if (!node) return;
+        let mid = (l + r) / 2;
+        node.x = mid;
+        node.y = 40 + depth * 55;
+        calcPositions(node.left, depth + 1, l, mid);
+        calcPositions(node.right, depth + 1, mid, r);
+      }
+      function drawEdges(node) {
+        if (!node) return;
+        if (node.left) {
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y + 18);
+          ctx.lineTo(node.left.x, node.left.y - 18);
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          drawEdges(node.left);
+        }
+        if (node.right) {
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y + 18);
+          ctx.lineTo(node.right.x, node.right.y - 18);
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          drawEdges(node.right);
+        }
+      }
+      function drawNodes(node) {
+        if (!node) return;
+        let color = '#00ccff';
+        if (node.val === highlightVal && highlightColor) color = highlightColor;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 18, 0, Math.PI*2);
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = 'bold 13px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(node.val, node.x, node.y);
+        drawNodes(node.left);
+        drawNodes(node.right);
+      }
+      calcPositions(root, 0, 30, 720);
+      drawEdges(root);
+      drawNodes(root);
+    }
+
+    function tsBuildSteps() {
+      steps = [];
+      let root = null;
+      let insertedVals = [];
+
+      function insertBST(val) {
+        let newNode = new TreeNode(val);
+        if (!root) {
+          root = newNode;
+          insertedVals.push(val);
+          steps.push({
+            type: 'insert_root',
+            arr: [...insertedVals],
+            rootVal: val,
+            highlightVal: val,
+            highlightColor: '#ffff00',
+            treeRoot: root,
+            phase: `Insert ${val} as root`,
+            phaseTitle: '🌱 Root Insert',
+            action: `${val} becomes root`,
+            explanation: `<div class="explain-section active"><h3>🌱 Insert Root: ${val}</h3><p>Tree was empty — <b>${val}</b> becomes the root of the BST.</p><p>All future insertions compare against this value.</p></div>`
+          });
+          return;
+        }
+        let cur = root;
+        let path = [];
+        while (cur) {
+          path.push(cur.val);
+          if (val < cur.val) {
+            if (!cur.left) {
+              cur.left = newNode;
+              insertedVals.push(val);
+              steps.push({
+                type: 'insert_left',
+                arr: [...insertedVals],
+                rootVal: root.val,
+                highlightVal: val,
+                highlightColor: '#ffff00',
+                parentVal: cur.val,
+                treeRoot: root,
+                phase: `Insert ${val} as left child of ${cur.val}`,
+                phaseTitle: '⬅ Insert Left',
+                action: `${val} < ${cur.val}, go left`,
+                explanation: `<div class="explain-section active"><h3>⬅ Insert ${val} (Left)</h3><p>${val} < ${cur.val}, so it goes to the <b>left subtree</b>.</p><p>Inserted as left child of <span class="dim">${cur.val}</span>.</p><p>Path: <span class="dim">${path.join(' → ')}</span></p></div>`
+              });
+              return;
+            }
+            cur = cur.left;
+          } else {
+            if (!cur.right) {
+              cur.right = newNode;
+              insertedVals.push(val);
+              steps.push({
+                type: 'insert_right',
+                arr: [...insertedVals],
+                rootVal: root.val,
+                highlightVal: val,
+                highlightColor: '#ffff00',
+                parentVal: cur.val,
+                treeRoot: root,
+                phase: `Insert ${val} as right child of ${cur.val}`,
+                phaseTitle: '➡ Insert Right',
+                action: `${val} ≥ ${cur.val}, go right`,
+                explanation: `<div class="explain-section active"><h3>➡ Insert ${val} (Right)</h3><p>${val} ≥ ${cur.val}, so it goes to the <b>right subtree</b>.</p><p>Inserted as right child of <span class="dim">${cur.val}</span>.</p><p>Path: <span class="dim">${path.join(' → ')}</span></p></div>`
+              });
+              return;
+            }
+            cur = cur.right;
+          }
+        }
+      }
+
+      // Insert all elements
+      for (let v of initialArr) {
+        insertBST(v);
+      }
+
+      steps.push({
+        type: 'tree_built',
+        arr: [...insertedVals],
+        highlightVal: -1,
+        treeRoot: root,
+        phase: 'BST built! Starting inorder traversal.',
+        phaseTitle: '✅ BST Complete',
+        action: 'All 8 elements inserted',
+        explanation: `<div class="explain-section active"><h3>✅ BST Complete</h3><p>All ${initialArr.length} elements have been inserted into the BST.</p><p>Now performing <b>inorder traversal</b> to retrieve sorted order.</p><p class="note">Inorder: left → root → right</p></div>`
+      });
+
+      // Inorder traversal
+      let sorted = [];
+      function inorder(node) {
+        if (!node) return;
+        inorder(node.left);
+        sorted.push(node.val);
+        steps.push({
+          type: 'traverse',
+          arr: [...sorted],
+          sortedSoFar: [...sorted],
+          highlightVal: node.val,
+          highlightColor: '#00ff88',
+          treeRoot: root,
+          phase: `Inorder: visit ${node.val}`,
+          phaseTitle: '🔍 Inorder Visit',
+          action: `Added ${node.val} to sorted output`,
+          explanation: `<div class="explain-section active"><h3>🔍 Inorder Visit: ${node.val}</h3><p>Visiting node <span class="dim">${node.val}</span></p><p>Sorted so far: [${sorted.join(', ')}]</p><p style="margin-top:6px;">Inorder rule: <b>Left → Root → Right</b></p></div>`
+        });
+        inorder(node.right);
+      }
+      inorder(root);
+
+      steps.push({
+        type: 'done',
+        arr: [...sorted],
+        highlightVal: -1,
+        treeRoot: root,
+        phase: 'All sorted!',
+        phaseTitle: '✓ Complete',
+        action: 'Array sorted',
+        explanation: ''
+      });
+    }
+
+    function clearHighlights() {
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      });
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      document.getElementById('insertedDisplay').textContent = (step.arr ? step.arr.length : 0) + ' / 8';
+      const ctx = document.getElementById('treeCanvas').getContext('2d');
+      if (step.treeRoot) {
+        let hlVal = step.highlightVal;
+        let hlColor = step.highlightColor;
+        if (step.type === 'traverse' && step.highlightColor === '#00ff88') {
+          drawTree(ctx, step.treeRoot, hlVal, '#00ff88');
+        } else if (step.type === 'done') {
+          drawTree(ctx, step.treeRoot, -1, null);
+        } else {
+          drawTree(ctx, step.treeRoot, hlVal, hlColor || '#ffff00');
+        }
+      } else {
+        ctx.clearRect(0, 0, 750, 300);
+      }
+      if (step.type === 'traverse' || step.type === 'done') {
+        for (let i = 0; i < arr.length; i++) {
+          const bar = document.getElementById('bar-' + i);
+          const item = document.getElementById('arr-item-' + i);
+          if (bar) {
+            if (step.sortedSoFar && step.sortedSoFar.includes(arr[i])) {
+              bar.className = 'bar sorted';
+              if (item) item.className = 'array-item sorted';
+            }
+          }
+        }
+        if (step.sortedSoFar) {
+          step.sortedSoFar.forEach((_, idx) => {
+            const bar = document.getElementById('bar-' + idx);
+            const item = document.getElementById('arr-item-' + idx);
+            if (bar) bar.className = 'bar sorted';
+            if (item) item.className = 'array-item sorted';
+          });
+        }
+      }
+      if (step.type === 'insert_root' || step.type === 'insert_left' || step.type === 'insert_right') {
+        const idx = initialArr.indexOf(step.highlightVal);
+        if (idx >= 0) {
+          const bar = document.getElementById('bar-' + idx);
+          const item = document.getElementById('arr-item-' + idx);
+          if (bar) bar.className = 'bar inserting';
+          if (item) item.className = 'array-item inserting';
+        }
+      }
+      let displayArr = step.sortedSoFar || step.arr || [];
+      for (let i = 0; i < Math.min(arr.length, displayArr.length); i++) {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (item) item.textContent = arr[i];
+        if (bar) {
+          const maxVal = Math.max(...arr);
+          bar.style.height = (arr[i] / maxVal * 200) + 'px';
+          bar.textContent = arr[i];
+        }
+      }
+      document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      if (step.type === 'done') {
+        document.getElementById('explainArea').innerHTML = `
+          <div class="explain-section active" style="border-left-color:#00ff88;">
+            <h3>✅ Algorithm Complete!</h3>
+            <p>The array has been sorted using <b>Tree Sort</b>.</p>
+            <p class="result-line">Sorted: [${step.arr.join(', ')}]</p>
+            <h3 style="margin-top:10px;">Complexity</h3>
+            <p><span class="dim">Time:</span> O(n log n) average, O(n²) worst-case</p>
+            <p><span class="dim">Space:</span> O(n) for tree nodes</p>
+          </div>`;
+      } else {
+        document.getElementById('explainArea').innerHTML = step.explanation;
+      }
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('insertedDisplay').textContent = '0 / 8';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Tree Sort</b>.</p>
+          <p>Input array: <span class="dim">[${initialArr.join(', ')}]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Insert each element into a <b>Binary Search Tree</b> (BST), then perform an <b>inorder traversal</b> to read elements in sorted order.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+      const ctx = document.getElementById('treeCanvas').getContext('2d');
+      ctx.clearRect(0, 0, 750, 300);
+      clearHighlights();
+      initDisplay();
+      tsBuildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const sorted = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'Array sorted';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalArray').textContent = '[' + sorted.join(', ') + ']';
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('bar-' + i);
+        const item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar sorted';
+        if (item) item.className = 'array-item sorted';
+      });
+      document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>The array has been sorted using <b>Tree Sort</b>.</p>
+          <p class="result-line">Sorted: [${sorted.join(', ')}]</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n log n) average, O(n²) worst-case</p>
+          <p><span class="dim">Space:</span> O(n) for tree nodes</p>
+        </div>`;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function initDisplay() {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      const maxVal = Math.max(...arr);
+      arr.forEach((val, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (val / maxVal * 200) + 'px';
+        bar.textContent = val;
+        container.appendChild(bar);
+      });
+      const ad = document.getElementById('arrayDisplay');
+      ad.innerHTML = '';
+      arr.forEach((val, i) => {
+        const item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = val;
+        ad.appendChild(item);
+      });
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    tsBuildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

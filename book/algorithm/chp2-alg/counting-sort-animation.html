@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counting Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+    }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 200px; margin: 12px 0; padding: 10px; background: #111; border: 1px solid #333; border-radius: 8px; }
+    .bar { width: 36px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; font-size: 0.7em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.comparing { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.swapping { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.counting { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .bar.placing { background: #0a0a30; border-color: #00ccff; color: #00ccff; }
+    .bar.active { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.done { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+    .array-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.85em; }
+    .array-item.sorted { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.comparing { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.counting { border-color: #ff66ff; background: #1a0030; color: #ff66ff; }
+    .array-item.placing { border-color: #00ccff; background: #0a0a30; color: #00ccff; }
+    .array-item.filled { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-label { text-align: center; color: #888; font-size: 0.75em; margin: 5px 0 2px; }
+    .array-label span { color: #00ccff; font-weight: bold; }
+    .count-chart { display: flex; justify-content: center; align-items: flex-end; gap: 2px; height: 150px; margin: 8px 0; padding: 8px; background: #0d0d1a; border: 1px solid #333; border-radius: 6px; }
+    .count-bar { width: 28px; transition: all 0.3s; border-radius: 3px 3px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 2px; font-size: 0.65em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .count-bar.active { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .count-bar.done { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .count-bar.cumulative { background: #0a0a30; border-color: #00ccff; color: #00ccff; }
+    .count-bar.placing { background: #1a0030; border-color: #ff66ff; color: #ff66ff; }
+    .section-title { color: #ff6600; font-size: 0.85em; font-weight: bold; margin: 12px 0 4px; text-align: center; }
+    .multi-section { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .multi-section > div { flex: 1; min-width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Counting Sort</h1>
+  <p class="subtitle">Sorting Algorithm — Integer Sorting (Non-Comparison Based)</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div id="algoDisplay">
+        <div class="section-title">Input Array</div>
+        <div class="chart-container" id="inputChart" style="height:160px;"></div>
+        <div class="section-title">Count Array (C[0..49])</div>
+        <div style="overflow-x:auto;padding:5px;">
+          <div class="count-chart" id="countChart"></div>
+        </div>
+        <div class="section-title">Cumulative Count (C'[0..49])</div>
+        <div style="overflow-x:auto;padding:5px;">
+          <div class="count-chart" id="cumulativeChart"></div>
+        </div>
+        <div class="section-title">Output Array</div>
+        <div class="chart-container" id="outputChart" style="height:160px;"></div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">Counting Sort</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span></div>
+        <div><span class="label">Range k:</span> <span class="value">49 (0..49)</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="result-section" id="resultSection">
+        <h2>✅ Sorting Complete!</h2>
+        <p>Sorted Array: <span id="finalArray" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></span></p>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Counting Sort</b>.</p>
+          <p>Input array: <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Count occurrences of each value, compute cumulative counts, then place each element directly into its correct sorted position. Non-comparison based — runs in O(n+k).</p>
+          <p><span class="dim">Range:</span> Values 10..48, k = 49</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let arr = [29, 10, 14, 37, 13, 33, 48, 22];
+    const initialArr = [...arr];
+    const K = 49;
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function precomputeAll() { return [...arr].sort((a,b)=>a-b); }
+
+    function csBuildSteps() {
+      steps = [];
+      let n = arr.length;
+      let count = new Array(K).fill(0);
+      let cum = new Array(K).fill(0);
+      let output = new Array(n).fill(-1);
+
+      // Step 1: Count occurrences
+      for (let i = 0; i < n; i++) {
+        let v = initialArr[i];
+        count[v]++;
+        steps.push({
+          type: 'count',
+          arr: [...initialArr],
+          count: [...count],
+          cum: [...cum],
+          output: [...output],
+          focusVal: v,
+          iPtr: i,
+          phase: `Count occurrences: a[${i}] = ${v} → count[${v}]++`,
+          phaseTitle: '🔢 Count Phase',
+          action: `count[${v}] = ${count[v]}`,
+          explanation: `<div class="explain-section active"><h3>🔢 Count Occurrences</h3><p>Processing a[${i}] = <span class="dim">${v}</span></p><p>Increment count[${v}] → ${count[v]}</p><span class="formula-line">count[value]++</span></div>`
+        });
+      }
+
+      steps.push({
+        type: 'count_done',
+        arr: [...initialArr],
+        count: [...count],
+        cum: [...cum],
+        output: [...output],
+        focusVal: -1,
+        iPtr: -1,
+        phase: 'Count phase complete.',
+        phaseTitle: '✅ Count Done',
+        action: 'Count array filled',
+        explanation: `<div class="explain-section active"><h3>✅ Count Phase Complete</h3><p>Each index in count[] stores how many times that value appears.</p><p>Now computing <b>cumulative counts</b>.</p></div>`
+      });
+
+      // Step 2: Cumulative counts
+      cum[0] = count[0];
+      for (let i = 1; i < K; i++) {
+        cum[i] = cum[i-1] + count[i];
+        steps.push({
+          type: 'cumulate',
+          arr: [...initialArr],
+          count: [...count],
+          cum: [...cum],
+          output: [...output],
+          focusVal: i,
+          iPtr: -1,
+          phase: `Cumulative: cum[${i}] = cum[${i-1}] + count[${i}] = ${cum[i-1]} + ${count[i]} = ${cum[i]}`,
+          phaseTitle: '📊 Cumulative Count',
+          action: `cum[${i}] = ${cum[i]}`,
+          explanation: `<div class="explain-section active"><h3>📊 Cumulative Count</h3><p>cum[${i}] = cum[${i-1}] + count[${i}]</p><span class="formula-line">cum[${i}] = ${cum[i-1]} + ${count[i]} = ${cum[i]}</span><p>cum[${i}] indicates <span class="dim">${cum[i]} elements</span> are ≤ ${i}.</p></div>`
+        });
+      }
+
+      steps.push({
+        type: 'cum_done',
+        arr: [...initialArr],
+        count: [...count],
+        cum: [...cum],
+        output: [...output],
+        focusVal: -1,
+        iPtr: -1,
+        phase: 'Cumulative phase complete.',
+        phaseTitle: '✅ Cumulative Done',
+        action: 'Cumulative array ready',
+        explanation: `<div class="explain-section active"><h3>✅ Cumulative Phase Complete</h3><p>cum[i] stores the number of elements ≤ i.</p><p>Now placing elements into output array.</p></div>`
+      });
+
+      // Step 3: Place elements (iterate from right to left for stability)
+      for (let i = n - 1; i >= 0; i--) {
+        let v = initialArr[i];
+        let pos = cum[v] - 1;
+        output[pos] = v;
+        cum[v]--;
+        steps.push({
+          type: 'place',
+          arr: [...initialArr],
+          count: [...count],
+          cum: [...cum],
+          output: [...output],
+          focusVal: v,
+          iPtr: i,
+          pos: pos,
+          phase: `Place a[${i}] = ${v} at output[${pos}]`,
+          phaseTitle: '📍 Place Element',
+          action: `output[${pos}] = ${v}`,
+          explanation: `<div class="explain-section active"><h3>📍 Place Element</h3><p>a[${i}] = <span class="dim">${v}</span> → output[${pos}] = ${v}</p><span class="formula-line">output[cum[value]-1] = value; cum[value]--</span><p>Iterating <b>right to left</b> for <b>stability</b>.</p></div>`
+        });
+      }
+
+      steps.push({
+        type: 'done',
+        arr: [...initialArr],
+        count: [...count],
+        cum: [...cum],
+        output: [...output],
+        focusVal: -1,
+        iPtr: -1,
+        phase: 'All sorted!',
+        phaseTitle: '✓ Complete',
+        action: 'Array sorted',
+        explanation: ''
+      });
+    }
+
+    function clearHighlights() {
+      arr.forEach((_, i) => {
+        const bar = document.getElementById('ibar-' + i);
+        const obar = document.getElementById('obar-' + i);
+        if (bar) bar.className = 'bar';
+        if (obar) obar.className = 'bar';
+      });
+      document.querySelectorAll('.count-bar').forEach(el => {
+        el.className = 'count-bar';
+      });
+    }
+
+    function initCountChart(containerId, data, label, cls) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      const maxVal = Math.max(...data, 1);
+      let visible = [];
+      let minIdx = 0;
+      let maxIdx = K - 1;
+      for (let i = 0; i < K; i++) {
+        if (data[i] > 0) { minIdx = Math.min(minIdx, i); maxIdx = Math.max(maxIdx, i); }
+      }
+      minIdx = Math.max(0, minIdx - 1);
+      maxIdx = Math.min(K - 1, maxIdx + 1);
+      for (let i = minIdx; i <= maxIdx; i++) visible.push(i);
+      visible.forEach(i => {
+        const bar = document.createElement('div');
+        bar.className = 'count-bar';
+        bar.id = containerId + '-cb-' + i;
+        let h = (data[i] / maxVal * 120);
+        if (h < 4 && data[i] > 0) h = 4;
+        bar.style.height = Math.max(h, 2) + 'px';
+        bar.textContent = data[i] || '';
+        bar.title = i + ': ' + data[i];
+        if (i === label) bar.classList.add(cls);
+        container.appendChild(bar);
+        const idxLabel = document.createElement('div');
+        idxLabel.style.cssText = 'text-align:center;font-size:0.55em;color:#555;width:28px;';
+        idxLabel.textContent = i;
+        container.appendChild(idxLabel);
+      });
+    }
+
+    function initCharts() {
+      let count = new Array(K).fill(0);
+      let cum = new Array(K).fill(0);
+      initCountChart('countChart', count, -1, '');
+      initCountChart('cumulativeChart', cum, -1, '');
+
+      const ic = document.getElementById('inputChart');
+      ic.innerHTML = '';
+      const maxV = Math.max(...arr);
+      arr.forEach((val, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'ibar-' + i;
+        bar.style.height = (val / maxV * 120) + 'px';
+        bar.textContent = val;
+        ic.appendChild(bar);
+      });
+
+      const oc = document.getElementById('outputChart');
+      oc.innerHTML = '';
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'obar-' + i;
+        bar.style.height = '2px';
+        bar.textContent = '';
+        oc.appendChild(bar);
+      }
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+
+      // Update count chart
+      if (step.count) initCountChart('countChart', step.count, step.focusVal, 'active');
+      // Update cumulative chart
+      if (step.cum) initCountChart('cumulativeChart', step.cum, (step.type==='cumulate'||step.type==='place') ? step.focusVal : -1, step.type==='cumulate'?'cumulative':(step.type==='place'?'placing':''));
+
+      // Update output chart
+      const oc = document.getElementById('outputChart');
+      oc.innerHTML = '';
+      let outArr = step.output || [];
+      let maxV = Math.max(...arr, 1);
+      for (let i = 0; i < arr.length; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'obar-' + i;
+        if (outArr[i] !== -1 && outArr[i] !== undefined) {
+          bar.style.height = (outArr[i] / maxV * 120) + 'px';
+          bar.textContent = outArr[i];
+          bar.classList.add('sorted');
+        } else {
+          bar.style.height = '2px';
+          bar.textContent = '';
+        }
+        oc.appendChild(bar);
+      }
+
+      // Update input chart
+      const ic = document.getElementById('inputChart');
+      ic.innerHTML = '';
+      arr.forEach((val, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'ibar-' + i;
+        bar.style.height = (val / maxV * 120) + 'px';
+        bar.textContent = val;
+        if (step.iPtr === i && (step.type === 'count' || step.type === 'place')) {
+          bar.classList.add(step.type === 'count' ? 'counting' : 'placing');
+        }
+        ic.appendChild(bar);
+      });
+
+      document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      if (step.type === 'done') {
+        let sorted = step.output || [];
+        document.getElementById('explainArea').innerHTML = `
+          <div class="explain-section active" style="border-left-color:#00ff88;">
+            <h3>✅ Algorithm Complete!</h3>
+            <p>The array has been sorted using <b>Counting Sort</b>.</p>
+            <p class="result-line">Sorted: [${sorted.join(', ')}]</p>
+            <h3 style="margin-top:10px;">Complexity</h3>
+            <p><span class="dim">Time:</span> O(n + k) = O(8 + 49) = O(57)</p>
+            <p><span class="dim">Space:</span> O(n + k) for count and output arrays</p>
+          </div>`;
+      } else {
+        document.getElementById('explainArea').innerHTML = step.explanation;
+      }
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1500 - parseInt(document.getElementById('speedSlider').value) * 130; }
+
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Sort the given array in <b>ascending order</b> using <b>Counting Sort</b>.</p>
+          <p>Input array: <span class="dim">[${initialArr.join(', ')}]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Count occurrences of each value, compute cumulative counts, then place each element directly into its correct sorted position. Non-comparison based — runs in O(n+k).</p>
+          <p><span class="dim">Range:</span> Values 10..48, k = 49</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>`;
+      clearHighlights();
+      initCharts();
+      csBuildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const sorted = precomputeAll();
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = 'Array sorted';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalArray').textContent = '[' + sorted.join(', ') + ']';
+      document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = `
+        <div class="explain-section active" style="border-left-color:#00ff88;">
+          <h3>✅ Algorithm Complete!</h3>
+          <p>The array has been sorted using <b>Counting Sort</b>.</p>
+          <p class="result-line">Sorted: [${sorted.join(', ')}]</p>
+          <h3 style="margin-top:10px;">Complexity</h3>
+          <p><span class="dim">Time:</span> O(n + k) = O(8 + 49) = O(57)</p>
+          <p><span class="dim">Space:</span> O(n + k) for count and output arrays</p>
+        </div>`;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initCharts();
+    csBuildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>

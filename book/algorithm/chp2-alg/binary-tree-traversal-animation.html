@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Tree Traversal Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+.traversal-section { margin: 15px 0; padding: 12px; background: #111; border: 1px solid #333; border-radius: 10px; }
+.traversal-section h3 { color: #00ccff; font-size: 0.95em; margin-bottom: 8px; }
+.traversal-output { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 36px; }
+.out-item { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.8em; transition: all 0.3s; }
+.out-item.visited { border-color: #ff6600; background: #1a0a00; color: #ff6600; animation: popIn 0.3s ease; }
+.out-item.done { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+@keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<h1>Binary Tree Traversal</h1>
+<p class="subtitle">Tree Algorithms — Preorder, Inorder, Postorder, Level-order</p>
+<div class="layout">
+<div class="main-panel">
+<canvas id="treeCanvas" width="700" height="400"></canvas>
+<div id="traversalType" style="text-align:center;color:#ff6600;font-size:1em;font-weight:bold;margin:5px 0;"></div>
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+<div class="info-panel">
+<div><span class="label">Topic:</span> <span class="value">Binary Tree Traversals</span></div>
+<div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+<div><span class="label">Current:</span> <span class="value" id="computingDisplay">—</span></div>
+</div>
+<div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+<div id="traversalSections"></div>
+<div class="result-section" id="resultSection">
+<h2>✅ All Traversals Complete!</h2>
+<p id="resultText" style="color:#00ff88;font-size:1.1em;font-weight:bold;"></p>
+</div>
+</div>
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Idle — press Play or Step to begin.</div>
+<div id="explainArea">
+<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>Binary Search Tree built from <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span>.</p>
+<p>Four traversal orders reveal different arrangements:</p>
+<p>• <b>Preorder</b>: Root → Left → Right</p>
+<p>• <b>Inorder</b>: Left → Root → Right (sorted order for BST)</p>
+<p>• <b>Postorder</b>: Left → Right → Root</p>
+<p>• <b>Level-order</b>: BFS level by level</p>
+<p class="note">Press Play to watch all four traversals in sequence.</p>
+</div>
+</div>
+</div>
+</div>
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+const values = [29, 10, 14, 37, 13, 33, 48, 22];
+
+function buildBST(arr) {
+  const nodes = arr.map(v => ({ val: v, left: null, right: null }));
+  const root = nodes[0];
+  for (let i = 1; i < nodes.length; i++) {
+    let curr = root;
+    while (true) {
+      if (nodes[i].val < curr.val) {
+        if (!curr.left) { curr.left = nodes[i]; break; }
+        curr = curr.left;
+      } else {
+        if (!curr.right) { curr.right = nodes[i]; break; }
+        curr = curr.right;
+      }
+    }
+  }
+  return root;
+}
+
+function computePositions(root, canvasW) {
+  const positions = new Map();
+  function assignPos(node, x, y, xOff) {
+    if (!node) return;
+    positions.set(node, { x, y });
+    assignPos(node.left, x - xOff, y + 60, xOff * 0.5);
+    assignPos(node.right, x + xOff, y + 60, xOff * 0.5);
+  }
+  assignPos(root, canvasW / 2, 40, 200);
+  return positions;
+}
+
+const root = buildBST(values);
+let nodePositions;
+
+function drawTree(highlightNode, visited) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  nodePositions = computePositions(root, W);
+
+  function drawNode(node) {
+    if (!node) return;
+    const pos = nodePositions.get(node);
+    const isHighlight = highlightNode === node;
+    const isVisited = visited && visited.has(node);
+    const color = isHighlight ? '#ff6600' : (isVisited ? '#00ff88' : '#00ccff');
+    const bg = isHighlight ? '#1a0a00' : (isVisited ? '#0a1a12' : '#0d0d1a');
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isHighlight ? 3.5 : 2;
+    if (isHighlight) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 15;
+    } else if (isVisited) {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 8;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.val.toString(), pos.x, pos.y);
+
+    if (node.left) {
+      const lp = nodePositions.get(node.left);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y + 20);
+      ctx.lineTo(lp.x, lp.y - 20);
+      ctx.strokeStyle = highlightNode && (node.left === highlightNode || node === highlightNode) ? '#ff6600' : '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawNode(node.left);
+    }
+    if (node.right) {
+      const rp = nodePositions.get(node.right);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y + 20);
+      ctx.lineTo(rp.x, rp.y - 20);
+      ctx.strokeStyle = highlightNode && (node.right === highlightNode || node === highlightNode) ? '#ff6600' : '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawNode(node.right);
+    }
+  }
+  drawNode(root);
+}
+
+function initTraversalSections() {
+  const container = document.getElementById('traversalSections');
+  const names = ['Preorder', 'Inorder', 'Postorder', 'Level-order'];
+  let html = '';
+  names.forEach(name => {
+    html += `<div class="traversal-section"><h3>${name}</h3><div class="traversal-output" id="output-${name}"></div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function clearOutputs() {
+  ['Preorder', 'Inorder', 'Postorder', 'Level-order'].forEach(name => {
+    document.getElementById('output-' + name).innerHTML = '';
+  });
+}
+
+function appendOutput(name, val) {
+  const container = document.getElementById('output-' + name);
+  const div = document.createElement('div');
+  div.className = 'out-item visited';
+  div.textContent = val;
+  container.appendChild(div);
+}
+
+function buildSteps() {
+  steps = [];
+
+  const traversals = [
+    { name: 'Preorder', order: 'Root → Left → Right' },
+    { name: 'Inorder', order: 'Left → Root → Right' },
+    { name: 'Postorder', order: 'Left → Right → Root' },
+    { name: 'Level-order', order: 'BFS (queue-based)' }
+  ];
+
+  let preorderResult = [], inorderResult = [], postorderResult = [], levelorderResult = [];
+  const visitedGlobal = new Set();
+
+  function preorder(node) {
+    if (!node) return;
+    preorderResult.push(node.val);
+    preorder(node.left);
+    preorder(node.right);
+  }
+  function inorder(node) {
+    if (!node) return;
+    inorder(node.left);
+    inorderResult.push(node.val);
+    inorder(node.right);
+  }
+  function postorder(node) {
+    if (!node) return;
+    postorder(node.left);
+    postorder(node.right);
+    postorderResult.push(node.val);
+  }
+  function levelorder(root) {
+    if (!root) return;
+    const q = [root];
+    while (q.length) {
+      const n = q.shift();
+      levelorderResult.push(n.val);
+      if (n.left) q.push(n.left);
+      if (n.right) q.push(n.right);
+    }
+  }
+
+  preorder(root);
+  inorder(root);
+  postorder(root);
+  levelorder(root);
+
+  const allResults = [preorderResult, inorderResult, postorderResult, levelorderResult];
+
+  traversals.forEach((t, tIdx) => {
+    const result = allResults[tIdx];
+    result.forEach((val, vIdx) => {
+      steps.push({
+        type: 'visit',
+        traversalName: t.name,
+        traversalOrder: t.order,
+        val: val,
+        node: findNodeByVal(root, val),
+        isFirstInTraversal: vIdx === 0,
+        isLastInTraversal: vIdx === result.length - 1,
+        resultSoFar: result.slice(0, vIdx + 1),
+        totalInTraversal: result.length,
+        currentTraversalIdx: tIdx,
+        explanation: buildTraversalExplanation(t.name, t.order, val, vIdx, result.length, result.slice(0, vIdx + 1))
+      });
+    });
+    steps.push({
+      type: 'traversal_done',
+      traversalName: t.name,
+      explanation: buildTraversalDoneExplanation(t.name, result)
+    });
+  });
+
+  steps.push({
+    type: 'all_done',
+    preorder: preorderResult,
+    inorder: inorderResult,
+    postorder: postorderResult,
+    levelorder: levelorderResult,
+    explanation: buildAllDoneExplanation(preorderResult, inorderResult, postorderResult, levelorderResult)
+  });
+}
+
+function findNodeByVal(node, val) {
+  if (!node) return null;
+  if (node.val === val) return node;
+  return findNodeByVal(node.left, val) || findNodeByVal(node.right, val);
+}
+
+function buildTraversalExplanation(name, order, val, idx, total, soFar) {
+  return `<div class="explain-section active">
+    <h3>${name} Traversal — Visiting ${val}</h3>
+    <p><b>Visit order:</b> ${order}</p>
+    <p>Visiting node <span class="dim">${val}</span> — step <span class="dim">${idx + 1}</span> of <span class="dim">${total}</span> in ${name}.</p>
+    <p>Current ${name} result: <span class="formula-line">[${soFar.join(', ')}]</span></p>
+    <h3 style="margin-top:8px;">How ${name} Works</h3>
+    <p style="color:#ccc;">
+    ${name === 'Preorder' ? 'Visit root first, then recursively traverse left subtree, then right subtree.' :
+      name === 'Inorder' ? 'Recursively traverse left subtree, visit root, then traverse right subtree. For a BST, this yields sorted order.' :
+      name === 'Postorder' ? 'Recursively traverse left subtree, then right subtree, then visit root.' :
+      'Process nodes level by level using a queue: dequeue a node, visit it, enqueue its children.'}
+    </p>
+    <p class="note">${name === 'Inorder' ? 'For BST, inorder gives sorted ascending order.' : ''}</p>
+  </div>`;
+}
+
+function buildTraversalDoneExplanation(name, result) {
+  return `<div class="explain-section" style="border-left-color:#00ff88;">
+    <h3>✅ ${name} Complete</h3>
+    <p>${name} traversal result: <span class="formula-line">[${result.join(', ')}]</span></p>
+    <p class="note">Moving to next traversal type.</p>
+  </div>`;
+}
+
+function buildAllDoneExplanation(pre, ino, post, level) {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ All Traversals Complete!</h3>
+    <h3 style="margin-top:10px;">Results</h3>
+    <p><b>Preorder:</b> <span style="color:#00ccff;">[${pre.join(', ')}]</span></p>
+    <p><b>Inorder:</b> <span style="color:#00ff88;">[${ino.join(', ')}]</span></p>
+    <p><b>Postorder:</b> <span style="color:#ff66ff;">[${post.join(', ')}]</span></p>
+    <p><b>Level-order:</b> <span style="color:#ffcc00;">[${level.join(', ')}]</span></p>
+    <h3 style="margin-top:10px;">Key Observations</h3>
+    <p>• <span class="dim">Inorder</span> of a BST is always <b>sorted ascending</b>.</p>
+    <p>• <span class="dim">Preorder</span> visits root first — useful for tree serialization.</p>
+    <p>• <span class="dim">Postorder</span> visits children before parent — used for tree deletion, expression eval.</p>
+    <p>• <span class="dim">Level-order</span> (BFS) processes by depth — used for shortest path in unweighted graphs.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(n) for each traversal</p>
+    <p><span class="dim">Space:</span> O(h) for recursive (stack), O(w) for level-order (queue)</p>
+  </div>`;
+}
+
+function applyStep(step) {
+  if (step.type === 'visit') {
+    document.getElementById('phaseDisplay').textContent = step.traversalName;
+    document.getElementById('computingDisplay').textContent = 'Visiting ' + step.val;
+
+    document.getElementById('traversalType').textContent = step.traversalName + ' Traversal  —  ' + step.traversalOrder;
+
+    const visited = new Set();
+    step.resultSoFar.forEach(v => visited.add(findNodeByVal(root, v)));
+    drawTree(step.node, visited);
+
+    appendOutput(step.traversalName, step.val);
+  } else if (step.type === 'traversal_done') {
+    document.getElementById('phaseDisplay').textContent = step.traversalName + ' ✓';
+    document.getElementById('computingDisplay').textContent = 'Complete';
+    document.getElementById('traversalType').textContent = step.traversalName + ' Traversal — ✓ Done';
+  } else if (step.type === 'all_done') {
+    finishAnimation();
+    return;
+  }
+
+  document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1000 - parseInt(document.getElementById('speedSlider').value) * 80; }
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('traversalType').textContent = '';
+  document.getElementById('sidebarPhase').textContent = 'Idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>Binary Search Tree built from <span class="dim">[29, 10, 14, 37, 13, 33, 48, 22]</span>.</p>
+    <p>Four traversal orders reveal different arrangements:</p>
+    <p>• <b>Preorder</b>: Root → Left → Right</p>
+    <p>• <b>Inorder</b>: Left → Root → Right (sorted order for BST)</p>
+    <p>• <b>Postorder</b>: Left → Right → Root</p>
+    <p>• <b>Level-order</b>: BFS level by level</p>
+    <p class="note">Press Play to watch all four traversals in sequence.</p>
+  </div>`;
+  clearOutputs();
+  drawTree(null, new Set());
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'All traversals done';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultText').textContent = 'All four traversals completed successfully!';
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initTraversalSections();
+drawTree(null, new Set());
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>

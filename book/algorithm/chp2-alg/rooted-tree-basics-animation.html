@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooted Tree Basics Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 15px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<h1>Rooted Tree Basics</h1>
+<p class="subtitle">Tree Concepts — Parent, Child, Sibling, Depth, Height, Subtree</p>
+<div class="layout">
+<div class="main-panel">
+<canvas id="treeCanvas" width="700" height="450"></canvas>
+<div class="controls">
+<button class="btn primary" onclick="startAnimation()">▶ Play All</button>
+<button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+<button class="btn" onclick="stepForward()">⏭ Step</button>
+<button class="btn" onclick="resetAnimation()">↺ Reset</button>
+<div class="speed-control">
+<label>Speed:</label>
+<input type="range" id="speedSlider" min="1" max="10" value="5">
+<span id="speedLabel">5x</span>
+</div>
+</div>
+<div class="info-panel">
+<div><span class="label">Topic:</span> <span class="value">Rooted Tree Basics</span></div>
+<div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span></div>
+<div><span class="label">Current:</span> <span class="value" id="computingDisplay">—</span></div>
+</div>
+<div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+<div class="result-section" id="resultSection">
+<h2>✅ All Concepts Covered!</h2>
+<p id="resultText" style="color:#00ff88;font-size:1.1em;font-weight:bold;"></p>
+</div>
+</div>
+<div class="sidebar" id="sidebar">
+<h2>📖 Step-by-Step Explanation</h2>
+<div class="step-phase" id="sidebarPhase">Idle — press Play or Step to begin.</div>
+<div id="explainArea">
+<div class="explain-section active">
+<h3>Problem Setup</h3>
+<p>A <b>rooted tree</b> with nodes A through L, rooted at <span class="dim">A</span>.</p>
+<p>Key concepts:</p>
+<p>• <b>Parent</b> — immediate predecessor on path to root</p>
+<p>• <b>Child</b> — immediate successor</p>
+<p>• <b>Sibling</b> — nodes sharing same parent</p>
+<p>• <b>Depth</b> — distance from root (root depth = 0)</p>
+<p>• <b>Height</b> — longest path to a leaf</p>
+<p>• <b>Subtree</b> — node and all its descendants</p>
+<p class="note">Press Play or Step to explore each concept.</p>
+</div>
+</div>
+</div>
+</div>
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+class TreeNode {
+  constructor(id) {
+    this.id = id;
+    this.children = [];
+    this.parent = null;
+  }
+  addChild(child) {
+    this.children.push(child);
+    child.parent = this;
+  }
+}
+
+const A = new TreeNode('A');
+const B = new TreeNode('B'); const C = new TreeNode('C'); const D = new TreeNode('D');
+const E = new TreeNode('E'); const F = new TreeNode('F'); const G = new TreeNode('G');
+const H = new TreeNode('H'); const I = new TreeNode('I'); const J = new TreeNode('J');
+const K = new TreeNode('K'); const L = new TreeNode('L');
+
+A.addChild(B); A.addChild(C); A.addChild(D);
+B.addChild(E); B.addChild(F);
+C.addChild(G);
+D.addChild(H); D.addChild(I);
+F.addChild(J); F.addChild(K);
+H.addChild(L);
+
+const allNodes = [A, B, C, D, E, F, G, H, I, J, K, L];
+const nodeMap = {};
+allNodes.forEach(n => nodeMap[n.id] = n);
+
+function getHeight(node) {
+  if (!node.children.length) return 0;
+  return 1 + Math.max(...node.children.map(getHeight));
+}
+
+function getDepth(node) {
+  let d = 0;
+  let n = node;
+  while (n.parent) { d++; n = n.parent; }
+  return d;
+}
+
+function getSubtreeIds(node) {
+  const ids = [];
+  function dfs(n) {
+    ids.push(n.id);
+    n.children.forEach(dfs);
+  }
+  dfs(node);
+  return ids;
+}
+
+function computePositions(root) {
+  const positions = new Map();
+  const leafCount = {};
+  function countLeaves(node) {
+    if (!node.children.length) { leafCount[node.id] = 1; return 1; }
+    let c = 0;
+    node.children.forEach(ch => c += countLeaves(ch));
+    leafCount[node.id] = c;
+    return c;
+  }
+  countLeaves(root);
+
+  function assign(node, x, y, xRange) {
+    positions.set(node.id, { x, y });
+    const totalLeaves = leafCount[node.id] || 1;
+    let used = 0;
+    node.children.forEach(ch => {
+      const chLeaves = leafCount[ch.id] || 1;
+      const frac = chLeaves / totalLeaves;
+      const chX = x - xRange/2 + (used + frac/2) * xRange;
+      assign(ch, chX, y + 60, xRange * frac);
+      used += frac;
+    });
+  }
+
+  assign(root, 350, 35, 600);
+  return positions;
+}
+
+let nodePositions;
+
+function drawTree(highlights) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  nodePositions = computePositions(A);
+
+  const defaultHighlight = { color: '#00ccff', bg: '#0d0d1a', glow: false };
+
+  function getStyle(nodeId) {
+    if (highlights && highlights[nodeId]) {
+      const h = highlights[nodeId];
+      return { color: h.color || '#ff6600', bg: h.bg || '#1a0a00', glow: h.glow || false, label: h.label || '' };
+    }
+    const node = nodeMap[nodeId];
+    if (node && !node.children.length) return { color: '#00ccff', bg: '#0d0d1a', glow: false, label: '' };
+    return defaultHighlight;
+  }
+
+  function drawEdges(node) {
+    const pos = nodePositions[node.id];
+    node.children.forEach(ch => {
+      const cp = nodePositions[ch.id];
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y + 18);
+      ctx.lineTo(cp.x, cp.y - 18);
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawEdges(ch);
+    });
+  }
+  drawEdges(A);
+
+  function drawNode(node) {
+    const pos = nodePositions[node.id];
+    const style = getStyle(node.id);
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = style.bg;
+    ctx.fill();
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = style.glow ? 3 : 2;
+    if (style.glow) {
+      ctx.shadowColor = style.color;
+      ctx.shadowBlur = 15;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = style.color;
+    ctx.font = 'bold 13px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.id, pos.x, pos.y);
+
+    if (style.label) {
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(style.label, pos.x, pos.y - 20);
+    }
+
+    node.children.forEach(drawNode);
+  }
+  drawNode(A);
+}
+
+function buildSteps() {
+  steps = [];
+
+  const concepts = [
+    {
+      name: 'show_root',
+      highlights: { 'A': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'ROOT' } },
+      explanation: `<div class="explain-section active">
+        <h3>🌳 Root</h3>
+        <p>The <b>root</b> is the topmost node with <span class="dim">no parent</span>.</p>
+        <p>Node <span class="split-info">A</span> is the root of this tree.</p>
+        <p>Every other node is reachable from the root via a unique path.</p>
+        <p>Properties of the root:</p>
+        <p style="margin-left:8px;">• <span class="dim">parent</span> = null</p>
+        <p style="margin-left:8px;">• <span class="dim">depth</span> = 0</p>
+        <p style="margin-left:8px;">• <span class="dim">height</span> = longest path to a leaf = 3</p>
+        <p class="note">A tree can have only one root.</p>
+      </div>`
+    },
+    {
+      name: 'show_parent_child',
+      highlights: {
+        'A': { color: '#00ccff', bg: '#0d0d1a', glow: false },
+        'D': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'PARENT' },
+        'H': { color: '#00ff88', bg: '#0a1a12', glow: true, label: 'CHILD' },
+        'I': { color: '#00ff88', bg: '#0a1a12', glow: true, label: 'CHILD' }
+      },
+      explanation: `<div class="explain-section active">
+        <h3>👪 Parent & Child</h3>
+        <p><b>Parent</b> = immediate predecessor on path to root.</p>
+        <p><b>Child</b> = immediate successor below parent.</p>
+        <p>Node <span class="split-info">D</span> is the <b>parent</b> of <span class="dim">H</span> and <span class="dim">I</span>.</p>
+        <p>Node <span class="dim">H</span> and <span class="dim">I</span> are <b>children</b> of <span class="split-info">D</span>.</p>
+        <span class="formula-line">parent(H) = D &nbsp;&nbsp; children(D) = {H, I}</span>
+        <p>Every node except the root has exactly <span class="dim">one parent</span>.</p>
+        <p class="note">A node can have 0, 1, or many children.</p>
+      </div>`
+    },
+    {
+      name: 'show_siblings',
+      highlights: {
+        'B': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'SIBLINGS' },
+        'C': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'SIBLINGS' },
+        'D': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'SIBLINGS' },
+        'A': { color: '#00ccff', bg: '#0d0d1a', glow: false }
+      },
+      explanation: `<div class="explain-section active">
+        <h3>🤝 Siblings</h3>
+        <p><b>Siblings</b> are nodes that share the same parent.</p>
+        <p>Nodes <span class="dim">B</span>, <span class="dim">C</span>, and <span class="dim">D</span> are siblings — all children of <span class="split-info">A</span>.</p>
+        <span class="formula-line">siblings = { nodes with same parent }</span>
+        <p>More examples:</p>
+        <p style="margin-left:8px;">• <span class="dim">E</span> and <span class="dim">F</span> are siblings (parent = B)</p>
+        <p style="margin-left:8px;">• <span class="dim">H</span> and <span class="dim">I</span> are siblings (parent = D)</p>
+        <p style="margin-left:8px;">• <span class="dim">J</span> and <span class="dim">K</span> are siblings (parent = F)</p>
+        <p class="note">Siblings are at the same depth level.</p>
+      </div>`
+    },
+    {
+      name: 'show_depth',
+      highlights: {
+        'A': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=0' },
+        'B': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=1' },
+        'C': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=1' },
+        'D': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=1' },
+        'E': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=2' },
+        'F': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'd=2' },
+        'G': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=2' },
+        'H': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=2' },
+        'I': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=2' },
+        'J': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=3' },
+        'K': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=3' },
+        'L': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'd=3' }
+      },
+      explanation: `<div class="explain-section active">
+        <h3>📏 Depth</h3>
+        <p><b>Depth</b> = number of edges from the root to the node.</p>
+        <p>Root <span class="dim">A</span> has depth <span class="split-info">0</span>.</p>
+        <p>Node <span class="dim">F</span> is highlighted — depth = <span class="split-info">2</span> (A → B → F).</p>
+        <span class="formula-line">depth(F) = 2 &nbsp; path: A → B → F</span>
+        <p>Depth of other nodes shown on canvas.</p>
+        <p>Tree depths:</p>
+        <p style="margin-left:8px;">• Depth 0: <span class="dim">A</span></p>
+        <p style="margin-left:8px;">• Depth 1: <span class="dim">B, C, D</span></p>
+        <p style="margin-left:8px;">• Depth 2: <span class="dim">E, F, G, H, I</span></p>
+        <p style="margin-left:8px;">• Depth 3: <span class="dim">J, K, L</span></p>
+        <p class="note">Depth is measured in edges, not nodes.</p>
+      </div>`
+    },
+    {
+      name: 'show_height',
+      highlights: {
+        'A': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=3' },
+        'B': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=2' },
+        'D': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'h=1' },
+        'F': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=1' },
+        'H': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=1' },
+        'C': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'E': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'G': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'I': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'J': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'K': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' },
+        'L': { color: '#00ccff', bg: '#0d0d1a', glow: false, label: 'h=0' }
+      },
+      explanation: `<div class="explain-section active">
+        <h3>📐 Height</h3>
+        <p><b>Height</b> = longest path from node down to a leaf (in edges).</p>
+        <p>Node <span class="dim">D</span> is highlighted — height = <span class="split-info">1</span> (D → H or D → L, via H→L).</p>
+        <span class="formula-line">height(D) = max(height(children)) + 1 = 1</span>
+        <p>Other heights shown on canvas.</p>
+        <p>Leaf nodes have height <span class="dim">0</span>.</p>
+        <p>The <b>tree height</b> = height(root) = <span class="result-line">3</span>.</p>
+        <p class="note">Height and depth are complementary measures.</p>
+      </div>`
+    },
+    {
+      name: 'show_subtree',
+      highlights: {
+        'B': { color: '#ff6600', bg: '#1a0a00', glow: true, label: 'SUBTREE' },
+        'E': { color: '#00ff88', bg: '#0a1a12', glow: true },
+        'F': { color: '#00ff88', bg: '#0a1a12', glow: true },
+        'J': { color: '#00ff88', bg: '#0a1a12', glow: true },
+        'K': { color: '#00ff88', bg: '#0a1a12', glow: true }
+      },
+      explanation: `<div class="explain-section active">
+        <h3>🌿 Subtree</h3>
+        <p>A <b>subtree</b> consists of a node and all its descendants.</p>
+        <p>Node <span class="dim">B</span> (highlighted) and its descendants <span class="dim">E, F, J, K</span> form a subtree.</p>
+        <span class="formula-line">subtree(B) = {B, E, F, J, K}</span>
+        <p>Properties of this subtree:</p>
+        <p style="margin-left:8px;">• Root: <span class="dim">B</span></p>
+        <p style="margin-left:8px;">• Size: <span class="dim">5</span> nodes</p>
+        <p style="margin-left:8px;">• Height: <span class="dim">2</span> (B → F → J/K)</p>
+        <p>Subtrees are themselves valid trees — this is a <b>recursive</b> property.</p>
+        <p class="note">Many tree algorithms operate recursively on subtrees.</p>
+      </div>`
+    }
+  ];
+
+  concepts.forEach((c, idx) => {
+    steps.push({
+      type: c.name,
+      highlights: c.highlights,
+      explanation: c.explanation
+    });
+  });
+
+  steps.push({
+    type: 'done',
+    explanation: `<div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ All Concepts Covered!</h3>
+      <p>Summary of rooted tree terminology learned:</p>
+      <p>• <span class="dim">Root</span> — top node (A), no parent, depth=0</p>
+      <p>• <span class="dim">Parent</span> — immediate predecessor (e.g., D is parent of H)</p>
+      <p>• <span class="dim">Child</span> — immediate successor (e.g., H is child of D)</p>
+      <p>• <span class="dim">Sibling</span> — same parent (B, C, D are siblings)</p>
+      <p>• <span class="dim">Depth</span> — edges from root (A=0, B=1, F=2, J=3)</p>
+      <p>• <span class="dim">Height</span> — edges to farthest leaf (root height = 3)</p>
+      <p>• <span class="dim">Subtree</span> — node + all descendants</p>
+      <h3 style="margin-top:10px;">Complexity of Tree Operations</h3>
+      <p><span class="dim">Traversal:</span> O(n)</p>
+      <p><span class="dim">Depth/Height:</span> O(n) (or O(h) with pointers)</p>
+      <p><span class="dim">Find parent/sibling:</span> O(1) with stored pointers</p>
+    </div>`
+  });
+}
+
+function applyStep(step) {
+  if (step.type === 'done') {
+    finishAnimation();
+    return;
+  }
+
+  const labels = {
+    'show_root': 'Root',
+    'show_parent_child': 'Parent & Child',
+    'show_siblings': 'Siblings',
+    'show_depth': 'Depth',
+    'show_height': 'Height',
+    'show_subtree': 'Subtree'
+  };
+
+  document.getElementById('phaseDisplay').textContent = labels[step.type] || step.type;
+  document.getElementById('computingDisplay').textContent = labels[step.type] || step.type;
+  document.getElementById('sidebarPhase').textContent = `Step ${currentStep + 1} / ${steps.length} — ${labels[step.type] || ''}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+
+  drawTree(step.highlights);
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() { return 1500 - parseInt(document.getElementById('speedSlider').value) * 120; }
+function pauseAnimation() { animating = false; clearInterval(animTimer); }
+function stepForward() { pauseAnimation(); processStep(); }
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>A <b>rooted tree</b> with nodes A through L, rooted at <span class="dim">A</span>.</p>
+    <p>Key concepts:</p>
+    <p>• <b>Parent</b> — immediate predecessor on path to root</p>
+    <p>• <b>Child</b> — immediate successor</p>
+    <p>• <b>Sibling</b> — nodes sharing same parent</p>
+    <p>• <b>Depth</b> — distance from root (root depth = 0)</p>
+    <p>• <b>Height</b> — longest path to a leaf</p>
+    <p>• <b>Subtree</b> — node and all its descendants</p>
+    <p class="note">Press Play or Step to explore each concept.</p>
+  </div>`;
+  drawTree(null);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'All concepts';
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultText').textContent = 'Rooted tree concepts: Root, Parent, Child, Sibling, Depth, Height, Subtree';
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) { clearInterval(animTimer); if (currentStep >= steps.length) finishAnimation(); return; }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+drawTree(null);
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
