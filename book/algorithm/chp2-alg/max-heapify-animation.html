@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAX-HEAPIFY Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+    .main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+    .sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; }
+    }
+    .sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+    .sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+    .explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+    .explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+    .explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+    .explain-section p { color: #ccc; margin: 4px 0; }
+    .explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+    .explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+    .explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .chart-container { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 220px; margin: 15px 0 2px; padding: 12px; background: #111; border: 1px solid #333; border-radius: 10px; }
+    .bar { width: 38px; transition: all 0.3s; border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 0.7em; color: #e0e0e0; font-weight: bold; background: #1a1a2e; border: 1px solid #444; }
+    .bar.parent { background: #1a0a1a; border-color: #ff66ff; color: #ff66ff; }
+    .bar.child-left { background: #1a1a00; border-color: #ffff00; color: #ffff00; }
+    .bar.child-right { background: #000a1a; border-color: #00ccff; color: #00ccff; }
+    .bar.swapping { background: #1a0a00; border-color: #ff6600; color: #ff6600; }
+    .bar.largest { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.done { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .bar.sorted { background: #0a1a12; border-color: #00ff88; color: #00ff88; }
+    .info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 12px 0; font-size: 0.85em; line-height: 1.8; }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+    .btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+    .speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+    .speed-control input { width: 80px; accent-color: #00ff88; }
+    .step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; display: none; }
+    .result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+    .array-display { display: flex; justify-content: center; gap: 5px; margin: 8px 0; flex-wrap: wrap; }
+    .array-item { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 2px solid #444; border-radius: 6px; background: #111; font-weight: bold; font-size: 0.82em; }
+    .array-item.parent { border-color: #ff66ff; background: #1a0a1a; color: #ff66ff; }
+    .array-item.child-left { border-color: #ffff00; background: #1a1a00; color: #ffff00; }
+    .array-item.child-right { border-color: #00ccff; background: #000a1a; color: #00ccff; }
+    .array-item.swapping { border-color: #ff6600; background: #1a0a00; color: #ff6600; }
+    .array-item.largest { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .array-item.done { border-color: #00ff88; background: #0a1a12; color: #00ff88; }
+    .heap-indices { display: flex; justify-content: center; gap: 6px; margin: 0 0 8px; font-size: 0.72em; }
+    .heap-idx { width: 38px; text-align: center; color: #555; }
+    .tree-wrapper { background: #111; border: 1px solid #333; border-radius: 10px; margin: 10px 0; padding: 10px; text-align: center; }
+    .tree-wrapper canvas { width: 100%; height: auto; background: transparent; }
+    .comp-section { margin: 25px 0; }
+    .comp-section .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 15px 0; }
+    .comp-section .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .comp-section .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .comp-section .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .comp-section .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .comp-section .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .comp-section .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .comp-section .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .comp-section .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .comp-section .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .comp-section .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .comp-section .card .highlight { color: #00ff88; font-weight: bold; }
+    .comp-section .card .dim { color: #ff9944; }
+    .comp-section .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .comp-section .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; font-size: 0.9em; }
+    .comp-section table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    .comp-section th, .comp-section td { border: 1px solid #333; padding: 8px; text-align: center; }
+    .comp-section th { background: #1a1a2e; color: #00ccff; }
+    .comp-section td { background: #0d0d1a; }
+    .comp-section .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .comp-section .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .comp-section .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .comp-section .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .comp-section .content-pane { display: none; }
+    .comp-section .content-pane.active { display: block; }
+    .comp-section .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .toggle-comp { display: block; margin: 10px 0; text-align: center; }
+    .toggle-comp button { padding: 10px 25px; border: 2px solid #ffcc00; background: #1a1a00; color: #ffcc00; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.9em; }
+    .toggle-comp button:hover { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+  </style>
+</head>
+<body>
+  <h1>MAX-HEAPIFY</h1>
+  <p class="subtitle">Maintaining the Max-Heap Property — Core Heap Operation</p>
+  <div class="layout">
+    <div class="main-panel">
+      <div id="algoDisplay">
+        <div class="chart-container" id="chartContainer"></div>
+        <div class="heap-indices" id="heapIndices"></div>
+        <div class="tree-wrapper"><canvas id="treeCanvas" height="280"></canvas></div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">&#9654; Play</button>
+        <button class="btn" onclick="pauseAnimation()">&#9208; Pause</button>
+        <button class="btn" onclick="stepForward()">&#9197; Step</button>
+        <button class="btn" onclick="resetAnimation()">&#8634; Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+      <div class="info-panel">
+        <div><span class="label">Algorithm:</span> <span class="value">MAX-HEAPIFY</span></div>
+        <div><span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready &mdash; Press Play</span></div>
+        <div><span class="label">Current Action:</span> <span class="value" id="computingDisplay">&mdash;</span></div>
+        <div><span class="label">Heap Size:</span> <span class="value" id="heapSizeDisplay">10</span></div>
+      </div>
+      <div class="step-counter">Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span></div>
+      <div class="array-display" id="arrayDisplay"></div>
+      <div class="result-section" id="resultSection">
+        <h2>&#9989; MAX-HEAPIFY Complete!</h2>
+        <p>Final Array: <span id="finalArray" style="color:#00ff88;font-size:1.2em;font-weight:bold;"></span></p>
+      </div>
+      <div class="toggle-comp">
+        <button onclick="toggleComprehensive(event)">&#128218; Show Comprehensive Reference</button>
+      </div>
+      <div class="comp-section" id="compSection" style="display:none;">
+        <div class="tabs">
+          <button class="tab active" onclick="showCompTab(event,'mh-tab1')">Algorithm</button>
+          <button class="tab" onclick="showCompTab(event,'mh-tab2')">Examples</button>
+          <button class="tab" onclick="showCompTab(event,'mh-tab3')">Complexity</button>
+          <button class="tab" onclick="showCompTab(event,'mh-tab4')">Properties</button>
+        </div>
+        <div class="content-pane active" id="mh-tab1">
+          <div class="section">
+            <h2>MAX-HEAPIFY Algorithm</h2>
+            <p>Maintains the max-heap property for a subtree rooted at index i. Assumes left and right subtrees are already max-heaps.</p>
+            <div class="code">
+MAX-HEAPIFY(A, i, n)
+{
+  left  = 2i
+  right = 2i + 1
+  largest = i
+  if (left ≤ n and A[left] > A[i])
+    largest = left
+  if (right ≤ n and A[right] > A[largest])
+    largest = right
+  if (largest ≠ i)
+  {
+    swap(A[i], A[largest])
+    MAX-HEAPIFY(A, largest, n)
+  }
+}
+            </div>
+            <div class="formula"><div class="label">Array Index Relations (1-based):</div><div class="expr">parent(i) = ⌊i/2⌋, left(i) = 2i, right(i) = 2i+1</div></div>
+            <div class="formula"><div class="label">Max-Heap Property:</div><div class="expr">A[parent(i)] ≥ A[i]</div><div class="desc">Parent must be ≥ both children</div></div>
+            <div class="note"><strong>Key Insight:</strong> MAX-HEAPIFY lets a single violation "sink down" until the heap property is restored. The element moves downward along a path, swapping with larger children.</div>
+          </div>
+        </div>
+        <div class="content-pane" id="mh-tab2">
+          <div class="section">
+            <h2>Worked Example</h2>
+            <div class="example">
+              <div class="title">MAX-HEAPIFY at i=2 in [16, 4, 10, 14, 7, 9, 3, 2, 8, 1]</div>
+              <p>Array: [16, 4, 10, 14, 7, 9, 3, 2, 8, 1]</p>
+              <p>A[2]=4 violates the max-heap property (children are A[4]=14 and A[5]=7).</p>
+              <p><b>Step 1:</b> Compare A[2]=4 with A[4]=14. 14 &gt; 4. Largest = A[4].</p>
+              <p><b>Step 2:</b> Compare A[4]=14 with A[5]=7. 7 &lt; 14. Largest stays at A[4].</p>
+              <p><b>Step 3:</b> Swap A[2] and A[4]. Array: [16, 14, 10, 4, 7, 9, 3, 2, 8, 1]</p>
+              <p><b>Step 4:</b> Recurse to i=4. Compare A[4]=4 with A[8]=2. 2 &lt; 4. Largest = A[4].</p>
+              <p><b>Step 5:</b> Compare A[4]=4 with A[9]=8. 8 &gt; 4. Largest = A[9].</p>
+              <p><b>Step 6:</b> Swap A[4] and A[9]. Array: [16, 14, 10, 8, 7, 9, 3, 2, 4, 1]</p>
+              <p><b>Step 7:</b> Recurse to i=9. No children (2·9=18 &gt; 10). Heap property holds.</p>
+              <p>Result: <span class="highlight">[16, 14, 10, 8, 7, 9, 3, 2, 4, 1]</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="content-pane" id="mh-tab3">
+          <div class="section">
+            <h2>Time Complexity</h2>
+            <div class="formula"><div class="label">Time per call:</div><div class="expr">O(h) = O(log n)</div><div class="desc">h is the height of the subtree rooted at i. In the worst case, the violation sinks from root to leaf, visiting O(log n) nodes.</div></div>
+            <div class="formula"><div class="label">Worst Case:</div><div class="expr">Θ(log n)</div><div class="desc">When the element at root is the smallest in the heap, it sinks all the way to a leaf, traversing the full height.</div></div>
+            <div class="formula"><div class="label">Best Case:</div><div class="expr">Θ(1)</div><div class="desc">When the node already satisfies the heap property. No swaps, immediate termination.</div></div>
+            <h3>Why O(log n)?</h3>
+            <p>The recursion follows a single path from the root of the subtree down to a leaf. Each level does O(1) work (comparisons and a possible swap). The height of a complete binary tree with n nodes is ⌊log₂n⌋.</p>
+          </div>
+        </div>
+        <div class="content-pane" id="mh-tab4">
+          <div class="section">
+            <h2>Properties</h2>
+            <div class="grid">
+              <div class="card"><h3>Recursive</h3><p class="highlight">Yes</p><p>May call itself recursively on the child that was swapped.</p></div>
+              <div class="card"><h3>Tail-Recursive</h3><p class="dim">Yes</p><p>The recursive call is the last operation — can be optimized to iteration.</p></div>
+              <div class="card"><h3>In-Place</h3><p class="highlight">Yes</p><p>Operates directly on the array, no extra storage.</p></div>
+              <div class="card"><h3>Building Block</h3><p class="highlight">Essential</p><p>Used in BUILD-MAX-HEAP and HEAP-SORT.</p></div>
+            </div>
+            <div class="warning"><strong>Usage:</strong><p>&bull; Building a max-heap: run MAX-HEAPIFY from ⌊n/2⌋ down to 1</p><p>&bull; Heap Sort: after extracting max, call MAX-HEAPIFY at root</p><p>&bull; Priority queues: restore heap after extract or insert</p></div>
+            <h3>Iterative Version</h3>
+            <div class="code">
+MAX-HEAPIFY-ITERATIVE(A, i, n)
+{
+  while (true)
+  {
+    left = 2i; right = 2i+1; largest = i
+    if (left ≤ n and A[left] > A[i])    largest = left
+    if (right ≤ n and A[right] > A[largest]) largest = right
+    if (largest == i) break
+    swap(A[i], A[largest])
+    i = largest
+  }
+}
+            </div>
+            <p class="note">The iterative version avoids recursion overhead and is preferred in practice.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar" id="sidebar">
+      <h2>&#128214; Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle &mdash; press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Run <b>MAX-HEAPIFY</b> on the subtree rooted at index <b>i=2</b> (1-based) where A[2]=4 violates the max-heap property.</p>
+          <p>Input array: <span class="dim" id="initArrayDisplay">[16, 4, 10, 14, 7, 9, 3, 2, 8, 1]</span></p>
+          <p style="margin-top:8px;"><b>How it works:</b> Compare A[i] with its left and right children. If A[i] is not the largest, swap it with the largest child and recurse.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const initialArr = [16, 4, 10, 14, 7, 9, 3, 2, 8, 1];
+    let arr = [...initialArr];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+    const heapSize = arr.length;
+
+    function i1(i) { return i + 1; }
+
+    function buildSteps() {
+      steps = [];
+      let a = [...initialArr];
+      const n = a.length;
+
+      steps.push({
+        type: 'initial',
+        arr: [...a],
+        highlights: [],
+        treeHighlights: [],
+        phase: 'Initial array',
+        phaseTitle: 'Initial State',
+        action: 'Array = [' + a.join(', ') + ']',
+        explanation: '<div class="explain-section active"><h3>Initial Array</h3><p>Array: <span class="dim">[' + a.join(', ') + ']</span></p><p>We will fix the violation at index <b>i=2</b> (1-based), where <b>A[2]=4</b> is smaller than its children.</p><p class="note">Press Play or Step to begin.</p></div>'
+      });
+
+      function mh(i) {
+        let l = 2 * i + 1;
+        let r = 2 * i + 2;
+        let largest = i;
+
+        if (l >= n) {
+          steps.push({
+            type: 'leaf',
+            arr: [...a],
+            parent: i,
+            highlights: [{idx: i, cls: 'parent'}],
+            treeHighlights: [{idx: i, cls: 'parent'}],
+            phase: 'A[' + i1(i) + ']=' + a[i] + ' has no children. Done.',
+            phaseTitle: '&#128260; MAX-HEAPIFY',
+            action: 'A[' + i1(i) + '] is a leaf node',
+            explanation: '<div class="explain-section active"><h3>Leaf Node at A[' + i1(i) + ']</h3><p>A[' + i1(i) + '] = <span class="dim">' + a[i] + '</span> has no children (2&middot;' + i1(i) + '=' + (2*i1(i)) + ' > heapSize=' + n + ').</p><p class="result-line">&#10003; Heap property holds.</p></div>'
+          });
+          return;
+        }
+
+        steps.push({
+          type: 'enter',
+          arr: [...a],
+          parent: i,
+          highlights: [{idx: i, cls: 'parent'}],
+          treeHighlights: [{idx: i, cls: 'parent'}],
+          phase: 'Start MAX-HEAPIFY at i=' + i1(i) + ', A[' + i1(i) + ']=' + a[i],
+          phaseTitle: '&#128260; MAX-HEAPIFY',
+          action: 'Checking node A[' + i1(i) + ']=' + a[i],
+          explanation: '<div class="explain-section active"><h3>MAX-HEAPIFY at i=' + i1(i) + '</h3><p>Parent: A[' + i1(i) + '] = <span class="dim">' + a[i] + '</span></p><p>We will compare A[' + i1(i) + '] with its children and swap with the largest if needed.</p></div>'
+        });
+
+        if (l < n) {
+          let newLargest = a[l] > a[largest] ? l : largest;
+          let desc = a[l] > a[largest] ? ('A[' + i1(l) + ']=' + a[l] + ' > A[' + i1(largest) + ']=' + a[largest] + ', so <b>largest = A[' + i1(l) + ']</b>') : ('A[' + i1(l) + ']=' + a[l] + ' &#8804; A[' + i1(largest) + ']=' + a[largest] + ', largest stays at A[' + i1(largest) + ']');
+          steps.push({
+            type: 'compare_left',
+            arr: [...a],
+            parent: i, left: l, largest: largest,
+            highlights: [{idx: i, cls: 'parent'}, {idx: l, cls: 'child-left'}],
+            treeHighlights: [{idx: i, cls: 'parent'}, {idx: l, cls: 'child-left'}],
+            phase: 'Compare A[' + i1(i) + ']=' + a[i] + ' with left child A[' + i1(l) + ']=' + a[l],
+            phaseTitle: '&#128270; Compare Left',
+            action: 'A[' + i1(i) + '] (' + a[i] + ') vs A[' + i1(l) + '] (' + a[l] + ')',
+            explanation: '<div class="explain-section active"><h3>Compare with Left Child</h3><p>A[' + i1(i) + '] = <span class="dim">' + a[i] + '</span> vs A[' + i1(l) + '] = <span class="dim">' + a[l] + '</span></p><p>' + desc + '</p></div>'
+          });
+          largest = newLargest;
+        }
+
+        if (r < n) {
+          let newLargest = a[r] > a[largest] ? r : largest;
+          let desc = a[r] > a[largest] ? ('A[' + i1(r) + ']=' + a[r] + ' > A[' + i1(largest) + ']=' + a[largest] + ', so <b>largest = A[' + i1(r) + ']</b>') : ('A[' + i1(r) + ']=' + a[r] + ' &#8804; A[' + i1(largest) + ']=' + a[largest] + ', largest stays at A[' + i1(largest) + ']');
+          steps.push({
+            type: 'compare_right',
+            arr: [...a],
+            parent: i, right: r, largest: largest,
+            highlights: [{idx: largest, cls: 'largest'}, {idx: r, cls: 'child-right'}],
+            treeHighlights: [{idx: largest, cls: 'largest'}, {idx: r, cls: 'child-right'}],
+            phase: 'Compare A[' + i1(largest) + ']=' + a[largest] + ' with right child A[' + i1(r) + ']=' + a[r],
+            phaseTitle: '&#128270; Compare Right',
+            action: 'A[' + i1(largest) + '] (' + a[largest] + ') vs A[' + i1(r) + '] (' + a[r] + ')',
+            explanation: '<div class="explain-section active"><h3>Compare with Right Child</h3><p>Current largest: A[' + i1(largest) + '] = <span class="dim">' + a[largest] + '</span></p><p>Right child: A[' + i1(r) + '] = <span class="dim">' + a[r] + '</span></p><p>' + desc + '</p></div>'
+          });
+          largest = newLargest;
+        }
+
+        if (largest !== i) {
+          let li = i;
+          let ll = largest;
+          let oldParentVal = a[i];
+          let oldChildVal = a[largest];
+          [a[i], a[largest]] = [a[largest], a[i]];
+          steps.push({
+            type: 'swap',
+            arr: [...a],
+            parent: li, child: ll,
+            highlights: [{idx: li, cls: 'swapping'}, {idx: ll, cls: 'swapping'}],
+            treeHighlights: [{idx: li, cls: 'swapping'}, {idx: ll, cls: 'swapping'}],
+            phase: 'Swap A[' + i1(li) + '] &harr; A[' + i1(ll) + ']',
+            phaseTitle: '&#128256; Swap',
+            action: 'Swap A[' + i1(li) + ']=' + oldParentVal + ' &harr; A[' + i1(ll) + ']=' + oldChildVal,
+            explanation: '<div class="explain-section active"><h3>Swap</h3><p>Since largest &#8800; i, swap A[' + i1(li) + '] and A[' + i1(ll) + ']</p><span class="formula-line">A[' + i1(li) + '] &harr; A[' + i1(ll) + '] : ' + oldParentVal + ' &harr; ' + oldChildVal + '</span><p class="note">Now recurse to i=' + i1(ll) + ' to maintain heap property in the affected subtree.</p></div>'
+          });
+          mh(ll);
+        } else {
+          steps.push({
+            type: 'ok',
+            arr: [...a],
+            parent: i,
+            highlights: [{idx: i, cls: 'largest'}],
+            treeHighlights: [{idx: i, cls: 'largest'}],
+            phase: 'A[' + i1(i) + ']=' + a[i] + ' satisfies heap property',
+            phaseTitle: '&#10003; OK',
+            action: 'No swap needed',
+            explanation: '<div class="explain-section active"><h3>Heap Property OK</h3><p>A[' + i1(i) + '] = <span class="dim">' + a[i] + '</span> is the largest among itself and its children.</p><p class="result-line">&#10003; Heap property satisfied.</p></div>'
+          });
+        }
+      }
+
+      mh(1);
+
+      steps.push({
+        type: 'done',
+        arr: [...a],
+        highlights: a.map(function(_, i) { return {idx: i, cls: 'done'}; }),
+        treeHighlights: [],
+        phase: 'MAX-HEAPIFY complete!',
+        phaseTitle: '&#10004; Complete',
+        action: 'Final array',
+        explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>&#10004; MAX-HEAPIFY Complete</h3><p>Array after heapifying at i=2:</p><p class="result-line">[' + a.join(', ') + ']</p><p>The max-heap property is now satisfied at all nodes in the subtree rooted at index 2.</p><p><span class="dim">Note:</span> A[1]=16 was not affected &mdash; it already satisfied the max-heap property.</p></div>'
+      });
+    }
+
+    function clearHighlights() {
+      arr.forEach(function(_, i) {
+        var bar = document.getElementById('bar-' + i);
+        var item = document.getElementById('arr-item-' + i);
+        if (bar) bar.className = 'bar';
+        if (item) item.className = 'array-item';
+      });
+    }
+
+    function drawTree(th) {
+      var canvas = document.getElementById('treeCanvas');
+      var wrapper = canvas.parentElement;
+      var rect = wrapper.getBoundingClientRect();
+      var w = Math.max(rect.width - 20, 400);
+      canvas.width = w * 2;
+      canvas.height = 280 * 2;
+      canvas.style.width = w + 'px';
+      canvas.style.height = '280px';
+      var ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+      var W = w;
+      var H = 280;
+      ctx.clearRect(0, 0, W, H);
+
+      var n = arr.length;
+      var maxLevel = 3;
+      var vSpace = 65;
+      var topOff = 30;
+
+      var highlightMap = {};
+      if (th) {
+        th.forEach(function(h) {
+          highlightMap[h.idx] = h.cls;
+        });
+      }
+
+      function nodeColor(cls) {
+        if (cls === 'parent') return {bg: '#1a0a1a', border: '#ff66ff', text: '#ff66ff'};
+        if (cls === 'child-left') return {bg: '#1a1a00', border: '#ffff00', text: '#ffff00'};
+        if (cls === 'child-right') return {bg: '#000a1a', border: '#00ccff', text: '#00ccff'};
+        if (cls === 'swapping') return {bg: '#1a0a00', border: '#ff6600', text: '#ff6600'};
+        if (cls === 'largest') return {bg: '#0a1a12', border: '#00ff88', text: '#00ff88'};
+        if (cls === 'done') return {bg: '#0a1a12', border: '#00ff88', text: '#00ff88'};
+        return {bg: '#0d0d1a', border: '#444', text: '#aaa'};
+      }
+
+      function getPos(i) {
+        var level = Math.floor(Math.log2(i + 1));
+        var posInLevel = i - Math.pow(2, level) + 1;
+        var totalInLevel = Math.pow(2, level);
+        var spacing = W / Math.pow(2, maxLevel);
+        var range = Math.pow(2, maxLevel - level);
+        var x = (posInLevel * range + range / 2) * spacing;
+        var y = level * vSpace + topOff;
+        return {x: x, y: y, level: level};
+      }
+
+      for (var i = 0; i < n; i++) {
+        var p = getPos(i);
+        var lc = 2 * i + 1;
+        var rc = 2 * i + 2;
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        if (lc < n) {
+          var cp = getPos(lc);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y + 12);
+          ctx.lineTo(cp.x, cp.y - 12);
+          ctx.stroke();
+        }
+        if (rc < n) {
+          var cp2 = getPos(rc);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y + 12);
+          ctx.lineTo(cp2.x, cp2.y - 12);
+          ctx.stroke();
+        }
+      }
+
+      var rad = 16;
+      for (var i = 0; i < n; i++) {
+        var p = getPos(i);
+        var cls = highlightMap[i] || '';
+        var col = nodeColor(cls);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rad, 0, 2 * Math.PI);
+        ctx.fillStyle = col.bg;
+        ctx.fill();
+        ctx.strokeStyle = col.border;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = col.text;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(arr[i], p.x, p.y);
+      }
+    }
+
+    function applyStep(step) {
+      arr = [...step.arr];
+      clearHighlights();
+      document.getElementById('phaseDisplay').textContent = step.phaseTitle || step.type;
+      document.getElementById('computingDisplay').textContent = step.action || '';
+      document.getElementById('heapSizeDisplay').textContent = heapSize;
+      if (step.highlights) {
+        step.highlights.forEach(function(h) {
+          var bar = document.getElementById('bar-' + h.idx);
+          var item = document.getElementById('arr-item-' + h.idx);
+          if (bar) bar.classList.add(h.cls);
+          if (item) item.classList.add(h.cls);
+        });
+      }
+      for (var i = 0; i < arr.length; i++) {
+        var bar = document.getElementById('bar-' + i);
+        var item = document.getElementById('arr-item-' + i);
+        if (item) item.textContent = arr[i];
+        if (bar) {
+          var maxVal = Math.max.apply(null, arr);
+          bar.style.height = (arr[i] / maxVal * 175) + 'px';
+          bar.textContent = arr[i];
+        }
+      }
+      document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — ' + step.phase;
+      if (step.type === 'done') {
+        document.getElementById('explainArea').innerHTML = step.explanation;
+      } else {
+        document.getElementById('explainArea').innerHTML = step.explanation;
+      }
+      document.getElementById('sidebar').scrollTop = 0;
+      drawTree(step.treeHighlights);
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(function() {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() { return 1200 - parseInt(document.getElementById('speedSlider').value) * 100; }
+
+    function pauseAnimation() { animating = false; clearInterval(animTimer); }
+
+    function stepForward() { pauseAnimation(); processStep(); }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      arr = [...initialArr];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('heapSizeDisplay').textContent = heapSize;
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active"><h3>Problem Setup</h3><p>Run <b>MAX-HEAPIFY</b> on the subtree rooted at index <b>i=2</b> (1-based) where A[2]=4 violates the max-heap property.</p><p>Input array: <span class="dim">[' + initialArr.join(', ') + ']</span></p><p style="margin-top:8px;"><b>How it works:</b> Compare A[i] with its left and right children. If A[i] is not the largest, swap it with the largest child and recurse.</p><p class="note">Press Play or Step to begin.</p></div>';
+      clearHighlights();
+      initDisplay();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '&#10004; Complete!';
+      document.getElementById('computingDisplay').textContent = 'MAX-HEAPIFY done';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalArray').textContent = '[' + arr.join(', ') + ']';
+      arr.forEach(function(_, i) {
+        var bar = document.getElementById('bar-' + i);
+        var item = document.getElementById('arr-item-' + i);
+        if (bar) { bar.className = 'bar done'; }
+        if (item) { item.className = 'array-item done'; }
+      });
+      document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — &#10004; Complete';
+      document.getElementById('explainArea').innerHTML = steps[steps.length - 1].explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+      drawTree([]);
+    }
+
+    function initDisplay() {
+      var container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      var maxVal = Math.max.apply(null, arr);
+      arr.forEach(function(val, i) {
+        var bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = (val / maxVal * 175) + 'px';
+        bar.textContent = val;
+        container.appendChild(bar);
+      });
+      var idxDiv = document.getElementById('heapIndices');
+      idxDiv.innerHTML = '';
+      arr.forEach(function(_, i) {
+        var idx = document.createElement('div');
+        idx.className = 'heap-idx';
+        idx.textContent = i1(i);
+        idxDiv.appendChild(idx);
+      });
+      var ad = document.getElementById('arrayDisplay');
+      ad.innerHTML = '';
+      arr.forEach(function(val, i) {
+        var item = document.createElement('div');
+        item.className = 'array-item';
+        item.id = 'arr-item-' + i;
+        item.textContent = val;
+        ad.appendChild(item);
+      });
+      drawTree([]);
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(function() {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    initDisplay();
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+
+    function toggleComprehensive(event) {
+      var s = document.getElementById('compSection');
+      var btn = event.target;
+      if (s.style.display === 'none') { s.style.display = 'block'; btn.textContent = '&#128213; Hide Comprehensive Reference'; }
+      else { s.style.display = 'none'; btn.textContent = '&#128218; Show Comprehensive Reference'; }
+    }
+    function showCompTab(event, id) {
+      document.querySelectorAll('.comp-section .content-pane').forEach(function(p) { p.classList.remove('active'); });
+      document.querySelectorAll('.comp-section .tab').forEach(function(t) { t.classList.remove('active'); });
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    window.addEventListener('resize', function() {
+      if (steps.length > 0 && currentStep <= steps.length) {
+        var step = steps[Math.min(currentStep, steps.length - 1)];
+        drawTree(step ? step.treeHighlights : []);
+      } else {
+        drawTree([]);
+      }
+    });
+  </script>
+</body>
+</html>
