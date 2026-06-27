@@ -514,10 +514,28 @@
       const answerLines = result.answers.map(a => 'k=' + a.k + ' → <span class="result-line" style="display:inline;">' + a.answer + '</span>').join('&nbsp;&nbsp;|&nbsp;&nbsp;');
       document.getElementById('resultText').innerHTML = answerLines;
       document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
-      document.getElementById('explainArea').innerHTML = '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>✅ All Three Searches Complete!</h3>' +
-        result.answers.map(a => '<p>k = <span class="dim">' + a.k + '</span> → <span class="result-line">' + a.answer + '</span> (' + (a.k===1?'st':a.k===2?'nd':a.k===3?'rd':'th') + ' smallest)</p>').join('') +
+      document.getElementById('explainArea').innerHTML = '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+        '<h3>✅ All Three Searches Complete!</h3>' +
+        result.answers.map(a => {
+          const sorted = result.sorted;
+          const pos = [];
+          for (let i = 0; i < sorted.length; i++) if (sorted[i] === a.answer) pos.push(i+1);
+          return '<p>k = <span class="dim">' + a.k + '</span> → <span class="result-line">' + a.answer + '</span> (' + (a.k===1?'st':a.k===2?'nd':a.k===3?'rd':'th') + ' smallest, at sorted position ' + pos.join(',') + ')</p>';
+        }).join('') +
         '<p>Sorted: <span class="dim">[' + result.sorted.join(', ') + ']</span></p>' +
-        '<h3 style="margin-top:10px;">Key Points</h3><p>• Each search runs the full algorithm independently on the original array</p><p>• Guarantees <span class="dim">O(n)</span> worst-case per search</p><p>• Total: O(3n) = O(n) for all three searches</p><h3 style="margin-top:10px;">Complexity</h3><p><span class="dim">Time:</span> O(n) per search, O(n) total</p><p><span class="dim">Space:</span> O(log n) recursion stack</p></div>';
+        '<h3 style="margin-top:10px;">Complete Trace Summary</h3>' +
+        '<p>Search 1 (k=7): pivot=39, |less|=7, k≤7 → left (k=7). pivot=12, |less|=0, k>1 → right (k=6). pivot=26, |less|=2, k>3 → right (k=3). Base → <span class="result-line">36</span></p>' +
+        '<p>Search 2 (k=3): pivot=39, |less|=7, k≤7 → left (k=3). pivot=12, |less|=0, k>1 → right (k=2). pivot=26, |less|=2, k≤2 → left (k=2). Base → <span class="result-line">18</span></p>' +
+        '<p>Search 3 (k=5): pivot=39, |less|=7, k≤7 → left (k=5). pivot=12, |less|=0, k>1 → right (k=4). pivot=26, |less|=2, k>3 → right (k=1). Base → <span class="result-line">29</span></p>' +
+        '<h3 style="margin-top:10px;">Key Insight: How k Guides the Algorithm</h3>' +
+        '<p>At each step, k tells us <b>exactly which partition</b> contains the answer:</p>' +
+        '<span class="formula-line">k ≤ |less| → answer is smaller than pivot → go LEFT</span>' +
+        '<span class="formula-line">|less| < k ≤ |less|+|equal| → answer IS the pivot</span>' +
+        '<span class="formula-line">k > |less|+|equal| → answer is larger → go RIGHT (adjust k)</span>' +
+        '<h3 style="margin-top:10px;">Complexity</h3>' +
+        '<p><span class="dim">Time:</span> O(n) per search, O(n) total for 3 searches</p>' +
+        '<p><span class="dim">Space:</span> O(log n) recursion stack</p>' +
+        '</div>';
       document.getElementById('sidebar').scrollTop = 0;
     }
 
@@ -532,7 +550,22 @@
         phase: 'Initialize — n=' + initialArr.length + ', three searches',
         phaseTitle: 'Initialize',
         action: 'Array ready',
-        explanation: '<div class="explain-section active"><h3>Initialize</h3><p>Array: <span class="dim">[' + initialArr.join(', ') + ']</span></p><p>Sorted: <span class="dim">[' + sorted.join(', ') + ']</span></p><p>We will find:</p><p>• <span class="dim">k=7</span> → ' + sorted[6] + '</p><p>• <span class="dim">k=3</span> → ' + sorted[2] + '</p><p>• <span class="dim">k=5</span> → ' + sorted[4] + '</p><p class="note">Each search runs the full algorithm independently.</p></div>'
+        explanation: '<div class="explain-section active"><h3>Initialize</h3>' +
+          '<p>Array: <span class="dim">[' + initialArr.join(', ') + ']</span></p>' +
+          '<p>Sorted: <span class="dim">[' + sorted.join(', ') + ']</span></p>' +
+          '<h3 style="margin-top:10px;">Three searches:</h3>' +
+          '<p>• <span class="dim">k=7</span> → answer = sorted[6] = <span class="result-line">' + sorted[6] + '</span></p>' +
+          '<p>• <span class="dim">k=3</span> → answer = sorted[2] = <span class="result-line">' + sorted[2] + '</span></p>' +
+          '<p>• <span class="dim">k=5</span> → answer = sorted[4] = <span class="result-line">' + sorted[4] + '</span></p>' +
+          '<h3 style="margin-top:10px;">How k works in the algorithm:</h3>' +
+          '<span class="formula-line">After partition around pivot p:</span>' +
+          '<p style="margin-left:8px;">• |less| elements are &lt; p (positions 1 to |less| in sorted order)</p>' +
+          '<p style="margin-left:8px;">• |equal| elements are = p (positions |less|+1 to |less|+|equal|)</p>' +
+          '<p style="margin-left:8px;">• |greater| elements are &gt; p (positions |less|+|equal|+1 to n)</p>' +
+          '<span class="formula-line">k ≤ |less| → recurse LEFT (same k)</span>' +
+          '<span class="formula-line">|less| < k ≤ |less|+|equal| → answer = pivot</span>' +
+          '<span class="formula-line">k > |less|+|equal| → recurse RIGHT (k -= |less|+|equal|)</span>' +
+          '<p class="note">Press Play or Step to begin.</p></div>'
       });
 
       function selectVisualization(subarray, origIndices, k, level, searchNum) {
@@ -552,7 +585,20 @@
           phase: searchBadge + ' ' + badge + ' — n=' + n + ', k=' + k,
           phaseTitle: 'Search ' + searchNum + ' — Level ' + level,
           action: 'sel([' + subarray.join(', ') + '], k=' + k + ')',
-          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Recursive Call</h3><p>Subarray: <span class="dim">[' + subarray.join(', ') + ']</span></p><p>k = <span class="dim">' + k + '</span> (find ' + (k===1?'st':k===2?'nd':k===3?'rd':'th') + ' smallest in this subarray)</p><p>n = ' + n + (n <= 5 ? ' → base case: sort and pick directly' : ' → form ⌈' + n + '/5⌉ = ' + Math.ceil(n/5) + ' groups') + '</p></div>'
+          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Recursive Call</h3>' +
+            '<p>We need the <span class="dim">' + k + ordinal(k) + ' smallest</span> element in:</p>' +
+            '<p style="margin-left:8px;">Subarray: <span class="dim">[' + subarray.join(', ') + ']</span></p>' +
+            '<p style="margin-left:8px;">n = ' + n + ' elements</p>' +
+            '<span class="formula-line">k = ' + k + ' means: if we sorted this subarray, the answer would be at position ' + k + '</span>' +
+            (n <= 5
+              ? '<p>n ≤ 5 → <b>base case</b>: sort directly and pick the ' + k + ordinal(k) + ' element.</p>'
+              : '<p>n = ' + n + ' > 5 → apply median-of-medians:</p>' +
+                '<p style="margin-left:8px;">1. Form ⌈' + n + '/5⌉ = ' + Math.ceil(n/5) + ' groups of 5</p>' +
+                '<p style="margin-left:8px;">2. Find median of each group</p>' +
+                '<p style="margin-left:8px;">3. Recursively find median of medians (pivot)</p>' +
+                '<p style="margin-left:8px;">4. Partition around pivot</p>' +
+                '<p style="margin-left:8px;">5. Use k to decide which side to recurse</p>') +
+            '</div>'
         });
 
         if (n <= 5) {
@@ -565,7 +611,14 @@
             phase: searchBadge + ' ' + badge + ' Base Case — answer=' + answer,
             phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Base Case',
             action: 'Sorted: [' + sortedSub.join(', ') + '], answer=' + answer,
-            explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>' + searchBadge + ' ' + badge + ' Base Case (n≤5)</h3><p>Sorted: <span class="dim">[' + sortedSub.join(', ') + ']</span></p><p>' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + ' smallest = <span class="result-line">' + answer + '</span></p></div>'
+            explanation: '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+              '<h3>' + searchBadge + ' ' + badge + ' Base Case (n≤5)</h3>' +
+              '<p>n = ' + n + ' ≤ 5 → sort directly:</p>' +
+              '<span class="formula-line">Sorted: [' + sortedSub.join(', ') + ']</span>' +
+              '<p>k = ' + k + ' → position ' + k + ' in sorted array (0-indexed: [' + (k-1) + '])</p>' +
+              '<span class="formula-line">sorted[' + (k-1) + '] = ' + answer + '</span>' +
+              '<p class="result-line" style="font-size:1.1em;">Answer: ' + answer + '</p>' +
+              '</div>'
           });
           return answer;
         }
@@ -594,9 +647,11 @@
           phase: searchBadge + ' ' + badge + ' Group — ' + groups.length + ' groups of ≤' + groupSize,
           phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Group',
           action: groups.length + ' groups formed',
-          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Divide into Groups of 5</h3><p>' + groups.length + ' groups:</p>' +
-            groups.map((g, i) => '<p>Group ' + i + ': <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][i%3] + '">[' + g.vals.join(', ') + ']</span></p>').join('') +
-            '<p class="note">Each group has at most 5 elements.</p></div>'
+          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Divide into Groups of 5</h3>' +
+            '<p>Goal: Find ' + k + ordinal(k) + ' smallest in [' + subarray.join(', ') + ']</p>' +
+            '<p>Step 1: Divide n=' + n + ' elements into ⌈' + n + '/5⌉ = ' + groups.length + ' groups:</p>' +
+            groups.map((g, i) => '<p style="margin-left:8px;">Group ' + i + ': <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][i%3] + '">[' + g.vals.join(', ') + ']</span></p>').join('') +
+            '<p class="note">Each group has at most 5 elements. We will sort each to find its median.</p></div>'
         });
 
         for (let g = 0; g < groups.length; g++) {
@@ -619,7 +674,12 @@
             phase: searchBadge + ' ' + badge + ' Sort Group ' + g + ' — median=' + medianVal,
             phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Sort Group ' + g,
             action: 'Group ' + g + ' sorted, median=' + medianVal,
-            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Sort Group ' + g + '</h3><p>Before: <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][g%3] + '">[' + grp.vals.join(', ') + ']</span></p><p>After:  <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][g%3] + '">[' + sortedVals.join(', ') + ']</span></p><p>Median (index ' + medIdxInGroup + '): <span class="result-line">' + medianVal + '</span></p></div>'
+            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Sort Group ' + g + '</h3>' +
+              '<p>Sort group to find its median (middle element):</p>' +
+              '<p>Before: <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][g%3] + '">[' + grp.vals.join(', ') + ']</span></p>' +
+              '<p>After:  <span class="dim" style="color:' + ['#00ccff','#ffcc00','#ff66ff'][g%3] + '">[' + sortedVals.join(', ') + ']</span></p>' +
+              '<span class="formula-line">Median (index ' + medIdxInGroup + '): ' + medianVal + '</span>' +
+              '<p class="note">We need all group medians before choosing the pivot.</p></div>'
           });
 
           grp.vals = [...sortedVals];
@@ -639,9 +699,11 @@
           phase: searchBadge + ' ' + badge + ' Medians — [' + medians.join(', ') + ']',
           phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Medians',
           action: 'Medians: [' + medians.join(', ') + ']',
-          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Collect Medians</h3><p>Medians from each group:</p>' +
-            groups.map((g, i) => '<p>Group ' + i + ' median: <span class="result-line">' + g.vals[g.medianIdx] + '</span></p>').join('') +
-            '<p>Median array B = <span class="dim">[' + medians.join(', ') + ']</span></p></div>'
+          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Collect Medians</h3>' +
+            '<p>Step 2: Extract median from each sorted group:</p>' +
+            groups.map((g, i) => '<p style="margin-left:8px;">Group ' + i + ' median: <span class="result-line">' + g.vals[g.medianIdx] + '</span></p>').join('') +
+            '<span class="formula-line">B = [' + medians.join(', ') + ']  (medians array, length ' + medians.length + ')</span>' +
+            '<p>Step 3: Find median of B recursively → this is our pivot.</p></div>'
         });
 
         const pivotSorted = [...medians].sort((a, b) => a - b);
@@ -667,7 +729,15 @@
           phase: searchBadge + ' ' + badge + ' Pivot = ' + pivot,
           phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Pivot',
           action: 'Pivot = ' + pivot,
-          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Median of Medians: ' + pivot + '</h3><p>B = <span class="dim">[' + medians.join(', ') + ']</span></p><p>Median of B = <span class="result-line">' + pivot + '</span></p><p class="note">This pivot guarantees at least 30% of elements on each side.</p></div>'
+          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Pivot Selected: ' + pivot + '</h3>' +
+            '<p>B = [' + medians.join(', ') + '], sorted B = [' + pivotSorted.join(', ') + ']</p>' +
+            '<span class="formula-line">pivot = median(B) = ' + pivot + '</span>' +
+            '<p>Step 4: Partition the subarray around pivot = ' + pivot + '</p>' +
+            '<p>This divides the array into three parts:</p>' +
+            '<p style="margin-left:8px;">• <span style="color:#00ff88;">Less</span>: elements &lt; ' + pivot + '</p>' +
+            '<p style="margin-left:8px;">• <span style="color:#ffcc00;">Equal</span>: elements = ' + pivot + '</p>' +
+            '<p style="margin-left:8px;">• <span style="color:#ff4444;">Greater</span>: elements &gt; ' + pivot + '</p>' +
+            '<p class="note">After partition, k tells us which part contains the answer.</p></div>'
         });
 
         const less = [], equal = [], greater = [];
@@ -691,7 +761,30 @@
           phase: searchBadge + ' ' + badge + ' Partition — L:' + less.length + ' E:' + equal.length + ' G:' + greater.length,
           phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Partition',
           action: 'Around pivot=' + pivot,
-          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Partition Around ' + pivot + '</h3><p><span style="color:#00ff88;">Less (' + less.length + '):</span> [' + less.join(', ') + ']</p><p><span style="color:#ffcc00;">Equal (' + equal.length + '):</span> [' + equal.join(', ') + ']</p><p><span style="color:#ff4444;">Greater (' + greater.length + '):</span> [' + greater.join(', ') + ']</p><p class="note">|less|=' + less.length + ', |equal|=' + equal.length + ', k=' + k + '</p></div>'
+          explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Partition Around ' + pivot + '</h3>' +
+            '<p>We split the subarray into three parts:</p>' +
+            '<p><span style="color:#00ff88;">Less (' + less.length + '):</span> [' + less.join(', ') + ']</p>' +
+            '<p><span style="color:#ffcc00;">Equal (' + equal.length + '):</span> [' + equal.join(', ') + ']</p>' +
+            '<p><span style="color:#ff4444;">Greater (' + greater.length + '):</span> [' + greater.join(', ') + ']</p>' +
+            '<h3 style="margin-top:10px;">How k relates to the answer:</h3>' +
+            '<span class="formula-line">k = ' + k + '  →  We want the ' + k + ordinal(k) + ' smallest element</span>' +
+            '<p>After partition, the sorted order of the subarray is:</p>' +
+            '<span class="formula-line">[Less sorted] + [Equal] + [Greater sorted]</span>' +
+            '<p>The ' + k + ordinal(k) + ' smallest element falls in one of three regions:</p>' +
+            '<p style="margin-left:8px;">• Positions 1 to ' + less.length + ': in the <span style="color:#00ff88;">Less</span> partition</p>' +
+            '<p style="margin-left:8px;">• Positions ' + (less.length + 1) + ' to ' + (less.length + equal.length) + ': in the <span style="color:#ffcc00;">Equal</span> partition (= pivot)</p>' +
+            '<p style="margin-left:8px;">• Positions ' + (less.length + equal.length + 1) + ' to ' + n + ': in the <span style="color:#ff4444;">Greater</span> partition</p>' +
+            '<h3 style="margin-top:10px;">Decision:</h3>' +
+            '<span class="formula-line">k = ' + k + '  ≤  |less| = ' + less.length + '  →  ' + (k <= less.length ? 'YES ✓ → recurse LEFT' : 'NO → check next') + '</span>' +
+            (k <= less.length
+              ? '<p class="result-line">k ≤ |less|: The answer is in the Less partition. Recurse left with same k=' + k + '.</p>'
+              : '<span class="formula-line">k = ' + k + '  ≤  |less|+|equal| = ' + (less.length + equal.length) + '  →  ' + (k <= less.length + equal.length ? 'YES ✓ → FOUND!' : 'NO → check next') + '</span>' +
+                (k <= less.length + equal.length
+                  ? '<p class="result-line">|less| < k ≤ |less|+|equal|: The answer IS the pivot = ' + pivot + '!</p>'
+                  : '<span class="formula-line">k = ' + k + '  >  |less|+|equal| = ' + (less.length + equal.length) + '  →  recurse RIGHT</span>' +
+                    '<p>New k = ' + k + ' - ' + (less.length + equal.length) + ' = <span class="dim">' + (k - less.length - equal.length) + '</span></p>' +
+                    '<p class="result-line">Recurse right with k=' + (k - less.length - equal.length) + '.</p>')) +
+            '</div>'
         });
 
         if (k <= less.length) {
@@ -701,7 +794,13 @@
             phase: searchBadge + ' ' + badge + ' k ≤ |less| → recurse LEFT',
             phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' → Left',
             action: 'Recurse left with k=' + k,
-            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Recurse Left</h3><p>k=' + k + ' ≤ |less|=' + less.length + '</p><p>The ' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + ' smallest is in the left partition.</p></div>'
+            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Decision: Recurse Left</h3>' +
+              '<span class="formula-line">k = ' + k + ' ≤ |less| = ' + less.length + '</span>' +
+              '<p>The ' + k + ordinal(k) + ' smallest element is among the ' + less.length + ' elements smaller than pivot.</p>' +
+              '<p>Key insight: <b>k does NOT change</b> when recursing left!</p>' +
+              '<span class="formula-line">Left partition: [' + less.join(', ') + '] (' + less.length + ' elements)</span>' +
+              '<p>Recursive call: sel([' + less.join(', ') + '], k=' + k + ')</p>' +
+              '<p class="note">We keep k unchanged because we\'re still looking for the same rank within a smaller array.</p></div>'
           });
           return selectVisualization(less, lessOrigIdx, k, level + 1, searchNum);
         } else if (k <= less.length + equal.length) {
@@ -713,7 +812,17 @@
             phase: searchBadge + ' ' + badge + ' ✅ Found! answer=' + pivot,
             phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' — Found!',
             action: 'Answer = ' + pivot,
-            explanation: '<div class="explain-section active" style="border-left-color:#00ff88;"><h3>' + searchBadge + ' ' + badge + ' ✅ Found!</h3><p>|less|=' + less.length + ', |equal|=' + equal.length + '</p><p>k=' + k + ' → ' + less.length + ' < ' + k + ' ≤ ' + (less.length + equal.length) + '</p><p>The answer is the pivot: <span class="result-line">' + pivot + '</span></p></div>'
+            explanation: '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+              '<h3>' + searchBadge + ' ' + badge + ' ✅ Found the Answer!</h3>' +
+              '<span class="formula-line">|less| = ' + less.length + ',  |equal| = ' + equal.length + '</span>' +
+              '<span class="formula-line">|less| < k ≤ |less|+|equal|</span>' +
+              '<span class="formula-line">' + less.length + ' < ' + k + ' ≤ ' + (less.length + equal.length) + '  ✓</span>' +
+              '<p>The ' + k + ordinal(k) + ' smallest element falls in the <span style="color:#ffcc00;">Equal</span> partition.</p>' +
+              '<p>Since all elements in Equal equal the pivot, the answer IS the pivot.</p>' +
+              '<span class="formula-line">Answer = pivot = ' + pivot + '</span>' +
+              '<p class="result-line" style="font-size:1.2em;">' + k + ordinal(k) + ' smallest = ' + pivot + '</p>' +
+              '<p class="note">The element ' + pivot + ' occupies positions ' + (less.length + 1) + ' through ' + (less.length + equal.length) + ' in sorted order.</p>' +
+              '</div>'
           });
           return pivot;
         } else {
@@ -724,7 +833,15 @@
             phase: searchBadge + ' ' + badge + ' k > |less|+|equal| → recurse RIGHT',
             phaseTitle: 'Search ' + searchNum + ' — Level ' + level + ' → Right',
             action: 'Recurse right with k=' + newK,
-            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Recurse Right</h3><p>k=' + k + ' > |less|+|equal|=' + (less.length + equal.length) + '</p><p>New k = ' + k + ' - ' + (less.length + equal.length) + ' = <span class="dim">' + newK + '</span></p><p>Recurse on right partition of ' + greater.length + ' elements.</p></div>'
+            explanation: '<div class="explain-section active"><h3>' + searchBadge + ' ' + badge + ' Decision: Recurse Right</h3>' +
+              '<span class="formula-line">k = ' + k + ' > |less|+|equal| = ' + (less.length + equal.length) + '</span>' +
+              '<p>The ' + k + ordinal(k) + ' smallest element is among the ' + greater.length + ' elements larger than pivot.</p>' +
+              '<p>Key insight: <b>k must be adjusted</b> when recursing right!</p>' +
+              '<span class="formula-line">New k = k - |less| - |equal| = ' + k + ' - ' + less.length + ' - ' + equal.length + ' = ' + newK + '</span>' +
+              '<p>Why subtract? We skip the ' + less.length + ' elements in Less and ' + equal.length + ' in Equal because they are all smaller than what we want.</p>' +
+              '<span class="formula-line">Right partition: [' + greater.join(', ') + '] (' + greater.length + ' elements)</span>' +
+              '<p>Recursive call: sel([' + greater.join(', ') + '], k=' + newK + ')</p>' +
+              '<p class="note">We want the ' + newK + ordinal(newK) + ' smallest in the right partition, which corresponds to the ' + k + ordinal(k) + ' smallest overall.</p></div>'
           });
           return selectVisualization(greater, greaterOrigIdx, newK, level + 1, searchNum);
         }
@@ -740,7 +857,12 @@
             phase: '🔄 Next Search — k=' + k + ' (' + (s+1) + '/' + K_VALUES.length + ')',
             phaseTitle: 'Transition → k=' + k,
             action: 'Starting new search: k=' + k,
-            explanation: '<div class="explain-section active"><h3>🔄 New Search: k=' + k + '</h3><p>Array: <span class="dim">[' + initialArr.join(', ') + ']</span></p><p>Now finding the <span class="dim">' + k + (k===1?'st':k===2?'nd':k===3?'rd':'th') + '</span> smallest element.</p><p class="note">The algorithm runs from scratch on the original array.</p></div>'
+            explanation: '<div class="explain-section active"><h3>🔄 New Search: k=' + k + '</h3>' +
+              '<p>Array: <span class="dim">[' + initialArr.join(', ') + ']</span></p>' +
+              '<span class="formula-line">Now finding the ' + k + ordinal(k) + ' smallest element</span>' +
+              '<p>Sorted array: <span class="dim">[' + sorted.join(', ') + ']</span></p>' +
+              '<p>k=' + k + ' → answer should be <span class="result-line">' + sorted[k-1] + '</span></p>' +
+              '<p class="note">The algorithm runs from scratch on the original array. Watch how k guides every decision!</p></div>'
           });
         }
         selectVisualization([...initialArr], allOrigIdx, k, 0, s + 1);
