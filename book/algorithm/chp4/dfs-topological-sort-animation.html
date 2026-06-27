@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DFS Topological Sort Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .graph-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    #graphCanvas {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .table-section { margin: 20px 0; }
+    .table-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      padding: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    th, td {
+      width: 72px;
+      height: 38px;
+      text-align: center;
+      border: 1px solid #333;
+      font-size: 0.78em;
+      transition: all 0.3s;
+    }
+    th {
+      background: #1a1a2e;
+      color: #00ccff;
+      font-weight: bold;
+    }
+    td {
+      background: #0d0d1a;
+      color: #aaa;
+    }
+    td.filled {
+      background: #0a1a12;
+      color: #00ff88;
+      border-color: #00ff8855;
+    }
+    td.current {
+      background: #1a0a00 !important;
+      color: #ff6600 !important;
+      border-color: #ff6600 !important;
+      box-shadow: 0 0 15px #ff660044;
+      transform: scale(1.05);
+      font-weight: bold;
+    }
+    td.gray {
+      background: #1a1a1a !important;
+      color: #888 !important;
+      border-color: #888 !important;
+    }
+    td.black {
+      background: #0a1a12 !important;
+      color: #00ff88 !important;
+      border-color: #00ff8855 !important;
+    }
+    .stack-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .stack-box {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      min-width: 200px;
+    }
+    .stack-box .title {
+      color: #00ccff;
+      margin-bottom: 10px;
+      font-size: 0.9em;
+    }
+    .stack-visual {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 3px;
+      min-height: 150px;
+      padding: 10px;
+      background: #0a0a18;
+      border-radius: 6px;
+      border: 1px solid #333;
+    }
+    .stack-element {
+      width: 100%;
+      height: 35px;
+      border: 2px solid #444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9em;
+      font-weight: bold;
+      background: #1a1a2e;
+      transition: all 0.3s;
+    }
+    .stack-element.highlight {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+      box-shadow: 0 0 10px #00ff8844;
+    }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .result-display {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .result-node {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1em;
+      font-weight: bold;
+      color: #00ff88;
+      background: #0a1a12;
+      animation: resultPop 0.3s ease;
+    }
+    .result-arrow {
+      color: #555;
+      font-size: 1.2em;
+    }
+    @keyframes resultPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>DFS Topological Sort</h1>
+  <p class="subtitle">Graph Algorithm — Depth-First Search Based Topological Ordering</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="graph-container">
+        <canvas id="graphCanvas" width="700" height="400"></canvas>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="highlight">DFS Topological Sort</span><br>
+        <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready — Press Play</span><br>
+        <span class="label">Current:</span> <span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="table-section">
+        <div class="table-title">Vertex Status & Times</div>
+        <div class="table-wrapper">
+          <table id="statusTable">
+            <thead>
+              <tr>
+                <th>Vertex</th>
+                <th>Color</th>
+                <th>Discovery</th>
+                <th>Finish</th>
+                <th>Parent</th>
+              </tr>
+            </thead>
+            <tbody id="statusBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack-container">
+        <div class="stack-box">
+          <div class="title">Stack (Reverse Finish Order)</div>
+          <div class="stack-visual" id="stackVisual"></div>
+        </div>
+      </div>
+
+      <div class="result-section" id="resultSection" style="display:none;">
+        <h2>Topological Order</h2>
+        <div class="result-display" id="resultDisplay"></div>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p><b>Topological Sort</b> orders vertices of a DAG such that for every directed edge <span class="dim">u → v</span>, vertex <span class="dim">u</span> appears before <span class="dim">v</span> in the ordering.</p>
+          <p>DFS-based approach: run DFS, push vertex to stack when <span class="dim">finished</span> (all descendants visited). Reverse the stack for topological order.</p>
+          <h3 style="margin-top:10px;">Key Idea</h3>
+          <span class="formula-line">finish_time[u] > finish_time[v]  ⟹  u comes before v</span>
+          <p class="note">A vertex finishes only after all its descendants are done, so it naturally appears before them in the reversed finish order.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Graph definition: vertices and directed edges
+    const vertices = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    const edges = [
+      ['A', 'B'], ['A', 'C'],
+      ['B', 'D'], ['B', 'E'],
+      ['C', 'E'], ['C', 'F'],
+      ['D', 'G'],
+      ['E', 'G'],
+      ['F', 'G']
+    ];
+
+    // Node positions for canvas drawing
+    const nodePos = {
+      'A': { x: 100, y: 80 },
+      'B': { x: 250, y: 80 },
+      'C': { x: 400, y: 80 },
+      'D': { x: 150, y: 220 },
+      'E': { x: 325, y: 220 },
+      'F': { x: 500, y: 220 },
+      'G': { x: 325, y: 350 }
+    };
+
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Algorithm state
+    let color = {};      // WHITE, GRAY, BLACK
+    let discovery = {};  // d
+    let finish = {};     // f
+    let parent = {};     // π
+    let time = 0;
+    let stack = [];
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    const WHITE = 'WHITE';
+    const GRAY = 'GRAY';
+    const BLACK = 'BLACK';
+
+    function initState() {
+      vertices.forEach(v => {
+        color[v] = WHITE;
+        discovery[v] = 0;
+        finish[v] = 0;
+        parent[v] = null;
+      });
+      time = 0;
+      stack = [];
+    }
+
+    // Build adjacency list
+    function adjList() {
+      const adj = {};
+      vertices.forEach(v => adj[v] = []);
+      edges.forEach(([u, v]) => adj[u].push(v));
+      return adj;
+    }
+
+    const adj = adjList();
+
+    // Precompute the full DFS execution to generate steps
+    function precomputeAll() {
+      initState();
+      const localColor = {};
+      const localDisc = {};
+      const localFin = {};
+      const localParent = {};
+      let localTime = 0;
+      const localStack = [];
+      const localSteps = [];
+
+      vertices.forEach(v => {
+        localColor[v] = WHITE;
+        localDisc[v] = 0;
+        localFin[v] = 0;
+        localParent[v] = null;
+      });
+
+      function dfsVisit(u) {
+        localTime++;
+        localDisc[u] = localTime;
+        localColor[u] = GRAY;
+
+        localSteps.push({
+          type: 'discover',
+          vertex: u,
+          time: localTime,
+          color: JSON.parse(JSON.stringify(localColor)),
+          disc: JSON.parse(JSON.stringify(localDisc)),
+          fin: JSON.parse(JSON.stringify(localFin)),
+          parent: JSON.parse(JSON.stringify(localParent)),
+          stack: [...localStack],
+          explanation: buildDiscoverExplanation(u, localTime, localParent[u])
+        });
+
+        for (const v of adj[u]) {
+          if (localColor[v] === WHITE) {
+            localParent[v] = u;
+
+            localSteps.push({
+              type: 'explore_edge',
+              from: u,
+              to: v,
+              time: localTime,
+              color: JSON.parse(JSON.stringify(localColor)),
+              disc: JSON.parse(JSON.stringify(localDisc)),
+              fin: JSON.parse(JSON.stringify(localFin)),
+              parent: JSON.parse(JSON.stringify(localParent)),
+              stack: [...localStack],
+              explanation: buildExploreEdgeExplanation(u, v)
+            });
+
+            dfsVisit(v);
+          } else if (localColor[v] === GRAY) {
+            localSteps.push({
+              type: 'back_edge',
+              from: u,
+              to: v,
+              time: localTime,
+              color: JSON.parse(JSON.stringify(localColor)),
+              disc: JSON.parse(JSON.stringify(localDisc)),
+              fin: JSON.parse(JSON.stringify(localFin)),
+              parent: JSON.parse(JSON.stringify(localParent)),
+              stack: [...localStack],
+              explanation: buildBackEdgeExplanation(u, v)
+            });
+          }
+        }
+
+        localColor[u] = BLACK;
+        localTime++;
+        localFin[u] = localTime;
+        localStack.push(u);
+
+        localSteps.push({
+          type: 'finish',
+          vertex: u,
+          time: localTime,
+          color: JSON.parse(JSON.stringify(localColor)),
+          disc: JSON.parse(JSON.stringify(localDisc)),
+          fin: JSON.parse(JSON.stringify(localFin)),
+          parent: JSON.parse(JSON.stringify(localParent)),
+          stack: [...localStack],
+          explanation: buildFinishExplanation(u, localTime, localFin[u])
+        });
+      }
+
+      for (const u of vertices) {
+        if (localColor[u] === WHITE) {
+          localSteps.push({
+            type: 'start_component',
+            vertex: u,
+            time: localTime,
+            color: JSON.parse(JSON.stringify(localColor)),
+            disc: JSON.parse(JSON.stringify(localDisc)),
+            fin: JSON.parse(JSON.stringify(localFin)),
+            parent: JSON.parse(JSON.stringify(localParent)),
+            stack: [...localStack],
+            explanation: buildStartComponentExplanation(u)
+          });
+          dfsVisit(u);
+        }
+      }
+
+      // Final step: reverse the stack
+      const topoOrder = [...localStack].reverse();
+      localSteps.push({
+        type: 'done',
+        time: localTime,
+        color: JSON.parse(JSON.stringify(localColor)),
+        disc: JSON.parse(JSON.stringify(localDisc)),
+        fin: JSON.parse(JSON.stringify(localFin)),
+        parent: JSON.parse(JSON.stringify(localParent)),
+        stack: [...localStack],
+        topoOrder: topoOrder,
+        explanation: buildDoneExplanation(topoOrder, localStack)
+      });
+
+      return { steps: localSteps, topoOrder };
+    }
+
+    // Explanation builders
+    function buildDiscoverExplanation(u, t, par) {
+      return `<div class="explain-section active">
+        <h3>Discover Vertex ${u}</h3>
+        <p>Vertex <span class="dim">${u}</span> is <span class="dim">WHITE</span> — start exploring it.</p>
+        <span class="formula-line">time = ${t}, ${u}.d = ${t}, ${u}.color = GRAY</span>
+        ${par ? `<p>Parent: <span class="split-info">${par}</span></p>` : '<p>Root of DFS tree (no parent)</p>'}
+        <p class="note">Gray means "discovered but not yet finished" — we're currently in its subtree.</p>
+      </div>`;
+    }
+
+    function buildExploreEdgeExplanation(u, v) {
+      return `<div class="explain-section active">
+        <h3>Tree Edge: ${u} → ${v}</h3>
+        <p>Edge <span class="dim">${u} → ${v}</span> leads to a <span class="dim">WHITE</span> vertex.</p>
+        <p>This is a <span class="split-info">tree edge</span> — ${v} becomes a child of ${u} in the DFS tree.</p>
+        <span class="formula-line">${v}.π = ${u}  (set parent)</span>
+        <p class="note">Now recurse into ${v} to explore its subtree.</p>
+      </div>`;
+    }
+
+    function buildBackEdgeExplanation(u, v) {
+      return `<div class="explain-section active">
+        <h3>Back Edge: ${u} → ${v}</h3>
+        <p>Edge <span class="dim">${u} → ${v}</span> leads to a <span class="dim">GRAY</span> vertex.</p>
+        <p>This is a <span class="split-info">back edge</span> — ${v} is an ancestor in the current DFS path.</p>
+        <p class="note">Back edges indicate cycles in directed graphs. For topological sort, the graph must be a DAG (no back edges).</p>
+      </div>`;
+    }
+
+    function buildFinishExplanation(u, t, f) {
+      return `<div class="explain-section active">
+        <h3>Finish Vertex ${u}</h3>
+        <p>All descendants of <span class="dim">${u}</span> have been visited.</p>
+        <span class="formula-line">time = ${t}, ${u}.f = ${f}, ${u}.color = BLACK</span>
+        <p>Push <span class="result-line">${u}</span> onto the stack.</p>
+        <p class="note">Stack now (bottom→top): [${stack.join(', ')}${stack.length ? ', ' : ''}${u}]</p>
+        <p class="note">Black means "completely processed" — all reachable vertices from ${u} are done.</p>
+      </div>`;
+    }
+
+    function buildStartComponentExplanation(u) {
+      return `<div class="explain-section active">
+        <h3>New DFS Component</h3>
+        <p>Vertex <span class="dim">${u}</span> is still <span class="dim">WHITE</span> — start a new DFS from it.</p>
+        <p class="note">In a disconnected graph, we may need multiple DFS calls. Each unvisited vertex triggers a new DFS tree.</p>
+      </div>`;
+    }
+
+    function buildDoneExplanation(topoOrder, stackOrder) {
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Algorithm Complete!</h3>
+        <p>DFS finished. Stack (finish order): <span class="dim">[${stackOrder.join(', ')}]</span></p>
+        <p>Reverse the stack to get <span class="result-line">topological order</span>:</p>
+        <span class="formula-line">[${topoOrder.join(' → ')}]</span>
+        <h3 style="margin-top:10px;">Verification</h3>
+        <p>Every edge ${edges.map(e => e[0] + '→' + e[1]).join(', ')}</p>
+        <p>respects the ordering: source appears before destination.</p>
+        <h3 style="margin-top:10px;">Complexity</h3>
+        <p><span class="dim">Time:</span> O(V + E) — each vertex and edge visited exactly once</p>
+        <p><span class="dim">Space:</span> O(V) — for color, discovery, finish arrays and the stack</p>
+      </div>`;
+    }
+
+    // Canvas drawing
+    function drawGraph(highlightNode, highlightEdge, nodeColors, discovery, finish) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw edges
+      edges.forEach(([u, v]) => {
+        const from = nodePos[u];
+        const to = nodePos[v];
+        const isHighlighted = highlightEdge && highlightEdge[0] === u && highlightEdge[1] === v;
+
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = isHighlighted ? '#ff6600' : '#555';
+        ctx.lineWidth = isHighlighted ? 3 : 1.5;
+        ctx.stroke();
+
+        // Arrow
+        const angle = Math.atan2(to.y - from.y, to.x - from.x);
+        const midX = (from.x + to.x) / 2;
+        const midY = (from.y + to.y) / 2;
+        const arrowLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(midX, midY);
+        ctx.lineTo(midX - arrowLen * Math.cos(angle - Math.PI / 6), midY - arrowLen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(midX, midY);
+        ctx.lineTo(midX - arrowLen * Math.cos(angle + Math.PI / 6), midY - arrowLen * Math.sin(angle + Math.PI / 6));
+        ctx.strokeStyle = isHighlighted ? '#ff6600' : '#555';
+        ctx.lineWidth = isHighlighted ? 3 : 1.5;
+        ctx.stroke();
+      });
+
+      // Draw nodes
+      vertices.forEach(v => {
+        const pos = nodePos[v];
+        const nodeColor = nodeColors ? nodeColors[v] : WHITE;
+        const isCurrent = highlightNode === v;
+
+        let fillColor = '#111';
+        let strokeColor = '#444';
+        let textColor = '#aaa';
+
+        if (nodeColor === GRAY) {
+          fillColor = '#1a1a1a';
+          strokeColor = '#888';
+          textColor = '#ccc';
+        } else if (nodeColor === BLACK) {
+          fillColor = '#0a1a12';
+          strokeColor = '#00ff88';
+          textColor = '#00ff88';
+        }
+
+        if (isCurrent) {
+          strokeColor = '#ff6600';
+          textColor = '#ff6600';
+          ctx.shadowColor = '#ff660044';
+          ctx.shadowBlur = 15;
+        }
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = isCurrent ? 3 : 2;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(v, pos.x, pos.y);
+
+        // Show discovery/finish times
+        if (discovery && discovery[v] > 0) {
+          ctx.fillStyle = '#555';
+          ctx.font = '10px Courier New';
+          ctx.fillText(`${discovery[v]}/${finish[v] || '?'}`, pos.x, pos.y + 32);
+        }
+      });
+    }
+
+    function updateStatusTable(colorState, discState, finState, parentState, highlightVertex) {
+      const tbody = document.getElementById('statusBody');
+      tbody.innerHTML = '';
+      vertices.forEach(v => {
+        const row = document.createElement('tr');
+        const isCurrent = highlightVertex === v;
+        row.innerHTML = `
+          <td${isCurrent ? ' class="current"' : ''}>${v}</td>
+          <td${colorState[v] === GRAY ? ' class="gray"' : colorState[v] === BLACK ? ' class="black"' : ''}>${colorState[v]}</td>
+          <td>${discState[v] || '—'}</td>
+          <td>${finState[v] || '—'}</td>
+          <td>${parentState[v] || 'NIL'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateStackDisplay(stackState) {
+      const visual = document.getElementById('stackVisual');
+      visual.innerHTML = '';
+      stackState.forEach((v, i) => {
+        const el = document.createElement('div');
+        el.className = 'stack-element' + (i === stackState.length - 1 ? ' highlight' : '');
+        el.textContent = v;
+        visual.appendChild(el);
+      });
+    }
+
+    // Build all steps
+    function buildSteps() {
+      const result = precomputeAll();
+      steps = result.steps;
+      return result.topoOrder;
+    }
+
+    function initTables() {
+      const initColor = {};
+      const initDisc = {};
+      const initFin = {};
+      const initParent = {};
+      vertices.forEach(v => {
+        initColor[v] = WHITE;
+        initDisc[v] = 0;
+        initFin[v] = 0;
+        initParent[v] = null;
+      });
+      updateStatusTable(initColor, initDisc, initFin, initParent, null);
+      updateStackDisplay([]);
+      drawGraph(null, null, initColor, initDisc, initFin);
+    }
+
+    function applyStep(step) {
+      updateStatusTable(step.color, step.disc, step.fin, step.parent, step.vertex || step.from);
+      updateStackDisplay(step.stack);
+
+      let highlightNode = step.vertex || step.from || null;
+      let highlightEdge = null;
+      if (step.type === 'explore_edge' || step.type === 'back_edge') {
+        highlightEdge = [step.from, step.to];
+      }
+
+      drawGraph(highlightNode, highlightEdge, step.color, step.disc, step.fin);
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${step.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function clearHighlights() {
+      vertices.forEach(v => {
+        color[v] = WHITE;
+        discovery[v] = 0;
+        finish[v] = 0;
+        parent[v] = null;
+      });
+      time = 0;
+      stack = [];
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      clearHighlights();
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p><b>Topological Sort</b> orders vertices of a DAG such that for every directed edge <span class="dim">u → v</span>, vertex <span class="dim">u</span> appears before <span class="dim">v</span> in the ordering.</p>
+        <p>DFS-based approach: run DFS, push vertex to stack when <span class="dim">finished</span> (all descendants visited). Reverse the stack for topological order.</p>
+        <h3 style="margin-top:10px;">Key Idea</h3>
+        <span class="formula-line">finish_time[u] > finish_time[v]  ⟹  u comes before v</span>
+        <p class="note">A vertex finishes only after all its descendants are done, so it naturally appears before them in the reversed finish order.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>`;
+      buildSteps();
+      initTables();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const result = precomputeAll();
+      const topoOrder = result.topoOrder;
+
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = `[${topoOrder.join(', ')}]`;
+      document.getElementById('resultSection').style.display = 'block';
+
+      const resultDisplay = document.getElementById('resultDisplay');
+      resultDisplay.innerHTML = '';
+      topoOrder.forEach((v, i) => {
+        const node = document.createElement('div');
+        node.className = 'result-node';
+        node.textContent = v;
+        node.style.animationDelay = (i * 0.1) + 's';
+        resultDisplay.appendChild(node);
+        if (i < topoOrder.length - 1) {
+          const arrow = document.createElement('span');
+          arrow.className = 'result-arrow';
+          arrow.textContent = '→';
+          resultDisplay.appendChild(arrow);
+        }
+      });
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildDoneExplanation(topoOrder, result.steps[result.steps.length - 1].stack);
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    // Speed slider listener
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    // Initialize
+    buildSteps();
+    initTables();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>
