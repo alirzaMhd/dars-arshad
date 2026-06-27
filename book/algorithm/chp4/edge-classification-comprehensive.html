@@ -59,6 +59,7 @@
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" onclick="showSection('rules')">Classification Rules</button>
+      <button class="tab" onclick="showSection('timestamps')">d[x] & f[x] Explained</button>
       <button class="tab" onclick="showSection('undirected')">Undirected Graphs</button>
       <button class="tab" onclick="showSection('examples')">Worked Examples</button>
     </div>
@@ -206,7 +207,214 @@
       </div>
     </div>
 
-    <!-- ============ TAB 2: UNDIRECTED GRAPHS ============ -->
+    <!-- ============ TAB 2: d[x] & f[x] EXPLAINED ============ -->
+    <div class="content" id="timestamps">
+      <div class="section">
+        <h2>What Are d[x] and f[x]?</h2>
+        <p>When DFS visits a vertex x, it assigns two timestamps:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3 style="color:#00ff88;">d[x] — Discovery Time</h3>
+            <p>The moment when vertex x is <strong>first discovered</strong> (turned from WHITE to GRAY).</p>
+            <p>Think of it as: "When did DFS first see x?"</p>
+            <p>d[x] is assigned when DFS-VISIT(x) is called, <strong>before</strong> exploring any neighbors.</p>
+          </div>
+          <div class="card">
+            <h3 style="color:#ff6600;">f[x] — Finish Time</h3>
+            <p>The moment when vertex x is <strong>fully processed</strong> (turned from GRAY to BLACK).</p>
+            <p>Think of it as: "When did DFS finish ALL work on x and all its descendants?"</p>
+            <p>f[x] is assigned <strong>after</strong> DFS has explored every neighbor of x and returned.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">DFS-VISIT(x) — Timestamp Assignment</div>
+          <div class="expr">
+            1. color[x] = GRAY<br>
+            2. time = time + 1; &nbsp; d[x] = time &nbsp;&nbsp;← discovery<br>
+            3. &nbsp;&nbsp;for each v ∈ Adj[x]:<br>
+            4. &nbsp;&nbsp;&nbsp;&nbsp;if color[v] == WHITE: DFS-VISIT(v)<br>
+            5. color[x] = BLACK<br>
+            6. time = time + 1; &nbsp; f[x] = time &nbsp;&nbsp;← finish
+          </div>
+          <div class="desc">d[x] is set on line 2 (entry), f[x] is set on line 6 (exit). All vertices in the subtree rooted at x have d-values and f-values between d[x] and f[x].</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>The Containment Property (Parenthesis Theorem)</h2>
+        <p>For any two vertices u and v, exactly ONE of the following is true:</p>
+
+        <div class="formula">
+          <div class="label">Three Possible Relationships Between Intervals [d[x], f[x]]</div>
+          <div class="expr">
+            Case 1: [d[u], f[u]] and [d[v], f[v]] are <span style="color:#ff6600;">completely disjoint</span><br>
+            &nbsp;&nbsp;&nbsp;→ u and v are in <strong>different branches</strong> (no ancestor relationship)<br><br>
+            Case 2: [d[u], f[u]] ⊂ [d[v], f[v]] &nbsp;(u's interval is inside v's)<br>
+            &nbsp;&nbsp;&nbsp;→ u is a <strong>descendant</strong> of v<br><br>
+            Case 3: [d[v], f[v]] ⊂ [d[u], f[u]] &nbsp;(v's interval is inside u's)<br>
+            &nbsp;&nbsp;&nbsp;→ v is a <strong>descendant</strong> of u
+          </div>
+          <div class="desc">This is called the <strong>Parenthesis Theorem</strong> because it's like matching parentheses: (u (v v) u) = v inside u, or (u u) (v v) = disjoint.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Visual Example of Containment</div>
+          <div class="timeline">
+Given DFS tree:
+
+    a (d=1, f=10)          ← root
+   / \
+  b (d=2, f=5)    c (d=6, f=9)
+ / \
+d(3,4) e(d=?, f=?)
+
+Intervals:
+  a: [1, 10]  ← contains ALL other intervals
+  b: [2, 5]   ← inside [1, 10], so b is descendant of a
+  d: [3, 4]   ← inside [2, 5], so d is descendant of b
+  c: [6, 9]   ← inside [1, 10] but disjoint from [2, 5], so c is descendant of a but NOT of b
+          </div>
+          <p><strong>Key insight:</strong> If [d[u], f[u]] ⊂ [d[v], f[v]], then u is a descendant of v. This is exactly how we distinguish tree/forward edges from cross edges!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>How d[x] and f[x] Classify Edges</h2>
+        <p>When DFS examines edge (u, v) from vertex u:</p>
+
+        <div class="formula">
+          <div class="label">Edge Classification Using Timestamps</div>
+          <div class="expr">
+            <strong>color[v] == WHITE</strong> → Tree Edge<br>
+            &nbsp;&nbsp;&nbsp;v is undiscovered → d[u] &lt; d[v] always (v will get a later timestamp)<br><br>
+            <strong>color[v] == GRAY</strong> → Back Edge<br>
+            &nbsp;&nbsp;&nbsp;v is still on recursion stack → d[v] &lt; d[u] (v was discovered earlier)<br><br>
+            <strong>color[v] == BLACK and d[u] &lt; d[v]</strong> → Forward Edge<br>
+            &nbsp;&nbsp;&nbsp;v is finished but discovered AFTER u → v is descendant of u<br><br>
+            <strong>color[v] == BLACK and d[u] &gt; d[v]</strong> → Cross Edge<br>
+            &nbsp;&nbsp;&nbsp;v is finished and discovered BEFORE u → v is NOT descendant of u
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Why the timestamps matter for forward vs cross edges:</strong><br>
+          Both forward and cross edges have BLACK targets. The only way to tell them apart is comparing timestamps:<br>
+          - Forward: d[u] &lt; d[v] → v is descendant (discovered later, finished earlier = inside u's interval)<br>
+          - Cross: d[u] &gt; d[v] → v is NOT descendant (discovered earlier, finished earlier = outside u's interval)
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complete Trace: d[x] and f[x] Example</h2>
+        <div class="example">
+          <div class="title">Full DFS Timestamp Trace</div>
+          <p><strong>Graph:</strong> V = {a, b, c, d, e}. Edges: a→b, a→c, b→d, c→d, c→e</p>
+          <p>DFS from a, adjacency alphabetical.</p>
+
+          <div class="timeline">
+time=0 (start)
+<br>
+DFS-VISIT(a):  color[a]=GRAY, time=1, d[a]=1
+<br>
+&nbsp;&nbsp;a→b (WHITE) → TREE
+<br>
+&nbsp;&nbsp;DFS-VISIT(b):  color[b]=GRAY, time=2, d[b]=2
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b→d (WHITE) → TREE
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;DFS-VISIT(d):  color[d]=GRAY, time=3, d[d]=3
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d has no WHITE neighbors → color[d]=BLACK, time=4, f[d]=4
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;back to b
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;b has no more WHITE neighbors → color[b]=BLACK, time=5, f[b]=5
+<br>
+&nbsp;&nbsp;back to a
+<br>
+&nbsp;&nbsp;a→c (WHITE) → TREE
+<br>
+&nbsp;&nbsp;DFS-VISIT(c):  color[c]=GRAY, time=6, d[c]=6
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;c→d (BLACK, d[c]&gt;d[d]) → CROSS
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;c→e (WHITE) → TREE
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;DFS-VISIT(e):  color[e]=GRAY, time=7, d[e]=7
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e has no WHITE neighbors → color[e]=BLACK, time=8, f[e]=8
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;back to c
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;c has no more WHITE neighbors → color[c]=BLACK, time=9, f[c]=9
+<br>
+&nbsp;&nbsp;back to a
+<br>
+&nbsp;&nbsp;a has no more WHITE neighbors → color[a]=BLACK, time=10, f[a]=10
+          </div>
+
+          <table>
+            <tr><th>Vertex</th><th>d[x]</th><th>f[x]</th><th>Interval</th><th>Finished by</th></tr>
+            <tr><td>a</td><td>1</td><td>10</td><td>[1, 10]</td><td>Last (root)</td></tr>
+            <tr><td>b</td><td>2</td><td>5</td><td>[2, 5]</td><td>Before c</td></tr>
+            <tr><td>c</td><td>6</td><td>9</td><td>[6, 9]</td><td>After b</td></tr>
+            <tr><td>d</td><td>3</td><td>4</td><td>[3, 4]</td><td>First leaf</td></tr>
+            <tr><td>e</td><td>7</td><td>8</td><td>[7, 8]</td><td>Second leaf</td></tr>
+          </table>
+
+          <p><strong>Observations:</strong></p>
+          <ul>
+            <li>[3,4] ⊂ [2,5] ⊂ [1,10] → d is descendant of b, b is descendant of a</li>
+            <li>[7,8] ⊂ [6,9] ⊂ [1,10] → e is descendant of c, c is descendant of a</li>
+            <li>[2,5] and [6,9] are disjoint → b and c are in different subtrees of a</li>
+            <li>Forward edge a→d? No — d is BLACK when a→d examined, but d is not a child of a (it's a child of b). Actually in this example we don't have forward edges.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: Why Timestamps Are Crucial</h2>
+        <div class="grid">
+          <div class="card">
+            <span class="highlight">d[x] tells you:</span>
+            <ul>
+              <li>When x was first discovered</li>
+              <li>Relative order of discovery (lower d = discovered earlier)</li>
+              <li>If d[u] &lt; d[v], u was discovered before v</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="highlight">f[x] tells you:</span>
+            <ul>
+              <li>When x was fully processed</li>
+              <li>When ALL descendants of x are done</li>
+              <li>Higher f = finished later = more descendants</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="highlight">Combined [d[x], f[x]]:</span>
+            <ul>
+              <li>Defines the "active interval" of x</li>
+              <li>Descendants have intervals INSIDE x's interval</li>
+              <li>Non-descendants have intervals OUTSIDE or DISJOINT from x's</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="highlight">For edge classification:</span>
+            <ul>
+              <li>WHITE → Tree (always d[u] &lt; d[v])</li>
+              <li>GRAY → Back (always d[v] &lt; d[u])</li>
+              <li>BLACK + d[u] &lt; d[v] → Forward</li>
+              <li>BLACK + d[u] &gt; d[v] → Cross</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TAB 3: UNDIRECTED GRAPHS ============ -->
     <div class="content" id="undirected">
       <div class="section">
         <h2>Edge Classification in Undirected Graphs</h2>
