@@ -240,7 +240,7 @@ td.ap-true { color: #ff0044 !important; font-weight: bold; }
         <h3 style="margin-top:10px;">Graph</h3>
         <p>8 vertices {<span class="dim">0,1,2,3,4,5,6,7</span>} with 9 undirected edges.</p>
         <p>Edges: <span class="dim">0-1, 1-2, 1-3, 2-3, 1-4, 4-5, 5-6, 5-7, 6-7</span></p>
-        <p>Three regions connected by bridges: left cycle {<span class="dim">0,1,2,3</span>}, middle node <span class="dim">4</span>, right cycle {<span class="dim">5,6,7</span>}.</p>
+        <p>Three regions connected by bridges: left side {<span class="dim">0,1,2,3</span>} (triangle {1,2,3} + pendant 0), middle node <span class="dim">4</span>, right cycle {<span class="dim">5,6,7</span>}.</p>
         <h3 style="margin-top:10px;">Key Formulas</h3>
         <span class="formula-line">low[v] = min( d[v], d[w] for each back edge (v,w), low[w] for each child w )</span>
         <p>Non-root <span class="dim">v</span> is articulation point if <span class="dim">&exist; child w</span> with <span class="result-line">low[w] &ge; d[v]</span></p>
@@ -296,7 +296,7 @@ function buildInitExplanation() {
 
 <h3 style="margin-top:12px;">Our Graph</h3>
 <p>8 vertices {<span class="dim">0,1,2,3,4,5,6,7</span>} with 9 undirected edges.</p>
-<p style="margin-left:8px;">• <b>Left cycle</b> {<span class="dim">0,1,2,3</span>}: 0-1-2-3-1 (triangle with one extra edge)</p>
+<p style="margin-left:8px;">• <b>Left side</b> {<span class="dim">0,1,2,3</span>}: triangle 1-2-3 with pendant vertex 0 attached via bridge (0,1)</p>
 <p style="margin-left:8px;">• <b>Middle node</b> <span class="dim">4</span>: sits on a bridge connecting left and right</p>
 <p style="margin-left:8px;">• <b>Right cycle</b> {<span class="dim">5,6,7</span>}: 4-5-6-7-5 (triangle)</p>
 
@@ -445,9 +445,9 @@ function buildMarkAPExplanation(v, child, lowChild, dV) {
 <p>In plain terms: <span class="dim">${child}</span>'s subtree has <b>no back edge</b> that reaches above <span class="dim">${v}</span>. The only path from that subtree to the rest of the graph goes <b>through</b> <span class="dim">${v}</span>.</p>
 <h3 style="margin-top:8px;">Consequence</h3>
 <p>Removing vertex <span style="color:#ff0044;font-weight:bold;">${v}</span> would <b>disconnect</b> <span class="dim">${child}</span>'s entire subtree from the rest of the graph — the graph would split into at least two separate components.</p>
-${v === 1 ? '<p class="note"><b>Context:</b> Vertex 1 connects three parts: the rest of the left cycle {0,2,3}, the middle node 4, and beyond. Without 1, nodes 0, 2, and 3 become isolated from each other and from 4,5,6,7.</p>' : ''}
-${v === 4 ? '<p class="note"><b>Context:</b> Vertex 4 sits on the only bridge between the left cycle {0,1,2,3} and the right cycle {5,6,7}. Removing 4 splits the graph into two disconnected halves.</p>' : ''}
-${v === 5 ? '<p class="note"><b>Context:</b> Vertex 5 connects vertices 6 and 7 to the rest. Without 5, the right cycle {6,7} becomes isolated from 4 and the rest of the graph.</p>' : ''}
+${v === 1 ? '<p class="note"><b>Context:</b> Vertex 1 connects three parts: pendant vertex 0, the triangle {2,3}, and the rest of the graph via node 4. Without 1, the graph splits into three components: {0}, {2,3}, and {4,5,6,7}.</p>' : ''}
+${v === 4 ? '<p class="note"><b>Context:</b> Vertex 4 connects the left side {0,1,2,3} to the right cycle {5,6,7} via bridges (1,4) and (4,5). Removing 4 splits the graph into two disconnected halves: {0,1,2,3} and {5,6,7}.</p>' : ''}
+${v === 5 ? '<p class="note"><b>Context:</b> Vertex 5 connects vertices 6 and 7 to the rest. Without 5, the right side {6,7} becomes isolated from 4 and the rest of the graph.</p>' : ''}
 <p class="note">Articulation points are critical infrastructure in networks — they represent single points of failure.</p>
 </div>`;
 }
@@ -509,9 +509,9 @@ function buildCompleteExplanation(apList, bridgeList) {
   let apDetail = '';
   if (apList.length > 0) {
     let reasons = [];
-    if (apList.includes(1)) reasons.push('<span class="dim">1</span> connects the left cycle {0,2,3} with the rest — removing it splits the left cycle apart and disconnects it from the right side');
+    if (apList.includes(1)) reasons.push('<span class="dim">1</span> connects pendant vertex 0, the triangle {2,3}, and the rest of the graph via node 4 — removing it splits the graph into three components: {0}, {2,3}, and {4,5,6,7}');
     if (apList.includes(4)) reasons.push('<span class="dim">4</span> is the sole bridge node between the left and right halves — without it, the graph splits into two');
-    if (apList.includes(5)) reasons.push('<span class="dim">5</span> connects {6,7} to the graph — removing it isolates the right triangle');
+    if (apList.includes(5)) reasons.push('<span class="dim">5</span> connects {6,7} to the graph — removing it isolates vertices 6 and 7');
     apDetail = reasons.map(r => `<p style="margin-left:8px;">• ${r}</p>`).join('');
   }
 
@@ -519,8 +519,9 @@ function buildCompleteExplanation(apList, bridgeList) {
   if (bridgeList.length > 0) {
     let reasons = [];
     for (let e of bridgeList) {
-      if (e.u === 1 && e.v === 4) reasons.push('<span class="dim">(1,4)</span> — the only edge connecting the left cycle to node 4');
-      if (e.u === 4 && e.v === 5) reasons.push('<span class="dim">(4,5)</span> — the only edge connecting node 4 to the right cycle');
+      if ((e.u === 0 && e.v === 1) || (e.u === 1 && e.v === 0)) reasons.push('<span class="dim">(0,1)</span> — the only edge connecting pendant vertex 0 to the rest of the graph');
+      if (e.u === 1 && e.v === 4) reasons.push('<span class="dim">(1,4)</span> — the only edge connecting the left side {0,2,3} to node 4');
+      if (e.u === 4 && e.v === 5) reasons.push('<span class="dim">(4,5)</span> — the only edge connecting node 4 to the right cycle {5,6,7}');
     }
     bridgeDetail = reasons.map(r => `<p style="margin-left:8px;">• ${r}</p>`).join('');
   }
@@ -537,8 +538,8 @@ ${apDetail || '<p style="color:#888;">None found — the graph is 2-vertex-conne
 ${bridgeDetail || '<p style="color:#888;">None found — the graph is 2-edge-connected.</p>'}
 
 <h3 style="margin-top:14px;">Understanding Our Graph's Structure</h3>
-<p style="margin-left:8px;">• The <b>left cycle</b> {<span class="dim">0,1,2,3</span>} internally has <b>no bridges</b> — it's a 2-connected component</p>
-<p style="margin-left:8px;">• But vertex <span class="dim">1</span> is an AP because it's the only connection point to the rest of the graph AND it holds the cycle together</p>
+<p style="margin-left:8px;">• The <b>left side</b> {<span class="dim">0,1,2,3</span>} contains a triangle {1,2,3} (2-connected) with pendant vertex 0 attached via bridge (0,1)</p>
+<p style="margin-left:8px;">• Vertex <span class="dim">1</span> is an AP because it connects pendant vertex 0, the triangle {2,3}, and the rest of the graph — removing it splits the graph into three components</p>
 <p style="margin-left:8px;">• Vertices <span class="dim">1 &rarr; 4 &rarr; 5</span> form a <b>bridge chain</b> — each is a critical link</p>
 <p style="margin-left:8px;">• The <b>right cycle</b> {<span class="dim">5,6,7</span>} has no bridges internally (it's a cycle), but <span class="dim">5</span> is the sole connection point</p>
 
