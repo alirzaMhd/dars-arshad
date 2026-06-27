@@ -334,16 +334,13 @@ function buildInitExplanation() {
 function buildDiscoverExplanation(v, dTime) {
   return `<div class="explain-section active">
 <h3>&#128269; DFS Arrival: Enter Vertex ${v}</h3>
-<p>The DFS recursion reaches vertex <span class="dim">${v}</span>. This is the <span class="result-line">${dTime}th</span> vertex discovered overall — our global discovery counter increments to ${dTime}.</p>
+<p>The DFS recursion reaches vertex <span class="dim">${v}</span>. This is the <span class="result-line">${dTime}th</span> vertex discovered overall — our global discovery counter is at ${dTime}.</p>
 <p><b>State change:</b> <span style="color:#555;">white</span> (undiscovered) &rarr; <span style="color:#ff6600;">gray</span> (on the recursion stack, "in progress").</p>
 
-<h3 style="margin-top:8px;">What "Gray" Means</h3>
-<p>A gray vertex is <b>currently being explored</b>. It's on the recursion stack — we entered it and haven't finished exploring all its neighbors yet. The stack forms a path from the DFS root to the current vertex.</p>
-
-<h3 style="margin-top:8px;">Initialize Low-Link</h3>
-<p>At the start, we assume <span class="dim">${v}</span> can only reach itself — no back edges or child propagations have been found yet:</p>
-<span class="formula-line">d[${v}] = ${dTime}   (discovery time: the ${dTime}th vertex found)</span>
-<span class="formula-line">low[${v}] = ${dTime}   (best reachable ancestor: currently just itself)</span>
+<h3 style="margin-top:8px;">When Were d[${v}] and low[${v}] Set?</h3>
+<p>${v === 0 ? `As the DFS root, <span class="dim">${v}</span>'s discovery time and low-link are initialized now at the start of dfs(${v}):` : `For non-root vertices, <span class="dim">${v}</span>'s discovery time and low-link were already set by its <b>parent</b> when the tree edge was created:`}
+</p>
+${v === 0 ? `<span class="formula-line">time++ → d[${v}] = ${dTime},  low[${v}] = ${dTime}</span>` : `<span class="formula-line">Parent set d[${v}] = ${dTime},  low[${v}] = ${dTime}  (before calling dfs(${v}))</span>`}
 <p>This is the <b>default</b> — we'll see if back edges or child propagations can <span style="color:#ff6600;">lower</span> this value later.</p>
 
 <h3 style="margin-top:8px;">Why low[v] = d[v] Initially?</h3>
@@ -372,12 +369,14 @@ function buildTreeEdgeExplanation(u, v, v_d) {
 <p>A tree edge is a <b>forward traversal</b> — DFS moves from a gray vertex to a white vertex. Tree edges form the structure of the DFS spanning tree. Every vertex (except the root) has exactly one incoming tree edge from its parent.</p>
 
 <h3 style="margin-top:8px;">Parent-Child Relationship</h3>
-<p>Setting <span class="dim">parent[${v}] = ${u}</span>. Vertex <span class="dim">${u}</span> is now the parent of <span class="dim">${v}</span> in the DFS tree. DFS will now <b>recursively descend</b> into <span class="dim">${v}</span>'s subtree before returning to process <span class="dim">${u}</span>'s remaining neighbors.</p>
+<p>Setting <span class="dim">parent[${v}] = ${u}</span>. Vertex <span class="dim">${u}</span> is now the parent of <span class="dim">${v}</span> in the DFS tree.</p>
 
-<h3 style="margin-top:8px;">Initialize Vertex v</h3>
-<span class="formula-line">d[${v}] = ${v_d}  (discovery time assigned)</span>
+<h3 style="margin-top:8px;">Initialize Vertex v (Done Before Recursing)</h3>
+<p>The parent ${u} assigns discovery time and low-link to ${v} <b>before</b> calling dfs(${v}):</p>
+<span class="formula-line">time++ → d[${v}] = ${v_d}  (discovery time assigned now)</span>
 <span class="formula-line">low[${v}] = ${v_d}  (initially can only reach itself)</span>
-<p><b>State change:</b> <span style="color:#555;">white</span> &rarr; <span style="color:#ff6600;">gray</span>. Vertex ${v} is now on the recursion stack.</p>
+<span class="formula-line">color[${v}] = gray  (now on the recursion stack)</span>
+<p>When dfs(${v}) is called next, it will see that d[${v}] is already set (non-zero) and skip re-initializing it.</p>
 
 <h3 style="margin-top:8px;">Why This Matters for AP/Bridge Detection</h3>
 <p>Tree edges <b>build the DFS tree</b> that we later analyze. When DFS returns from exploring ${v}'s subtree, we check:</p>
@@ -1012,12 +1011,14 @@ function buildSteps() {
   }));
 
   function dfs(u) {
-    st.time++;
-    st.d[u] = st.time;
-    st.low[u] = st.time;
+    if (st.d[u] === 0) {
+      st.time++;
+      st.d[u] = st.time;
+      st.low[u] = st.time;
+    }
     st.color[u] = 'gray';
 
-    steps.push(Object.assign(snap({ lowUpdateFrom: st.time, lowUpdateTo: st.time }), {
+    steps.push(Object.assign(snap({ lowUpdateFrom: st.d[u], lowUpdateTo: st.d[u] }), {
       type: 'discover', currentVertex: u, currentEdge: null,
       phase: `Discovered vertex ${u} at time ${st.d[u]}`
     }));
