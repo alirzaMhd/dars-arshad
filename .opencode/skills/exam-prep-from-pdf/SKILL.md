@@ -7,20 +7,17 @@ description: Use when generating exam study materials from PDF textbooks with qu
 
 ## Overview
 
-Analyzes PDF textbook chapters by cross-referencing questions with their answer sheets and the textbook explanation section. Identifies three categories of study material:
-1. **Tricky Questions** - سوالاتی که تله دارند، پاسخ عکس‌ال intuitif دارند، یا اغلب اشتباه فهمیده می‌شوند
-2. **Hidden Tips & Points** - نکات مهمی که در پاسخ‌ها وجود دارد اما در متن کتاب توضیح داده نشده
-3. **Basic Questions** - سوالات پایه‌ای که هر دانشجو باید برای این فصل حل کند
+**MAIN IDEA:** Read all question tips WITHOUT solving them — then solve only a FEW key questions.
 
-**Output language: ALL content in the HTML report MUST be written in Persian (فارسی).** This includes:
-- Section headers and titles
-- Question text (keep original if already in Persian; translate if in English)
-- Analysis reasons (tricky reasons, hidden tips, basic reasons)
-- Solutions and explanations
-- Key insights and memorize-this items
-- Statistics labels
-- Dashboard text
-- All UI text in the HTML template
+This skill does NOT solve every question. Instead it:
+1. **Reads all questions and their answer sheets** — extracts the TIPS, TRICKS, and HIDDEN POINTS from each question's answer
+2. **Identifies which questions have valuable tips** — questions that teach you something the textbook doesn't explain
+3. **Solves only 5-10 of the most important questions** — the ones with the best tips or most fundamental concepts
+4. **Skips questions that are straightforward** — if the answer is just "apply formula X", no tip to learn
+
+**Output:** A curated list of question tips + a few fully solved examples. NOT every question solved.
+
+**Output language: ALL content in the HTML report MUST be written in Persian (فارسی).**
 
 ## When to Use
 
@@ -56,28 +53,25 @@ digraph exam_prep {
     "Extract Text from Chapter Pages" [shape=box];
     "Separate Questions from Answers" [shape=box];
     "Parse Explanation Section" [shape=box];
-    "Analyze Each Question" [shape=box];
-    "Classify: Tricky / Hidden-Tip / Basic" [shape=box];
-    "Generate HTML Report (Pass 1)" [shape=box];
-    "Review: Missed Good Questions?" [shape=diamond];
-    "Second Pass Extraction" [shape=box];
-    "Merge & Deduplicate" [shape=box];
-    "Final Verification" [shape=box];
+    "Extract TIP from Each Question" [shape=box];
+    "Rank Questions by Tip Value" [shape=box];
+    "Select 5-10 Best to Solve" [shape=box];
+    "Solve Selected Questions Fully" [shape=box];
+    "Generate HTML Report" [shape=box];
+    "Verify Completeness" [shape=box];
     "Deliver to User" [shape=doublecircle];
 
     "Collect Inputs" -> "Extract Text from Chapter Pages";
     "Extract Text from Chapter Pages" -> "Separate Questions from Answers";
     "Extract Text from Chapter Pages" -> "Parse Explanation Section";
-    "Separate Questions from Answers" -> "Analyze Each Question";
-    "Parse Explanation Section" -> "Analyze Each Question";
-    "Analyze Each Question" -> "Classify: Tricky / Hidden-Tip / Basic";
-    "Classify: Tricky / Hidden-Tip / Basic" -> "Generate HTML Report (Pass 1)";
-    "Generate HTML Report (Pass 1)" -> "Review: Missed Good Questions?";
-    "Review: Missed Good Questions?" -> "Second Pass Extraction" [label="yes, missed some"];
-    "Review: Missed Good Questions?" -> "Final Verification" [label="no, complete"];
-    "Second Pass Extraction" -> "Merge & Deduplicate";
-    "Merge & Deduplicate" -> "Review: Missed Good Questions?";
-    "Final Verification" -> "Deliver to User";
+    "Separate Questions from Answers" -> "Extract TIP from Each Question";
+    "Parse Explanation Section" -> "Extract TIP from Each Question";
+    "Extract TIP from Each Question" -> "Rank Questions by Tip Value";
+    "Rank Questions by Tip Value" -> "Select 5-10 Best to Solve";
+    "Select 5-10 Best to Solve" -> "Solve Selected Questions Fully";
+    "Solve Selected Questions Fully" -> "Generate HTML Report";
+    "Generate HTML Report" -> "Verify Completeness";
+    "Verify Completeness" -> "Deliver to User";
 }
 ```
 
@@ -152,38 +146,44 @@ For each concept in the explanation, extract:
 - **Key formulas/rules stated**
 - **Tips or warnings explicitly given**
 
-## Phase 3: Analyze Each Question
+## Phase 3: Extract Tips from Each Question (DO NOT SOLVE YET)
 
-### Pre-filter: Exclude Fully Covered Questions
+**For EVERY question, extract the TIP only — do NOT write a full solution.**
 
-Before analyzing, check if the question's answer is **entirely explained** in the textbook's explanation section:
+### What is a "Tip"?
+
+A tip is the ONE thing this question teaches you that you wouldn't know from just reading the textbook. It's the insight, trick, trap, or hidden point.
+
+### Tip Extraction Template
+
+For each question, write:
 
 ```
-For each question Q with answer A:
-    Compare A against explanation section E:
-    - If ALL concepts in A are explained in E
-    - AND A adds no new insight, shortcut, or deeper reasoning beyond E
-    - AND the question tests only direct recall/application of textbook content
-    → EXCLUDE this question from the report
-    → Mark as "textbook-covered" — no value-add for exam prep
+سوال N: [متن کوتاه سوال]
+نکته: [یک جمله — چه چیزی یاد می‌گیرید از این سوال]
+دلیل اهمیت: [چرا این نکته برای امتحان مهم است]
 ```
 
-**Keep the question if ANY of these are true:**
-- Answer contains a concept NOT in the explanation section → hidden tip
-- Answer uses a shortcut or technique not taught in the chapter → hidden tip
-- Question has a common trap or counterintuitive element → tricky
-- Question is fundamental and must-solve for exam → basic
-- Answer reveals a deeper insight or cross-topic connection → hidden tip
+### Tip Value Scoring
 
-**Exclude the question if ALL of these are true:**
-- Answer is a direct restatement of textbook explanation
-- No hidden tips, no tricky framing, no special technique
-- Question is a straightforward "plug into formula" with no traps
-- Not in the "basic must-solve" list (not a core exam pattern)
+Rate each tip 1-5 based on how much value it adds beyond the textbook:
 
-The goal: **only include questions that provide value beyond the textbook.**
+| Score | Meaning |
+|-------|---------|
+| 5 | نکته‌ای که در کتاب نیست و اکثر دانشجوها نمی‌دانند |
+| 4 | تله رایج که باعث غلط زدن می‌شود |
+| 3 | نکته خوب که درک عمیق‌تری می‌دهد |
+| 2 | نکته ساده ولی مفید |
+| 1 | تکرار مطلب کتاب — ارزش افزوده ندارد |
 
-### 1. Tricky Question Detection
+**Questions with score 1 → SKIP. Do not include in the report.**
+
+### Pre-filter: Skip Textbook-Covered Questions
+
+If a question's answer is just a direct restatement of the textbook explanation with no new tip:
+- Score = 1
+- Skip it entirely
+- Do not include in the tips list or the solved questions
 
 A question is **tricky** if it has ANY of:
 - **Counterintuitive answer** - the correct answer contradicts common intuition
@@ -219,71 +219,97 @@ For each concept C in answer:
 - **Cross-topic connection** - links to concepts from other chapters
 - **Intuition builder** - mental model not provided in textbook
 
-### 3. Basic Question Detection
+## Phase 4: Select Best Questions to Solve
 
-A question is **basic** (must-solve) if it:
-- Tests a core concept that appears in >50% of exam patterns
-- Is explicitly labeled as fundamental/important in the textbook
-- Has a straightforward solution using only chapter's main formulas
-- Is a prerequisite for understanding harder questions in the chapter
-- Tests a definition, formula, or process that must be memorized
-- Appears in multiple past exams or is referenced as "classic"
+After extracting tips from ALL questions, select **5-10 questions** to fully solve.
 
-**Score basic importance:**
-- `basic_score` = 1-5 scale (5 = absolutely must solve)
-- `basic_reasons` = why this is fundamental
+### Selection Criteria
 
-## Phase 4: Generate HTML Report
+Pick questions that have:
+1. **Tip score 4-5** — highest value tips
+2. **Multiple tip types** — e.g., both tricky AND hidden tip
+3. **Fundamental concepts** — must-solve for exam preparation
+4. **Variety** — cover different topics/concepts from the chapter
+
+### What to Skip
+
+- Questions with tip score 1-2 (straightforward, no new insight)
+- Questions that are just "apply formula" with no trick
+- Duplicate tips (if two questions teach the same thing, pick the better one)
+
+### Solve Template for Selected Questions
+
+For each selected question, write a FULL solution:
+
+```
+سوال N: [متن کامل سوال]
+
+نکته اصلی: [یک جمله — مهم‌ترین چیزی که یاد می‌گیرید]
+
+حل کامل:
+  مرحله ۱: ...
+  مرحله ۲: ...
+  مرحله ۳: ...
+
+اشتباه رایج: [چه اشتباهی دانشجوها می‌کنند]
+
+نکته حفظی: [چیزی که باید حفظ کنید]
+```
+
+## Phase 5: Generate HTML Report
 
 ### HTML Structure
 
+The HTML has TWO main sections:
+1. **لیست نکات** — all question tips (quick overview, no full solutions)
+2. **سوالات حل شده** — 5-10 fully solved questions
+
 ```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Prep: [Chapter Name]</title>
+    <title>آمادگی امتحان: [نام فصل]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        /* Creative dark theme with neon accents */
         :root {
-            --bg-primary: #0a0a1a;
-            --bg-secondary: #12122a;
-            --bg-card: #1a1a3a;
-            --text-primary: #e0e0ff;
-            --text-secondary: #8888aa;
-            --accent-tricky: #ff4466;
-            --accent-hidden: #44ff88;
-            --accent-basic: #4488ff;
-            --accent-gold: #ffaa00;
-            --glow-tricky: 0 0 20px rgba(255,68,102,0.3);
-            --glow-hidden: 0 0 20px rgba(68,255,136,0.3);
-            --glow-basic: 0 0 20px rgba(68,136,255,0.3);
+            --bg: #F8F9FA;
+            --card: #FFFFFF;
+            --text: #1A1A2E;
+            --text-secondary: #4A4A6A;
+            --accent: #2563EB;
+            --purple: #7C3AED;
+            --green: #059669;
+            --amber: #D97706;
+            --border: #E5E7EB;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --radius: 12px;
         }
-        /* ... full CSS ... */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', 'Vazirmatn', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 32px;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Plus Jakarta Sans', 'Vazirmatn', sans-serif;
+            font-weight: 600;
+        }
+        /* Add professional card styles, stats bar, tip badges, solution accordions here */
     </style>
 </head>
 <body>
-    <!-- Header with chapter stats -->
-    <!-- Tab navigation: Tricky | Hidden Tips | Basic | All Questions -->
-    <!-- Question cards with expandable details -->
-    <!-- Summary statistics -->
+    <!-- Header -->
+    <!-- لیست نکات (Tips List) -->
+    <!-- سوالات حل شده (Solved Questions) -->
 </body>
 </html>
 ```
-
-### Creative Design Elements
-
-1. **Animated Background** - subtle particle effect or gradient animation
-2. **Color-Coded Cards** - red for tricky, green for hidden tips, blue for basic
-3. **Glowing Borders** - neon glow effect on hover for each category
-4. **Progress Tracker** - visual checklist of questions analyzed
-5. **Difficulty Meter** - animated gauge showing tricky_score
-6. **Collapsible Sections** - click to expand question details
-7. **Search/Filter** - filter by category, difficulty, topic
-8. **Print Mode** - clean layout for printing
-9. **Dark/Light Toggle** - theme switcher
-10. **Statistics Dashboard** - pie chart of question categories
 
 ### Required Sections in HTML
 
@@ -291,108 +317,86 @@ A question is **basic** (must-solve) if it:
 ```
 فصل: [نام فصل]
 تعداد کل سوالات: N
-دشوار: N (XX٪)
-نکات پنهان: N
-پایه (حتماً حل شود): N
+نکات استخراج شده: N
+سوالات حل شده: 5-10
 تاریخ تحلیل: [تاریخ]
 ```
 
-#### Section 2: Tricky Questions (Red Theme)
-For each tricky question:
+#### Section 2: لیست نکات (Tips List)
+For each question with tip score ≥ 2:
 ```html
-<div class="question-card tricky">
+<div class="tip-card">
+    <div class="tip-header">
+        <span class="tip-score">نکته ۵</span>
+        <span class="tip-num">سوال ۳</span>
+    </div>
+    <div class="tip-question">[متن کوتاه سوال]</div>
+    <div class="tip-text">[نکته — یک جمله]</div>
+    <div class="tip-why">[چرا مهم است]</div>
+</div>
+```
+
+#### Section 3: سوالات حل شده (Fully Solved Questions)
+For each selected question (5-10 total):
+```html
+<div class="solved-card">
     <div class="card-header">
-        <span class="badge">سوال دشوار</span>
-        <span class="difficulty">درجه سختی: ●●●○○</span>
+        <span class="badge">حل کامل</span>
         <span class="question-num">سوال ۳</span>
     </div>
-    <div class="question-text">
-        [متن کامل سوال]
-    </div>
-    <div class="tricky-reasons">
-        <h4>چرا این سوال دشوار است:</h4>
-        <ul>
-            <li>پاسخ عکس‌ال intuition</li>
-            <li>تله رایج: بیشتر دانشجوها گزینه ب را انتخاب می‌کنند</li>
-        </ul>
-    </div>
-    <div class="answer-walkthrough">
-        <h4>پاسخ کامل:</h4>
-        [حل گام به گام کامل]
-    </div>
-    <div class="key-insight">
-        <h4>نکته کلیدی:</h4>
-        [یک چیزی که باید به خاطر بسپارید]
-    </div>
-</div>
-```
-
-#### Section 3: Hidden Tips (Green Theme)
-For each hidden tip:
-```html
-<div class="question-card hidden-tip">
-    <div class="card-header">
-        <span class="badge">نکته پنهان</span>
-        <span class="tip-type">پیش‌نیاز بیان‌نشده</span>
-    </div>
-    <div class="tip-content">
-        <h4>چیزی که کتاب توضیح نداده:</h4>
-        [مفهومی که در بخش توضیحات نیست]
-    </div>
-    <div class="appears-in">
-        <h4>در این سوالات ظاهر می‌شود:</h4>
-        <span class="question-ref">سوال ۵، سوال ۱۲، سوال ۱۸</span>
-    </div>
-    <div class="why-it-matters">
-        <h4>چرا مهم است:</h4>
-        [چرا باید این را بدانید]
-    </div>
-</div>
-```
-
-#### Section 4: Basic Must-Solve (Blue Theme)
-For each basic question:
-```html
-<div class="question-card basic">
-    <div class="card-header">
-        <span class="badge">سوال پایه - حتماً حل کنید</span>
-        <span class="importance">اهمیت: ★★★★★</span>
-    </div>
-    <div class="question-text">
-        [متن کامل سوال]
-    </div>
-    <div class="why-basic">
-        <h4>چرا این سوال پایه‌ای است:</h4>
-        [دلیل اینکه چرا باید حل شود]
-    </div>
+    <div class="question-text">[متن کامل سوال]</div>
+    <div class="main-tip">[نکته اصلی — یک جمله]</div>
     <div class="solution">
-        <h4>پاسخ:</h4>
-        [Step-by-step solution]
+        <h4>حل کامل:</h4>
+        <ol>
+            <li>مرحله ۱: ...</li>
+            <li>مرحله ۲: ...</li>
+            <li>مرحله ۳: ...</li>
+        </ol>
     </div>
-    <div class="memorize">
-        <h4>حفظ کنید:</h4>
-        [فرمول یا مفهوم کلیدی برای حفظ کردن]
-    </div>
+    <div class="common-mistake">[اشتباه رایج]</div>
+    <div class="memorize">[نکته حفظی]</div>
 </div>
 ```
 
-#### Section 5: Statistics & Summary
-```html
-<div class="stats-dashboard">
-    <div class="stat-card">
-        <div class="stat-number">12</div>
-        <div class="stat-label">سوالات دشوار</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">8</div>
-        <div class="stat-label">نکات پنهان</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">15</div>
-        <div class="stat-label">سوالات پایه (حتماً حل شود)</div>
-    </div>
-</div>
-```
+### Professional Design Requirements
+
+#### Color Palette (Light Professional Theme)
+- **Background:** `#F8F9FA` (soft gray-white)
+- **Card Background:** `#FFFFFF` (pure white)
+- **Primary Text:** `#1A1A2E` (dark navy)
+- **Secondary Text:** `#4A4A6A` (muted purple-gray)
+- **Accent Primary:** `#2563EB` (professional blue)
+- **Accent Secondary:** `#7C3AED` (refined purple)
+- **Success/Score 5:** `#059669` (emerald green)
+- **Warning/Score 4:** `#D97706` (amber)
+- **Info/Score 3:** `#2563EB` (blue)
+- **Border:** `#E5E7EB` (light gray)
+- **Shadow:** `0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)`
+
+#### Typography
+- **Primary Font:** `'Inter', 'Vazirmatn', system-ui, sans-serif` (Google Fonts Inter + Vazirmatn for Persian)
+- **Heading Font:** `'Plus Jakarta Sans', 'Vazirmatn', sans-serif`
+- **Monospace:** `'JetBrains Mono', 'Fira Code', monospace`
+- Load from Google Fonts: `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">`
+
+#### Math Notation Support
+- Use **MathJax 3** for LaTeX math rendering
+- Load: `<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>`
+- Wrap all math in `\(...\)` for inline and `\[...\]` for display mode
+- In solutions, always render formulas with proper notation
+
+#### Design Elements
+1. **Clean Card Layout** - white cards with subtle shadows, rounded corners (12px)
+2. **Color-Coded Tip Badges** - emerald for score 5, amber for score 4, blue for score 3
+3. **Subtle Hover Effects** - smooth shadow transition on card hover (no neon/glow)
+4. **Collapsible Solutions** - clean accordion with smooth expand/collapse animation
+5. **Search/Filter Bar** - minimal input with icon, filter by tip score
+6. **Print Mode** - clean layout with no shadows, optimized margins
+7. **Statistics Summary** - clean horizontal stat cards at top
+8. **Professional Spacing** - generous padding (24px cards, 16px gaps), clear visual hierarchy
+9. **RTL Support** - full right-to-left layout for Persian content
+10. **Subtle Dividers** - thin `1px solid #E5E7EB` lines between sections
 
 ## Phase 5: Iterative Extraction — Second Pass (MANDATORY)
 
@@ -486,27 +490,27 @@ After second pass:
 
 Before delivering, verify:
 
-- [ ] Every question from the chapter is analyzed
-- [ ] Question count matches: analysis count = page count (±0)
-- [ ] Every tricky question has: question text, reasons, full solution, key insight
-- [ ] Every hidden tip has: concept, which questions it appears in, why it matters
-- [ ] Every basic question has: importance rating, solution, memorize-this item
+- [ ] Every question from the chapter has a tip extracted (score ≥ 2)
+- [ ] Questions with score 1 are excluded (no value beyond textbook)
+- [ ] 5-10 questions are fully solved (best tips, most fundamental)
+- [ ] All solved questions have: full solution, main tip, common mistake, memorize item
 - [ ] HTML renders correctly in browser
-- [ ] All interactive elements work (tabs, expand/collapse, filter)
+- [ ] All interactive elements work (expand/collapse, filter)
 - [ ] Statistics match actual counts
-- [ ] No question is left uncategorized
 - [ ] Second pass review completed (even if no new questions found)
 
 ## Rules
 
-- **ALL output in Persian (فارسی).** Every label, header, reason, solution, insight, and UI text in the HTML must be in Persian. Only keep original question text if it's already in Persian; translate English questions to Persian.
-- **Never skip questions.** Analyze EVERY question from the chapter.
-- **Be specific with reasons.** "دشوار" کافی نیست — توضیح دهید چرا.
-- **Include full solutions.** نگویید "به پاسخ نگاه کنید" — کامل حل کنید.
-- **Cross-reference thoroughly.** Check every answer concept against the explanation section.
+- **ALL output in Persian (فارسی).** Every label, header, reason, solution, insight, and UI text in the HTML must be in Persian.
+- **Professional light theme only.** Use the specified color palette — white cards, soft gray background, no dark themes.
+- **Use MathJax for all math.** Every formula, equation, and mathematical expression must be wrapped in `\(...\)` or `\[...\]` for proper rendering.
+- **Load Google Fonts.** Always include Inter + Vazirmatn + Plus Jakarta Sans via Google Fonts CDN.
+- **DO NOT solve every question.** Extract tips from ALL questions, but solve only 5-10 of the best ones.
+- **Be specific with tips.** "نکته خوب" کافی نیست — توضیح دهید چه چیزی یاد می‌گیرید.
+- **Include full solutions for selected questions only.** نگویید "به پاسخ نگاه کنید" — کامل حل کنید.
+- **Skip textbook-covered questions.** If the answer just restates the textbook with no new tip, exclude it.
 - **Iterate until complete.** Always run the second pass review. If you missed questions, do a third pass.
-- **Count verification is mandatory.** Compare analysis count vs page count. Mismatch = not done.
-- **Creative but readable.** Design should enhance, not distract from content.
+- **Clean, readable design.** Professional typography, generous spacing, subtle shadows — no flashy effects.
 - **Print-friendly.** Ensure the HTML prints cleanly for offline study.
 - **Mobile responsive.** Must work on phones for studying on the go.
 
@@ -522,13 +526,14 @@ Agent:
 1. Extract pages 45-52 → chapter_extracted.txt
 2. Separate questions from answers within the text
 3. Extract explanation from pages 38-44 → explanation_extracted.txt
-4. Analyze each question against its answer and explanation
-5. Pass 1 results: 10 tricky, 6 hidden tips, 14 basic must-solve (30 total)
-6. Generate linked-lists-exam-prep.html
-7. Review pass: found 2 missed questions in page 49 (sub-parts b,c)
-8. Pass 2: added 2 more questions, re-analyzed, updated HTML
-9. Final count: 10 tricky, 7 hidden tips, 15 basic must-solve (32 total)
-10. Deliver: "Created exam prep with 32 analyzed questions (2 passes)"
+4. Extract tip from each question (DO NOT solve yet)
+5. Score tips: 15 questions with score ≥ 2, 8 questions with score 1 (excluded)
+6. Select 7 best questions to fully solve (scores 4-5, variety of topics)
+7. Generate linked-lists-exam-prep.html with tips list + solved questions
+8. Review pass: found 2 missed questions in page 49
+9. Pass 2: extract tips for 2 more, 1 has score 4 → add to solved list
+10. Final: 17 tips in list, 8 questions fully solved
+11. Deliver: "آمادگی امتحان لینک: ۱۷ نکته + ۸ سوال حل شده"
 ```
 
 ## File Naming
