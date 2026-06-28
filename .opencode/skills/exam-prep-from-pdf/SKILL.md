@@ -146,7 +146,34 @@ For each concept in the explanation, extract:
 
 ## Phase 3: Analyze Each Question
 
-For EVERY question, perform this analysis:
+### Pre-filter: Exclude Fully Covered Questions
+
+Before analyzing, check if the question's answer is **entirely explained** in the textbook's explanation section:
+
+```
+For each question Q with answer A:
+    Compare A against explanation section E:
+    - If ALL concepts in A are explained in E
+    - AND A adds no new insight, shortcut, or deeper reasoning beyond E
+    - AND the question tests only direct recall/application of textbook content
+    → EXCLUDE this question from the report
+    → Mark as "textbook-covered" — no value-add for exam prep
+```
+
+**Keep the question if ANY of these are true:**
+- Answer contains a concept NOT in the explanation section → hidden tip
+- Answer uses a shortcut or technique not taught in the chapter → hidden tip
+- Question has a common trap or counterintuitive element → tricky
+- Question is fundamental and must-solve for exam → basic
+- Answer reveals a deeper insight or cross-topic connection → hidden tip
+
+**Exclude the question if ALL of these are true:**
+- Answer is a direct restatement of textbook explanation
+- No hidden tips, no tricky framing, no special technique
+- Question is a straightforward "plug into formula" with no traps
+- Not in the "basic must-solve" list (not a core exam pattern)
+
+The goal: **only include questions that provide value beyond the textbook.**
 
 ### 1. Tricky Question Detection
 
@@ -382,6 +409,10 @@ Ask yourself for EVERY question in the chapter:
   - Count expected (from scanning pages): ___
   - If mismatch → find the missing ones
 
+□ Did I exclude questions fully covered by the textbook explanation?
+  - For each included question: does it add value beyond the textbook?
+  - If answer is just "see section X" with no extra insight → exclude
+
 □ Are there questions I skipped because they seemed "too easy"?
   - Re-evaluate: even easy questions may be basic must-solve
 
@@ -418,7 +449,8 @@ for i, page_num in enumerate(range(PAGE_START-1, PAGE_END)):
 1. Read `chapter_extracted.txt` side-by-side with `chapter_extracted_pass2.txt`
 2. Find any question present in Pass 2 but missing from Pass 1 analysis
 3. For each missed question, run the full analysis (tricky/hidden/basic detection)
-4. Add to the HTML report
+4. Apply the pre-filter: exclude if fully covered by textbook explanation
+5. Add qualifying questions to the HTML report
 
 ### Merge & Deduplicate
 
