@@ -1351,7 +1351,8 @@ async function pushDsaToGithub() {
     const state = collectDsaState();
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
     const filePath = DSA_STATE_DIR + '/dynamic-programming-exam-prep-state.json';
-    const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
+    const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
+    const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
     const getRes = await fetch(getUrl, {
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -1383,7 +1384,8 @@ async function loadDsaFromGithub() {
   updateDsaSyncStatus('yellow', 'loading...');
   try {
     const filePath = DSA_STATE_DIR + '/dynamic-programming-exam-prep-state.json';
-    const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
+    const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
     const res = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -1391,11 +1393,21 @@ async function loadDsaFromGithub() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     dsaGithubSha = data.sha;
-    const raw = data.content.replace(/\n/g, '');
+    let raw = '';
+    if (data.content) {
+      raw = data.content.replace(/\n/g, '');
+    } else if (data.download_url) {
+      const dlRes = await fetch(data.download_url);
+      raw = await dlRes.text();
+    }
     if (!raw) { updateDsaSyncStatus('green', 'empty state'); return; }
-    const content = decodeURIComponent(escape(atob(raw)));
-    const parsed = JSON.parse(content);
-    applyDsaState(parsed);
+    let content;
+    if (raw.startsWith('{')) {
+      content = raw;
+    } else {
+      content = decodeURIComponent(escape(atob(raw)));
+    }
+    applyDsaState(JSON.parse(content));
     updateDsaSyncStatus('green', 'synced');
   } catch (e) {
     console.error('GitHub load error:', e);
