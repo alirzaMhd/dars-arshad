@@ -301,12 +301,218 @@ The HTML has TWO main sections:
             font-weight: 600;
         }
         /* Add professional card styles, stats bar, tip badges, solution accordions here */
+
+        /* ── Memo styles ── */
+        .memo-cell{border-top:1px solid var(--border);padding:12px 0 8px;margin-top:12px}
+        .memo-label{font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .memo-cell textarea{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;transition:border-color .15s;line-height:1.5;background:var(--bg)}
+        .memo-cell textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(37,99,235,.12)}
+        .memo-cell textarea::placeholder{color:#bbb}
+        .memo-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+        .memo-actions .ts-btn{background:transparent;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit}
+        .memo-actions .ts-btn:hover{background:#EEF2FF}
+        .memo-images{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+        .memo-img-wrap{position:relative;display:inline-block;max-width:180px;border-radius:8px;overflow:hidden;border:1px solid var(--border);cursor:pointer}
+        .memo-img-wrap img{display:block;width:100%;height:auto;max-height:140px;object-fit:cover}
+        .memo-img-wrap .img-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+        .memo-img-wrap:hover .img-del{opacity:1}
+        .img-upload-btn{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-secondary);font-family:inherit;transition:all .15s}
+        .img-upload-btn:hover{border-color:var(--accent);color:var(--accent);background:#EEF2FF}
+        .img-preview-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;cursor:zoom-out}
+        .img-preview-overlay.open{display:flex}
+        .img-preview-overlay img{max-width:90vw;max-height:90vh;border-radius:8px}
     </style>
 </head>
 <body>
     <!-- Header -->
     <!-- لیست نکات (Tips List) -->
     <!-- سوالات حل شده (Solved Questions) -->
+
+    <!-- Sync status indicator (fixed bottom-right) -->
+    <div style="position:fixed;bottom:16px;right:16px;z-index:100;display:flex;align-items:center;gap:8px;background:var(--card);padding:8px 14px;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border);font-size:12px">
+      <span class="dot gray" id="dsa-sync-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af"></span>
+      <span id="dsa-sync-label" style="color:var(--text-secondary)">offline</span>
+      <button onclick="openDsaTokenModal()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">⚙️</button>
+    </div>
+
+    <!-- Token settings modal -->
+    <div id="dsa-token-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;justify-content:center;align-items:center">
+      <div style="background:var(--card);border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <h3 style="margin-bottom:8px;color:var(--accent)">⚙️ GitHub Auto-Sync</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.<br>State auto-saves and auto-pushes on every change.</p>
+        <input type="text" id="dsa-token-input" placeholder="github_pat_..." style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="closeDsaTokenModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--bg);color:var(--text);cursor:pointer;font-size:13px">Cancel</button>
+          <button onclick="saveDsaTokenFromModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:600">Save & Sync</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image preview overlay -->
+    <div id="dsa-img-preview" class="img-preview-overlay" onclick="this.classList.remove('open')"><img src="" alt="Preview"></div>
+
+    <!-- Memo + Auto-Push JavaScript -->
+    <script>
+    // ── Config ──
+    const DSA_GITHUB_REPO = 'alirzaMhd/dars-arshad';
+    const DSA_STATE_DIR = 'book/dsa-exam/data';
+    let dsaGithubSha = null;
+    let dsaAutoPushTimer = null;
+    const DSA_PUSH_DEBOUNCE = 2500;
+
+    function getDsaToken() { return localStorage.getItem('dsaGithubToken') || ''; }
+    function setDsaToken(t) { localStorage.setItem('dsaGithubToken', t); }
+
+    // ── State ──
+    function getFileName() { return window.location.pathname.split('/').pop().replace('.html', ''); }
+
+    function collectDsaState() {
+      const memos = {}, images = {};
+      document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
+        const id = card.dataset.memoId || '';
+        if (!id) return;
+        const ta = card.querySelector('.memo-cell textarea');
+        if (ta && ta.value.trim()) memos[id] = ta.value;
+        const imgContainer = card.querySelector('.memo-images');
+        if (imgContainer) {
+          const imgs = [];
+          imgContainer.querySelectorAll('.memo-img-wrap img').forEach(img => { if (img.src) imgs.push(img.src); });
+          if (imgs.length) images[id] = imgs;
+        }
+      });
+      return { version: 1, updatedAt: new Date().toISOString(), memos, images };
+    }
+
+    function applyDsaState(state) {
+      if (!state) return;
+      if (state.memos) Object.entries(state.memos).forEach(([id, val]) => {
+        const card = document.querySelector(`[data-memo-id="${id}"]`);
+        if (card) { const ta = card.querySelector('.memo-cell textarea'); if (ta) ta.value = val; }
+      });
+      if (state.images) Object.entries(state.images).forEach(([id, imgs]) => {
+        const card = document.querySelector(`[data-memo-id="${id}"]`);
+        if (card) { const c = card.querySelector('.memo-images'); if (c) imgs.forEach(src => addImageToContainer(c, src)); }
+      });
+    }
+
+    function saveDsaLocal() {
+      localStorage.setItem('dsaExamState_' + getFileName(), JSON.stringify(collectDsaState()));
+      scheduleDsaAutoPush();
+    }
+
+    // ── Auto-push ──
+    function scheduleDsaAutoPush() {
+      if (dsaAutoPushTimer) clearTimeout(dsaAutoPushTimer);
+      dsaAutoPushTimer = setTimeout(() => pushDsaToGithub(), DSA_PUSH_DEBOUNCE);
+    }
+
+    async function pushDsaToGithub() {
+      const token = getDsaToken();
+      if (!token) return;
+      try {
+        const state = collectDsaState();
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+        const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
+        const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`;
+        const getRes = await fetch(getUrl, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
+        if (getRes.ok) { const d = await getRes.json(); dsaGithubSha = d.sha; } else { dsaGithubSha = null; }
+        const body = { message: 'Auto-update DSA memo (' + getFileName() + ') ' + new Date().toISOString().slice(0,10), content };
+        if (dsaGithubSha) body.sha = dsaGithubSha;
+        const res = await fetch(getUrl, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (res.ok) { const r = await res.json(); dsaGithubSha = r.content.sha; updateDsaSyncStatus('green', 'synced'); }
+        else { updateDsaSyncStatus('red', 'push error'); }
+      } catch (e) { console.error('DSA auto-push error:', e); updateDsaSyncStatus('red', 'error'); }
+    }
+
+    async function loadDsaFromGithub() {
+      const token = getDsaToken();
+      if (!token) { updateDsaSyncStatus('gray', 'no token'); return; }
+      updateDsaSyncStatus('yellow', 'loading...');
+      try {
+        const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
+        const res = await fetch(`https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
+        if (res.status === 404) { updateDsaSyncStatus('green', 'no saved state'); return; }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json(); dsaGithubSha = data.sha;
+        applyDsaState(JSON.parse(atob(data.content.replace(/\n/g, ''))));
+        updateDsaSyncStatus('green', 'synced');
+      } catch (e) { console.error('GitHub load error:', e); updateDsaSyncStatus('red', 'load error'); }
+    }
+
+    function updateDsaSyncStatus(color, label) {
+      const dot = document.getElementById('dsa-sync-dot'), lbl = document.getElementById('dsa-sync-label');
+      if (dot) dot.className = 'dot ' + color;
+      if (lbl) lbl.textContent = label;
+    }
+
+    // ── Memo actions ──
+    function dsaSaveMemo(id) { saveDsaLocal(); }
+    function dsaInsertTimestamp(id) {
+      const card = document.querySelector(`[data-memo-id="${id}"]`); if (!card) return;
+      const ta = card.querySelector('.memo-cell textarea'); if (!ta) return;
+      const ts = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      ta.value = (ta.value ? ta.value + '\n' : '') + '[' + ts + '] '; ta.focus(); dsaSaveMemo(id);
+    }
+    function dsaClearMemo(id) {
+      const card = document.querySelector(`[data-memo-id="${id}"]`); if (!card) return;
+      const ta = card.querySelector('.memo-cell textarea'); if (ta) { ta.value = ''; dsaSaveMemo(id); }
+    }
+
+    // ── Image handling ──
+    function dsaUploadImage(id) {
+      const card = document.querySelector(`[data-memo-id="${id}"]`); if (!card) return;
+      const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
+      input.onchange = (e) => { const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onloadend = () => {
+          const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); };
+        reader.readAsDataURL(file); }; input.click();
+    }
+    function addImageToContainer(container, src) {
+      const wrap = document.createElement('div'); wrap.className = 'memo-img-wrap';
+      const img = document.createElement('img'); img.src = src;
+      img.onclick = (e) => { e.stopPropagation(); openImagePreview(src); };
+      const del = document.createElement('button'); del.className = 'img-del'; del.textContent = '\u00d7';
+      del.onclick = (e) => { e.stopPropagation(); wrap.remove(); saveDsaLocal(); };
+      wrap.appendChild(img); wrap.appendChild(del); container.appendChild(wrap);
+    }
+    function openImagePreview(src) {
+      const o = document.getElementById('dsa-img-preview'); if (o) { o.querySelector('img').src = src; o.classList.add('open'); }
+    }
+    function dsaHandlePaste(e, id) {
+      const items = e.clipboardData?.items; if (!items) return;
+      for (const item of items) { if (item.type.startsWith('image/')) { e.preventDefault();
+        const reader = new FileReader(); reader.onloadend = () => {
+          const card = document.querySelector(`[data-memo-id="${id}"]`);
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
+        reader.readAsDataURL(item.getAsFile()); break; } }
+    }
+    function dsaHandleDrop(e, id) {
+      e.preventDefault(); const files = e.dataTransfer?.files; if (!files) return;
+      for (const file of files) { if (file.type.startsWith('image/')) {
+        const reader = new FileReader(); reader.onloadend = () => {
+          const card = document.querySelector(`[data-memo-id="${id}"]`);
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
+        reader.readAsDataURL(file); } }
+    }
+    function dsaHandleDragOver(e) { e.preventDefault(); }
+
+    // ── Token modal ──
+    function openDsaTokenModal() { document.getElementById('dsa-token-input').value = getDsaToken(); document.getElementById('dsa-token-modal').style.display = 'flex'; }
+    function closeDsaTokenModal() { document.getElementById('dsa-token-modal').style.display = 'none'; }
+    function saveDsaTokenFromModal() { const t = document.getElementById('dsa-token-input').value.trim(); setDsaToken(t); closeDsaTokenModal(); if (t) loadDsaFromGithub(); }
+
+    // ── Init ──
+    window.addEventListener('DOMContentLoaded', () => {
+      if (getDsaToken()) loadDsaFromGithub();
+      else { const s = localStorage.getItem('dsaExamState_' + getFileName()); if (s) try { applyDsaState(JSON.parse(s)); } catch(e) {} updateDsaSyncStatus('gray', 'no token'); }
+      document.querySelectorAll('.memo-cell textarea').forEach(ta => {
+        const card = ta.closest('.tip-card, .solved-card'); const id = card?.dataset.memoId || '';
+        ta.addEventListener('paste', (e) => dsaHandlePaste(e, id));
+        ta.addEventListener('drop', (e) => dsaHandleDrop(e, id));
+        ta.addEventListener('dragover', dsaHandleDragOver);
+      });
+    });
+    </script>
 </body>
 </html>
 ```
@@ -325,24 +531,36 @@ The HTML has TWO main sections:
 #### Section 2: لیست نکات (Tips List)
 For each question with tip score ≥ 2:
 ```html
-<div class="tip-card">
+<div class="tip-card" data-memo-id="[chapter-name]-tip-[N]">
     <div class="tip-header">
-        <span class="tip-score">نکته ۵</span>
-        <span class="tip-num">سوال ۳</span>
+        <span class="tip-badge badge-[score]">نکته [score]</span>
+        <span class="tip-num">سوال [N]</span>
     </div>
     <div class="tip-question">[متن کوتاه سوال]</div>
     <div class="tip-text">[نکته — یک جمله]</div>
     <div class="tip-why">[چرا مهم است]</div>
+    <div class="memo-cell">
+        <div class="memo-label">
+            📌 Memo
+            <button class="img-upload-btn" onclick="event.stopPropagation();dsaUploadImage('[chapter-name]-tip-[N]')" title="Upload image">🖼 Image</button>
+        </div>
+        <textarea placeholder="Notes, key points, reminders..." oninput="dsaSaveMemo('[chapter-name]-tip-[N]')"></textarea>
+        <div class="memo-actions">
+            <button class="ts-btn" onclick="event.stopPropagation();dsaInsertTimestamp('[chapter-name]-tip-[N]')">⏱ Timestamp</button>
+            <button class="ts-btn" onclick="event.stopPropagation();dsaClearMemo('[chapter-name]-tip-[N]')">✕ Clear</button>
+        </div>
+        <div class="memo-images"></div>
+    </div>
 </div>
 ```
 
 #### Section 3: سوالات حل شده (Fully Solved Questions)
 For each selected question (5-10 total):
 ```html
-<div class="solved-card">
-    <div class="card-header">
-        <span class="badge">حل کامل</span>
-        <span class="question-num">سوال ۳</span>
+<div class="solved-card" data-memo-id="[chapter-name]-solved-[N]">
+    <div class="solved-header">
+        <span class="solved-badge">حل کامل</span>
+        <span class="tip-num">سوال [N]</span>
     </div>
     <div class="question-text">[متن کامل سوال]</div>
     <div class="main-tip">[نکته اصلی — یک جمله]</div>
@@ -356,6 +574,18 @@ For each selected question (5-10 total):
     </div>
     <div class="common-mistake">[اشتباه رایج]</div>
     <div class="memorize">[نکته حفظی]</div>
+    <div class="memo-cell">
+        <div class="memo-label">
+            📌 Memo
+            <button class="img-upload-btn" onclick="event.stopPropagation();dsaUploadImage('[chapter-name]-solved-[N]')" title="Upload image">🖼 Image</button>
+        </div>
+        <textarea placeholder="Notes, key points, reminders..." oninput="dsaSaveMemo('[chapter-name]-solved-[N]')"></textarea>
+        <div class="memo-actions">
+            <button class="ts-btn" onclick="event.stopPropagation();dsaInsertTimestamp('[chapter-name]-solved-[N]')">⏱ Timestamp</button>
+            <button class="ts-btn" onclick="event.stopPropagation();dsaClearMemo('[chapter-name]-solved-[N]')">✕ Clear</button>
+        </div>
+        <div class="memo-images"></div>
+    </div>
 </div>
 ```
 
@@ -513,6 +743,9 @@ Before delivering, verify:
 - **Clean, readable design.** Professional typography, generous spacing, subtle shadows — no flashy effects.
 - **Print-friendly.** Ensure the HTML prints cleanly for offline study.
 - **Mobile responsive.** Must work on phones for studying on the go.
+- **Memo functionality required.** Every tip-card and solved-card MUST include the memo-cell with textarea, image upload, timestamp, and clear button. Never skip or omit the memo HTML.
+- **Auto-push to GitHub.** State auto-saves to localStorage and auto-pushes to `alirzaMhd/dars-arshad` repo after 2.5s of inactivity. No save button — completely automatic. Configure via the ⚙️ settings button (fixed bottom-right).
+- **Image support in memos.** Users can paste (Ctrl+V), drag-drop, or upload images into memos. Images are stored as base64 data URLs in state and synced to GitHub.
 
 ## Example Usage
 
