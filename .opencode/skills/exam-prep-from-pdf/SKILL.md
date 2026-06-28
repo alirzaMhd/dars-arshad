@@ -351,7 +351,7 @@ The HTML has TWO main sections:
     <!-- Image preview overlay -->
     <div id="dsa-img-preview" class="img-preview-overlay" onclick="this.classList.remove('open')"><img src="" alt="Preview"></div>
 
-    <!-- Memo + Auto-Push JavaScript -->
+    <!-- Memo + Auto-Push JavaScript (MUST come BEFORE the sync bar script below) -->
     <script>
     // ── Config ──
     const DSA_GITHUB_REPO = 'alirzaMhd/dars-arshad';
@@ -529,9 +529,9 @@ The HTML has TWO main sections:
 ```
 
 #### Section 2: لیست نکات (Tips List)
-For each question with tip score ≥ 2:
+For each question with tip score ≥ 2. Note: tip-cards may have additional classes like `score-4`, `score-5` etc. Always use regex to match `class="tip-card[^"]*"` when inserting `data-memo-id`:
 ```html
-<div class="tip-card" data-memo-id="[chapter-name]-tip-[N]">
+<div class="tip-card score-4" data-memo-id="[chapter-name]-tip-[N]" data-score="4">
     <div class="tip-header">
         <span class="tip-badge badge-[score]">نکته [score]</span>
         <span class="tip-num">سوال [N]</span>
@@ -555,7 +555,7 @@ For each question with tip score ≥ 2:
 ```
 
 #### Section 3: سوالات حل شده (Fully Solved Questions)
-For each selected question (5-10 total):
+For each selected question (5-10 total). Note: solved-cards may have additional classes. Use regex to match `class="solved-card[^"]*"` when inserting `data-memo-id`:
 ```html
 <div class="solved-card" data-memo-id="[chapter-name]-solved-[N]">
     <div class="solved-header">
@@ -746,6 +746,7 @@ Before delivering, verify:
 - **Memo functionality required.** Every tip-card and solved-card MUST include the memo-cell with textarea, image upload, timestamp, and clear button. Never skip or omit the memo HTML.
 - **Auto-push to GitHub.** State auto-saves to localStorage and auto-pushes to `alirzaMhd/dars-arshad` repo after 2.5s of inactivity. No save button — completely automatic. Configure via the ⚙️ settings button (fixed bottom-right).
 - **Image support in memos.** Users can paste (Ctrl+V), drag-drop, or upload images into memos. Images are stored as base64 data URLs in state and synced to GitHub.
+- **Script order matters.** The memo JS script (which defines `getDsaToken`, `setDsaToken`, etc.) MUST come BEFORE the sync bar script (which calls `openDsaTokenModal` → `getDsaToken`). If you inject scripts before `</body>`, put the memo JS first, then the sync bar script second. This prevents `ReferenceError: getDsaToken is not defined`.
 
 ## Example Usage
 
