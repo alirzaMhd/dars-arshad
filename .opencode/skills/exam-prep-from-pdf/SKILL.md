@@ -432,17 +432,12 @@ The HTML has TWO main sections:
         const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
         const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
         const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
-        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3.raw' } });
         if (res.status === 404) { updateDsaSyncStatus('green', 'no saved state'); return; }
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json(); dsaGithubSha = data.sha;
-        let raw = '';
-        if (data.content) { raw = data.content.replace(/\n/g, ''); }
-        else if (data.download_url) { const dlRes = await fetch(data.download_url); raw = await dlRes.text(); }
-        if (!raw) { updateDsaSyncStatus('green', 'empty state'); return; }
-        let content;
-        if (raw.startsWith('{')) { content = raw; } else { content = decodeURIComponent(escape(atob(raw))); }
-        applyDsaState(JSON.parse(content));
+        const raw = await res.text();
+        if (!raw || !raw.trim()) { updateDsaSyncStatus('green', 'empty state'); return; }
+        applyDsaState(JSON.parse(raw));
         updateDsaSyncStatus('green', 'synced');
       } catch (e) { console.error('GitHub load error:', e); updateDsaSyncStatus('red', 'load error'); }
     }
