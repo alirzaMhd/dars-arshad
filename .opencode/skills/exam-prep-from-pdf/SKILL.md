@@ -8,11 +8,19 @@ description: Use when generating exam study materials from PDF textbooks with qu
 ## Overview
 
 Analyzes PDF textbook chapters by cross-referencing questions with their answer sheets and the textbook explanation section. Identifies three categories of study material:
-1. **Tricky Questions** - questions with common traps, counterintuitive answers, or frequently misunderstood concepts
-2. **Hidden Tips & Points** - important concepts in answers that are NOT explained in the textbook section
-3. **Basic Questions** - fundamental questions every student must solve for the chapter
+1. **Tricky Questions** - سوالاتی که تله دارند، پاسخ عکس‌ال intuitif دارند، یا اغلب اشتباه فهمیده می‌شوند
+2. **Hidden Tips & Points** - نکات مهمی که در پاسخ‌ها وجود دارد اما در متن کتاب توضیح داده نشده
+3. **Basic Questions** - سوالات پایه‌ای که هر دانشجو باید برای این فصل حل کند
 
-Outputs everything in a visually creative, interactive HTML file.
+**Output language: ALL content in the HTML report MUST be written in Persian (فارسی).** This includes:
+- Section headers and titles
+- Question text (keep original if already in Persian; translate if in English)
+- Analysis reasons (tricky reasons, hidden tips, basic reasons)
+- Solutions and explanations
+- Key insights and memorize-this items
+- Statistics labels
+- Dashboard text
+- All UI text in the HTML template
 
 ## When to Use
 
@@ -281,12 +289,12 @@ A question is **basic** (must-solve) if it:
 
 #### Section 1: Dashboard Header
 ```
-Chapter: [Name]
-Total Questions: N
-Tricky: N (XX%)
-Hidden Tips: N
-Basic Must-Solve: N
-Analysis Date: [Date]
+فصل: [نام فصل]
+تعداد کل سوالات: N
+دشوار: N (XX٪)
+نکات پنهان: N
+پایه (حتماً حل شود): N
+تاریخ تحلیل: [تاریخ]
 ```
 
 #### Section 2: Tricky Questions (Red Theme)
@@ -294,27 +302,27 @@ For each tricky question:
 ```html
 <div class="question-card tricky">
     <div class="card-header">
-        <span class="badge">TRICKY</span>
-        <span class="difficulty">Difficulty: ●●●○○</span>
-        <span class="question-num">Q3</span>
+        <span class="badge">سوال دشوار</span>
+        <span class="difficulty">درجه سختی: ●●●○○</span>
+        <span class="question-num">سوال ۳</span>
     </div>
     <div class="question-text">
-        [Full question text]
+        [متن کامل سوال]
     </div>
     <div class="tricky-reasons">
-        <h4>Why This Is Tricky:</h4>
+        <h4>چرا این سوال دشوار است:</h4>
         <ul>
-            <li>Counterintuitive answer</li>
-            <li>Common trap: most students pick B</li>
+            <li>پاسخ عکس‌ال intuition</li>
+            <li>تله رایج: بیشتر دانشجوها گزینه ب را انتخاب می‌کنند</li>
         </ul>
     </div>
     <div class="answer-walkthrough">
-        <h4>Full Solution:</h4>
-        [Complete step-by-step solution]
+        <h4>پاسخ کامل:</h4>
+        [حل گام به گام کامل]
     </div>
     <div class="key-insight">
-        <h4>Key Insight:</h4>
-        [The one thing to remember]
+        <h4>نکته کلیدی:</h4>
+        [یک چیزی که باید به خاطر بسپارید]
     </div>
 </div>
 ```
@@ -324,20 +332,20 @@ For each hidden tip:
 ```html
 <div class="question-card hidden-tip">
     <div class="card-header">
-        <span class="badge">HIDDEN TIP</span>
-        <span class="tip-type">Unstated Prerequisite</span>
+        <span class="badge">نکته پنهان</span>
+        <span class="tip-type">پیش‌نیاز بیان‌نشده</span>
     </div>
     <div class="tip-content">
-        <h4>What the textbook doesn't explain:</h4>
-        [Concept not in explanation section]
+        <h4>چیزی که کتاب توضیح نداده:</h4>
+        [مفهومی که در بخش توضیحات نیست]
     </div>
     <div class="appears-in">
-        <h4>Appears in these questions:</h4>
-        <span class="question-ref">Q5, Q12, Q18</span>
+        <h4>در این سوالات ظاهر می‌شود:</h4>
+        <span class="question-ref">سوال ۵، سوال ۱۲، سوال ۱۸</span>
     </div>
     <div class="why-it-matters">
-        <h4>Why This Matters:</h4>
-        [Why you need to know this]
+        <h4>چرا مهم است:</h4>
+        [چرا باید این را بدانید]
     </div>
 </div>
 ```
@@ -347,23 +355,23 @@ For each basic question:
 ```html
 <div class="question-card basic">
     <div class="card-header">
-        <span class="badge">BASIC - MUST SOLVE</span>
-        <span class="importance">Importance: ★★★★★</span>
+        <span class="badge">سوال پایه - حتماً حل کنید</span>
+        <span class="importance">اهمیت: ★★★★★</span>
     </div>
     <div class="question-text">
-        [Full question text]
+        [متن کامل سوال]
     </div>
     <div class="why-basic">
-        <h4>Why This Is Fundamental:</h4>
-        [Reason it's a must-solve]
+        <h4>چرا این سوال پایه‌ای است:</h4>
+        [دلیل اینکه چرا باید حل شود]
     </div>
     <div class="solution">
-        <h4>Solution:</h4>
+        <h4>پاسخ:</h4>
         [Step-by-step solution]
     </div>
     <div class="memorize">
-        <h4>Memorize This:</h4>
-        [Key formula or concept to memorize]
+        <h4>حفظ کنید:</h4>
+        [فرمول یا مفهوم کلیدی برای حفظ کردن]
     </div>
 </div>
 ```
@@ -373,15 +381,15 @@ For each basic question:
 <div class="stats-dashboard">
     <div class="stat-card">
         <div class="stat-number">12</div>
-        <div class="stat-label">Tricky Questions</div>
+        <div class="stat-label">سوالات دشوار</div>
     </div>
     <div class="stat-card">
         <div class="stat-number">8</div>
-        <div class="stat-label">Hidden Tips</div>
+        <div class="stat-label">نکات پنهان</div>
     </div>
     <div class="stat-card">
         <div class="stat-number">15</div>
-        <div class="stat-label">Basic Must-Solve</div>
+        <div class="stat-label">سوالات پایه (حتماً حل شود)</div>
     </div>
 </div>
 ```
@@ -491,9 +499,10 @@ Before delivering, verify:
 
 ## Rules
 
+- **ALL output in Persian (فارسی).** Every label, header, reason, solution, insight, and UI text in the HTML must be in Persian. Only keep original question text if it's already in Persian; translate English questions to Persian.
 - **Never skip questions.** Analyze EVERY question from the chapter.
-- **Be specific with reasons.** "Tricky" is not enough — explain WHY.
-- **Include full solutions.** Don't just say "see answer" — write out the complete solution.
+- **Be specific with reasons.** "دشوار" کافی نیست — توضیح دهید چرا.
+- **Include full solutions.** نگویید "به پاسخ نگاه کنید" — کامل حل کنید.
 - **Cross-reference thoroughly.** Check every answer concept against the explanation section.
 - **Iterate until complete.** Always run the second pass review. If you missed questions, do a third pass.
 - **Count verification is mandatory.** Compare analysis count vs page count. Mismatch = not done.
