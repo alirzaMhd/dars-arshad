@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scheduling with Deadlines Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+
+.jobs-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+.job-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 14px;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: #0d0d1a;
+  min-width: 80px;
+  transition: all 0.4s;
+}
+.job-card .job-label {
+  font-size: 0.82em;
+  color: #00ccff;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.job-card .job-profit {
+  font-size: 1.1em;
+  color: #ffcc00;
+  font-weight: bold;
+}
+.job-card .job-deadline {
+  font-size: 0.75em;
+  color: #888;
+  margin-top: 2px;
+}
+.job-card .job-deadline .dim { color: #ff9944; }
+.job-card.sorted {
+  border-color: #00ccff;
+  box-shadow: 0 0 10px #00ccff33;
+}
+.job-card.current {
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 14px #ff660044;
+  transform: scale(1.08);
+}
+.job-card.scheduled {
+  border-color: #00ff88;
+  background: #0a1a12;
+  box-shadow: 0 0 12px #00ff8844;
+}
+.job-card.scheduled .job-label { color: #00ff88; }
+.job-card.rejected {
+  opacity: 0.35;
+  border-color: #555;
+}
+.job-card.rejected .job-label { color: #555; }
+
+.timeline-section {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+}
+.timeline-title {
+  font-size: 0.95em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.timeline-slots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.timeline-slot {
+  width: 90px;
+  height: 52px;
+  border: 2px solid #333;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0d0d1a;
+  transition: all 0.3s;
+}
+.timeline-slot .slot-index {
+  font-size: 0.65em;
+  color: #555;
+  margin-bottom: 2px;
+}
+.timeline-slot .slot-job {
+  font-size: 0.8em;
+  color: #555;
+  font-weight: bold;
+}
+.timeline-slot .slot-profit {
+  font-size: 0.6em;
+  color: #444;
+}
+.timeline-slot.scheduled {
+  border-color: #00ff88;
+  background: #0a1a12;
+  box-shadow: 0 0 10px #00ff8833;
+}
+.timeline-slot.scheduled .slot-job { color: #00ff88; }
+.timeline-slot.scheduled .slot-profit { color: #00ccff; }
+.timeline-slot.current {
+  border-color: #ff6600 !important;
+  background: #1a0a00 !important;
+  box-shadow: 0 0 14px #ff660044;
+}
+.timeline-slot.current .slot-job { color: #ff6600; }
+.timeline-slot.finding {
+  border-color: #ffff00 !important;
+  background: #1a1a00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+.timeline-slot.finding .slot-job { color: #ffff00; }
+.timeline-slot.rejected-slot {
+  border-color: #ff4444;
+  background: #1a0a0a;
+}
+.timeline-slot.rejected-slot .slot-job { color: #ff4444; }
+
+.uf-section {
+  margin: 15px 0;
+}
+.uf-title {
+  font-size: 0.95em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.uf-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+.uf-table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+.uf-table th, .uf-table td {
+  width: 60px;
+  height: 36px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+.uf-table th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+.uf-table td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+.uf-table td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+.uf-table td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 12px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+.uf-table td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+}
+.uf-table td.sentinel {
+  background: #1a0020 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+}
+.uf-table td.linked {
+  background: #1a0030 !important;
+  color: #ff99ff !important;
+  border-color: #ff66ff55;
+}
+
+.selected-section {
+  margin: 20px 0;
+  padding: 15px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+.selected-title {
+  font-size: 0.95em;
+  color: #00ccff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+#selectedBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+.selected-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 12px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  color: #00ff88;
+  font-size: 0.85em;
+  animation: badgePop 0.3s ease;
+}
+.selected-badge .badge-profit {
+  font-size: 0.7em;
+  color: #00ccff;
+}
+@keyframes badgePop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.result-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  margin: 4px;
+  background: #0a1a12;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  color: #00ff88;
+  font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+
+<h1>SCHEDULING WITH DEADLINES</h1>
+<p class="subtitle">Greedy Algorithm — Job Sequencing with Deadlines using Union-Find</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="info-panel">
+      <span class="label">Algorithm:</span> <span class="value">Greedy Job Scheduling</span> &nbsp;|&nbsp;
+      <span class="label">Phase:</span> <span class="highlight" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+      <span class="label">Current:</span> <span id="computingDisplay">—</span>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Jobs (sorted by profit descending)</div>
+      <div class="jobs-container" id="jobsContainer"></div>
+    </div>
+
+    <div class="timeline-section">
+      <div class="timeline-title">Timeline — Slot Assignment</div>
+      <div class="timeline-slots" id="timelineSlots"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <div class="uf-section">
+      <div class="uf-title">Union-Find Parent Array</div>
+      <div class="uf-wrapper">
+        <table class="uf-table" id="ufTable"></table>
+      </div>
+    </div>
+
+    <div class="selected-section">
+      <div class="selected-title">Selected Schedule</div>
+      <div id="selectedBadges"></div>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>✓ Optimal Schedule Found</h2>
+      <p style="color:#ccc; margin:6px 0;">Total Profit: <span class="result-badge" id="finalProfit"></span></p>
+      <p style="color:#ccc; margin:6px 0;">Jobs Scheduled: <span class="result-badge" id="finalCount"></span></p>
+      <div id="resultDetail" style="margin-top:12px; text-align:left;"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+    </div>
+  </div>
+</div>
+
+<script>
+const jobs = [
+  { id: 'J1', profit: 20, deadline: 2 },
+  { id: 'J2', profit: 15, deadline: 2 },
+  { id: 'J3', profit: 10, deadline: 1 },
+  { id: 'J4', profit: 5, deadline: 3 },
+  { id: 'J5', profit: 1, deadline: 3 }
+];
+const n = jobs.length;
+const maxD = Math.max(...jobs.map(j => j.deadline));
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let sortedJobs = [];
+let selectedJobs = [];
+let selectedMap = {};
+let schedule = {};
+let parent = [];
+
+function ufFind(x) {
+  if (parent[x] !== x) parent[x] = ufFind(parent[x]);
+  return parent[x];
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.job-card').forEach(c => {
+    c.classList.remove('current', 'sorted', 'scheduled', 'rejected');
+  });
+  document.querySelectorAll('.timeline-slot').forEach(c => {
+    c.classList.remove('current', 'scheduled', 'finding', 'rejected-slot');
+    c.querySelector('.slot-job').textContent = '—';
+    c.querySelector('.slot-profit').textContent = '';
+  });
+  document.querySelectorAll('.uf-table td').forEach(c => {
+    c.classList.remove('current', 'computing', 'filled', 'sentinel', 'linked');
+  });
+}
+
+function initJobCards() {
+  const container = document.getElementById('jobsContainer');
+  container.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const j = jobs[i];
+    const card = document.createElement('div');
+    card.className = 'job-card';
+    card.id = 'jobCard-' + i;
+    card.innerHTML = `<div class="job-label">${j.id}</div>
+      <div class="job-profit">$${j.profit}</div>
+      <div class="job-deadline">d=<span class="dim">${j.deadline}</span></div>`;
+    container.appendChild(card);
+  }
+}
+
+function initTimeline() {
+  const container = document.getElementById('timelineSlots');
+  container.innerHTML = '';
+  for (let s = 1; s <= maxD; s++) {
+    const slot = document.createElement('div');
+    slot.className = 'timeline-slot';
+    slot.id = 'slot-' + s;
+    slot.innerHTML = `<div class="slot-index">t=${s}</div>
+      <div class="slot-job">—</div>
+      <div class="slot-profit"></div>`;
+    container.appendChild(slot);
+  }
+}
+
+function initUfTable() {
+  const table = document.getElementById('ufTable');
+  let html = '<tr><th>Index</th>';
+  for (let i = 0; i <= maxD; i++) html += `<th>${i}</th>`;
+  html += '</tr><tr><td style="background:#1a1a2e;color:#00ccff;font-weight:bold;">parent</td>';
+  for (let i = 0; i <= maxD; i++) html += `<td id="uf-${i}">${i}</td>`;
+  html += '</tr>';
+  table.innerHTML = html;
+}
+
+function buildSortOrder() {
+  let indices = Array.from({length: n}, (_, i) => i);
+  indices.sort((a, b) => jobs[b].profit - jobs[a].profit);
+  return indices;
+}
+
+function buildSteps() {
+  steps = [];
+  let sortOrder = buildSortOrder();
+
+  steps.push({
+    type: 'sort',
+    order: sortOrder,
+    explanation: buildSortExplanation(sortOrder)
+  });
+
+  for (let rank = 0; rank < n; rank++) {
+    let origIdx = sortOrder[rank];
+    let j = jobs[origIdx];
+
+    steps.push({
+      type: 'check',
+      rank: rank,
+      origIdx: origIdx,
+      explanation: buildCheckExplanation(rank, origIdx)
+    });
+
+    let slotFound = j.deadline;
+    let parentSnap = [...parent];
+    let ufSteps = [];
+    let cur = j.deadline;
+    while (cur > 0 && parent[cur] !== cur) {
+      ufSteps.push(cur);
+      cur = parent[cur];
+    }
+    ufSteps.push(cur);
+
+    if (cur > 0) {
+      parent[cur] = ufFind(cur - 1);
+      steps.push({
+        type: 'schedule',
+        rank: rank,
+        origIdx: origIdx,
+        slot: cur,
+        ufSteps: ufSteps,
+        parentBefore: parentSnap,
+        explanation: buildScheduleExplanation(rank, origIdx, cur, ufSteps, parentSnap)
+      });
+    } else {
+      steps.push({
+        type: 'reject',
+        rank: rank,
+        origIdx: origIdx,
+        ufSteps: ufSteps,
+        parentBefore: parentSnap,
+        explanation: buildRejectExplanation(rank, origIdx, ufSteps)
+      });
+    }
+  }
+
+  steps.push({
+    type: 'done',
+    explanation: buildDoneExplanation()
+  });
+}
+
+function buildSortExplanation(order) {
+  let list = order.map((idx, r) =>
+    `<span class="dim">${jobs[idx].id}</span> ($${jobs[idx].profit}, d=${jobs[idx].deadline})${r < order.length-1 ? ', ' : ''}`
+  ).join('');
+  return `<div class="explain-section active">
+    <h3>Sort by Profit (Descending)</h3>
+    <p>First, sort all jobs by <b>profit in decreasing order</b>. This is the greedy strategy — always try the most profitable job first.</p>
+    <p>Sorted order: ${list}</p>
+    <span class="formula-line">For each job in sorted order: schedule at latest free slot ≤ deadline</span>
+    <p class="note">Union-Find will efficiently find available slots. Press Play to continue.</p>
+  </div>`;
+}
+
+function buildCheckExplanation(rank, origIdx) {
+  let j = jobs[origIdx];
+  return `<div class="explain-section active">
+    <h3>Check ${j.id} — Rank #${rank+1}</h3>
+    <p>Processing <span class="dim">${j.id}</span> with <b>profit = ${j.profit}</b> and <b>deadline = ${j.deadline}</b>.</p>
+    <p>Need to find the latest available time slot ≤ <span class="dim">${j.deadline}</span>.</p>
+    <span class="formula-line">find(${j.deadline}) → find the latest free slot</span>
+    <p class="note">Using Union-Find with path compression for O(α(n)) amortized lookup.</p>
+  </div>`;
+}
+
+function buildScheduleExplanation(rank, origIdx, slot, ufSteps, parentBefore) {
+  let j = jobs[origIdx];
+  let pathStr = ufSteps.length > 1 ? ' → ' + ufSteps.map(s => 'parent['+s+']='+parentBefore[s]).join(' → ') : '';
+  let savedParent = parent.slice();
+  for (let k = 0; k <= maxD; k++) parent[k] = parentBefore[k];
+  let nextSlot = slot > 1 ? ufFind(slot - 1) : 0;
+  for (let k = 0; k <= maxD; k++) parent[k] = savedParent[k];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✓ Schedule ${j.id} at Slot ${slot}</h3>
+    <p><span class="dim">${j.id}</span> (profit=${j.profit}) is assigned to <b>time slot ${slot}</b>.</p>
+    <p>Union-Find path: <span class="split-info">find(${j.deadline}) = ${slot}</span>${pathStr}</p>
+    <span class="formula-line">parent[${slot}] ← find(${slot}-1) = ${nextSlot}</span>
+    <p>After union, future calls to find(${slot}) will skip this slot.</p>
+    <p class="result-line">Total scheduled profit so far: ${selectedJobs.reduce((s, idx) => s + jobs[idx].profit, 0) + j.profit}</p>
+  </div>`;
+}
+
+function buildRejectExplanation(rank, origIdx, ufSteps) {
+  let j = jobs[origIdx];
+  let pathStr = ufSteps.length > 1 ? ' → ' + ufSteps.map(s => 'parent['+s+']='+parent[s]).join(' → ') : '';
+  return `<div class="explain-section active" style="border-left-color:#ff4444;">
+    <h3>✗ Reject ${j.id}</h3>
+    <p><span class="dim">${j.id}</span> (profit=${j.profit}, deadline=${j.deadline}) <b>cannot be scheduled</b>.</p>
+    <p>All slots ≤ <span class="dim">${j.deadline}</span> are occupied.</p>
+    <span class="formula-line">find(${j.deadline}) = 0 → no available slot${pathStr}</span>
+    <p class="note">This job is skipped. Higher-profit jobs already claimed the earlier slots.</p>
+  </div>`;
+}
+
+function buildDoneExplanation() {
+  let total = selectedJobs.reduce((s, idx) => s + jobs[idx].profit, 0);
+  let list = selectedJobs.map(idx =>
+    `<span class="dim">${jobs[idx].id}</span> → slot ${schedule[idx]} (profit=${jobs[idx].profit})`
+  ).join('<br>');
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>The greedy scheduling is done. Maximum profit schedule found.</p>
+    <h3 style="margin-top:10px;">Selected Jobs</h3>
+    <p>${list}</p>
+    <p class="result-line">Maximum Profit: ${total}</p>
+    <h3 style="margin-top:10px;">Why This Works</h3>
+    <p>The greedy choice property holds: sorting by profit and scheduling at the latest available slot guarantees an optimal solution. Any swap of a higher-profit job with a lower-profit one would not increase total profit.</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Time:</span> O(n log n) for sorting + O(n · α(n)) for Union-Find operations ≈ O(n log n)</p>
+    <p><span class="dim">Space:</span> O(n) for the parent array and schedule</p>
+  </div>`;
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  if (step.type === 'sort') {
+    step.order.forEach((origIdx, r) => {
+      let card = document.getElementById('jobCard-' + origIdx);
+      if (card) card.classList.add('sorted');
+    });
+    document.getElementById('phaseDisplay').textContent = 'Sorting by Profit';
+    document.getElementById('computingDisplay').textContent = 'Jobs ordered by decreasing profit';
+
+  } else if (step.type === 'check') {
+    let card = document.getElementById('jobCard-' + step.origIdx);
+    if (card) card.classList.add('current');
+    let j = jobs[step.origIdx];
+    document.getElementById('phaseDisplay').textContent = `Checking ${j.id}`;
+    document.getElementById('computingDisplay').textContent = `profit=$${j.profit}, deadline=${j.deadline}`;
+    for (let i = 0; i <= maxD; i++) {
+      let cell = document.getElementById('uf-' + i);
+      if (cell) {
+        cell.textContent = parent[i];
+        if (i === 0) cell.className = 'sentinel';
+        else if (parent[i] !== i) cell.className = 'linked';
+        else cell.className = 'filled';
+      }
+    }
+
+  } else if (step.type === 'schedule') {
+    let card = document.getElementById('jobCard-' + step.origIdx);
+    if (card) card.classList.add('scheduled');
+    let slotEl = document.getElementById('slot-' + step.slot);
+    if (slotEl) {
+      slotEl.classList.add('scheduled');
+      slotEl.querySelector('.slot-job').textContent = jobs[step.origIdx].id;
+      slotEl.querySelector('.slot-profit').textContent = '$' + jobs[step.origIdx].profit;
+    }
+    step.ufSteps.forEach((s, i) => {
+      if (s > 0) {
+        let slotE = document.getElementById('slot-' + s);
+        if (slotE && s !== step.slot) slotE.classList.add('finding');
+      }
+    });
+    let cell = document.getElementById('uf-' + step.slot);
+    if (cell) cell.classList.add('current');
+    for (let i = 0; i <= maxD; i++) {
+      let ufCell = document.getElementById('uf-' + i);
+      if (ufCell) {
+        ufCell.textContent = parent[i];
+        if (i === 0) ufCell.className = 'sentinel';
+        else if (i === step.slot) ufCell.className = 'current';
+        else if (parent[i] !== i) ufCell.className = 'linked';
+        else ufCell.className = 'filled';
+      }
+    }
+    let j = jobs[step.origIdx];
+    document.getElementById('phaseDisplay').textContent = `Scheduled ${j.id}`;
+    document.getElementById('computingDisplay').textContent = `${j.id} → slot ${step.slot}`;
+
+  } else if (step.type === 'reject') {
+    let card = document.getElementById('jobCard-' + step.origIdx);
+    if (card) card.classList.add('rejected');
+    step.ufSteps.forEach(s => {
+      if (s > 0) {
+        let slotE = document.getElementById('slot-' + s);
+        if (slotE) slotE.classList.add('finding');
+      }
+    });
+    let j = jobs[step.origIdx];
+    document.getElementById('phaseDisplay').textContent = `Rejected ${j.id}`;
+    document.getElementById('computingDisplay').textContent = `No slot ≤ ${j.deadline} available`;
+    for (let i = 0; i <= maxD; i++) {
+      let ufCell = document.getElementById('uf-' + i);
+      if (ufCell) {
+        ufCell.textContent = parent[i];
+        if (i === 0) ufCell.className = 'sentinel';
+        else if (parent[i] !== i) ufCell.className = 'linked';
+        else ufCell.className = 'filled';
+      }
+    }
+
+  } else if (step.type === 'done') {
+    document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+    document.getElementById('computingDisplay').textContent = `Max profit = ${selectedJobs.reduce((s, idx) => s + jobs[idx].profit, 0)}`;
+    finishAnimation();
+    return;
+  }
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+
+  if (steps[currentStep].type === 'schedule') {
+    let origIdx = steps[currentStep].origIdx;
+    let slot = steps[currentStep].slot;
+    selectedJobs.push(origIdx);
+    selectedMap[origIdx] = true;
+    schedule[origIdx] = slot;
+    let badge = document.createElement('div');
+    badge.className = 'selected-badge';
+    badge.innerHTML = `<div>${jobs[origIdx].id} → slot ${slot}</div><div class="badge-profit">$${jobs[origIdx].profit}</div>`;
+    document.getElementById('selectedBadges').appendChild(badge);
+  }
+
+  currentStep++;
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function finishAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  let total = selectedJobs.reduce((s, idx) => s + jobs[idx].profit, 0);
+  document.getElementById('computingDisplay').textContent = `Max profit = ${total}`;
+
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalProfit').textContent = '$' + total;
+  document.getElementById('finalCount').textContent = selectedJobs.length + ' / ' + n;
+
+  let detailHtml = '<p style="color:#ccc;"><b>Schedule:</b></p>';
+  for (let idx of selectedJobs) {
+    detailHtml += `<p style="margin-left:8px;color:#ccc;">✓ <span class="dim">${jobs[idx].id}</span> → slot ${schedule[idx]} (profit=$${jobs[idx].profit})</p>`;
+  }
+  detailHtml += `<p style="color:#ccc;margin-top:6px;"><span class="result-line">Total Profit: $${total}</span></p>`;
+  document.getElementById('resultDetail').innerHTML = detailHtml;
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  selectedJobs = [];
+  selectedMap = {};
+  schedule = {};
+  parent = [];
+  for (let i = 0; i <= maxD; i++) parent[i] = i;
+
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('selectedBadges').innerHTML = '';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>The <b>Scheduling with Deadlines</b> problem: given <span class="dim">n</span> jobs, each with a <b>profit</b> and a <b>deadline</b>, schedule jobs on a single machine to maximize total profit. Each job takes 1 unit of time and must be completed by its deadline.</p>
+      <p>Available jobs:</p>
+      <p style="margin-left:8px;">
+        <span class="dim">J1:</span> profit=20, deadline=2 &nbsp;|&nbsp;
+        <span class="dim">J2:</span> profit=15, deadline=2 &nbsp;|&nbsp;
+        <span class="dim">J3:</span> profit=10, deadline=1 &nbsp;|&nbsp;
+        <span class="dim">J4:</span> profit=5, deadline=3 &nbsp;|&nbsp;
+        <span class="dim">J5:</span> profit=1, deadline=3
+      </p>
+      <p>Maximum time slots: <span class="dim">${maxD}</span></p>
+      <h3 style="margin-top:10px;">Greedy Strategy</h3>
+      <span class="formula-line">Sort jobs by profit descending</span>
+      <span class="formula-line">For each job: assign to latest free slot ≤ deadline</span>
+      <span class="formula-line">Use Union-Find for O(α(n)) slot lookup</span>
+      <p class="note">Union-Find tracks which slots are free. When slot k is taken, parent[k] points to k-1 (next candidate). find(j) returns the latest free slot ≤ j, or 0 if none.</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+  clearHighlights();
+  buildSteps();
+  initJobCards();
+  initTimeline();
+  initUfTable();
+  for (let i = 0; i <= maxD; i++) {
+    let cell = document.getElementById('uf-' + i);
+    if (cell) {
+      cell.textContent = parent[i];
+      if (i === 0) cell.className = 'sentinel';
+      else cell.className = 'filled';
+    }
+  }
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+resetAnimation();
+</script>
+</body>
+</html>
