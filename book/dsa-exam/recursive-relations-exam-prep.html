@@ -1396,7 +1396,7 @@ async function pushDsaToGithub() {
     const state = collectDsaState();
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
     const filePath = DSA_STATE_DIR + '/recursive-relations-exam-prep-state.json';
-    const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`;
+    const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
     const getRes = await fetch(getUrl, {
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -1428,7 +1428,7 @@ async function loadDsaFromGithub() {
   updateDsaSyncStatus('yellow', 'loading...');
   try {
     const filePath = DSA_STATE_DIR + '/recursive-relations-exam-prep-state.json';
-    const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`;
+    const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
     const res = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
     });
@@ -1436,8 +1436,11 @@ async function loadDsaFromGithub() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     dsaGithubSha = data.sha;
-    const content = atob(data.content.replace(/\n/g, ''));
-    applyDsaState(JSON.parse(content));
+    const raw = data.content.replace(/\n/g, '');
+    if (!raw) { updateDsaSyncStatus('green', 'empty state'); return; }
+    const content = decodeURIComponent(escape(atob(raw)));
+    const parsed = JSON.parse(content);
+    applyDsaState(parsed);
     updateDsaSyncStatus('green', 'synced');
   } catch (e) {
     console.error('GitHub load error:', e);
