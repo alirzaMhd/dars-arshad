@@ -311,13 +311,23 @@ The HTML has TWO main sections:
         .memo-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
         .memo-actions .ts-btn{background:transparent;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:2px 8px;border-radius:4px;font-family:inherit}
         .memo-actions .ts-btn:hover{background:#EEF2FF}
+        .img-upload-btn{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-secondary);font-family:inherit;transition:all .15s}
+        .img-upload-btn:hover{border-color:var(--accent);color:var(--accent);background:#EEF2FF}
+        .rec-btn{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-secondary);font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+        .rec-btn:hover{border-color:#dc2626;color:#dc2626;background:#FEF2F2}
+        .rec-btn.recording{background:#dc2626;color:#fff;border-color:#dc2626;animation:pulse 1s infinite}
+        @keyframes pulse{50%{opacity:.6}}
         .memo-images{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
         .memo-img-wrap{position:relative;display:inline-block;max-width:180px;border-radius:8px;overflow:hidden;border:1px solid var(--border);cursor:pointer}
         .memo-img-wrap img{display:block;width:100%;height:auto;max-height:140px;object-fit:cover}
         .memo-img-wrap .img-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
         .memo-img-wrap:hover .img-del{opacity:1}
-        .img-upload-btn{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-secondary);font-family:inherit;transition:all .15s}
-        .img-upload-btn:hover{border-color:var(--accent);color:var(--accent);background:#EEF2FF}
+        .audio-attachments{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+        .audio-attachment{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg);border-radius:8px;font-size:12px;border:1px solid var(--border)}
+        .audio-attachment audio{height:32px;flex:1;min-width:120px}
+        .audio-attachment .audio-info{color:var(--text-secondary);white-space:nowrap;font-size:11px}
+        .audio-attachment .audio-del{background:transparent;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+        .audio-attachment .audio-del:hover{background:#FEF2F2;color:#dc2626}
         .img-preview-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;cursor:zoom-out}
         .img-preview-overlay.open{display:flex}
         .img-preview-overlay img{max-width:90vw;max-height:90vh;border-radius:8px}
@@ -367,7 +377,7 @@ The HTML has TWO main sections:
     function getFileName() { return window.location.pathname.split('/').pop().replace('.html', ''); }
 
     function collectDsaState() {
-      const memos = {}, images = {};
+      const memos = {}, images = {}, audio = {};
       document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
         const id = card.dataset.memoId || '';
         if (!id) return;
@@ -379,8 +389,20 @@ The HTML has TWO main sections:
           imgContainer.querySelectorAll('.memo-img-wrap img').forEach(img => { if (img.src) imgs.push(img.src); });
           if (imgs.length) images[id] = imgs;
         }
+        const audioContainer = card.querySelector('.audio-attachments');
+        if (audioContainer) {
+          const recordings = [];
+          audioContainer.querySelectorAll('.audio-attachment').forEach(el => {
+            const data = el.dataset.audioData;
+            const dur = parseFloat(el.dataset.duration) || 0;
+            const ts = el.dataset.createdAt || '';
+            const aid = el.dataset.audioId || '';
+            if (data) recordings.push({ id: aid, data, duration: dur, createdAt: ts });
+          });
+          if (recordings.length) audio[id] = recordings;
+        }
       });
-      return { version: 1, updatedAt: new Date().toISOString(), memos, images };
+      return { version: 2, updatedAt: new Date().toISOString(), memos, images, audio };
     }
 
     function applyDsaState(state) {
@@ -392,6 +414,10 @@ The HTML has TWO main sections:
       if (state.images) Object.entries(state.images).forEach(([id, imgs]) => {
         const card = document.querySelector(`[data-memo-id="${id}"]`);
         if (card) { const c = card.querySelector('.memo-images'); if (c) imgs.forEach(src => addImageToContainer(c, src)); }
+      });
+      if (state.audio) Object.entries(state.audio).forEach(([id, recordings]) => {
+        const card = document.querySelector(`[data-memo-id="${id}"]`);
+        if (card) { const c = card.querySelector('.audio-attachments'); if (c && recordings.length) recordings.forEach(r => appendAudioPlayer(c, r.data, r.duration, r.createdAt, r.id)); }
       });
     }
 
@@ -496,6 +522,78 @@ The HTML has TWO main sections:
     }
     function dsaHandleDragOver(e) { e.preventDefault(); }
 
+    // ── Voice Recording ──
+    const mediaRecorders = {};
+    async function dsaToggleRecording(id) {
+      const btn = document.getElementById('recbtn-' + id);
+      if (!btn) return;
+      if (mediaRecorders[id]) {
+        mediaRecorders[id].stop();
+        delete mediaRecorders[id];
+        btn.classList.remove('recording');
+        btn.innerHTML = '🎤 Record';
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const chunks = [];
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorders[id] = recorder;
+        const startTime = Date.now();
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(chunks, { type: recorder.mimeType });
+          const duration = Math.round((Date.now() - startTime) / 100) / 10;
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result;
+            const card = document.querySelector(`[data-memo-id="${id}"]`);
+            if (card) {
+              const container = card.querySelector('.audio-attachments');
+              if (container) {
+                const aid = 'a-' + id + '-' + Date.now();
+                appendAudioPlayer(container, dataUrl, duration, new Date().toISOString(), aid);
+                saveDsaLocal();
+              }
+            }
+          };
+          reader.readAsDataURL(blob);
+        };
+        recorder.start();
+        btn.classList.add('recording');
+        btn.innerHTML = '🔴 Stop';
+      } catch (e) {
+        alert('Microphone access denied: ' + e.message);
+      }
+    }
+    function appendAudioPlayer(container, dataUrl, duration, createdAt, audioId) {
+      const div = document.createElement('div');
+      div.className = 'audio-attachment';
+      div.dataset.audioData = dataUrl;
+      div.dataset.duration = duration;
+      div.dataset.createdAt = createdAt;
+      div.dataset.audioId = audioId;
+      const info = document.createElement('span');
+      info.className = 'audio-info';
+      const d = duration ? (duration < 60 ? duration + 's' : Math.floor(duration/60) + 'm ' + Math.floor(duration%60) + 's') : '';
+      info.textContent = '🎤 ' + d;
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.preload = 'metadata';
+      audio.src = dataUrl;
+      const del = document.createElement('button');
+      del.className = 'audio-del';
+      del.textContent = '\u2715';
+      del.title = 'Delete recording';
+      del.onclick = (e) => { e.stopPropagation(); div.remove(); saveDsaLocal(); };
+      div.appendChild(info);
+      div.appendChild(audio);
+      div.appendChild(del);
+      container.appendChild(div);
+    }
+
     // ── Token modal ──
     function openDsaTokenModal() { document.getElementById('dsa-token-input').value = getDsaToken(); document.getElementById('dsa-token-modal').style.display = 'flex'; }
     function closeDsaTokenModal() { document.getElementById('dsa-token-modal').style.display = 'none'; }
@@ -541,8 +639,9 @@ For each question with tip score ≥ 2. Note: tip-cards may have additional clas
     <div class="tip-why">[چرا مهم است]</div>
     <div class="memo-cell">
         <div class="memo-label">
-            📌 Memo
+            📝 Memo
             <button class="img-upload-btn" onclick="event.stopPropagation();dsaUploadImage('[chapter-name]-tip-[N]')" title="Upload image">🖼 Image</button>
+            <button class="rec-btn" id="recbtn-[chapter-name]-tip-[N]" onclick="event.stopPropagation();dsaToggleRecording('[chapter-name]-tip-[N]')" title="Record audio memo">🎤 Record</button>
         </div>
         <textarea placeholder="Notes, key points, reminders..." oninput="dsaSaveMemo('[chapter-name]-tip-[N]')"></textarea>
         <div class="memo-actions">
@@ -550,6 +649,7 @@ For each question with tip score ≥ 2. Note: tip-cards may have additional clas
             <button class="ts-btn" onclick="event.stopPropagation();dsaClearMemo('[chapter-name]-tip-[N]')">✕ Clear</button>
         </div>
         <div class="memo-images"></div>
+        <div class="audio-attachments"></div>
     </div>
 </div>
 ```
@@ -576,8 +676,9 @@ For each selected question (5-10 total). Note: solved-cards may have additional 
     <div class="memorize">[نکته حفظی]</div>
     <div class="memo-cell">
         <div class="memo-label">
-            📌 Memo
+            📝 Memo
             <button class="img-upload-btn" onclick="event.stopPropagation();dsaUploadImage('[chapter-name]-solved-[N]')" title="Upload image">🖼 Image</button>
+            <button class="rec-btn" id="recbtn-[chapter-name]-solved-[N]" onclick="event.stopPropagation();dsaToggleRecording('[chapter-name]-solved-[N]')" title="Record audio memo">🎤 Record</button>
         </div>
         <textarea placeholder="Notes, key points, reminders..." oninput="dsaSaveMemo('[chapter-name]-solved-[N]')"></textarea>
         <div class="memo-actions">
@@ -585,6 +686,7 @@ For each selected question (5-10 total). Note: solved-cards may have additional 
             <button class="ts-btn" onclick="event.stopPropagation();dsaClearMemo('[chapter-name]-solved-[N]')">✕ Clear</button>
         </div>
         <div class="memo-images"></div>
+        <div class="audio-attachments"></div>
     </div>
 </div>
 ```
