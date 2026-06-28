@@ -126,16 +126,55 @@
       <div class="section">
         <h2>Problem Definition</h2>
         <p>Given <strong>n</strong> keys <strong>k₁, k₂, ..., kₙ</strong> with search probabilities <strong>p₁, p₂, ..., pₙ</strong> (where Σ pᵢ = 1), construct a binary search tree that minimizes the expected search cost.</p>
+        
+        <div class="concept-box" style="background:#0a1a12;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;font-weight:bold;">Why Does This Problem Matter?</span>
+          <p style="margin:8px 0;color:#ccc;">In real-world applications like database indexing, dictionary lookups, and compiler symbol tables, we search for keys thousands of times per second. If we know that some keys are searched for much more frequently than others, we can organize the tree to place frequent keys near the root — reducing the average number of comparisons needed.</p>
+          <p style="margin:8px 0;color:#ccc;">For example, in an English dictionary, words like "the" and "is" are searched far more often than "zyzzyva" or "quixotic". An optimal BST puts high-frequency words at shallower depths.</p>
+        </div>
+
         <div class="formula">
           <div class="label">Expected Search Cost:</div>
           <div class="expr">Cost(T) = Σ_{i=1}^{n} pᵢ · (depth(kᵢ) + 1)</div>
-          <div class="desc">Weighted sum of all key depths, where depth is the number of comparisons required to find the key.</div>
+          <div class="desc">
+            Weighted sum of all key depths, where depth is the number of comparisons required to find the key.
+            <br><br>
+            <strong>Breaking down the formula:</strong>
+            <br>• <strong>pᵢ</strong> = probability that key kᵢ is searched for (higher pᵢ means more frequent searches)
+            <br>• <strong>depth(kᵢ)</strong> = number of edges from root to key kᵢ (root has depth 0)
+            <br>• <strong>depth(kᵢ) + 1</strong> = number of comparisons needed to find kᵢ (we compare at each level, including the root)
+            <br>• <strong>pᵢ · (depth(kᵢ) + 1)</strong> = expected number of comparisons contributed by key kᵢ
+            <br>• Sum over all keys = total expected search cost
+          </div>
         </div>
         <div class="warning">
           ⚠ High-probability keys should be near the root to minimize expected search cost!
         </div>
+        
+        <h3>Intuition: Why Does Placement Matter?</h3>
+        <p style="margin:8px 0;color:#ccc;">Consider two极端 cases:</p>
+        <div class="grid" style="margin:12px 0;">
+          <div class="card" style="border-color:#00ff88;">
+            <h3 style="color:#00ff88;">Best Case</h3>
+            <p>If the most probable key (p=0.9) is at the root, it costs only 0.9 × 1 = <strong>0.9</strong> expected comparisons.</p>
+            <p style="color:#aaa;font-size:0.85em;">The other 10% of searches go deeper, but the 90% are fast.</p>
+          </div>
+          <div class="card" style="border-color:#ff6666;">
+            <h3 style="color:#ff6666;">Worst Case</h3>
+            <p>If the most probable key (p=0.9) is at depth 3, it costs 0.9 × 4 = <strong>3.6</strong> expected comparisons — 4× worse!</p>
+            <p style="color:#aaa;font-size:0.85em;">The 90% of searches now take 4 comparisons each.</p>
+          </div>
+        </div>
+
         <h3>BST Properties</h3>
-        <p>In a BST, for any node: all keys in its left subtree are smaller, and all keys in its right subtree are larger.</p>
+        <p>In a BST, for any node: all keys in its left subtree are smaller, and all keys in its right subtree are larger. This ordering property is what makes BSTs efficient for search — we can eliminate half the remaining keys with each comparison.</p>
+        
+        <div class="concept-box" style="background:#0a0a1a;padding:12px;border-radius:8px;margin:12px 0;border:1px solid #00ccff44;">
+          <span class="label" style="color:#00ccff;font-weight:bold;">The BST Ordering Constraint</span>
+          <p style="margin:6px 0;color:#ccc;">When we choose a root, we split the remaining keys into two groups: those smaller go to the left subtree, those larger go to the right. This constraint means we cannot arbitrarily place keys — the structure is determined by which key we pick as root at each step.</p>
+          <p style="margin:6px 0;color:#ccc;">This is why OBST is harder than just sorting keys by probability: we must respect the BST ordering while trying to minimize cost.</p>
+        </div>
+
         <div class="example">
           <div class="title">Example: 3 Keys with Probabilities</div>
           <p><strong>Keys:</strong> k₁=10 (p₁=0.5), k₂=20 (p₂=0.3), k₃=30 (p₃=0.2)</p>
@@ -147,23 +186,40 @@
             <tr><td>30(root), 20(left), 10(left)</td><td>30</td><td>0.5·3 + 0.3·2 + 0.2·1</td><td>2.3</td></tr>
             <tr><td>10(root), 30(root), 20(left)</td><td>10/30</td><td>Invalid (BST property violated)</td><td>—</td></tr>
           </table>
-          <p class="note">The optimal tree has cost 1.7 — either with root=10 or root=20.</p>
+          <p class="note">The optimal tree has cost 1.7 — either with root=10 or root=20. Notice that putting the highest probability key (10 with p=0.5) at the root gives the best result.</p>
         </div>
+
+        <div class="example">
+          <div class="title">Understanding Dummy Keys (External Nodes)</div>
+          <p>In addition to real keys k₁...kₙ, we have <strong>n+1 dummy keys</strong> d₀, d₁, ..., dₙ representing the "gaps" between keys:</p>
+          <p style="margin:8px 0;color:#ccc;">• <strong>d₀</strong> = search for a value less than k₁ (left of the smallest key)</p>
+          <p style="margin:8px 0;color:#ccc;">• <strong>d₁</strong> = search for a value between k₁ and k₂</p>
+          <p style="margin:8px 0;color:#ccc;">• <strong>dₙ</strong> = search for a value greater than kₙ (right of the largest key)</p>
+          <p style="margin:8px 0;color:#ccc;">Each dummy key dᵢ has probability <strong>qᵢ</strong> — the probability that a search ends at that gap (unsuccessful search). These dummy keys become the leaves of the BST.</p>
+          <div class="formula" style="margin:10px 0;">
+            <div class="label">Total Probability Constraint:</div>
+            <div class="expr">Σᵢ pᵢ + Σⱼ qⱼ = 1</div>
+            <div class="desc">All searches must end somewhere — either at a real key (successful search) or at a dummy key (unsuccessful search).</div>
+          </div>
+        </div>
+
         <div class="grid">
           <div class="card">
             <h3>Input</h3>
             <p>• n sorted keys k₁...kₙ</p>
-            <p>• Probabilities p₁...pₙ</p>
+            <p>• Key probabilities p₁...pₙ</p>
+            <p>• Dummy probabilities q₀...qₙ</p>
           </div>
           <div class="card">
             <h3>Output</h3>
             <p>• Minimum expected search cost</p>
-            <p>• The optimal BST structure (roots)</p>
+            <p>• The optimal BST structure (which key is root at each subtree)</p>
           </div>
           <div class="card">
             <h3>Constraints</h3>
-            <p>• BST ordering must hold</p>
-            <p>• Probabilities sum to 1</p>
+            <p>• BST ordering must hold (left < root < right)</p>
+            <p>• All probabilities sum to 1</p>
+            <p>• Each subtree must also be optimal</p>
           </div>
         </div>
       </div>
@@ -172,96 +228,202 @@
     <div class="content" id="tab2">
       <div class="section">
         <h2>Dynamic Programming Solution</h2>
+        
+        <div class="concept-box" style="background:#0a1a12;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;font-weight:bold;">Why Dynamic Programming?</span>
+          <p style="margin:8px 0;color:#ccc;">The OBST problem has <strong>optimal substructure</strong>: the optimal tree for keys k₁...kₙ must contain optimal subtrees for its left and right children. If we knew which key was the root, we could solve the left and right subproblems independently.</p>
+          <p style="margin:8px 0;color:#ccc;">However, we don't know which key should be the root! So we <strong>try every possible root</strong>, and for each, we need the optimal cost of the left and right subtrees. This is where DP helps — we solve all smaller subproblems first and reuse their results.</p>
+          <p style="margin:8px 0;color:#ccc;"><strong>Key insight:</strong> A subproblem is defined by a contiguous range of keys kᵢ...kⱼ. There are O(n²) such subproblems, and each takes O(n) time to solve (trying all possible roots). Total: O(n³).</p>
+        </div>
+
         <h3>Recurrence Relation</h3>
         <p>Define <strong>A[i][j]</strong> = minimum expected search cost for the subproblem with keys kᵢ...kⱼ (where i ≤ j).</p>
         <p>Define <strong>R[i][j]</strong> = index of the root chosen for the optimal BST for keys kᵢ...kⱼ (used for reconstruction).</p>
+        
         <div class="formula">
           <div class="label">Base Case (single key):</div>
           <div class="expr">A[i][i] = pᵢ &nbsp; and &nbsp; R[i][i] = i</div>
-          <div class="desc">A tree with one key has cost equal to its probability.</div>
+          <div class="desc">
+            A tree with one key has cost equal to its probability.
+            <br><br>
+            <strong>Why?</strong> If we have only key kᵢ, it becomes the root. The search cost for kᵢ is 1 comparison (just compare with root). The expected cost = pᵢ × 1 = pᵢ.
+            <br><br>
+            <strong>Note:</strong> The dummy keys (leaves) are not counted in this cost because they represent unsuccessful searches that end at external nodes.
+          </div>
         </div>
+        
+        <div class="formula">
+          <div class="label">Base Case (empty subtree):</div>
+          <div class="expr">A[i][i-1] = 0 &nbsp; and &nbsp; A[n+1][n] = 0</div>
+          <div class="desc">
+            An empty subtree (when i > j) has zero cost because there are no keys to search for.
+            <br><br>
+            <strong>Important:</strong> When we later include dummy keys q₀...qₙ in the weight calculation, we account for the cost of unsuccessful searches that end at these empty subtrees.
+          </div>
+        </div>
+
         <div class="formula">
           <div class="label">Recurrence (i &lt; j):</div>
           <div class="expr">A[i][j] = min_{i ≤ m ≤ j} ( A[i][m-1] + A[m+1][j] ) + Σ_{t=i}^{j} p_t</div>
           <div class="desc">
             For each possible root m in keys i..j:
-            <br>• A[i][m-1] = cost of left subtree (keys i..m-1)
-            <br>• A[m+1][j] = cost of right subtree (keys m+1..j)
-            <br>• Add all probabilities because each key's depth increases by 1 when a root is added above
-            <br>• If i &gt; m-1 or m+1 &gt; j, the empty subtree cost = 0
+            <br>• <strong>A[i][m-1]</strong> = cost of left subtree (keys i..m-1)
+            <br>• <strong>A[m+1][j]</strong> = cost of right subtree (keys m+1..j)
+            <br>• <strong>Σ p_t</strong> = sum of probabilities for all keys in the range (the "weight penalty")
+            <br><br>
+            <strong>Why add Σ p_t?</strong> When we make key m the root, every other key in the subtree moves down by 1 level. This means each key's search cost increases by 1 comparison. The total extra cost = sum of all probabilities × 1 = Σ p_t.
+            <br><br>
+            <strong>If i &gt; m-1 or m+1 &gt; j:</strong> The empty subtree cost = 0 (no keys to search).
           </div>
         </div>
+        
         <div class="formula">
           <div class="label">Final Answer:</div>
           <div class="expr">A[1][n]</div>
-          <div class="desc">Minimum expected search cost for the complete set of n keys.</div>
+          <div class="desc">Minimum expected search cost for the complete set of n keys. This is the value we want to compute.</div>
         </div>
+
+        <h3>Understanding the Weight Term w[i][j]</h3>
+        <div class="concept-box" style="background:#0a0a1a;padding:12px;border-radius:8px;margin:12px 0;border:1px solid #00ccff44;">
+          <span class="label" style="color:#00ccff;font-weight:bold;">Why w[i][j] = Σ p_t + Σ q_t?</span>
+          <p style="margin:8px 0;color:#ccc;">The weight w[i][j] includes BOTH real key probabilities AND dummy key probabilities. This is because:</p>
+          <p style="margin:6px 0;color:#ccc;">1. <strong>Real keys (pᵢ):</strong> When we add a root above, each real key's depth increases by 1, adding pᵢ to the expected cost.</p>
+          <p style="margin:6px 0;color:#ccc;">2. <strong>Dummy keys (qⱼ):</strong> The dummy keys (leaves) also get pushed down by 1 level. A search that ends at dummy key dⱼ now takes 1 extra comparison, adding qⱼ to the expected cost.</p>
+          <p style="margin:8px 0;color:#ccc;"><strong>Example:</strong> For subtree k₂...k₃ with p₂=0.3, p₃=0.2, q₁=0.1, q₂=0.05, q₃=0.05:</p>
+          <p style="margin:4px 0;color:#ccc;">w[2][3] = p₂ + p₃ + q₁ + q₂ + q₃ = 0.3 + 0.2 + 0.1 + 0.05 + 0.05 = 0.7</p>
+        </div>
+
         <h3>Algorithm: Optimal BST DP</h3>
         <div class="code">OPTIMAL-BST(p, n)
   let A[1..n+1][0..n], R[1..n][1..n]
   for i ← 1 to n
-    A[i][i] ← p[i]
-    R[i][i] ← i
-    A[i][i-1] ← 0    // empty subtree
-  A[n+1][n] ← 0      // empty right subtree for key n
+    A[i][i] ← p[i]           // single key subtree
+    R[i][i] ← i              // root is the only key
+    A[i][i-1] ← 0            // empty left subtree
+  A[n+1][n] ← 0              // empty right subtree for last key
 
-  for d ← 1 to n-1    // diagonal (chain length - 1)
-    for i ← 1 to n-d
-      j ← i + d
-      A[i][j] ← ∞
-      sumP ← Σ_{t=i}^{j} p[t]
-      for m ← i to j
+  for d ← 1 to n-1           // diagonal (subtree size - 1)
+    for i ← 1 to n-d         // starting index
+      j ← i + d              // ending index
+      A[i][j] ← ∞            // initialize to infinity
+      sumP ← Σ_{t=i}^{j} p[t]  // weight of this subtree
+      for m ← i to j         // try each possible root
         cost ← A[i][m-1] + A[m+1][j] + sumP
         if cost &lt; A[i][j]
-          A[i][j] ← cost
-          R[i][j] ← m
+          A[i][j] ← cost     // found better root
+          R[i][j] ← m        // remember which root
   return A[1][n], R</div>
+        
+        <div class="concept-box" style="background:#1a1a00;padding:12px;border-radius:8px;margin:12px 0;border:1px solid #ffff0044;">
+          <span class="label" style="color:#ffff00;font-weight:bold;">How the Algorithm Works (Step by Step):</span>
+          <p style="margin:6px 0;color:#ccc;">1. <strong>Initialize base cases:</strong> Fill A[i][i] = pᵢ for single keys, and A[i][i-1] = 0 for empty subtrees.</p>
+          <p style="margin:6px 0;color:#ccc;">2. <strong>Process diagonals:</strong> Start with d=1 (pairs of adjacent keys), then d=2 (triples), ..., up to d=n-1 (all n keys).</p>
+          <p style="margin:6px 0;color:#ccc;">3. <strong>For each subproblem (i,j):</strong> Try every possible root m from i to j. For each m, compute cost = left subtree cost + right subtree cost + weight penalty.</p>
+          <p style="margin:6px 0;color:#ccc;">4. <strong>Keep the minimum:</strong> Store the best (minimum) cost and which root achieved it in R[i][j].</p>
+          <p style="margin:6px 0;color:#ccc;">5. <strong>Build the tree:</strong> Use the R matrix to reconstruct the optimal tree by recursive subdivision.</p>
+        </div>
+
         <h3>Tree Reconstruction from R Matrix</h3>
         <div class="code">BUILD-TREE(R, i, j)
   if i &gt; j
-    return null
-  r ← R[i][j]
+    return null              // empty subtree
+  r ← R[i][j]               // root of optimal BST for keys i..j
   node = new Node(key[r])
-  node.left = BUILD-TREE(R, i, r-1)
-  node.right = BUILD-TREE(R, r+1, j)
+  node.left = BUILD-TREE(R, i, r-1)    // left subtree
+  node.right = BUILD-TREE(R, r+1, j)   // right subtree
   return node</div>
+        
+        <div class="concept-box" style="background:#0a1a12;padding:12px;border-radius:8px;margin:12px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;font-weight:bold;">Reconstruction Example:</span>
+          <p style="margin:6px 0;color:#ccc;">For keys k₁, k₂, k₃ with R[1][3] = 2 (root is k₂):</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• Root = k₂</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• Left subtree: BUILD-TREE(R, 1, 1) → k₁</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• Right subtree: BUILD-TREE(R, 3, 3) → k₃</p>
+          <p style="margin:6px 0;color:#ccc;">Result: Tree with k₂ at root, k₁ as left child, k₃ as right child.</p>
+        </div>
       </div>
     </div>
 
     <div class="content" id="tab3">
       <div class="section">
         <h2>Worked Examples</h2>
+        
+        <div class="concept-box" style="background:#0a1a12;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;font-weight:bold;">How to Read These Examples:</span>
+          <p style="margin:6px 0;color:#ccc;">Each example shows the complete DP computation step-by-step. We fill the A[i][j] table diagonal by diagonal:</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• <strong>Diagonal d=0:</strong> Single keys (A[1][1], A[2][2], ..., A[n][n])</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• <strong>Diagonal d=1:</strong> Pairs of adjacent keys (A[1][2], A[2][3], ...)</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• <strong>Diagonal d=2:</strong> Triples (A[1][3], A[2][4], ...)</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">• <strong>Continue</strong> until we fill A[1][n] (the full range)</p>
+          <p style="margin:6px 0;color:#ccc;">For each cell, we try every possible root and keep the minimum cost.</p>
+        </div>
+
         <div class="example">
           <div class="title">Example 1: 3 Keys with Skewed Probabilities</div>
           <p><strong>Keys:</strong> k₁ (p₁=0.5), k₂ (p₂=0.3), k₃ (p₃=0.2)</p>
+          
+          <div class="concept-box" style="background:#0a0a1a;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ccff44;">
+            <span class="label" style="color:#00ccff;font-weight:bold;">Understanding the Input:</span>
+            <p style="margin:4px 0;color:#ccc;">• Key k₁ has 50% chance of being searched — it's the most frequent</p>
+            <p style="margin:4px 0;color:#ccc;">• Key k₂ has 30% chance — moderately frequent</p>
+            <p style="margin:4px 0;color:#ccc;">• Key k₃ has 20% chance — least frequent</p>
+            <p style="margin:4px 0;color:#ccc;"><strong>Intuition:</strong> We expect the optimal tree to put k₁ near the root since it's searched most often.</p>
+          </div>
+
           <p><strong>Step 1: Base cases (d=0)</strong></p>
           <table>
-            <tr><th>i</th><th>j</th><th>A[i][j]</th><th>R[i][j]</th></tr>
-            <tr><td>1</td><td>1</td><td>0.5</td><td>1</td></tr>
-            <tr><td>2</td><td>2</td><td>0.3</td><td>2</td></tr>
-            <tr><td>3</td><td>3</td><td>0.2</td><td>3</td></tr>
+            <tr><th>i</th><th>j</th><th>A[i][j]</th><th>R[i][j]</th><th>Explanation</th></tr>
+            <tr><td>1</td><td>1</td><td>0.5</td><td>1</td><td>Single key k₁: cost = p₁ = 0.5</td></tr>
+            <tr><td>2</td><td>2</td><td>0.3</td><td>2</td><td>Single key k₂: cost = p₂ = 0.3</td></tr>
+            <tr><td>3</td><td>3</td><td>0.2</td><td>3</td><td>Single key k₃: cost = p₃ = 0.2</td></tr>
           </table>
-          <p><strong>Step 2: d=1 (pairs)</strong></p>
-          <p><strong>A[1][2]:</strong> sumP = 0.5+0.3 = 0.8</p>
-          <p>m=1: A[1][0]+A[2][2]+0.8 = 0+0.3+0.8 = 1.1</p>
-          <p>m=2: A[1][1]+A[3][2]+0.8 = 0.5+0+0.8 = 1.3</p>
-          <p>min = 1.1, R[1][2] = 1</p>
-          <p><strong>A[2][3]:</strong> sumP = 0.3+0.2 = 0.5</p>
-          <p>m=2: A[2][1]+A[3][3]+0.5 = 0+0.2+0.5 = 0.7</p>
-          <p>m=3: A[2][2]+A[4][3]+0.5 = 0.3+0+0.5 = 0.8</p>
-          <p>min = 0.7, R[2][3] = 2</p>
+          
+          <p><strong>Step 2: d=1 (pairs of adjacent keys)</strong></p>
+          <div class="concept-box" style="background:#0a0a1a;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ccff44;">
+            <span class="label" style="color:#00ccff;font-weight:bold;">What We're Computing:</span>
+            <p style="margin:4px 0;color:#ccc;">For each pair of adjacent keys, we try making either one the root and compute the resulting cost.</p>
+          </div>
+          
+          <p><strong>A[1][2]:</strong> keys k₁, k₂ (sumP = 0.5+0.3 = 0.8)</p>
+          <p style="margin-left:20px;">• Try root k₁: A[1][0] + A[2][2] + 0.8 = 0 + 0.3 + 0.8 = <strong>1.1</strong></p>
+          <p style="margin-left:20px;">• Try root k₂: A[1][1] + A[3][2] + 0.8 = 0.5 + 0 + 0.8 = <strong>1.3</strong></p>
+          <p style="margin-left:20px;color:#00ff88;">→ Minimum = 1.1, root = k₁</p>
+          
+          <p><strong>A[2][3]:</strong> keys k₂, k₃ (sumP = 0.3+0.2 = 0.5)</p>
+          <p style="margin-left:20px;">• Try root k₂: A[2][1] + A[3][3] + 0.5 = 0 + 0.2 + 0.5 = <strong>0.7</strong></p>
+          <p style="margin-left:20px;">• Try root k₃: A[2][2] + A[4][3] + 0.5 = 0.3 + 0 + 0.5 = <strong>0.8</strong></p>
+          <p style="margin-left:20px;color:#00ff88;">→ Minimum = 0.7, root = k₂</p>
+          
           <p><strong>Step 3: d=2 (all three keys)</strong></p>
-          <p><strong>A[1][3]:</strong> sumP = 0.5+0.3+0.2 = 1.0</p>
-          <p>m=1: A[1][0]+A[2][3]+1.0 = 0+0.7+1.0 = 1.7</p>
-          <p>m=2: A[1][1]+A[3][3]+1.0 = 0.5+0.2+1.0 = 1.7</p>
-          <p>m=3: A[1][2]+A[4][3]+1.0 = 1.1+0+1.0 = 2.1</p>
-          <p>min = 1.7, R[1][3] = 1 (or 2, tie)</p>
+          <p><strong>A[1][3]:</strong> keys k₁, k₂, k₃ (sumP = 0.5+0.3+0.2 = 1.0)</p>
+          <p style="margin-left:20px;">• Try root k₁: A[1][0] + A[2][3] + 1.0 = 0 + 0.7 + 1.0 = <strong>1.7</strong></p>
+          <p style="margin-left:20px;">• Try root k₂: A[1][1] + A[3][3] + 1.0 = 0.5 + 0.2 + 1.0 = <strong>1.7</strong></p>
+          <p style="margin-left:20px;">• Try root k₃: A[1][2] + A[4][3] + 1.0 = 1.1 + 0 + 1.0 = <strong>2.1</strong></p>
+          <p style="margin-left:20px;color:#00ff88;">→ Minimum = 1.7, root = k₁ (or k₂, tie)</p>
+          
+          <div class="concept-box" style="background:#0a1a12;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ff8844;">
+            <span class="label" style="color:#00ff88;font-weight:bold;">Analysis:</span>
+            <p style="margin:4px 0;color:#ccc;">• Both root=k₁ and root=k₂ give cost 1.7 — they're equally good!</p>
+            <p style="margin:4px 0;color:#ccc;">• Root=k₃ is worse (2.1) because it puts the high-probability k₁ deep in the tree</p>
+            <p style="margin:4px 0;color:#ccc;">• The algorithm correctly identifies that the most probable key should be near the root</p>
+          </div>
+          
           <p class="result">Minimum expected search cost = 1.7</p>
         </div>
+
         <div class="example">
           <div class="title">Example 2: 4 Keys — Complete A and R Matrices</div>
           <p><strong>Probabilities:</strong> p=[0.4, 0.1, 0.2, 0.3] (sum=1.0)</p>
-          <p><strong>A Matrix:</strong></p>
+          
+          <div class="concept-box" style="background:#0a0a1a;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ccff44;">
+            <span class="label" style="color:#00ccff;font-weight:bold;">Input Analysis:</span>
+            <p style="margin:4px 0;color:#ccc;">• k₁ (p=0.4): Most probable — should be near root</p>
+            <p style="margin:4px 0;color:#ccc;">• k₂ (p=0.1): Least probable — can be deep</p>
+            <p style="margin:4px 0;color:#ccc;">• k₃ (p=0.2): Moderate</p>
+            <p style="margin:4px 0;color:#ccc;">• k₄ (p=0.3): Second most probable — should be near root</p>
+          </div>
+
+          <p><strong>A Matrix (Expected Search Cost):</strong></p>
           <table>
             <tr><th>A[i][j]</th><th>j=1</th><th>j=2</th><th>j=3</th><th>j=4</th></tr>
             <tr><td>i=1</td><td>0.4</td><td>0.6</td><td>1.0</td><td class="result">1.6</td></tr>
@@ -269,7 +431,16 @@
             <tr><td>i=3</td><td>—</td><td>—</td><td>0.2</td><td>0.7</td></tr>
             <tr><td>i=4</td><td>—</td><td>—</td><td>—</td><td>0.3</td></tr>
           </table>
-          <p><strong>R Matrix:</strong></p>
+          
+          <div class="concept-box" style="background:#0a0a1a;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ccff44;">
+            <span class="label" style="color:#00ccff;font-weight:bold;">Reading the A Matrix:</span>
+            <p style="margin:4px 0;color:#ccc;">• A[1][1] = 0.4: Cost for just key k₁</p>
+            <p style="margin:4px 0;color:#ccc;">• A[1][2] = 0.6: Optimal cost for keys k₁, k₂</p>
+            <p style="margin:4px 0;color:#ccc;">• A[1][4] = 1.6: Optimal cost for all 4 keys (final answer)</p>
+            <p style="margin:4px 0;color:#ccc;">• Diagonal values (—) are undefined because i > j</p>
+          </div>
+
+          <p><strong>R Matrix (Root Selection):</strong></p>
           <table>
             <tr><th>R[i][j]</th><th>j=1</th><th>j=2</th><th>j=3</th><th>j=4</th></tr>
             <tr><td>i=1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
@@ -277,24 +448,58 @@
             <tr><td>i=3</td><td>—</td><td>—</td><td>3</td><td>3</td></tr>
             <tr><td>i=4</td><td>—</td><td>—</td><td>—</td><td>4</td></tr>
           </table>
-          <p class="result">Minimum expected search cost = 1.9</p>
+          
+          <div class="concept-box" style="background:#0a1a12;padding:10px;border-radius:6px;margin:10px 0;border:1px solid #00ff8844;">
+            <span class="label" style="color:#00ff88;font-weight:bold;">Reconstructing the Tree from R Matrix:</span>
+            <p style="margin:4px 0;color:#ccc;">• R[1][4] = 1 → Root of full tree is k₁</p>
+            <p style="margin:4px 0 4px 16px;color:#ccc;">• Left subtree: empty (k₁ is smallest)</p>
+            <p style="margin:4px 0 4px 16px;color:#ccc;">• Right subtree: R[2][4] = 3 → Root is k₃</p>
+            <p style="margin:4px 0 4px 32px;color:#ccc;">• Left of k₃: R[2][2] = 2 → k₂</p>
+            <p style="margin:4px 0 4px 32px;color:#ccc;">• Right of k₃: R[4][4] = 4 → k₄</p>
+            <p style="margin:6px 0;color:#ccc;"><strong>Tree structure:</strong> k₁ (root) → right: k₃ → left: k₂, right: k₄</p>
+          </div>
+          
+          <p class="result">Minimum expected search cost = 1.6</p>
         </div>
+
         <h2>Complexity Analysis</h2>
+        
+        <div class="concept-box" style="background:#0a0a1a;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #00ccff44;">
+          <span class="label" style="color:#00ccff;font-weight:bold;">Why O(n³) Time?</span>
+          <p style="margin:6px 0;color:#ccc;">The algorithm has three nested loops:</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">1. <strong>Outer loop (diagonals):</strong> n-1 iterations (d = 1 to n-1)</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">2. <strong>Middle loop (starting index):</strong> Up to n iterations per diagonal</p>
+          <p style="margin:4px 0 4px 16px;color:#ccc;">3. <strong>Inner loop (root choice):</strong> Up to n iterations per subproblem</p>
+          <p style="margin:6px 0;color:#ccc;">Total: O(n) × O(n) × O(n) = <strong>O(n³)</strong></p>
+          <p style="margin:6px 0;color:#ccc;"><strong>Space:</strong> We store three n×n tables (A, w, R), so O(n²) space.</p>
+        </div>
+
         <div class="grid">
           <div class="card">
             <h3>Time Complexity</h3>
             <p><span class="highlight">O(n³)</span></p>
             <p>For each of O(n²) subproblems, we try O(n) possible roots. Total O(n³) operations.</p>
+            <p style="color:#aaa;font-size:0.85em;margin-top:6px;">For n=100 keys, this is about 1 million operations — very fast.</p>
           </div>
           <div class="card">
             <h3>Space Complexity</h3>
             <p><span class="dim">O(n²)</span></p>
             <p>Two n×n tables: A for costs, R for roots.</p>
+            <p style="color:#aaa;font-size:0.85em;margin-top:6px;">For n=100, we need about 10,000 entries — trivial memory usage.</p>
           </div>
           <div class="card">
             <h3>Knuth Optimization</h3>
             <p>For OBST, the root choice is monotonic: R[i][j-1] ≤ R[i][j] ≤ R[i+1][j]. This reduces to O(n²) by limiting root search range.</p>
+            <p style="color:#aaa;font-size:0.85em;margin-top:6px;">This optimization is possible because of the quadrangle inequality in the cost function.</p>
           </div>
+        </div>
+
+        <div class="concept-box" style="background:#1a1a00;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #ffff0044;">
+          <span class="label" style="color:#ffff00;font-weight:bold;">Comparison with Brute Force:</span>
+          <p style="margin:6px 0;color:#ccc;"><strong>Brute force:</strong> Try all possible BST structures. The number of distinct BSTs with n keys is the Catalan number C(n) = (2n)!/((n+1)!n!), which grows exponentially.</p>
+          <p style="margin:6px 0;color:#ccc;"><strong>DP approach:</strong> O(n³) polynomial time — much more efficient!</p>
+          <p style="margin:6px 0;color:#ccc;">For n=10: Brute force tries ~16,796 trees. DP does ~1,000 operations.</p>
+          <p style="margin:6px 0;color:#ccc;">For n=20: Brute force tries ~6,564,120,420 trees. DP does ~8,000 operations.</p>
         </div>
       </div>
     </div>
@@ -448,16 +653,18 @@
         <div class="concept-box">
           <span class="label">What is a Base Case?</span>
           <p style="margin:4px 0;">A base case represents the cost of an <b>empty subtree</b>. When we have no real keys (i.e., i > j), the "tree" is just a dummy key (external node).</p>
+          <p style="margin:4px 0;">In the OBST problem, dummy keys d₀, d₁, ..., dₙ represent the "gaps" between real keys. A search that reaches a dummy key means the target was not found (unsuccessful search).</p>
         </div>
         <h4>Variables Explained:</h4>
         <p><span class="var-ref">i = ${i}</span> — start index of key range</p>
-        <p><span class="var-ref">j = ${i-1}</span> — end index (j < i means empty range)</p>
+        <p><span class="var-ref">j = ${i-1}</span> — end index (j < i means empty range — no keys in this subtree)</p>
         <p><span class="var-ref">q[${dummyIdx}] = ${dummyProb}</span> — probability of searching for a key that falls in the gap after k<sub>${dummyIdx}</sub></p>
         <h4>Formula:</h4>
         <span class="formula-line">e[${i}][${i-1}] = q[${dummyIdx}] = ${dummyProb}</span>
         <h4>Why?</h4>
         <p>An empty subtree has cost equal to the dummy key probability. This is because a search that reaches this empty subtree takes exactly <b>1 comparison</b> (to realize it's not here), and this happens with probability q[${dummyIdx}].</p>
-        <span class="note">Concept: dummy keys d<sub>0</sub>, d<sub>1</sub>, ..., d<sub>${A_N}</sub> represent the "gaps" between/around real keys. Searching ends at a dummy key when the target is not found.</span>
+        <p style="margin:4px 0;"><b>Real-world analogy:</b> Imagine looking for a word in a dictionary. If you open to a page and find no word matches (empty subtree), you've spent 1 comparison to determine the word isn't there. The cost of this "wasted" comparison is weighted by how often this happens (the dummy probability).</p>
+        <span class="note">Concept: dummy keys d<sub>0</sub>, d<sub>1</sub>, ..., d<sub>${A_N}</sub> represent the "gaps" between/around real keys. Searching ends at a dummy key when the target is not found. These become the leaves of the BST.</span>
       </div>`;
     }
 
@@ -495,6 +702,7 @@
         <div class="concept-box">
           <span class="label">What We're Doing:</span>
           <p style="margin:4px 0;">We're computing the cost of making key <b>${keyK}</b> (index k=${k}) the root of a subtree containing keys k<sub>${i}</sub>..k<sub>${j}</sub>.</p>
+          <p style="margin:4px 0;">The key insight: when we pick a root, we split the remaining keys into left and right subtrees. We then recursively compute the optimal cost for each subtree.</p>
         </div>
         <h4>Input Variables:</h4>
         <p><span class="var-ref">i = ${i}</span> — start of key range (key k<sub>${i}</sub> = ${A_KEYS[i-1]})</p>
@@ -508,10 +716,14 @@
         <p style="margin:2px 0;">w[${i}][${j}] = Σ all p and q in range = <span class="val-ref">${w.toFixed(4)}</span></p>
         <p style="margin:2px 0; font-size:0.85em; color:#888;">Breakdown: ${weightBreakdown.join(', ')}</p>
         <p style="margin:4px 0;"><b>Why add w[i][j]?</b> Making key ${keyK} the root pushes every node in the subtree down by 1 level. This increases the search cost for every key and dummy in the subtree by their probability × 1. The total extra cost = w[${i}][${j}].</p>
+        <div class="concept-box" style="background:#1a1a00;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #ffff0044;">
+          <span class="label" style="color:#ffff00;">Intuition:</span>
+          <p style="margin:4px 0;">Think of it like this: before adding root ${keyK}, each node had some depth d. After adding root ${keyK} above them, their depth becomes d+1. The extra comparison for each node costs its probability. Summing over all nodes gives w[${i}][${j}].</p>
+        </div>
         <h4>Computation:</h4>
         <span class="formula-line">e[${i}][${k-1}] + e[${k+1}][${j}] + w[${i}][${j}]</span>
         <span class="formula-line">= ${eL.toFixed(4)} + ${eR.toFixed(4)} + ${w.toFixed(4)} = ${t.toFixed(4)}</span>
-        <p class="note">This is one candidate value. We'll compare all roots k=${i}..${j} and keep the minimum.</p>
+        <p class="note">This is one candidate value. We'll compare all roots k=${i}..${j} and keep the minimum. The root that gives the smallest total cost will be stored in root[${i}][${j}].</p>
       </div>`;
     }
 
@@ -543,11 +755,19 @@
         <div class="concept-box">
           <span class="label">Result for Subtree k<sub>${i}</sub>..k<sub>${j}</sub>:</span>
           <p style="margin:4px 0;">After trying all possible roots, key <b>${keyK}</b> (k=${k}) gives the minimum cost.</p>
+          <p style="margin:4px 0;">This means: for the subtree containing keys ${keysInSubtree}, the optimal structure has ${keyK} at the root.</p>
         </div>
         <h4>All Candidate Roots Tried:</h4>
         ${comparisonHtml}
         <h4>Why Key ${keyK} Wins:</h4>
         <p style="margin:4px 0;">Key ${keyK} has probability p<sub>${k}</sub>=${A_P[k]}, which ${A_P[k] >= 0.3 ? 'is relatively high' : 'is relatively low'}. ${A_P[k] >= 0.3 ? 'Placing it near the root reduces the depth penalty for frequent searches.' : 'The algorithm still found this to be the best compromise.'}</p>
+        <div class="concept-box" style="background:#0a1a12;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;">Decision Analysis:</span>
+          <p style="margin:4px 0;">The algorithm balances two competing goals:</p>
+          <p style="margin:4px 0 4px 16px;">1. Put high-probability keys near the root (shallow depth)</p>
+          <p style="margin:4px 0 4px 16px;">2. Keep the tree balanced (so no key gets too deep)</p>
+          <p style="margin:4px 0;">Key ${keyK} achieves the best balance for this subtree.</p>
+        </div>
         <h4>Optimal Split:</h4>
         <p>• Root: <b>key ${keyK}</b></p>
         <p>• Left child: ${leftChildStr}</p>
@@ -555,7 +775,7 @@
         <h4>Final Values:</h4>
         <span class="result-line">e[${i}][${j}] = ${val.toFixed(4)}</span>
         <span class="split-info">root[${i}][${j}] = ${k} (key ${keyK})</span>
-        <p class="note">These values are now permanently stored. They will be used when computing larger subproblems that include this subtree.</p>
+        <p class="note">These values are now permanently stored. They will be used when computing larger subproblems that include this subtree. This is the essence of dynamic programming — solve smaller subproblems first, then use their solutions for larger problems.</p>
       </div>`;
     }
 
@@ -582,19 +802,34 @@
           <span class="label">Summary:</span>
           <p style="margin:4px 0;">We filled the e[i][j] table diagonal by diagonal, from single keys up to the full range.</p>
           <p style="margin:4px 0;">Total steps executed: <b>${totalSteps}</b></p>
+          <p style="margin:4px 0;">The algorithm systematically explored all possible BST structures and found the one with minimum expected search cost.</p>
         </div>
         <h4>Optimal Expected Cost:</h4>
         <span class="result-line" style="font-size:1.2em;">e[1][${A_N}] = ${res.e[1][A_N].toFixed(4)}</span>
         <h4>Cost Verification (depth × probability):</h4>
         <p style="margin:4px 0;">${costCalc} = ${res.e[1][A_N].toFixed(4)}</p>
+        <div class="concept-box" style="background:#0a1a12;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #00ff8844;">
+          <span class="label" style="color:#00ff88;">Verification Explanation:</span>
+          <p style="margin:4px 0;">Each term represents: (probability of searching for key) × (number of comparisons needed)</p>
+          <p style="margin:4px 0;">For example, if key k₁ is at depth 0 (root), it takes 1 comparison. If its probability is 0.4, it contributes 0.4×1 = 0.4 to the total cost.</p>
+        </div>
         <h4>Optimal Tree Structure:</h4>
         <p>${ts}</p>
         <h4>Reconstruction Logic:</h4>
         <p style="margin:4px 0;">root[1][${A_N}] = ${res.root[1][A_N]} → root is key ${A_KEYS[res.root[1][A_N]-1]}</p>
         <p style="margin:4px 0;">Then recursively: left subtree from root[1][${res.root[1][A_N]-1}], right subtree from root[${res.root[1][A_N]+1}][${A_N}]</p>
+        <div class="concept-box" style="background:#1a1a00;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #ffff0044;">
+          <span class="label" style="color:#ffff00;">Key Insight:</span>
+          <p style="margin:4px 0;">The R matrix encodes the entire optimal tree structure. By reading R[1][n], we find the root. Then R[1][root-1] gives the left subtree root, and R[root+1][n] gives the right subtree root. This recursive process reconstructs the complete tree.</p>
+        </div>
         <h4>Complexity:</h4>
         <p><span class="dim">Time:</span> O(n³) — we had ${A_N} diagonals, each with O(n) subproblems, each trying O(n) roots</p>
         <p><span class="dim">Space:</span> O(n²) — three ${A_N}×${A_N} tables (e, w, root)</p>
+        <div class="concept-box" style="background:#0a0a1a;padding:8px;border-radius:6px;margin:8px 0;border:1px solid #00ccff44;">
+          <span class="label" style="color:#00ccff;">Practical Implications:</span>
+          <p style="margin:4px 0;">For n=100 keys, the algorithm does about 1 million operations — trivial for modern computers. Even for n=1000, it's only 1 billion operations, which runs in seconds.</p>
+          <p style="margin:4px 0;">The O(n²) space is also negligible — three 100×100 tables use only 30,000 entries.</p>
+        </div>
       </div>`;
     }
 
