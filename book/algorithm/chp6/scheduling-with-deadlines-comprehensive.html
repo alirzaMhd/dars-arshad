@@ -446,10 +446,12 @@
     <div class="content active" id="tab1">
       <div class="section">
         <h2>Problem Definition</h2>
-        <p>Given a set of <strong>n jobs</strong>, where each job has a <strong>deadline</strong> and a <strong>profit</strong>, we must schedule a subset of jobs on a <strong>single processor</strong> to maximize total profit. Each job takes exactly <strong>1 unit of time</strong> to process.</p>
+        <p>Imagine you run a factory with a single machine. Customers bring you jobs, and each job promises a certain <strong>profit</strong> if completed by a certain <strong>deadline</strong>. You cannot work on two jobs simultaneously, and each job takes exactly one hour (one time unit). Your goal: choose which jobs to accept so that you <strong>maximize your total profit</strong> while ensuring every accepted job finishes on time.</p>
+
+        <p>This is the <strong>Scheduling with Deadlines</strong> problem — a classic optimization problem in computer science and operations research. It appears in real-world scenarios such as task scheduling in operating systems, production planning in factories, CPU job scheduling in compilers, and project management where tasks have firm deadlines.</p>
 
         <div class="warning">
-          ⚠ <strong>Important Assumption:</strong> Each job takes exactly 1 unit of time. This is a key constraint — without it, the greedy approach discussed here would not apply directly.
+          ⚠ <strong>Important Assumption:</strong> Each job takes exactly 1 unit of time. This is a key constraint — without it, the greedy approach discussed here would not apply directly. If jobs had different processing times, the problem becomes significantly harder (NP-hard in general). The unit-time assumption is what makes the greedy strategy work perfectly.
         </div>
 
         <div class="formula">
@@ -462,36 +464,58 @@
           </div>
         </div>
 
+        <p>In mathematical terms, we have a set of n jobs. Job i has a deadline dᵢ (a positive integer representing the latest time unit by which it must finish) and a profit pᵢ (a positive number earned if and only if the job is scheduled and completes by its deadline). We must choose a subset of jobs and assign each chosen job to a distinct time slot (1, 2, 3, ...) such that no job is assigned to a slot later than its deadline. The objective is to maximize the total profit of all scheduled jobs.</p>
+
         <h3>Feasibility Condition</h3>
-        <p>A set of jobs is <strong>feasible</strong> if there exists a schedule (ordering) such that every job finishes by its deadline. Since each job takes 1 unit, a set of k jobs is feasible iff after sorting jobs by ascending deadline, we have:</p>
+        <p>A set of jobs is <strong>feasible</strong> if there exists a schedule (ordering) such that every job finishes by its deadline. The key insight is this: since every job takes exactly 1 time unit, if we have k jobs to schedule, we need k distinct time slots. The question is whether we can assign these k jobs to slots 1 through k such that each job i is placed in a slot ≤ dᵢ.</p>
+
+        <p>The simplest way to check feasibility is to sort the jobs by their deadlines in ascending order and assign them greedily to slots 1, 2, 3, .... If at any position i, the i-th job (in deadline-sorted order) has a deadline less than i, then the set is infeasible — there simply aren't enough early slots to accommodate all the jobs with tight deadlines.</p>
+
         <div class="formula">
           <div class="label">Feasibility Test</div>
           <div class="expr">deadline<sub>(i)</sub> ≥ i &nbsp; for all i = 1, 2, ..., k</div>
-          <div class="desc">Where jobs are sorted by deadline and i is the position in the schedule.</div>
+          <div class="desc">Where jobs are sorted by ascending deadline and i is the position in the schedule. If this condition holds for every position, the set is feasible. If it fails at any position, no valid schedule exists for this set.</div>
         </div>
+
+        <p><strong>Why does sorting by deadline work?</strong> Suppose you have a feasible schedule. If any two adjacent jobs are out of deadline order (the later one has an earlier deadline), swapping them cannot make things worse — the job with the earlier deadline gets an earlier slot, which is better for it. By repeatedly swapping such inversions, you eventually reach the deadline-sorted order, which is also feasible. Therefore, if ANY schedule works, the deadline-sorted schedule works too.</p>
 
         <h3>Key Properties</h3>
         <div class="grid">
           <div class="card">
             <h4>Single Processor</h4>
-            <p>Only one job at a time. No parallel execution.</p>
+            <p>Only one job at a time. No parallel execution. This models a real-world scenario where you have one machine, one worker, or one CPU core. The constraint means jobs must be serialized — each occupies the full time slot.</p>
           </div>
           <div class="card">
             <h4>Unit Processing Time</h4>
-            <p>Every job takes exactly 1 time unit, regardless of job.</p>
+            <p>Every job takes exactly 1 time unit, regardless of job. This simplification is crucial: it means time is divided into discrete slots (1, 2, 3, ...), and each job fills exactly one slot. Without this, we'd need to handle variable-length intervals, making the problem much harder.</p>
           </div>
           <div class="card">
             <h4>Deadline Constraint</h4>
-            <p>Job must complete at or before its deadline (time ≤ dᵢ).</p>
+            <p>Job must complete at or before its deadline (time ≤ dᵢ). If a job with deadline 3 is assigned to slot 4, it fails — the deadline is violated and no profit is earned. The deadline is a hard constraint, not a soft preference.</p>
           </div>
           <div class="card">
             <h4>Profit Maximization</h4>
-            <p>Goal: maximize sum of profits of scheduled jobs.</p>
+            <p>Goal: maximize sum of profits of scheduled jobs. Not all jobs need to be scheduled — sometimes skipping a low-profit job allows fitting a higher-profit one. The challenge is choosing the right subset.</p>
           </div>
         </div>
 
         <h3>Optimal Substructure</h3>
-        <p>If J is an optimal feasible set of jobs, then J − {j} (removing any job) is also an optimal feasible set for the remaining jobs. This property enables greedy construction of the solution.</p>
+        <p>The scheduling problem has <strong>optimal substructure</strong>, meaning: if J* is an optimal feasible set of jobs, then for any job j in J*, the set J* − {j} is an optimal feasible set for the remaining jobs (all jobs except j). This property is what makes greedy algorithms applicable — it means we can build the optimal solution incrementally by making locally optimal choices (picking the highest-profit feasible job) without worrying about future consequences.</p>
+
+        <p>More precisely, suppose J* = {j₁, j₂, ..., jₖ} is the optimal set. If we remove any job jᵢ from J*, the remaining k−1 jobs still form a feasible schedule (since removing a job can only make feasibility easier), and they are optimal for the subproblem consisting of all jobs except jᵢ. If there were a better feasible subset of the remaining jobs, we could combine it with jᵢ to get a better solution for the original problem — contradicting the optimality of J*.</p>
+
+        <h3>Why Greedy Works Here</h3>
+        <p>Not all optimization problems can be solved greedily. The scheduling problem has two key properties that enable a greedy approach:</p>
+        <ol>
+          <li><strong>Greedy Choice Property:</strong> There exists an optimal solution that includes the locally optimal choice (the highest-profit job that can be feasibly added). We can safely make this choice without exploring alternatives.</li>
+          <li><strong>Optimal Substructure:</strong> After making the greedy choice, the remaining subproblem (scheduling the remaining jobs) has the same structure as the original problem.</li>
+        </ol>
+        <p>Together, these properties mean: sort jobs by profit (descending), try each one in order, keep it if feasible, and the result is optimal. No backtracking, no recursion — just a single pass.</p>
+
+        <div class="example">
+          <div class="title">Real-World Analogy</div>
+          <p>Think of it like a freelance worker with 1-hour appointment slots. Clients offer different payments (profits) and have latest-available times (deadlines). The worker wants to maximize income. The strategy: always try to book the highest-paying client first, and if they fit into the schedule without conflicting with already-booked clients, accept them.</p>
+        </div>
       </div>
     </div>
 
@@ -501,67 +525,114 @@
         <h2>Greedy Algorithm with Feasibility Checking</h2>
 
         <h3>Algorithm Overview</h3>
-        <p>The greedy algorithm builds a feasible job set incrementally. It processes jobs in <strong>decreasing order of profit</strong>. For each job, it tentatively adds it to the selected set and checks feasibility. If the set remains feasible, the job is kept; otherwise, it is discarded.</p>
+        <p>The greedy algorithm builds a feasible job set incrementally using a simple but powerful strategy: <strong>always try the most profitable job first</strong>. The intuition is straightforward — if you're going to skip any job, you'd rather skip a low-profit one than a high-profit one. So process jobs from highest to lowest profit, and for each job, check whether adding it to your current schedule would still keep everything feasible.</p>
+
+        <p>Here's the step-by-step logic:</p>
+        <ol>
+          <li><strong>Sort all jobs by profit in decreasing order.</strong> This ensures we always consider the most valuable jobs first, giving them priority for the limited time slots.</li>
+          <li><strong>Start with an empty schedule.</strong> No jobs selected yet.</li>
+          <li><strong>For each job (in profit order):</strong>
+            <ul>
+              <li>Temporarily add it to the selected set.</li>
+              <li>Check if the resulting set is still feasible (can all selected jobs be scheduled by their deadlines?).</li>
+              <li>If feasible → keep it (permanently add to the set).</li>
+              <li>If infeasible → discard it (it would violate some deadline, so skip it).</li>
+            </ul>
+          </li>
+          <li><strong>The final selected set is optimal.</strong> No other combination of jobs yields a higher total profit while respecting all deadlines.</li>
+        </ol>
 
         <div class="warning">
-          <strong>Important:</strong> To check feasibility of a set, we only need to examine jobs sorted by <strong>ascending deadline</strong>. There is no need to check all possible permutations — the deadline-sorted order is the canonical feasible order.
+          <strong>Important:</strong> To check feasibility of a set, we only need to examine jobs sorted by <strong>ascending deadline</strong>. There is no need to check all possible permutations — the deadline-sorted order is the canonical feasible order. If the deadline-sorted order fails, no other order succeeds. This is a proven theorem, not just a heuristic.
         </div>
 
         <h3>Pseudocode</h3>
         <div class="code">
           <div class="line"><span class="keyword">function</span> SCHEDULE_WITH_DEADLINES(J, d, p):</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs by decreasing profit → list L</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;S ← ∅  <span class="comment">▷ Selected feasible set</span></div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> each job j <span class="keyword">in</span> L:</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S' ← S ∪ {j}</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> IS_FEASIBLE(S') <span class="keyword">then</span></div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S ← S'</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;S ← ∅  <span class="comment">▷ Selected feasible set (initially empty)</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> each job j <span class="keyword">in</span> L:  <span class="comment">▷ Process highest-profit first</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S' ← S ∪ {j}  <span class="comment">▷ Tentatively add job j</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> IS_FEASIBLE(S') <span class="keyword">then</span>  <span class="comment">▷ Can all jobs in S' meet deadlines?</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S ← S'  <span class="comment">▷ Yes: permanently add j</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> S</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> S  <span class="comment">▷ The optimal feasible set</span></div>
           <div class="line">&nbsp;</div>
           <div class="line"><span class="keyword">function</span> IS_FEASIBLE(S):</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs in S by ascending deadline</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> i = 1 <span class="keyword">to</span> |S|:</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> deadline(S[i]) &lt; i <span class="keyword">then</span></div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">false</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> deadline(S[i]) &lt; i <span class="keyword">then</span>  <span class="comment">▷ Job i can't fit in slot i</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">false</span>  <span class="comment">▷ Set is infeasible</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">true</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">true</span>  <span class="comment">▷ All jobs fit — set is feasible</span></div>
         </div>
 
         <h3>Why Only One Feasibility Check?</h3>
+        <p>A natural question: when we add a new job to the set, why do we need to check the <em>entire</em> set again? Why not just check if the new job fits? The answer is subtle but important:</p>
+
+        <p>When we add a new job j to an already feasible set S, the set S ∪ {j} might become infeasible <strong>not because of j itself, but because j displaces another job</strong>. The feasibility condition requires that ALL jobs in the set can be simultaneously scheduled. Adding a job pushes other jobs to later time slots, potentially violating their deadlines.</p>
+
+        <p>For example, suppose S = {A(d=2), B(d=3)} is feasible (schedule: A at t=1, B at t=2). If we add C(d=2), the set becomes {A(d=2), B(d=3), C(d=2)}. Sorted by deadline: A(d=2), C(d=2), B(d=3). Position 3: B's deadline 3 ≥ 3 ✓. But if C had deadline 1 instead, we'd have A(d=2), C(d=1), B(d=3) — position 2: A's deadline 2 ≥ 2 ✓, but position 1: C's deadline 1 ≥ 1 ✓. Actually this is feasible. The point is: adding ANY job can potentially break feasibility for OTHER jobs, not just the new one.</p>
+
+        <p>So we must re-verify the entire set. Fortunately, the check is fast: just sort by deadline and scan once.</p>
+
+        <h3>Why Deadline-Sorted Order is the Canonical Check</h3>
         <p>For a given set of jobs, if <strong>any</strong> schedule orders them by deadline and this order is feasible, then the set is feasible. This is because:</p>
         <ul>
           <li>If there <em>exists</em> some feasible schedule, sorting by deadlines always yields a feasible schedule</li>
           <li>The deadline-sorted order minimizes the completion time of each job, giving the highest chance of feasibility</li>
           <li>No other permutation can satisfy deadlines if the deadline-sorted order fails</li>
         </ul>
+        <p>Intuitively: if you put jobs with tight deadlines first, you give them the best chance. If even that fails, nothing works.</p>
 
         <h3>Step-by-Step Feasibility Check</h3>
         <p>Given a candidate set S, the feasibility check works as follows:</p>
         <ol>
-          <li>Sort jobs in S by ascending deadline</li>
-          <li>Assign job[1] to time 1, job[2] to time 2, ..., job[k] to time k</li>
-          <li>If for any job[i], deadline[i] &lt; i, the set is infeasible</li>
+          <li><strong>Sort</strong> jobs in S by ascending deadline (earliest deadline first).</li>
+          <li><strong>Assign</strong> job[1] to time slot 1, job[2] to time slot 2, ..., job[k] to time slot k.</li>
+          <li><strong>Verify</strong>: if for any job[i], deadline[i] &lt; i, the set is infeasible. This means job[i] would need to be scheduled at time i, but its deadline is earlier than i — it can't be completed on time.</li>
+          <li>If all positions pass (deadline[i] ≥ i for all i), the set is feasible.</li>
         </ol>
 
         <div class="example">
-          <div class="title">Feasibility Example</div>
+          <div class="title">Feasibility Example — How the Check Works</div>
           <p>Suppose S has jobs with deadlines {3, 1, 2}.</p>
-          <p>Sorted by deadline: [d=1, d=2, d=3]</p>
-          <p>At position 1: deadline 1 ≥ 1 ✓<br>
-             At position 2: deadline 2 ≥ 2 ✓<br>
-             At position 3: deadline 3 ≥ 3 ✓</p>
-          <p class="result">→ Feasible ✓</p>
+          <p>Step 1: Sort by deadline → [d=1, d=2, d=3]</p>
+          <p>Step 2: Assign to slots: job with d=1 → slot 1, job with d=2 → slot 2, job with d=3 → slot 3</p>
+          <p>Step 3: Verify each position:</p>
+          <p>Position 1: deadline 1 ≥ 1 ✓ (job with deadline 1 finishes at time 1 — on time)</p>
+          <p>Position 2: deadline 2 ≥ 2 ✓ (job with deadline 2 finishes at time 2 — on time)</p>
+          <p>Position 3: deadline 3 ≥ 3 ✓ (job with deadline 3 finishes at time 3 — on time)</p>
+          <p class="result">→ Feasible ✓ All three jobs can be scheduled.</p>
         </div>
         <div class="example">
-          <div class="title">Infeasibility Example</div>
+          <div class="title">Infeasibility Example — When the Check Fails</div>
           <p>Suppose S has jobs with deadlines {1, 1, 3}.</p>
-          <p>Sorted by deadline: [d=1, d=1, d=3]</p>
-          <p>At position 1: deadline 1 ≥ 1 ✓<br>
-             At position 2: deadline 1 &lt; 2 ✗ → INFEASIBLE</p>
-          <p class="result" style="color:#ff4444;">→ Infeasible ✗</p>
+          <p>Step 1: Sort by deadline → [d=1, d=1, d=3]</p>
+          <p>Step 2: Assign to slots: job with d=1 → slot 1, job with d=1 → slot 2, job with d=3 → slot 3</p>
+          <p>Step 3: Verify each position:</p>
+          <p>Position 1: deadline 1 ≥ 1 ✓ (first job finishes at time 1 — on time)</p>
+          <p>Position 2: deadline 1 &lt; 2 ✗ (second job would need to finish at time 2, but its deadline is 1 — TOO LATE!)</p>
+          <p class="result" style="color:#ff4444;">→ Infeasible ✗ We have two jobs with deadline 1 but only one time slot ≤ 1. One must be rejected.</p>
+        </div>
+
+        <h3>Greedy Choice Property — Why This Works</h3>
+        <p>The greedy algorithm works because of the <strong>greedy choice property</strong>: there exists an optimal solution that includes the highest-profit feasible job. Proof sketch:</p>
+        <ol>
+          <li>Let O* be an optimal solution (maximum profit feasible set).</li>
+          <li>If the greedy choice g (highest-profit feasible job) is in O*, we're done.</li>
+          <li>If g is NOT in O*, then O* contains some other job j with profit p(j) &lt; p(g).</li>
+          <li>Replace j with g in O*. Since g's deadline is at least as late as j's (g was feasible when considered), the set remains feasible.</li>
+          <li>The new set has higher profit (p(g) > p(j)), contradicting O*'s optimality.</li>
+          <li>Therefore, g must be in some optimal solution.</li>
+        </ol>
+        <p>After fixing the greedy choice, the remaining problem (scheduling remaining jobs) has the same structure, so we can apply the same argument recursively.</p>
+
+        <div class="example">
+          <div class="title">Why Not Sort by Deadline Instead?</div>
+          <p>You might wonder: why not sort by deadline (earliest first) and schedule greedily? The reason is that this maximizes the NUMBER of jobs scheduled, not the TOTAL PROFIT. Consider jobs: A(p=100, d=2), B(p=1, d=1). Sorting by deadline gives: B at slot 1, A at slot 2 → total profit = 101. But sorting by profit gives: A first (feasible at slot 1), then B (also feasible at slot 2) → total profit = 101. Same result here, but consider: A(p=100, d=1), B(p=50, d=1). Sorting by deadline: only B fits (slot 1) → profit 50. Sorting by profit: A fits (slot 1) → profit 100. The profit-sorted approach correctly prioritizes high-value jobs.</p>
         </div>
       </div>
     </div>
@@ -570,6 +641,7 @@
     <div class="content" id="tab3">
       <div class="section">
         <h2>Worked Examples</h2>
+        <p>The best way to understand the greedy scheduling algorithm is to trace through complete examples. Each example below shows every step of the algorithm, including the feasibility checks and the reasoning behind accepting or rejecting each job. Study these carefully — they demonstrate exactly how the algorithm makes decisions.</p>
 
         <!-- EXAMPLE 1 (Example 6 from textbook) -->
         <h3>Example 1: Four Jobs with Varying Profits</h3>
@@ -578,56 +650,66 @@
           <table>
             <tr><th>Job</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
             <tr><th>Profit pᵢ</th><td>100</td><td>10</td><td>15</td><td>27</td></tr>
-            <tr><th>Deadline dᵢ</th><td>2</td><td>1</td><td>2</td><td>1</td></tr>
+            <tr><th>Deadline dᵢ</th><td>2</td><td>1</th><td>2</td><td>1</td></tr>
           </table>
-          <p>Jobs sorted by decreasing profit: 1 (100), 4 (27), 3 (15), 2 (10)</p>
+          <p>First, we sort all jobs by decreasing profit: Job 1 (profit=100), Job 4 (profit=27), Job 3 (profit=15), Job 2 (profit=10). We process them in this order, from most profitable to least profitable.</p>
+          <p>The maximum deadline is 2, so we have at most 2 time slots (t=1 and t=2). This means we can schedule at most 2 jobs total.</p>
 
           <div class="step feasible">
-            <div class="step-label">Step 1: Try Job 1 (p=100, d=2)</div>
-            <p>S = {1}. Sorted by deadline: [d=2]. Position 1: 2 ≥ 1 ✓</p>
-            <p class="result">→ Feasible. Keep job 1.</p>
+            <div class="step-label">Step 1: Try Job 1 (profit=100, deadline=2)</div>
+            <p><strong>Current selected set:</strong> S = {1}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 1 with d=2]</p>
+            <p>Position 1: Job 1's deadline (2) ≥ position (1) ✓ — Job 1 can be placed at time slot 1 (or 2), which is before its deadline of 2.</p>
+            <p class="result">→ Feasible. Keep job 1. S = {1}</p>
           </div>
 
           <div class="step feasible">
-            <div class="step-label">Step 2: Try Job 4 (p=27, d=1)</div>
-            <p>S = {1, 4}. Sorted by deadline: [4(d=1), 1(d=2)].</p>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓</p>
-            <p class="result">→ Feasible. Keep job 4.</p>
+            <div class="step-label">Step 2: Try Job 4 (profit=27, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {1, 4}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 4 (d=1), Job 1 (d=2)]</p>
+            <p>Position 1: Job 4's deadline (1) ≥ position (1) ✓ — Job 4 must go at time slot 1 (its deadline is 1, so it can only go here).</p>
+            <p>Position 2: Job 1's deadline (2) ≥ position (2) ✓ — Job 1 goes at time slot 2 (deadline 2 means it must finish by time 2).</p>
+            <p class="result">→ Feasible. Keep job 4. S = {1, 4}</p>
+            <p><strong>So far:</strong> Two jobs scheduled, total profit = 100 + 27 = 127.</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 3: Try Job 3 (p=15, d=2)</div>
-            <p>S = {1, 4, 3}. Sorted by deadline: [4(d=1), 1(d=2), 3(d=2)].</p>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 2 &lt; 3 ✗</p>
-            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3.</p>
+            <div class="step-label">Step 3: Try Job 3 (profit=15, deadline=2)</div>
+            <p><strong>Current selected set:</strong> S = {1, 4, 3}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 4 (d=1), Job 1 (d=2), Job 3 (d=2)]</p>
+            <p>Position 1: Job 4's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 1's deadline (2) ≥ position (2) ✓</p>
+            <p>Position 3: Job 3's deadline (2) < position (3) ✗ — Job 3 would need to be placed at time slot 3, but its deadline is only 2. It would finish AFTER its deadline. This violates the constraint.</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3. S remains {1, 4}.</p>
+            <p><strong>Why it fails:</strong> We only have 2 time slots (because max deadline = 2). We already filled both with Jobs 4 and 1. There's no room for a third job.</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 4: Try Job 2 (p=10, d=1)</div>
-            <p>S = {1, 4, 2}. Sorted by deadline: [4(d=1), 2(d=1), 1(d=2)].</p>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
-            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 2.</p>
+            <div class="step-label">Step 4: Try Job 2 (profit=10, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {1, 4, 2}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 4 (d=1), Job 2 (d=1), Job 1 (d=2)]</p>
+            <p>Position 1: Job 4's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 2's deadline (1) < position (2) ✗ — Job 2 would need slot 2, but its deadline is 1. It can only go at slot 1, which is already taken by Job 4.</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 2. S remains {1, 4}.</p>
+            <p><strong>Why it fails:</strong> Both Job 4 and Job 2 have deadline 1, meaning they both MUST go at time slot 1. But only one job can occupy slot 1. Job 4 (higher profit) was already there, so Job 2 is rejected.</p>
           </div>
 
           <p class="result">Final Optimal Set: J = {1, 4} with total profit = 100 + 27 = <strong>127</strong></p>
-          <p>Valid schedules: [4, 1] (job 4 at time 1, job 1 at time 2)</p>
+          <p>Valid schedule: [4, 1] — Job 4 at time 1 (meets deadline 1), Job 1 at time 2 (meets deadline 2). Total profit = 127.</p>
         </div>
 
-        <h4>Comparison of All Possible Schedules</h4>
+        <h4>Why No Other Schedule Beats 127</h4>
+        <p>Let's verify by examining all possible feasible 2-job schedules:</p>
         <table>
-          <tr><th>Schedule</th><th>Jobs</th><th>Total Profit</th><th>Feasible?</th></tr>
-          <tr><td>[1, 3] or [3, 1]</td><td>1, 3</td><td>115</td><td>✓</td></tr>
-          <tr><td>[2, 1] or [1, 2]</td><td>1, 2</td><td>110</td><td>✓</td></tr>
-          <tr><td>[4, 1] or [1, 4]</td><td>1, 4</td><td>127</td><td>✓ <span class="comparison-badge badge-opt">OPTIMAL</span></td></tr>
-          <tr><td>[4, 3] or [3, 4]</td><td>3, 4</td><td>42</td><td>✓</td></tr>
-          <tr><td>[2, 3] or [3, 2]</td><td>2, 3</td><td>25</td><td>✓</td></tr>
-          <tr><td>[2, 4]</td><td>2, 4</td><td>37</td><td>✗ (both deadline 1)</td></tr>
-          <tr><td>[1]</td><td>1</td><td>100</td><td>✓</td></tr>
-          <tr><td>[2]</td><td>2</td><td>10</td><td>✓</td></tr>
-          <tr><td>[3]</td><td>3</td><td>15</td><td>✓</td></tr>
-          <tr><td>[4]</td><td>4</td><td>27</td><td>✓</td></tr>
-          <tr><td>∅</td><td>none</td><td>0</td><td>✓</td></tr>
+          <tr><th>Schedule</th><th>Jobs</th><th>Deadlines Met?</th><th>Total Profit</th></tr>
+          <tr><td>[4, 1]</td><td>4, 1</td><td>d(4)=1≥1 ✓, d(1)=2≥2 ✓</td><td>27 + 100 = 127 <span class="comparison-badge badge-opt">OPTIMAL</span></td></tr>
+          <tr><td>[4, 3]</td><td>4, 3</td><td>d(4)=1≥1 ✓, d(3)=2≥2 ✓</td><td>27 + 15 = 42</td></tr>
+          <tr><td>[2, 1]</td><td>2, 1</td><td>d(2)=1≥1 ✓, d(1)=2≥2 ✓</td><td>10 + 100 = 110</td></tr>
+          <tr><td>[2, 3]</td><td>2, 3</td><td>d(2)=1≥1 ✓, d(3)=2≥2 ✓</td><td>10 + 15 = 25</td></tr>
+          <tr><td>[2, 4]</td><td>2, 4</td><td>d(2)=1≥1 ✓, d(4)=1≥2? ✗</td><td>INFEASIBLE (both deadline 1)</td></tr>
+          <tr><td>[1, 3]</td><td>1, 3</td><td>d(1)=2≥1 ✓, d(3)=2≥2 ✓</td><td>100 + 15 = 115</td></tr>
         </table>
+        <p>No feasible schedule exceeds profit 127. The greedy algorithm correctly found the optimum.</p>
 
         <!-- EXAMPLE 2 (Example 7 from textbook) -->
         <h3>Example 2: Seven Jobs (Pre-sorted by Profit)</h3>
@@ -638,53 +720,85 @@
             <tr><th>Profit pᵢ</th><td>40</td><td>35</td><td>30</td><td>25</td><td>20</td><td>15</td><td>10</td></tr>
             <tr><th>Deadline dᵢ</th><td>3</td><td>1</td><td>1</td><td>3</td><td>1</td><td>3</td><td>2</td></tr>
           </table>
-          <p>Jobs are already in decreasing profit order: 1, 2, 3, 4, 5, 6, 7.</p>
+          <p>Jobs are already in decreasing profit order: 1, 2, 3, 4, 5, 6, 7. The maximum deadline is 3, so we have 3 time slots (t=1, t=2, t=3). We can schedule at most 3 jobs.</p>
 
           <div class="step feasible">
-            <div class="step-label">Step 1: J = {1} — deadline sorted: [1(d=3)]</div>
-            <p>Position 1: 3 ≥ 1 ✓</p>
-            <p class="result">→ Feasible. Keep job 1.</p>
+            <div class="step-label">Step 1: Try Job 1 (profit=40, deadline=3)</div>
+            <p><strong>Current selected set:</strong> S = {1}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 1 with d=3]</p>
+            <p>Position 1: Job 1's deadline (3) ≥ position (1) ✓</p>
+            <p class="result">→ Feasible. Keep job 1. S = {1}</p>
+            <p>Job 1 can go at any of slots 1, 2, or 3 (all ≤ deadline 3). We'll figure out the exact slot later.</p>
           </div>
 
           <div class="step feasible">
-            <div class="step-label">Step 2: J = {1, 2} — deadline sorted: [2(d=1), 1(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓</p>
-            <p class="result">→ Feasible. Keep job 2.</p>
+            <div class="step-label">Step 2: Try Job 2 (profit=35, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 1 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓ — Job 2 must go at slot 1 (only slot ≤ deadline 1).</p>
+            <p>Position 2: Job 1's deadline (3) ≥ position (2) ✓ — Job 1 can go at slot 2 (or 3).</p>
+            <p class="result">→ Feasible. Keep job 2. S = {1, 2}</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 3: J = {1, 2, 3} — deadline sorted: [3(d=1), 2(d=1), 1(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
-            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3.</p>
+            <div class="step-label">Step 3: Try Job 3 (profit=30, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2, 3}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 3 (d=1), Job 1 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 3's deadline (1) < position (2) ✗ — Job 3 would need slot 2, but its deadline is 1. Both Job 2 and Job 3 have deadline 1 and both need slot 1. Only one can have it.</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 3. S remains {1, 2}.</p>
+            <p><strong>Key insight:</strong> Job 3 has the same deadline as Job 2 (both deadline 1), but lower profit. The algorithm correctly keeps Job 2 and rejects Job 3.</p>
           </div>
 
           <div class="step feasible">
-            <div class="step-label">Step 4: J = {1, 2, 4} — deadline sorted: [2(d=1), 1(d=3), 4(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓</p>
-            <p class="result">→ Feasible. Keep job 4.</p>
+            <div class="step-label">Step 4: Try Job 4 (profit=25, deadline=3)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2, 4}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 1 (d=3), Job 4 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓ — Job 2 at slot 1.</p>
+            <p>Position 2: Job 1's deadline (3) ≥ position (2) ✓ — Job 1 at slot 2.</p>
+            <p>Position 3: Job 4's deadline (3) ≥ position (3) ✓ — Job 4 at slot 3.</p>
+            <p class="result">→ Feasible. Keep job 4. S = {1, 2, 4}</p>
+            <p><strong>So far:</strong> Three jobs scheduled, total profit = 40 + 35 + 25 = 100. All 3 slots are now filled!</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 5: J = {1, 2, 4, 5} — deadline sorted: [2(d=1), 5(d=1), 1(d=3), 4(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗</p>
+            <div class="step-label">Step 5: Try Job 5 (profit=20, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2, 4, 5}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 5 (d=1), Job 1 (d=3), Job 4 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 5's deadline (1) < position (2) ✗ — Job 5 needs slot 2 but deadline is 1. Slot 1 is already taken by Job 2.</p>
             <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 5.</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 6: J = {1, 2, 4, 6} — deadline sorted: [2(d=1), 1(d=3), 4(d=3), 6(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 3 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;|&nbsp; Position 4: 3 &lt; 4 ✗</p>
+            <div class="step-label">Step 6: Try Job 6 (profit=15, deadline=3)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2, 4, 6}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 1 (d=3), Job 4 (d=3), Job 6 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 1's deadline (3) ≥ position (2) ✓</p>
+            <p>Position 3: Job 4's deadline (3) ≥ position (3) ✓</p>
+            <p>Position 4: Job 6's deadline (3) < position (4) ✗ — Job 6 needs slot 4, but its deadline is 3 and we only have 3 slots.</p>
             <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 6.</p>
           </div>
 
           <div class="step infeasible">
-            <div class="step-label">Step 7: J = {1, 2, 4, 7} — deadline sorted: [2(d=1), 7(d=2), 1(d=3), 4(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;|&nbsp; Position 4: 3 &lt; 4 ✗</p>
+            <div class="step-label">Step 7: Try Job 7 (profit=10, deadline=2)</div>
+            <p><strong>Current selected set:</strong> S = {1, 2, 4, 7}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [Job 2 (d=1), Job 7 (d=2), Job 1 (d=3), Job 4 (d=3)]</p>
+            <p>Position 1: Job 2's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: Job 7's deadline (2) ≥ position (2) ✓</p>
+            <p>Position 3: Job 1's deadline (3) ≥ position (3) ✓</p>
+            <p>Position 4: Job 4's deadline (3) < position (4) ✗ — Job 4 needs slot 4, but its deadline is 3.</p>
             <p class="result" style="color:#ff4444;">→ Infeasible. Discard job 7.</p>
           </div>
 
           <p class="result">Final Optimal Set: J = {1, 2, 4} with total profit = 40 + 35 + 25 = <strong>100</strong></p>
-          <p>Valid schedules: [2, 1, 4] or [2, 4, 1] (deadlines: [1, 3, 3])</p>
+          <p>Valid schedule: [2, 1, 4] — Job 2 at t=1 (deadline 1 ✓), Job 1 at t=2 (deadline 3 ✓), Job 4 at t=3 (deadline 3 ✓).</p>
+          <p>Alternative schedule: [2, 4, 1] also works (all three have deadlines ≥ their slot positions).</p>
         </div>
+
+        <h4>Why Jobs 3, 5, 6, 7 Were All Rejected</h4>
+        <p>Jobs 3, 5, and 7 all have deadline 1, meaning they can only go at time slot 1. But slot 1 was claimed by Job 2 (profit=35), which is higher than any of them (30, 20, 10). Job 6 has deadline 3, so it could go at slots 1, 2, or 3 — but all three slots were already occupied by higher-profit jobs. The greedy algorithm correctly prioritized high-profit jobs.</p>
 
         <!-- EXAMPLE 3: Custom -->
         <h3>Example 3: Five Jobs — Ties in Deadlines</h3>
@@ -695,42 +809,69 @@
             <tr><th>Profit pᵢ</th><td>50</td><td>40</td><td>30</td><td>20</td><td>10</td></tr>
             <tr><th>Deadline dᵢ</th><td>2</td><td>1</td><td>2</td><td>3</td><td>1</td></tr>
           </table>
-          <p>Jobs sorted by decreasing profit: A(50), B(40), C(30), D(20), E(10)</p>
+          <p>Jobs sorted by decreasing profit: A(50), B(40), C(30), D(20), E(10). Maximum deadline is 3, so we have 3 time slots.</p>
 
           <div class="step feasible">
-            <div class="step-label">Step 1: J = {A} — [A(d=2)]</div>
-            <p>Position 1: 2 ≥ 1 ✓ &nbsp;→ Keep A</p>
+            <div class="step-label">Step 1: Try Job A (profit=50, deadline=2)</div>
+            <p><strong>Current selected set:</strong> S = {A}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [A(d=2)]</p>
+            <p>Position 1: A's deadline (2) ≥ position (1) ✓</p>
+            <p class="result">→ Feasible. Keep A. S = {A}</p>
           </div>
           <div class="step feasible">
-            <div class="step-label">Step 2: J = {A, B} — [B(d=1), A(d=2)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;→ Keep B</p>
+            <div class="step-label">Step 2: Try Job B (profit=40, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {A, B}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [B(d=1), A(d=2)]</p>
+            <p>Position 1: B's deadline (1) ≥ position (1) ✓ — B goes at slot 1.</p>
+            <p>Position 2: A's deadline (2) ≥ position (2) ✓ — A goes at slot 2.</p>
+            <p class="result">→ Feasible. Keep B. S = {A, B}. Running profit = 50 + 40 = 90.</p>
           </div>
           <div class="step infeasible">
-            <div class="step-label">Step 3: J = {A, B, C} — [B(d=1), A(d=2), C(d=2)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 2 &lt; 3 ✗ → Discard C</p>
+            <div class="step-label">Step 3: Try Job C (profit=30, deadline=2)</div>
+            <p><strong>Current selected set:</strong> S = {A, B, C}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [B(d=1), A(d=2), C(d=2)]</p>
+            <p>Position 1: B's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: A's deadline (2) ≥ position (2) ✓</p>
+            <p>Position 3: C's deadline (2) < position (3) ✗ — C needs slot 3, but its deadline is 2. Can't fit 3 jobs when 2 of them have deadline ≤ 2.</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard C.</p>
           </div>
           <div class="step feasible">
-            <div class="step-label">Step 4: J = {A, B, D} — [B(d=1), A(d=2), D(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 2 ≥ 2 ✓ &nbsp;|&nbsp; Position 3: 3 ≥ 3 ✓ &nbsp;→ Keep D</p>
+            <div class="step-label">Step 4: Try Job D (profit=20, deadline=3)</div>
+            <p><strong>Current selected set:</strong> S = {A, B, D}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [B(d=1), A(d=2), D(d=3)]</p>
+            <p>Position 1: B's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: A's deadline (2) ≥ position (2) ✓</p>
+            <p>Position 3: D's deadline (3) ≥ position (3) ✓</p>
+            <p class="result">→ Feasible. Keep D. S = {A, B, D}. Running profit = 50 + 40 + 20 = 110.</p>
+            <p>All 3 slots are now filled! Any further job will be rejected.</p>
           </div>
           <div class="step infeasible">
-            <div class="step-label">Step 5: J = {A, B, D, E} — [B(d=1), E(d=1), A(d=2), D(d=3)]</div>
-            <p>Position 1: 1 ≥ 1 ✓ &nbsp;|&nbsp; Position 2: 1 &lt; 2 ✗ → Discard E</p>
+            <div class="step-label">Step 5: Try Job E (profit=10, deadline=1)</div>
+            <p><strong>Current selected set:</strong> S = {A, B, D, E}</p>
+            <p><strong>Feasibility check:</strong> Sort S by deadline → [B(d=1), E(d=1), A(d=2), D(d=3)]</p>
+            <p>Position 1: B's deadline (1) ≥ position (1) ✓</p>
+            <p>Position 2: E's deadline (1) < position (2) ✗ — E needs slot 2 but deadline is 1. Slot 1 is taken by B.</p>
+            <p class="result" style="color:#ff4444;">→ Infeasible. Discard E.</p>
           </div>
 
           <p class="result">Final Set: J = {A, B, D} with profit = 50 + 40 + 20 = <strong>110</strong></p>
-          <p>Schedule: [B, A, D] or [B, D, A] (for D at time 2, A at time 3 — both work since deadlines A=2, D=3 or swapped)</p>
+          <p>Valid schedule: [B, A, D] — B at t=1 (deadline 1 ✓), A at t=2 (deadline 2 ✓), D at t=3 (deadline 3 ✓).</p>
+          <p>Could we do better by replacing D with C? Let's check: {A, B, C} → sorted by deadline: [B(d=1), A(d=2), C(d=2)]. Position 3: C's deadline 2 < 3 ✗. Infeasible! So C can't replace D.</p>
         </div>
       </div>
 
       <div class="section">
         <h2>Comparing All Approaches</h2>
+        <p>There are three main ways to solve the scheduling-with-deadlines problem. Here's how they compare in terms of time, space, and practical usability:</p>
         <table>
           <tr><th>Approach</th><th>Time Complexity</th><th>Space Complexity</th><th>Notes</th></tr>
-          <tr><td>Brute Force (all subsets)</td><td>O(2ⁿ · n)</td><td>O(n)</td><td>Impractical for n &gt; 20</td></tr>
-          <tr><td>Greedy (basic)</td><td>O(n²)</td><td>O(n)</td><td>Simple, clear feasibility check</td></tr>
-          <tr><td>Greedy + Union-Find</td><td>O(n log n)</td><td>O(m) m=max deadline</td><td>Best for large n</td></tr>
+          <tr><td>Brute Force (enumerate all subsets)</td><td>O(2ⁿ · n)</td><td>O(n)</td><td>Try every possible subset of jobs, check feasibility of each, pick the one with maximum profit. Exponential time — only feasible for n ≤ 20.</td></tr>
+          <tr><td>Greedy (basic feasibility check)</td><td>O(n²)</td><td>O(n)</td><td>Sort by profit, then for each job, re-sort and re-check the entire selected set. Simple to implement, easy to understand. Good for n ≤ 1,000.</td></tr>
+          <tr><td>Greedy + Union-Find</td><td>O(n log n)</td><td>O(m) where m = max deadline</td><td>Same greedy logic, but uses Union-Find to find free slots in nearly O(1). Best for large n (10,000+). Requires understanding of DSU.</td></tr>
         </table>
+        <p><strong>Why not brute force?</strong> With n jobs, there are 2ⁿ possible subsets (each job is either included or not). For n = 20, that's about 1 million subsets. For n = 30, it's about 1 billion. For n = 40, it's about 1 trillion. The brute force approach is mathematically correct but computationally impossible for realistic problem sizes.</p>
+        <p><strong>Why greedy works:</strong> The problem has the greedy choice property and optimal substructure, which together guarantee that the greedy approach finds the optimal solution. No need to explore alternatives.</p>
+        <p><strong>Why Union-Find helps:</strong> The basic greedy algorithm wastes time re-checking feasibility from scratch each time. Union-Find remembers which slots are free, so each job's feasibility check is nearly instant.</p>
       </div>
     </div>
 
@@ -739,73 +880,129 @@
       <div class="section">
         <h2>Union-Find Optimization</h2>
 
-        <h3>Motivation</h3>
-        <p>The basic greedy algorithm checks feasibility from scratch each time (O(k) per job, O(n²) total). Using a <strong>Union-Find (Disjoint Set Union)</strong> data structure, we can reduce this to nearly O(1) per job.</p>
+        <h3>Motivation — Why Do We Need This?</h3>
+        <p>The basic greedy algorithm works correctly, but it has a performance problem. Each time we try to schedule a job, we must check whether the entire current set is still feasible. This feasibility check requires sorting the set by deadline and scanning through it — an O(k) operation where k is the number of currently selected jobs. Since we do this for each of the n jobs, the total time is O(n²).</p>
 
-        <h3>Core Idea</h3>
-        <p>Instead of checking deadlines for the entire set, we maintain time slots from 1 to the maximum deadline. For each job (processed in decreasing profit order):</p>
+        <p>For small n (say, n ≤ 1000), O(n²) is perfectly fine. But what if n = 100,000 or 1,000,000? Then n² = 10 billion operations — way too slow. We need a faster way to check feasibility.</p>
+
+        <p>The <strong>Union-Find (Disjoint Set Union)</strong> data structure solves this problem. Instead of re-checking the entire set each time, we maintain a clever data structure that tells us, in nearly O(1) time, whether there's a free time slot for a new job. The key insight: instead of asking "is the entire set feasible?", we ask the simpler question "is there a free slot ≤ this job's deadline?" — and Union-Find answers that almost instantly.</p>
+
+        <h3>Core Idea — Finding Free Slots</h3>
+        <p>Imagine time slots as a row of parking spaces numbered 1, 2, 3, ..., m (where m is the maximum deadline). Initially, all spaces are empty. When we assign a job to slot k, that slot becomes occupied. For a new job with deadline d, we need to find the <strong>latest free slot ≤ d</strong>. Why the latest? Because we want to leave earlier slots free for future jobs with tighter deadlines.</p>
+
+        <p>Without Union-Find, finding the latest free slot ≤ d requires scanning backwards from d to 1 until we find an empty slot — potentially O(m) per job. With Union-Find, we can find it in nearly O(1) amortized time.</p>
+
+        <p>Here's the trick: we maintain a <strong>parent array</strong> where parent[t] tells us "if slot t is occupied, the next candidate slot to try is parent[t]." Initially, parent[t] = t for all t (every slot points to itself, meaning it's free). When we occupy slot t, we set parent[t] = find(t-1), which means "slot t is taken; try the slot that t-1 points to."</p>
+
         <ol>
-          <li>Find the latest free time slot ≤ deadline of the job</li>
-          <li>If a free slot exists, assign the job to that slot</li>
-          <li>Merge the assigned slot with the slot immediately before it (so future lookups skip occupied slots)</li>
+          <li><strong>Find the latest free time slot ≤ deadline of the job.</strong> Call find(d[j]). If it returns 0, no free slot exists — reject the job. If it returns t > 0, slot t is free and we can schedule the job there.</li>
+          <li><strong>Assign the job to that slot.</strong> Record slot[t] = j.</li>
+          <li><strong>Merge the assigned slot with the slot before it.</strong> Set parent[t] = find(t-1). This "links" slot t to the previous slot, so future calls to find(t) will skip over the occupied slot and find the next available one.</li>
         </ol>
 
-        <h3>Data Structure</h3>
+        <h3>The Union-Find Data Structure Explained</h3>
+        <p>Union-Find (also called Disjoint Set Union or DSU) is a data structure that tracks elements partitioned into disjoint (non-overlapping) sets. It supports two main operations:</p>
+        <ul>
+          <li><strong>find(x)</strong>: Returns the "representative" (root) of the set containing x. In our context, find(t) returns the latest free slot ≤ t.</li>
+          <li><strong>union(x, y)</strong>: Merges the sets containing x and y. In our context, after occupying slot t, we union(t, t-1) so that future lookups skip slot t.</li>
+        </ul>
+        <p>The magic is in the <strong>path compression</strong> optimization: during find(x), after finding the root, we make every node on the path point directly to the root. This flattens the tree structure, making future find operations extremely fast.</p>
+
+        <p>Without path compression, find could take O(n) time in the worst case (a long chain). With path compression, each find takes <strong>amortized O(α(n))</strong> time, where α is the inverse Ackermann function — a function that grows so slowly it's ≤ 5 for any practical input size (even n = 10^100).</p>
+
+        <h3>Data Structure in Detail</h3>
         <p>We maintain an array <code>parent[]</code> where <code>parent[t]</code> points to the next available slot before t. Initially, <code>parent[t] = t</code> for all t. When slot t is occupied, we set <code>parent[t] = find(t-1)</code>.</p>
 
         <div class="formula">
           <div class="label">Union-Find Operations</div>
           <div class="expr">find(t) = latest free slot ≤ t</div>
           <div class="desc">
-            If slot t is free, returns t. Otherwise, recursively finds an earlier free slot.<br>
-            After occupying slot t: union(t, t-1) so parent[t] points to t-1's parent.
+            If slot t is free, parent[t] = t, so find(t) returns t. If slot t is occupied, parent[t] points to some earlier slot, so find(t) recursively searches earlier slots until finding a free one. If no free slot exists (we reach 0), find returns 0.<br><br>
+            After occupying slot t: union(t, t-1) sets parent[t] = find(t-1), so future calls to find(t) skip the occupied slot and find the next available one.
           </div>
         </div>
 
-        <h3>Optimized Algorithm</h3>
+        <p><strong>Visual example of parent array evolution:</strong></p>
+        <p>Initial: parent = [0, 1, 2, 3] (slots 0-3, all free, each points to itself)</p>
+        <p>After occupying slot 2: parent[2] = find(1) = 1. Now parent = [0, 1, 1, 3].</p>
+        <p>After occupying slot 1: parent[1] = find(0) = 0. Now parent = [0, 0, 1, 3].</p>
+        <p>Now find(2) → parent[2] = 1 → parent[1] = 0 → returns 0 (no free slots ≤ 2).</p>
+        <p>But find(3) → parent[3] = 3 → returns 3 (slot 3 is still free).</p>
+
+        <h3>Optimized Algorithm — Complete Pseudocode</h3>
         <div class="code">
           <div class="line"><span class="keyword">function</span> SCHEDULE_UF(J, d, p):</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;Sort jobs by decreasing profit</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;m ← max deadline among all jobs</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;parent[0..m] initialized: parent[t] = t</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;slot[1..m] ← empty</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;parent[0..m] initialized: parent[t] = t  <span class="comment">▷ Each slot points to itself</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;slot[1..m] ← empty  <span class="comment">▷ Which job is assigned to each slot</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;total_profit ← 0</div>
           <div class="line">&nbsp;</div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">for</span> each job j <span class="keyword">in</span> sorted order:</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;t ← find(min(d[j], m))</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> t &gt; 0:</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;t ← find(min(d[j], m))  <span class="comment">▷ Find latest free slot ≤ deadline</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> t &gt; 0:  <span class="comment">▷ A free slot was found</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slot[t] ← j  <span class="comment">▷ Assign job to slot t</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;total_profit ← total_profit + p[j]</div>
-          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;parent[t] ← find(t - 1)  <span class="comment">▷ Merge with previous</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;parent[t] ← find(t - 1)  <span class="comment">▷ Mark slot t as occupied; link to previous</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">end if</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">end for</span></div>
           <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> slot[1..m], total_profit</div>
+          <div class="line">&nbsp;</div>
+          <div class="line"><span class="keyword">function</span> find(x):</div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">if</span> parent[x] == x <span class="keyword">then return</span> x  <span class="comment">▷ x is free (root of its set)</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;parent[x] ← find(parent[x])  <span class="comment">▷ Path compression: point directly to root</span></div>
+          <div class="line">  &nbsp;&nbsp;&nbsp;<span class="keyword">return</span> parent[x]</div>
         </div>
 
-        <h3>Path Compression</h3>
-        <p>With path compression, each <code>find</code> operation runs in nearly O(1) time (amortized inverse Ackermann function α(n)). The entire scheduling becomes O(n log n + n α(m)) = O(n log n).</p>
+        <h3>Path Compression — The Secret to Speed</h3>
+        <p>Without path compression, if we repeatedly occupy consecutive slots, the parent array forms a long chain: parent[t] = t-1, parent[t-1] = t-2, ..., parent[1] = 0. A find(t) call would need to follow this entire chain — O(t) time.</p>
 
-        <h3>Worked Example with Union-Find</h3>
+        <p>Path compression fixes this: during find(x), after we find the root r, we update parent[x] = r (and similarly for every node on the path). This means future calls to find(x) jump directly to the root in O(1) time, without traversing the chain.</p>
+
+        <p><strong>Example of path compression:</strong></p>
+        <p>Before: parent = [0, 0, 1, 2, 3] (a chain: 4→3→2→1→0)</p>
+        <p>find(4) traverses: 4→3→2→1→0, returns 0</p>
+        <p>After path compression: parent = [0, 0, 1, 0, 0] (4 and 3 now point directly to 0)</p>
+        <p>Next find(4) returns 0 in just 1 step!</p>
+
+        <p>With path compression, each find operation runs in nearly O(1) time (amortized inverse Ackermann function α(n)). The entire scheduling becomes O(n log n + n α(m)) = O(n log n).</p>
+
+        <h3>Worked Example with Union-Find — Full Trace</h3>
         <div class="example">
           <div class="title">Example 7 revisited with Union-Find</div>
+          <p>We'll trace through the same 7-job example from Tab 3, but this time using the Union-Find approach. Watch how the parent array evolves.</p>
           <table>
             <tr><th>Job</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
             <tr><th>Profit</th><td>40</td><td>35</td><td>30</td><td>25</td><td>20</td><td>15</td><td>10</td></tr>
             <tr><th>Deadline</th><td>3</td><td>1</td><td>1</td><td>3</td><td>1</td><td>3</td><td>2</td></tr>
           </table>
-          <p>max deadline m = 3. parent = [0→0, 1→1, 2→2, 3→3]</p>
+          <p><strong>Setup:</strong> max deadline m = 3. Initial parent = [0→0, 1→1, 2→2, 3→3] (all slots free).</p>
           <table>
-            <tr><th>Step</th><th>Job</th><th>d</th><th>find(d)</th><th>Assign</th><th>parent after</th></tr>
-            <tr><td>1</td><td>1 (40)</td><td>3</td><td>3</td><td>slot[3]=1</td><td>parent[3]=find(2)=2</td></tr>
-            <tr><td>2</td><td>2 (35)</td><td>1</td><td>1</td><td>slot[1]=2</td><td>parent[1]=find(0)=0</td></tr>
-            <tr><td>3</td><td>3 (30)</td><td>1</td><td>find(1)→find(parent[1]=0)→0</td><td>0 → skip</td><td>—</td></tr>
-            <tr><td>4</td><td>4 (25)</td><td>3</td><td>find(3)→find(parent[3]=2)→2</td><td>slot[2]=4</td><td>parent[2]=find(1)=0</td></tr>
-            <tr><td>5</td><td>5 (20)</td><td>1</td><td>find(1)→0</td><td>0 → skip</td><td>—</td></tr>
-            <tr><td>6</td><td>6 (15)</td><td>3</td><td>find(3)→find(2)→find(parent[2]=0)→0</td><td>0 → skip</td><td>—</td></tr>
-            <tr><td>7</td><td>7 (10)</td><td>2</td><td>find(2)→0</td><td>0 → skip</td><td>—</td></tr>
+            <tr><th>Step</th><th>Job</th><th>Profit</th><th>Deadline</th><th>find(d)</th><th>Result</th><th>parent after</th></tr>
+            <tr><td>1</td><td>Job 1</td><td>40</td><td>3</td><td>find(3) → parent[3]=3 (free)</td><td><strong>Schedule at slot 3</strong></td><td>parent[3] = find(2) = 2</td></tr>
+            <tr><td>2</td><td>Job 2</td><td>35</td><td>1</td><td>find(1) → parent[1]=1 (free)</td><td><strong>Schedule at slot 1</strong></td><td>parent[1] = find(0) = 0</td></tr>
+            <tr><td>3</td><td>Job 3</td><td>30</td><td>1</td><td>find(1) → parent[1]=0 → find(0)→0</td><td><strong>Reject</strong> (no slot ≤ 1)</td><td>—</td></tr>
+            <tr><td>4</td><td>Job 4</td><td>25</td><td>3</td><td>find(3) → parent[3]=2 → find(2)→2 (free)</td><td><strong>Schedule at slot 2</strong></td><td>parent[2] = find(1) = 0</td></tr>
+            <tr><td>5</td><td>Job 5</td><td>20</td><td>1</td><td>find(1) → parent[1]=0 → find(0)→0</td><td><strong>Reject</strong> (no slot ≤ 1)</td><td>—</td></tr>
+            <tr><td>6</td><td>Job 6</td><td>15</td><td>3</td><td>find(3) → parent[3]=2 → find(2)=0 → find(0)→0</td><td><strong>Reject</strong> (no slot ≤ 3)</td><td>—</td></tr>
+            <tr><td>7</td><td>Job 7</td><td>10</td><td>2</td><td>find(2) → parent[2]=0 → find(0)→0</td><td><strong>Reject</strong> (no slot ≤ 2)</td><td>—</td></tr>
           </table>
-          <p class="result">Result: slot[1]=Job 2, slot[2]=Job 4, slot[3]=Job 1 → schedule [2, 4, 1], profit = 100</p>
+          <p class="result">Final schedule: slot[1]=Job 2, slot[2]=Job 4, slot[3]=Job 1</p>
+          <p>Schedule order: [Job 2, Job 4, Job 1] (at time slots 1, 2, 3 respectively)</p>
+          <p>Total profit = 35 + 25 + 40 = <strong>100</strong></p>
+
+          <h4>Step-by-step parent array evolution:</h4>
+          <p><strong>Initial:</strong> parent = [0, 1, 2, 3] — all slots free</p>
+          <p><strong>After Job 1 → slot 3:</strong> parent[3] = find(2) = 2. Now parent = [0, 1, 2, 2]. Slot 3 is occupied.</p>
+          <p><strong>After Job 2 → slot 1:</strong> parent[1] = find(0) = 0. Now parent = [0, 0, 2, 2]. Slots 1 and 3 occupied.</p>
+          <p><strong>After Job 4 → slot 2:</strong> parent[2] = find(1) = 0. Now parent = [0, 0, 0, 2]. All slots 1, 2, 3 occupied.</p>
+          <p>After this, find(1) = 0, find(2) = 0, find(3) = find(2) = 0 — no free slots remain.</p>
         </div>
+
+        <h3>Why This Gives the Same Result as the Basic Algorithm</h3>
+        <p>The Union-Find approach produces the <strong>exact same schedule</strong> as the basic greedy algorithm. Both process jobs in decreasing profit order and assign each to the latest available slot ≤ its deadline. The only difference is <em>how</em> they find the available slot: the basic algorithm re-sorts and re-checks the entire set, while Union-Find uses the parent array to jump directly to the answer.</p>
+
+        <p>The correctness proof is identical: the greedy choice property and optimal substructure still hold. The Union-Find is purely a performance optimization — it doesn't change the algorithm's logic, only its speed.</p>
       </div>
     </div>
 
@@ -813,84 +1010,116 @@
     <div class="content" id="tab5">
       <div class="section">
         <h2>Complexity Analysis</h2>
+        <p>Understanding the time and space complexity of both algorithms is essential for choosing the right one in practice. Let's break down exactly where the time goes in each approach.</p>
 
-        <h3>Basic Greedy Algorithm</h3>
+        <h3>Basic Greedy Algorithm — O(n²)</h3>
+        <p>The basic greedy algorithm has two main phases: sorting and the main loop with feasibility checks.</p>
+
         <div class="formula">
           <div class="label">Time Complexity: O(n²)</div>
           <div class="expr">T(n) = O(n log n) + O(n²) = O(n²)</div>
           <div class="desc">
-            n log n for sorting jobs by profit + n jobs × O(k) for feasibility checks (k ≤ n).
+            n log n for sorting jobs by profit + n jobs × O(k) for feasibility checks (k ≤ n). The sorting term is dominated by the quadratic feasibility checks.
           </div>
         </div>
 
+        <p><strong>Breaking it down step by step:</strong></p>
+        <ul>
+          <li><strong>Sorting phase:</strong> We sort n jobs by decreasing profit. Any comparison-based sort (merge sort, quicksort, heapsort) takes O(n log n) time. This is a one-time cost.</li>
+          <li><strong>Main loop:</strong> We iterate through all n jobs. For each job, we perform a feasibility check on the current selected set S.</li>
+          <li><strong>Feasibility check:</strong> Given k jobs in S, we sort them by deadline (O(k log k)) and scan through them (O(k)). In total, this is O(k log k) per job.</li>
+          <li><strong>Total for all feasibility checks:</strong> The sum of k log k over all iterations is bounded by O(n² log n) in the worst case, but practically O(n²) since the log factor is small. The dominant cost is the repeated sorting.</li>
+        </ul>
+
         <table>
-          <tr><th>Phase</th><th>Operation</th><th>Cost</th></tr>
-          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td></tr>
-          <tr><td>Loop</td><td>For each of n jobs</td><td>O(n)</td></tr>
-          <tr><td>Feasibility Check</td><td>Sort + verify k jobs (k up to n)</td><td>O(k log k) ≈ O(n)</td></tr>
-          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n²)</strong></td></tr>
+          <tr><th>Phase</th><th>Operation</th><th>Cost</th><th>Why?</th></tr>
+          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td><td>Comparison-based sort; done once at the start</td></tr>
+          <tr><td>Loop</td><td>For each of n jobs, try to add it</td><td>O(n)</td><td>One iteration per job</td></tr>
+          <tr><td>Feasibility Check</td><td>Sort + verify k jobs (k = current set size, up to n)</td><td>O(k log k) ≈ O(n)</td><td>Must re-sort after each addition; k can grow to n</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n²)</strong></td><td>n iterations × O(n) per iteration</td></tr>
         </table>
 
-        <h3>Union-Find Optimized Algorithm</h3>
+        <p><strong>When is O(n²) acceptable?</strong> For n ≤ 1,000, n² = 1 million operations — takes milliseconds. For n = 10,000, n² = 100 million — takes about 1 second. For n = 100,000, n² = 10 billion — takes minutes. Beyond that, it's impractical.</p>
+
+        <h3>Union-Find Optimized Algorithm — O(n log n)</h3>
+        <p>The Union-Find approach eliminates the repeated feasibility checks, reducing the per-job cost from O(n) to nearly O(1).</p>
+
         <div class="formula">
           <div class="label">Time Complexity: O(n log n)</div>
           <div class="expr">T(n) = O(n log n) + n × O(α(m)) = O(n log n)</div>
           <div class="desc">
-            n log n for sorting + n find/union operations, each amortized O(α(m)) ≈ O(1).
+            n log n for sorting + n find/union operations, each amortized O(α(m)) ≈ O(1). The α(m) term is the inverse Ackermann function, which is effectively constant for any practical input.
           </div>
         </div>
+
+        <p><strong>Breaking it down step by step:</strong></p>
+        <ul>
+          <li><strong>Sorting phase:</strong> Same as before — O(n log n). This is now the DOMINANT cost.</li>
+          <li><strong>Initialization:</strong> Creating the parent array of size m (max deadline) takes O(m) time.</li>
+          <li><strong>Main loop:</strong> We iterate through n jobs. For each job, we perform one find operation (to locate a free slot) and one union operation (to mark the slot as occupied).</li>
+          <li><strong>Find/Union cost:</strong> Each operation is O(α(m)) amortized, where α is the inverse Ackermann function. In practice, α(m) ≤ 5 for all m ≤ 10^80 (more atoms than in the universe).</li>
+          <li><strong>Total for all operations:</strong> n × O(α(m)) = O(n α(m)) ≈ O(n). This is negligible compared to the sorting cost.</li>
+        </ul>
 
         <table>
-          <tr><th>Phase</th><th>Operation</th><th>Cost</th></tr>
-          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td></tr>
-          <tr><td>Initialize</td><td>Create parent array of size m (max deadline)</td><td>O(m)</td></tr>
-          <tr><td>Loop</td><td>For each of n jobs</td><td>O(n)</td></tr>
-          <tr><td>Find/Union</td><td>Path-compressed find, union</td><td>O(α(m)) ≈ O(1) each</td></tr>
-          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n log n)</strong></td></tr>
+          <tr><th>Phase</th><th>Operation</th><th>Cost</th><th>Why?</th></tr>
+          <tr><td>Sort</td><td>Sort n jobs by decreasing profit</td><td>O(n log n)</td><td>Comparison-based sort; this dominates total time</td></tr>
+          <tr><td>Initialize</td><td>Create parent array of size m (max deadline)</td><td>O(m)</td><td>One array of size m, filled with defaults</td></tr>
+          <tr><td>Loop</td><td>For each of n jobs</td><td>O(n)</td><td>One iteration per job</td></tr>
+          <tr><td>Find/Union</td><td>Path-compressed find + union</td><td>O(α(m)) ≈ O(1) each</td><td>Amortized nearly constant with path compression</td></tr>
+          <tr><td><strong>Total</strong></td><td></td><td><strong>O(n log n)</strong></td><td>Sorting dominates; UF operations are negligible</td></tr>
         </table>
 
-        <h3>Space Complexity</h3>
+        <h3>Space Complexity — How Much Memory?</h3>
         <div class="grid">
           <div class="card">
-            <h4>Basic Algorithm</h4>
-            <p>O(n) — stores the selected job set and deadlines/profits</p>
+            <h4>Basic Algorithm: O(n)</h4>
+            <p>We need O(n) space for the job list (deadlines and profits), plus O(k) for the selected set (k ≤ n). No additional data structures needed. Total: O(n).</p>
           </div>
           <div class="card">
-            <h4>Union-Find Algorithm</h4>
-            <p>O(m) — parent array of size m (max deadline), plus job metadata O(n)</p>
+            <h4>Union-Find Algorithm: O(m)</h4>
+            <p>We need O(n) for the job list, plus O(m) for the parent array (m = max deadline), plus O(m) for the slot array. If m is comparable to n, this is O(n). If m >> n (e.g., 1 job with deadline 10^6), this could be O(m). Total: O(n + m).</p>
           </div>
         </div>
 
-        <h3>Comparison Summary</h3>
+        <h3>Head-to-Head Comparison</h3>
         <table>
           <tr><th>Criterion</th><th>Basic Greedy</th><th>Greedy + Union-Find</th></tr>
           <tr><td>Preprocessing</td><td>Sort by profit: O(n log n)</td><td>Sort by profit: O(n log n)</td></tr>
-          <tr><td>Per-job cost</td><td>O(k) feasibility check (k current set size)</td><td>O(α(m)) find+union — nearly O(1)</td></tr>
+          <tr><td>Per-job cost</td><td>O(k) feasibility check (k = current set size)</td><td>O(α(m)) find+union — nearly O(1)</td></tr>
           <tr><td>Total time</td><td>O(n²)</td><td>O(n log n)</td></tr>
           <tr><td>Extra space</td><td>O(n)</td><td>O(m) where m = max deadline</td></tr>
-          <tr><td>Implementation complexity</td><td>Simple</td><td>Moderate (needs DSU)</td></tr>
-          <tr><td>Best for</td><td>Small n, teaching</td><td>Large n, production</td></tr>
+          <tr><td>Implementation complexity</td><td>Simple — easy to code and understand</td><td>Moderate — requires DSU with path compression</td></tr>
+          <tr><td>Best for</td><td>Small n (≤ 10³), teaching, interviews</td><td>Large n (10⁵+), production systems</td></tr>
         </table>
 
-        <h3>When to Use Each</h3>
+        <h3>When to Use Which Algorithm</h3>
         <ul>
-          <li><strong>Basic Greedy (O(n²)):</strong> Suitable when n ≤ 10³, or when simplicity and readability matter more than performance.</li>
-          <li><strong>Union-Find (O(n log n)):</strong> Essential when n is large (10⁵+), or when jobs have a wide range of deadlines.</li>
+          <li><strong>Basic Greedy (O(n²)):</strong> Use when n ≤ 1,000, or when code simplicity matters more than performance. Also good for interviews where you need to explain the algorithm clearly. The O(n²) approach is easier to implement correctly and easier to debug.</li>
+          <li><strong>Union-Find (O(n log n)):</strong> Use when n > 10,000, or when jobs have a wide range of deadlines (m ≈ n). Essential for competitive programming and production systems handling large datasets. The extra implementation complexity is worth it for the performance gain.</li>
         </ul>
 
         <div class="note">
-          <strong>Note:</strong> α(n) is the inverse Ackermann function, which grows extremely slowly. For all practical values of n (even up to 10⁹), α(n) ≤ 5. This makes Union-Find operations effectively O(1) in practice.
+          <strong>What is α(n)?</strong> α(n) is the inverse Ackermann function. The Ackermann function grows incredibly fast — faster than any exponential. Its inverse grows incredibly SLOWLY. For all practical values of n (even n up to 10^80, which is more than the number of atoms in the observable universe), α(n) ≤ 5. This means Union-Find operations are effectively O(1) — constant time — for any problem you'll ever encounter.
         </div>
 
-        <h3>Proof of Optimality (Sketch)</h3>
-        <p>The greedy algorithm is optimal for the scheduling-with-deadlines problem under the 1-unit time assumption. The proof uses an <strong>exchange argument</strong>:</p>
+        <h3>Proof of Optimality — Exchange Argument</h3>
+        <p>The greedy algorithm is optimal for the scheduling-with-deadlines problem under the 1-unit time assumption. The standard proof technique is the <strong>exchange argument</strong>:</p>
+
         <ol>
-          <li>Let G be the greedy solution and O be any optimal solution.</li>
-          <li>Sort both sets by deadline. Let the first position where they differ be k.</li>
-          <li>Greedy chose a higher-profit job at position k than any feasible alternative could.</li>
-          <li>By swapping jobs, O can be transformed into G without decreasing profit.</li>
-          <li>Therefore, G is at least as good as O → G is optimal.</li>
+          <li><strong>Assume the contrary:</strong> Let G be the greedy solution and O be any optimal solution with O ≠ G. We'll show O can be transformed into G without decreasing profit.</li>
+          <li><strong>Find the first difference:</strong> Sort both sets by deadline. Let the first position where they differ be position k. At positions 1 through k-1, both sets have the same jobs. At position k, G has job g and O has job o, where p(g) > p(o) (greedy chose a higher-profit job).</li>
+          <li><strong>Exchange:</strong> Replace o with g in O. Since g's deadline ≥ o's deadline (g was feasible when considered by greedy), and o was at position k in the deadline-sorted order, g also fits at position k. The set remains feasible.</li>
+          <li><strong>Profit increases or stays same:</strong> The new set has profit(O) - p(o) + p(g) ≥ profit(O) since p(g) > p(o).</li>
+          <li><strong>Repeat:</strong> Continue finding differences and exchanging. Eventually O becomes identical to G.</li>
+          <li><strong>Conclusion:</strong> Since each exchange didn't decrease profit, and G is the final result, profit(G) ≥ profit(O). Since O was optimal, profit(G) = profit(O). Therefore G is optimal.</li>
         </ol>
+
+        <div class="example">
+          <div class="title">Exchange Argument Example</div>
+          <p>Greedy G = {A(p=50, d=2), B(p=40, d=1), D(p=20, d=3)} (profit=110)</p>
+          <p>Optimal O = {A(p=50, d=2), B(p=40, d=1), E(p=10, d=1)} (profit=100) — but wait, {A, B, E} is infeasible (B and E both deadline 1). So O can't contain E. This illustrates why the greedy choice is always part of some optimal solution.</p>
+        </div>
       </div>
     </div>
     <!-- ==================== TAB 6: Interactive Animation ==================== -->
@@ -1119,22 +1348,27 @@
         `<span class="dim">${animJobs[idx].id}</span> ($${animJobs[idx].profit}, d=${animJobs[idx].deadline})${r < order.length-1 ? ', ' : ''}`
       ).join('');
       return `<div class="anim-explain-section active">
-        <h3>Sort by Profit (Descending)</h3>
-        <p>First, sort all jobs by <b>profit in decreasing order</b>. This is the greedy strategy — always try the most profitable job first.</p>
+        <h3>Step 1: Sort Jobs by Profit (Descending)</h3>
+        <p>The first step of the greedy algorithm is to <b>sort all jobs by profit in decreasing order</b>. This is the greedy strategy — we always try the most profitable job first, because if we're going to reject any job, we'd rather reject a low-profit one.</p>
+        <p>Why descending profit? Because we want to give high-value jobs priority for the limited time slots. If we sorted by deadline instead, we'd maximize the number of jobs scheduled, not the total profit.</p>
         <p>Sorted order: ${list}</p>
-        <span class="formula-line">For each job in sorted order: schedule at latest free slot ≤ deadline</span>
-        <p class="note">Union-Find will efficiently find available slots. Press Play to continue.</p>
+        <span class="formula-line">For each job in sorted order: assign to latest free slot ≤ deadline</span>
+        <p>We'll use Union-Find to efficiently track which time slots are free. The parent array helps us jump directly to the nearest available slot.</p>
+        <p class="note">Press Play or Step to see the algorithm process each job in order.</p>
       </div>`;
     }
 
     function animBuildCheckExplanation(rank, origIdx) {
       let j = animJobs[origIdx];
+      let maxSlot = j.deadline <= animMaxD ? j.deadline : animMaxD;
       return `<div class="anim-explain-section active">
-        <h3>Check ${j.id} — Rank #${rank+1}</h3>
-        <p>Processing <span class="dim">${j.id}</span> with <b>profit = ${j.profit}</b> and <b>deadline = ${j.deadline}</b>.</p>
-        <p>Need to find the latest available time slot ≤ <span class="dim">${j.deadline}</span>.</p>
-        <span class="formula-line">find(${j.deadline}) → find the latest free slot</span>
-        <p class="note">Using Union-Find with path compression for O(α(n)) amortized lookup.</p>
+        <h3>Check Job ${j.id} — Rank #${rank+1} of ${animN}</h3>
+        <p>Now processing <span class="dim">${j.id}</span> with <b>profit = $${j.profit}</b> and <b>deadline = ${j.deadline}</b>.</p>
+        <p>We need to find the <b>latest free time slot ≤ ${j.deadline}</b>. This is the slot where we'd place this job if it fits.</p>
+        <span class="formula-line">find(${j.deadline}) → find the latest available slot</span>
+        <p><b>How does find() work?</b> We start at slot ${j.deadline} and follow the parent array. If parent[${j.deadline}] = ${j.deadline}, the slot is free and we're done. If parent[${j.deadline}] points to a different slot, we follow the chain until we find a free slot or reach 0 (no slot available).</p>
+        <p>Using Union-Find with path compression, this lookup is nearly O(1) — almost instant, even for large inputs.</p>
+        <p class="note">Watch the parent array below to see how find() traverses the chain.</p>
       </div>`;
     }
 
@@ -1145,13 +1379,17 @@
       for (let k = 0; k <= animMaxD; k++) animParent[k] = parentBefore[k];
       let nextSlot = slot > 1 ? animUfFind(slot - 1) : 0;
       for (let k = 0; k <= animMaxD; k++) animParent[k] = savedParent[k];
+      let totalProfit = animSelectedJobs.reduce((s, idx) => s + animJobs[idx].profit, 0) + j.profit;
       return `<div class="anim-explain-section active" style="border-left-color:#00ff88;">
-        <h3>✓ Schedule ${j.id} at Slot ${slot}</h3>
-        <p><span class="dim">${j.id}</span> (profit=${j.profit}) is assigned to <b>time slot ${slot}</b>.</p>
-        <p>Union-Find path: <span class="split-info">find(${j.deadline}) = ${slot}</span>${pathStr}</p>
+        <h3>✓ Schedule ${j.id} at Time Slot ${slot}</h3>
+        <p><b>Success!</b> <span class="dim">${j.id}</span> (profit=$${j.profit}) is assigned to <b>time slot ${slot}</b>.</p>
+        <p><b>What happened:</b> find(${j.deadline}) traced through the parent array: ${j.deadline}${pathStr} and found slot ${slot} is free.</p>
+        <p><b>Union-Find path:</b> <span class="split-info">find(${j.deadline}) = ${slot}</span>${pathStr}</p>
         <span class="formula-line">parent[${slot}] ← find(${slot}-1) = ${nextSlot}</span>
-        <p>After union, future calls to find(${slot}) will skip this slot.</p>
-        <p class="result-line">Total scheduled profit so far: ${animSelectedJobs.reduce((s, idx) => s + animJobs[idx].profit, 0) + j.profit}</p>
+        <p><b>After union:</b> parent[${slot}] now points to ${nextSlot}. This means future calls to find(${slot}) will skip this occupied slot and jump to slot ${nextSlot} (or earlier). The slot is now "linked" to its predecessor.</p>
+        <p><b>Why latest free slot?</b> We assign to the LATEST free slot (not the earliest) to leave earlier slots available for future jobs with tighter deadlines. A job with deadline 1 can only go at slot 1, but a job with deadline 3 can go at slots 1, 2, or 3 — so we give it slot 3.</p>
+        <p class="result-line">Total scheduled profit so far: $${totalProfit} (${animSelectedJobs.length + 1} jobs scheduled)</p>
+        <p class="note">The green badge below shows this job has been added to the schedule.</p>
       </div>`;
     }
 
@@ -1159,30 +1397,45 @@
       let j = animJobs[origIdx];
       let pathStr = ufSteps.length > 1 ? ' → ' + ufSteps.map(s => 'parent['+s+']='+animParent[s]).join(' → ') : '';
       return `<div class="anim-explain-section active" style="border-left-color:#ff4444;">
-        <h3>✗ Reject ${j.id}</h3>
-        <p><span class="dim">${j.id}</span> (profit=${j.profit}, deadline=${j.deadline}) <b>cannot be scheduled</b>.</p>
-        <p>All slots ≤ <span class="dim">${j.deadline}</span> are occupied.</p>
-        <span class="formula-line">find(${j.deadline}) = 0 → no available slot${pathStr}</span>
-        <p class="note">This job is skipped. Higher-profit jobs already claimed the earlier slots.</p>
+        <h3>✗ Reject ${j.id} — No Available Slot</h3>
+        <p><span class="dim">${j.id}</span> (profit=$${j.profit}, deadline=${j.deadline}) <b>cannot be scheduled</b>.</p>
+        <p><b>What happened:</b> find(${j.deadline}) traced through the parent array: ${j.deadline}${pathStr} → 0. It reached 0, meaning <b>all slots ≤ ${j.deadline} are occupied</b>.</p>
+        <span class="formula-line">find(${j.deadline}) = 0 → no free slot exists in range [1, ${j.deadline}]</span>
+        <p><b>Why is this job rejected?</b> The slots that ${j.id} could use (slots 1 through ${j.deadline}) are already claimed by higher-profit jobs. Since those jobs were processed first (higher profit = higher priority), they get the slots.</p>
+        <p><b>Is this the right decision?</b> Yes! The greedy algorithm already scheduled higher-profit jobs that fit. Rejecting a lower-profit job to keep higher-profit ones is the optimal strategy. This is the greedy choice property in action.</p>
+        <p class="note">This job is permanently rejected. We won't reconsider it. Moving to the next job.</p>
       </div>`;
     }
 
     function animBuildDoneExplanation() {
       let total = animSelectedJobs.reduce((s, idx) => s + animJobs[idx].profit, 0);
       let list = animSelectedJobs.map(idx =>
-        `<span class="dim">${animJobs[idx].id}</span> → slot ${animSchedule[idx]} (profit=${animJobs[idx].profit})`
+        `<span class="dim">${animJobs[idx].id}</span> → slot ${animSchedule[idx]} (profit=$${animJobs[idx].profit}, deadline=${animJobs[idx].deadline})`
       ).join('<br>');
       return `<div class="anim-explain-section active" style="border-left-color:#00ff88;">
-        <h3>✅ Algorithm Complete!</h3>
-        <p>The greedy scheduling is done. Maximum profit schedule found.</p>
-        <h3 style="margin-top:10px;">Selected Jobs</h3>
+        <h3>✅ Algorithm Complete — Optimal Schedule Found!</h3>
+        <p>The greedy scheduling algorithm has processed all ${animN} jobs and found the <b>maximum profit schedule</b>.</p>
+
+        <h3 style="margin-top:10px;">Selected Jobs (${animSelectedJobs.length} of ${animN})</h3>
         <p>${list}</p>
-        <p class="result-line">Maximum Profit: ${total}</p>
-        <h3 style="margin-top:10px;">Why This Works</h3>
-        <p>The greedy choice property holds: sorting by profit and scheduling at the latest available slot guarantees an optimal solution.</p>
+
+        <h3 style="margin-top:10px;">Final Schedule</h3>
+        <p>Time slot 1: ${animSchedule[animSelectedJobs[0]] === 1 ? animJobs[animSelectedJobs[0]].id : (animSelectedJobs.length > 1 && animSchedule[animSelectedJobs[1]] === 1 ? animJobs[animSelectedJobs[1]].id : '—')}</p>
+        <p>Time slot 2: ${animSchedule[animSelectedJobs[0]] === 2 ? animJobs[animSelectedJobs[0]].id : (animSelectedJobs.length > 1 && animSchedule[animSelectedJobs[1]] === 2 ? animJobs[animSelectedJobs[1]].id : (animSelectedJobs.length > 2 && animSchedule[animSelectedJobs[2]] === 2 ? animJobs[animSelectedJobs[2]].id : '—'))}</p>
+        <p>Time slot 3: ${animSchedule[animSelectedJobs[0]] === 3 ? animJobs[animSelectedJobs[0]].id : (animSelectedJobs.length > 1 && animSchedule[animSelectedJobs[1]] === 3 ? animJobs[animSelectedJobs[1]].id : (animSelectedJobs.length > 2 && animSchedule[animSelectedJobs[2]] === 3 ? animJobs[animSelectedJobs[2]].id : '—'))}</p>
+
+        <p class="result-line">Maximum Total Profit: $${total}</p>
+
+        <h3 style="margin-top:10px;">Why This Is Optimal</h3>
+        <p>The greedy algorithm works because of two key properties:</p>
+        <p><b>1. Greedy Choice Property:</b> There exists an optimal solution that includes the highest-profit feasible job. By always picking the most profitable job first, we never miss a better solution.</p>
+        <p><b>2. Optimal Substructure:</b> After scheduling one job, the remaining problem has the same structure. We can apply the same greedy strategy to the remaining jobs.</p>
+        <p>Together, these guarantee that the greedy approach finds the globally optimal solution — no backtracking needed.</p>
+
         <h3 style="margin-top:10px;">Complexity</h3>
-        <p><span class="dim">Time:</span> O(n log n) for sorting + O(n · α(n)) for Union-Find ≈ O(n log n)</p>
+        <p><span class="dim">Time:</span> O(n log n) for sorting + O(n · α(n)) for Union-Find ≈ <b>O(n log n)</b></p>
         <p><span class="dim">Space:</span> O(n) for the parent array and schedule</p>
+        <p class="note">The Union-Find operations are effectively constant time due to path compression.</p>
       </div>`;
     }
 
@@ -1366,22 +1619,29 @@
       document.getElementById('animExplainArea').innerHTML = `
         <div class="anim-explain-section active">
           <h3>Problem Setup</h3>
-          <p>The <b>Scheduling with Deadlines</b> problem: given <span class="dim">n</span> jobs, each with a <b>profit</b> and a <b>deadline</b>, schedule jobs on a single machine to maximize total profit. Each job takes 1 unit of time and must be completed by its deadline.</p>
-          <p>Available jobs:</p>
+          <p>The <b>Scheduling with Deadlines</b> problem: given <span class="dim">${animN}</span> jobs, each with a <b>profit</b> and a <b>deadline</b>, schedule jobs on a single machine to maximize total profit. Each job takes exactly 1 unit of time and must be completed by its deadline.</p>
+          <p>Think of it like a freelance worker with hourly appointment slots. Clients offer different payments and have latest-available times. The worker wants to maximize income by choosing the right clients.</p>
+
+          <p><b>Available jobs:</b></p>
           <p style="margin-left:8px;">
-            <span class="dim">J1:</span> profit=20, deadline=2 &nbsp;|&nbsp;
-            <span class="dim">J2:</span> profit=15, deadline=2 &nbsp;|&nbsp;
-            <span class="dim">J3:</span> profit=10, deadline=1 &nbsp;|&nbsp;
-            <span class="dim">J4:</span> profit=5, deadline=3 &nbsp;|&nbsp;
-            <span class="dim">J5:</span> profit=1, deadline=3
+            <span class="dim">J1:</span> profit=$20, deadline=2 &nbsp;(can go at slot 1 or 2)<br>
+            <span class="dim">J2:</span> profit=$15, deadline=2 &nbsp;(can go at slot 1 or 2)<br>
+            <span class="dim">J3:</span> profit=$10, deadline=1 &nbsp;(can ONLY go at slot 1)<br>
+            <span class="dim">J4:</span> profit=$5, deadline=3 &nbsp;(can go at slot 1, 2, or 3)<br>
+            <span class="dim">J5:</span> profit=$1, deadline=3 &nbsp;(can go at slot 1, 2, or 3)
           </p>
-          <p>Maximum time slots: <span class="dim">${animMaxD}</span></p>
-          <h3 style="margin-top:10px;">Greedy Strategy</h3>
-          <span class="formula-line">Sort jobs by profit descending</span>
-          <span class="formula-line">For each job: assign to latest free slot ≤ deadline</span>
-          <span class="formula-line">Use Union-Find for O(α(n)) slot lookup</span>
-          <p class="note">Union-Find tracks which slots are free. When slot k is taken, parent[k] points to k-1 (next candidate). find(j) returns the latest free slot ≤ j, or 0 if none.</p>
-          <p class="note">Press Play or Step to begin.</p>
+          <p>Maximum time slots available: <span class="dim">${animMaxD}</span> (determined by the largest deadline)</p>
+
+          <h3 style="margin-top:10px;">The Greedy Strategy</h3>
+          <p>The algorithm follows two simple rules:</p>
+          <span class="formula-line">1. Sort jobs by profit descending (highest profit first)</span>
+          <span class="formula-line">2. For each job: assign to the latest free slot ≤ deadline</span>
+          <span class="formula-line">3. Use Union-Find for O(α(n)) slot lookup</span>
+
+          <p><b>Why "latest" free slot?</b> Because we want to leave earlier slots free for future jobs with tighter deadlines. A job with deadline 1 can ONLY go at slot 1, but a job with deadline 3 can go at slots 1, 2, or 3. So we give the flexible job the latest slot, preserving the earliest slot for restrictive jobs.</p>
+
+          <p><b>How Union-Find helps:</b> The parent array tracks which slots are free. When slot k is taken, parent[k] points to k-1 (next candidate). find(j) returns the latest free slot ≤ j, or 0 if none exist. Path compression ensures this lookup is nearly instant.</p>
+          <p class="note">Press Play for automatic playback, or Step to advance one step at a time. Adjust speed with the slider.</p>
         </div>`;
       animClearHighlights();
       animBuildSteps();
