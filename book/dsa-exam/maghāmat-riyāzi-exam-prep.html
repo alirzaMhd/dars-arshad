@@ -1503,8 +1503,6 @@
 const DSA_GITHUB_REPO = 'alirzaMhd/dars-arshad';
 const DSA_STATE_DIR = 'book/dsa-exam/data';
 let dsaGithubSha = null;
-let dsaAutoPushTimer = null;
-const DSA_PUSH_DEBOUNCE = 2500;
 const mediaRecorders = {};
 
 function getDsaToken() { return localStorage.getItem('dsaGithubToken') || ''; }
@@ -1579,46 +1577,6 @@ function applyDsaState(state) {
 function saveDsaLocal() {
   const state = collectDsaState();
   localStorage.setItem('dsaExamState_maghāmat-riyāzi-exam-prep', JSON.stringify(state));
-  scheduleDsaAutoPush();
-}
-
-function scheduleDsaAutoPush() {
-  if (dsaAutoPushTimer) clearTimeout(dsaAutoPushTimer);
-  dsaAutoPushTimer = setTimeout(() => pushDsaToGithub(), DSA_PUSH_DEBOUNCE);
-}
-
-async function pushDsaToGithub() {
-  const token = getDsaToken();
-  if (!token) return;
-  try {
-    const state = collectDsaState();
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
-    const filePath = DSA_STATE_DIR + '/maghāmat-riyāzi-exam-prep-state.json';
-    const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
-    const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
-    const getRes = await fetch(getUrl, {
-      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (getRes.ok) { const d = await getRes.json(); dsaGithubSha = d.sha; }
-    else { dsaGithubSha = null; }
-    const body = { message: 'Auto-update DSA memo (maghāmat-riyāzi-exam-prep) ' + new Date().toISOString().slice(0,10), content };
-    if (dsaGithubSha) body.sha = dsaGithubSha;
-    const res = await fetch(getUrl, {
-      method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.ok) {
-      const result = await res.json();
-      dsaGithubSha = result.content.sha;
-      updateDsaSyncStatus('green', 'synced');
-    } else {
-      updateDsaSyncStatus('red', 'push error');
-    }
-  } catch (e) {
-    console.error('DSA auto-push error:', e);
-    updateDsaSyncStatus('red', 'error');
-  }
 }
 
 async function loadDsaFromGithub() {
@@ -1869,12 +1827,13 @@ window.addEventListener('DOMContentLoaded', () => {
 <div style="position:fixed;bottom:16px;right:16px;z-index:100;display:flex;align-items:center;gap:8px;background:var(--card);padding:8px 14px;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border);font-size:12px">
   <span class="dot gray" id="dsa-sync-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af"></span>
   <span id="dsa-sync-label" style="color:var(--text-secondary)">offline</span>
+  <button id="dsa-save-btn" onclick="dsaSaveToGithub()" style="background:#d1fae5;color:#065f46;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">☁️ Save</button>
   <button onclick="openDsaTokenModal()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">⚙️</button>
 </div>
 <div id="dsa-token-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;justify-content:center;align-items:center">
   <div style="background:var(--card);border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-    <h3 style="margin-bottom:8px;color:var(--accent)">⚙️ GitHub Auto-Sync</h3>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.<br>State auto-saves and auto-pushes on every change.</p>
+    <h3 style="margin-bottom:8px;color:var(--accent)">⚙️ GitHub Sync</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.<br>Click Save to push memo state to GitHub. Auto-loads on every page visit.</p>
     <input type="text" id="dsa-token-input" placeholder="github_pat_..." style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="closeDsaTokenModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--bg);color:var(--text);cursor:pointer;font-size:13px">Cancel</button>
@@ -1887,6 +1846,40 @@ window.addEventListener('DOMContentLoaded', () => {
 function openDsaTokenModal(){document.getElementById('dsa-token-input').value=getDsaToken();document.getElementById('dsa-token-modal').style.display='flex'}
 function closeDsaTokenModal(){document.getElementById('dsa-token-modal').style.display='none'}
 function saveDsaTokenFromModal(){var t=document.getElementById('dsa-token-input').value.trim();setDsaToken(t);closeDsaTokenModal();if(t)loadDsaFromGithub()}
+async function dsaSaveToGithub(){
+  var token=getDsaToken();
+  if(!token){openDsaTokenModal();return;}
+  var btn=document.getElementById('dsa-save-btn');
+  btn.textContent='☁️ Saving...';
+  btn.style.opacity='.6';
+  btn.style.pointerEvents='none';
+  updateDsaSyncStatus('yellow','saving...');
+  try{
+    var state=collectDsaState();
+    var content=btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    var filePath=DSA_STATE_DIR+'/{filename}-state.json';
+    var urlPath=filePath.split('/').map(encodeURIComponent).join('/');
+    var getUrl='https://api.github.com/repos/'+DSA_GITHUB_REPO+'/contents/'+urlPath;
+    var getRes=await fetch(getUrl,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(getRes.ok){var d=await getRes.json();dsaGithubSha=d.sha;}
+    else{dsaGithubSha=null;}
+    var body={message:'Update DSA memo ({filename}) '+new Date().toISOString().slice(0,10),content};
+    if(dsaGithubSha)body.sha=dsaGithubSha;
+    var res=await fetch(getUrl,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var result=await res.json();
+    dsaGithubSha=result.content.sha;
+    updateDsaSyncStatus('green','saved at '+new Date().toLocaleTimeString());
+  }catch(e){
+    console.error('DSA save error:',e);
+    updateDsaSyncStatus('red','save error');
+    alert('Save failed: '+e.message);
+  }finally{
+    btn.textContent='☁️ Save';
+    btn.style.opacity='1';
+    btn.style.pointerEvents='auto';
+  }
+}
 </script>
 
 </body>

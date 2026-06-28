@@ -342,14 +342,15 @@ The HTML has TWO main sections:
     <div style="position:fixed;bottom:16px;right:16px;z-index:100;display:flex;align-items:center;gap:8px;background:var(--card);padding:8px 14px;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border);font-size:12px">
       <span class="dot gray" id="dsa-sync-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af"></span>
       <span id="dsa-sync-label" style="color:var(--text-secondary)">offline</span>
+      <button id="dsa-save-btn" onclick="dsaSaveToGithub()" style="background:#d1fae5;color:#065f46;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">☁️ Save</button>
       <button onclick="openDsaTokenModal()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">⚙️</button>
     </div>
 
     <!-- Token settings modal -->
     <div id="dsa-token-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;justify-content:center;align-items:center">
       <div style="background:var(--card);border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-        <h3 style="margin-bottom:8px;color:var(--accent)">⚙️ GitHub Auto-Sync</h3>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.<br>State auto-saves and auto-pushes on every change.</p>
+        <h3 style="margin-bottom:8px;color:var(--accent)">⚙️ GitHub Sync</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.<br>Click Save to push memo state to GitHub. Auto-loads on every page visit.</p>
         <input type="text" id="dsa-token-input" placeholder="github_pat_..." style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
         <div style="display:flex;gap:10px;justify-content:flex-end">
           <button onclick="closeDsaTokenModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--bg);color:var(--text);cursor:pointer;font-size:13px">Cancel</button>
@@ -367,8 +368,6 @@ The HTML has TWO main sections:
     const DSA_GITHUB_REPO = 'alirzaMhd/dars-arshad';
     const DSA_STATE_DIR = 'book/dsa-exam/data';
     let dsaGithubSha = null;
-    let dsaAutoPushTimer = null;
-    const DSA_PUSH_DEBOUNCE = 2500;
 
     function getDsaToken() { return localStorage.getItem('dsaGithubToken') || ''; }
     function setDsaToken(t) { localStorage.setItem('dsaGithubToken', t); }
@@ -423,31 +422,6 @@ The HTML has TWO main sections:
 
     function saveDsaLocal() {
       localStorage.setItem('dsaExamState_' + getFileName(), JSON.stringify(collectDsaState()));
-      scheduleDsaAutoPush();
-    }
-
-    // ── Auto-push ──
-    function scheduleDsaAutoPush() {
-      if (dsaAutoPushTimer) clearTimeout(dsaAutoPushTimer);
-      dsaAutoPushTimer = setTimeout(() => pushDsaToGithub(), DSA_PUSH_DEBOUNCE);
-    }
-
-    async function pushDsaToGithub() {
-      const token = getDsaToken();
-      if (!token) return;
-      try {
-        const state = collectDsaState();
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
-        const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
-        const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`;
-        const getRes = await fetch(getUrl, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
-        if (getRes.ok) { const d = await getRes.json(); dsaGithubSha = d.sha; } else { dsaGithubSha = null; }
-        const body = { message: 'Auto-update DSA memo (' + getFileName() + ') ' + new Date().toISOString().slice(0,10), content };
-        if (dsaGithubSha) body.sha = dsaGithubSha;
-        const res = await fetch(getUrl, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (res.ok) { const r = await res.json(); dsaGithubSha = r.content.sha; updateDsaSyncStatus('green', 'synced'); }
-        else { updateDsaSyncStatus('red', 'push error'); }
-      } catch (e) { console.error('DSA auto-push error:', e); updateDsaSyncStatus('red', 'error'); }
     }
 
     async function loadDsaFromGithub() {
@@ -456,11 +430,19 @@ The HTML has TWO main sections:
       updateDsaSyncStatus('yellow', 'loading...');
       try {
         const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
-        const res = await fetch(`https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${filePath}`, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
+        const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
+        const url = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
         if (res.status === 404) { updateDsaSyncStatus('green', 'no saved state'); return; }
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json(); dsaGithubSha = data.sha;
-        applyDsaState(JSON.parse(atob(data.content.replace(/\n/g, ''))));
+        let raw = '';
+        if (data.content) { raw = data.content.replace(/\n/g, ''); }
+        else if (data.download_url) { const dlRes = await fetch(data.download_url); raw = await dlRes.text(); }
+        if (!raw) { updateDsaSyncStatus('green', 'empty state'); return; }
+        let content;
+        if (raw.startsWith('{')) { content = raw; } else { content = decodeURIComponent(escape(atob(raw))); }
+        applyDsaState(JSON.parse(content));
         updateDsaSyncStatus('green', 'synced');
       } catch (e) { console.error('GitHub load error:', e); updateDsaSyncStatus('red', 'load error'); }
     }
@@ -598,6 +580,41 @@ The HTML has TWO main sections:
     function openDsaTokenModal() { document.getElementById('dsa-token-input').value = getDsaToken(); document.getElementById('dsa-token-modal').style.display = 'flex'; }
     function closeDsaTokenModal() { document.getElementById('dsa-token-modal').style.display = 'none'; }
     function saveDsaTokenFromModal() { const t = document.getElementById('dsa-token-input').value.trim(); setDsaToken(t); closeDsaTokenModal(); if (t) loadDsaFromGithub(); }
+
+    // ── Manual Save ──
+    async function dsaSaveToGithub() {
+      const token = getDsaToken();
+      if (!token) { openDsaTokenModal(); return; }
+      const btn = document.getElementById('dsa-save-btn');
+      btn.textContent = '☁️ Saving...';
+      btn.style.opacity = '.6';
+      btn.style.pointerEvents = 'none';
+      updateDsaSyncStatus('yellow', 'saving...');
+      try {
+        const state = collectDsaState();
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+        const filePath = DSA_STATE_DIR + '/' + getFileName() + '-state.json';
+        const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
+        const getUrl = `https://api.github.com/repos/${DSA_GITHUB_REPO}/contents/${urlPath}`;
+        const getRes = await fetch(getUrl, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' } });
+        if (getRes.ok) { const d = await getRes.json(); dsaGithubSha = d.sha; } else { dsaGithubSha = null; }
+        const body = { message: 'Update DSA memo (' + getFileName() + ') ' + new Date().toISOString().slice(0,10), content };
+        if (dsaGithubSha) body.sha = dsaGithubSha;
+        const res = await fetch(getUrl, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const result = await res.json();
+        dsaGithubSha = result.content.sha;
+        updateDsaSyncStatus('green', 'saved at ' + new Date().toLocaleTimeString());
+      } catch (e) {
+        console.error('DSA save error:', e);
+        updateDsaSyncStatus('red', 'save error');
+        alert('Save failed: ' + e.message);
+      } finally {
+        btn.textContent = '☁️ Save';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
+    }
 
     // ── Init ──
     window.addEventListener('DOMContentLoaded', () => {
@@ -846,8 +863,9 @@ Before delivering, verify:
 - **Print-friendly.** Ensure the HTML prints cleanly for offline study.
 - **Mobile responsive.** Must work on phones for studying on the go.
 - **Memo functionality required.** Every tip-card and solved-card MUST include the memo-cell with textarea, image upload, timestamp, and clear button. Never skip or omit the memo HTML.
-- **Auto-push to GitHub.** State auto-saves to localStorage and auto-pushes to `alirzaMhd/dars-arshad` repo after 2.5s of inactivity. No save button — completely automatic. Configure via the ⚙️ settings button (fixed bottom-right).
+- **Manual Save to GitHub.** Click the ☁️ Save button to push memo state to `alirzaMhd/dars-arshad` repo. State auto-loads from GitHub on every page visit. Configure via the ⚙️ settings button (fixed bottom-right).
 - **Image support in memos.** Users can paste (Ctrl+V), drag-drop, or upload images into memos. Images are stored as base64 data URLs in state and synced to GitHub.
+- **Voice recording in memos.** Each memo cell has a 🎤 Record button. Click to start recording, click again to stop. Recordings are stored as base64 data URLs and synced to GitHub. Uses MediaRecorder API with webm/opus codec.
 - **Script order matters.** The memo JS script (which defines `getDsaToken`, `setDsaToken`, etc.) MUST come BEFORE the sync bar script (which calls `openDsaTokenModal` → `getDsaToken`). If you inject scripts before `</body>`, put the memo JS first, then the sync bar script second. This prevents `ReferenceError: getDsaToken is not defined`.
 
 ## Example Usage
