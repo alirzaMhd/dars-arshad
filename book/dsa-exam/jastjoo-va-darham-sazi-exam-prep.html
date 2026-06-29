@@ -1370,19 +1370,20 @@ function dsaClearMemo(id) {
 }
 
 // ── Image Handling ──
-function dsaUploadImage(id) {
+async function dsaUploadImage(id) {
   const card = document.querySelector(`[data-memo-id="${id}"]`);
   if (!card) return;
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.onchange = (e) => {
+  input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
+      var compressed = await compressImage(reader.result);
       const container = card.querySelector('.memo-images');
-      if (container) addImageToContainer(container, reader.result);
+      if (container) addImageToContainer(container, compressed);
       saveDsaLocal();
     };
     reader.readAsDataURL(file);
@@ -1413,7 +1414,7 @@ function openImagePreview(src) {
   }
 }
 
-function dsaHandlePaste(e, id) {
+async function dsaHandlePaste(e, id) {
   const items = e.clipboardData?.items;
   if (!items) return;
   for (const item of items) {
@@ -1421,11 +1422,12 @@ function dsaHandlePaste(e, id) {
       e.preventDefault();
       const blob = item.getAsFile();
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
+        var compressed = await compressImage(reader.result);
         const card = document.querySelector(`[data-memo-id="${id}"]`);
         if (card) {
           const container = card.querySelector('.memo-images');
-          if (container) addImageToContainer(container, reader.result);
+          if (container) addImageToContainer(container, compressed);
           saveDsaLocal();
         }
       };
@@ -1435,18 +1437,19 @@ function dsaHandlePaste(e, id) {
   }
 }
 
-function dsaHandleDrop(e, id) {
+async function dsaHandleDrop(e, id) {
   e.preventDefault();
   const files = e.dataTransfer?.files;
   if (!files) return;
   for (const file of files) {
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
+        var compressed = await compressImage(reader.result);
         const card = document.querySelector(`[data-memo-id="${id}"]`);
         if (card) {
           const container = card.querySelector('.memo-images');
-          if (container) addImageToContainer(container, reader.result);
+          if (container) addImageToContainer(container, compressed);
           saveDsaLocal();
         }
       };
@@ -1456,6 +1459,24 @@ function dsaHandleDrop(e, id) {
 }
 
 function dsaHandleDragOver(e) { e.preventDefault(); }
+
+async function compressImage(dataUrl, maxWidth, quality) {
+  maxWidth = maxWidth || 800;
+  quality = quality || 0.7;
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
 
 // ── Voice Recording ──
 async function dsaToggleRecording(id) {
@@ -1529,6 +1550,17 @@ function appendAudioPlayer(container, dataUrl, duration, createdAt, audioId) {
   container.appendChild(div);
 }
 
+async function validateDsaToken(token) {
+  try {
+    var res = await fetch('https://api.github.com/user', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    return res.ok;
+  } catch(e) {
+    return false;
+  }
+}
+
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
   if (getDsaToken()) loadDsaFromGithub();
@@ -1572,7 +1604,7 @@ function closeDsaTokenModal(){document.getElementById('dsa-token-modal').style.d
 function saveDsaTokenFromModal(){var t=document.getElementById('dsa-token-input').value.trim();setDsaToken(t);closeDsaTokenModal();if(t)loadDsaFromGithub()}
 async function dsaSaveToGithub(){
   var token=getDsaToken();
-  if(!token){openDsaTokenModal();return;}
+  if(!token){openDsaTokenModal();return;}var valid=await validateDsaToken(token);if(!valid){updateDsaSyncStatus('red','invalid token');alert('GitHub token is invalid or expired. Please update it in settings.');openDsaTokenModal();return;}
   var btn=document.getElementById('dsa-save-btn');
   btn.textContent='☁️ Saving...';
   btn.style.opacity='.6';
@@ -1580,7 +1612,9 @@ async function dsaSaveToGithub(){
   updateDsaSyncStatus('yellow','saving...');
   try{
     var state=collectDsaState();
-    var content=btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    var jsonStr=JSON.stringify(state);
+    if(jsonStr.length>900000){var proceed=confirm('Memo data is large ('+Math.round(jsonStr.length/1024)+' KB). GitHub API may reject files over 1 MB. Proceed anyway?');if(!proceed){updateDsaSyncStatus('gray','cancelled');btn.textContent='☁️ Save';btn.style.opacity='1';btn.style.pointerEvents='auto';return;}}
+    var content=btoa(unescape(encodeURIComponent(jsonStr)));
     var filePath=DSA_STATE_DIR+'/jastjoo-va-darham-sazi-exam-prep-state.json';
     var urlPath=filePath.split('/').map(encodeURIComponent).join('/');
     var getUrl='https://api.github.com/repos/'+DSA_GITHUB_REPO+'/contents/'+urlPath;
@@ -1590,7 +1624,7 @@ async function dsaSaveToGithub(){
     var body={message:'Update DSA memo (jastjoo-va-darham-sazi-exam-prep) '+new Date().toISOString().slice(0,10),content};
     if(dsaGithubSha)body.sha=dsaGithubSha;
     var res=await fetch(getUrl,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!res.ok)throw new Error('HTTP '+res.status);
+    if(!res.ok){var errText=await res.text();if(res.status===401){updateDsaSyncStatus('red','unauthorized');alert('GitHub token is invalid or expired. Please update it in settings.');openDsaTokenModal();}else if(res.status===422){updateDsaSyncStatus('red','too large');alert('GitHub API rejected the file (422). The data exceeds the 1 MB size limit. Try removing some images or recordings.');}else{throw new Error('HTTP '+res.status+': '+errText);}return;}
     var result=await res.json();
     dsaGithubSha=result.content.sha;
     updateDsaSyncStatus('green','saved at '+new Date().toLocaleTimeString());
