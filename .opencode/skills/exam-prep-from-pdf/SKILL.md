@@ -678,7 +678,7 @@ The HTML has TWO main sections:
       btn.style.pointerEvents = 'none';
       updateDsaSyncStatus('yellow', 'saving...');
       try {
-        const state = await compressStateAudio(collectDsaState());
+        const state = collectDsaState();
         const jsonStr = JSON.stringify(state);
         if (jsonStr.length > 900000) {
           const proceed = confirm('Memo data is large (' + Math.round(jsonStr.length/1024) + ' KB). GitHub API may reject files over 1 MB. Proceed anyway?');
