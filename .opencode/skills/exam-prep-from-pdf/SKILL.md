@@ -462,12 +462,24 @@ The HTML has TWO main sections:
     }
 
     // ── Image handling ──
+    async function dsaCompressImage(dataUrl, maxW, quality) {
+      return new Promise((resolve) => {
+        const img = new Image(); img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', quality));
+        }; img.src = dataUrl;
+      });
+    }
     async function dsaUploadImage(id) {
       const card = document.querySelector(`[data-memo-id="${id}"]`); if (!card) return;
       const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
       input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader(); reader.onloadend = async () => {
-          const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); };
+          const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
+          const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); };
         reader.readAsDataURL(file); }; input.click();
     }
     function addImageToContainer(container, src) {
@@ -485,16 +497,18 @@ The HTML has TWO main sections:
       const items = e.clipboardData?.items; if (!items) return;
       for (const item of items) { if (item.type.startsWith('image/')) { e.preventDefault();
         const reader = new FileReader(); reader.onloadend = async () => {
+          const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
           const card = document.querySelector(`[data-memo-id="${id}"]`);
-          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); } };
         reader.readAsDataURL(item.getAsFile()); break; } }
     }
     async function dsaHandleDrop(e, id) {
       e.preventDefault(); const files = e.dataTransfer?.files; if (!files) return;
       for (const file of files) { if (file.type.startsWith('image/')) {
         const reader = new FileReader(); reader.onloadend = async () => {
+          const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
           const card = document.querySelector(`[data-memo-id="${id}"]`);
-          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); } };
         reader.readAsDataURL(file); } }
     }
     function dsaHandleDragOver(e) { e.preventDefault(); }
