@@ -2043,149 +2043,314 @@
     <button class="theme-toggle" id="themeToggle">☀️</button>
 
     <script>
-        // Filter Questions
-        function filterQuestions(type) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
-                if (type === 'all') {
-                    card.style.display = '';
-                } else {
-                    card.style.display = card.dataset.type === type ? '' : 'none';
-                }
-            });
-        }
+// ── DSA Exam Memo System ──
+const DSA_GITHUB_REPO = 'alirzaMhd/dars-arshad';
+const DSA_STATE_DIR = 'book/dsa-exam/data';
+let dsaGithubSha = null;
+const mediaRecorders = {};
 
-        // Search
-        function handleSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
-                const text = card.textContent.toLowerCase();
-                card.style.display = text.includes(query) ? '' : 'none';
-            });
-        }
+function getDsaToken() { return localStorage.getItem('dsaGithubToken') || ''; }
+function setDsaToken(t) { localStorage.setItem('dsaGithubToken', t); }
 
-        // Theme Toggle
-        document.getElementById('themeToggle').addEventListener('click', function() {
-            document.body.classList.toggle('dark');
-            this.textContent = document.body.classList.contains('dark') ? '🌙' : '☀️';
-        });
+function collectDsaState() {
+  const memos = {}; const images = {}; const audio = {};
+  document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
+    const id = card.dataset.memoId || '';
+    if (!id) return;
+    const ta = card.querySelector('.memo-cell textarea');
+    if (ta && ta.value.trim()) memos[id] = ta.value;
+    const imgContainer = card.querySelector('.memo-images');
+    if (imgContainer) {
+      const imgs = [];
+      imgContainer.querySelectorAll('.memo-img-wrap img').forEach(img => { if (img.src) imgs.push(img.src); });
+      if (imgs.length) images[id] = imgs;
+    }
+    const audioContainer = card.querySelector('.audio-attachments');
+    if (audioContainer) {
+      const recordings = [];
+      audioContainer.querySelectorAll('.audio-attachment').forEach(el => {
+        const data = el.dataset.audioData;
+        const dur = parseFloat(el.dataset.duration) || 0;
+        const ts = el.dataset.createdAt || '';
+        const aid = el.dataset.audioId || '';
+        if (data) recordings.push({ id: aid, data, duration: dur, createdAt: ts });
+      });
+      if (recordings.length) audio[id] = recordings;
+    }
+  });
+  return { version: 2, updatedAt: new Date().toISOString(), memos, images, audio };
+}
 
-        // Memo Functions
-        function dsaSaveMemo(id) {
-            const card = document.querySelector(`[data-memo-id="${id}"]`);
-            if (!card) return;
-            const textarea = card.querySelector('.memo-cell textarea');
-            if (!textarea) return;
-            const memos = JSON.parse(localStorage.getItem('dsa-martabe-memos') || '{}');
-            memos[id] = textarea.value;
-            localStorage.setItem('dsa-martabe-memos', JSON.stringify(memos));
-        }
+function applyDsaState(state) {
+  if (!state) return;
+  if (state.memos) {
+    Object.entries(state.memos).forEach(([id, val]) => {
+      const card = document.querySelector(`[data-memo-id="${id}"]`);
+      if (card) { const ta = card.querySelector('.memo-cell textarea'); if (ta) ta.value = val; }
+    });
+  }
+  if (state.images) {
+    Object.entries(state.images).forEach(([id, imgs]) => {
+      const card = document.querySelector(`[data-memo-id="${id}"]`);
+      if (card) { const container = card.querySelector('.memo-images'); if (container) { container.innerHTML = ''; imgs.forEach(src => addImageToContainer(container, src)); } }
+    });
+  }
+  if (state.audio) {
+    Object.entries(state.audio).forEach(([id, recordings]) => {
+      const card = document.querySelector(`[data-memo-id="${id}"]`);
+      if (card) { const container = card.querySelector('.audio-attachments'); if (container && recordings.length) { recordings.forEach(r => appendAudioPlayer(container, r.data, r.duration, r.createdAt, r.id)); } }
+    });
+  }
+}
 
-        function dsaInsertTimestamp(id) {
-            const card = document.querySelector(`[data-memo-id="${id}"]`);
-            if (!card) return;
-            const textarea = card.querySelector('.memo-cell textarea');
-            if (!textarea) return;
-            const now = new Date();
-            const ts = `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}] `;
-            textarea.value = ts + textarea.value;
-            dsaSaveMemo(id);
-        }
+function saveDsaLocal() {
+  const state = collectDsaState();
+  localStorage.setItem('dsaExamState_martabe-ha-ye-amari-complete-exam-prep', JSON.stringify(state));
+}
 
-        function dsaClearMemo(id) {
-            const card = document.querySelector(`[data-memo-id="${id}"]`);
-            if (!card) return;
-            const textarea = card.querySelector('.memo-cell textarea');
-            if (!textarea) return;
-            textarea.value = '';
-            dsaSaveMemo(id);
-        }
+async function loadDsaFromGithub() {
+  const token = getDsaToken();
+  if (!token) { updateDsaSyncStatus('gray', 'no token'); return; }
+  updateDsaSyncStatus('yellow', 'loading...');
+  try {
+    const filePath = DSA_STATE_DIR + '/martabe-ha-ye-amari-complete-exam-prep-state.json';
+    const urlPath = filePath.split('/').map(encodeURIComponent).join('/');
+    const url = 'https://api.github.com/repos/' + DSA_GITHUB_REPO + '/contents/' + urlPath;
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3.raw' } });
+    if (res.status === 404) { updateDsaSyncStatus('green', 'no saved state'); return; }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.text();
+    if (!raw || !raw.trim()) { updateDsaSyncStatus('green', 'empty state'); return; }
+    applyDsaState(JSON.parse(raw));
+    updateDsaSyncStatus('green', 'synced');
+  } catch (e) { console.error('GitHub load error:', e); updateDsaSyncStatus('red', 'load error'); }
+}
 
-        function dsaUploadImage(id) {
-            const card = document.querySelector(`[data-memo-id="${id}"]`);
-            if (!card) return;
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    const container = card.querySelector('.memo-images');
-                    const img = document.createElement('img');
-                    img.src = ev.target.result;
-                    container.appendChild(img);
-                    // Save to localStorage
-                    const memos = JSON.parse(localStorage.getItem('dsa-martabe-images') || '{}');
-                    if (!memos[id]) memos[id] = [];
-                    memos[id].push(ev.target.result);
-                    localStorage.setItem('dsa-martabe-images', JSON.stringify(memos));
-                };
-                reader.readAsDataURL(file);
-            };
-            input.click();
-        }
+function updateDsaSyncStatus(color, label) {
+  const dot = document.getElementById('dsa-sync-dot');
+  const lbl = document.getElementById('dsa-sync-label');
+  if (dot) dot.className = 'dot ' + color;
+  if (lbl) lbl.textContent = label;
+}
 
-        let mediaRecorder = null;
-        let audioChunks = [];
+function dsaSaveMemo(id) { saveDsaLocal(); }
+function dsaInsertTimestamp(id) {
+  const card = document.querySelector('[data-memo-id="' + id + '"]');
+  if (!card) return;
+  const ta = card.querySelector('.memo-cell textarea');
+  if (!ta) return;
+  const now = new Date();
+  const ts = now.toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  ta.value = (ta.value ? ta.value + '\n' : '') + '[' + ts + '] ';
+  ta.focus();
+  dsaSaveMemo(id);
+}
+function dsaClearMemo(id) {
+  const card = document.querySelector('[data-memo-id="' + id + '"]');
+  if (!card) return;
+  const ta = card.querySelector('.memo-cell textarea');
+  if (ta) { ta.value = ''; dsaSaveMemo(id); }
+}
 
-        function dsaToggleRecording(id) {
-            const btn = document.getElementById('recbtn-' + id);
-            if (!btn) return;
-            
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                btn.classList.remove('recording');
-                btn.textContent = '🎤';
-                return;
-            }
+async function dsaCompressImage(dataUrl, maxW, quality) {
+  return new Promise((resolve) => {
+    const img = new Image(); img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    }; img.src = dataUrl;
+  });
+}
+async function dsaUploadImage(id) {
+  const card = document.querySelector('[data-memo-id="' + id + '"]');
+  if (!card) return;
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
+      const container = card.querySelector('.memo-images');
+      if (container) addImageToContainer(container, compressed);
+      saveDsaLocal();
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onload = function() {
-                            const card = document.querySelector(`[data-memo-id="${id}"]`);
-                            if (!card) return;
-                            const container = card.querySelector('.audio-attachments');
-                            const audio = document.createElement('audio');
-                            audio.controls = true;
-                            audio.src = reader.result;
-                            container.appendChild(audio);
-                            // Save to localStorage
-                            const memos = JSON.parse(localStorage.getItem('dsa-martabe-audio') || '{}');
-                            if (!memos[id]) memos[id] = [];
-                            memos[id].push(reader.result);
-                            localStorage.setItem('dsa-martabe-audio', JSON.stringify(memos));
-                        };
-                        reader.readAsDataURL(blob);
-                        stream.getTracks().forEach(t => t.stop());
-                    };
-                    mediaRecorder.start();
-                    btn.classList.add('recording');
-                    btn.textContent = '⏹';
-                })
-                .catch(err => alert('امکان ضبط صدا وجود ندارد'));
-        }
+function addImageToContainer(container, src) {
+  const wrap = document.createElement('div'); wrap.className = 'memo-img-wrap';
+  const img = document.createElement('img'); img.src = src;
+  img.onclick = (e) => { e.stopPropagation(); openImagePreview(src); };
+  const del = document.createElement('button'); del.className = 'img-del'; del.textContent = '\u00d7';
+  del.onclick = (e) => { e.stopPropagation(); wrap.remove(); saveDsaLocal(); };
+  wrap.appendChild(img); wrap.appendChild(del); container.appendChild(wrap);
+}
 
-        // Load saved memos on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const memos = JSON.parse(localStorage.getItem('dsa-martabe-memos') || '{}');
-            Object.keys(memos).forEach(id => {
-                const card = document.querySelector(`[data-memo-id="${id}"]`);
-                if (card) {
-                    const textarea = card.querySelector('.memo-cell textarea');
-                    if (textarea) textarea.value = memos[id];
-                }
-            });
-        });
+function openImagePreview(src) {
+  const overlay = document.getElementById('dsa-img-preview');
+  if (overlay) { overlay.querySelector('img').src = src; overlay.classList.add('open'); }
+}
+
+async function dsaHandlePaste(e, id) {
+  const items = e.clipboardData?.items; if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault(); const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
+        const card = document.querySelector('[data-memo-id="' + id + '"]');
+        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, compressed); saveDsaLocal(); }
+      };
+      reader.readAsDataURL(blob); break;
+    }
+  }
+}
+async function dsaHandleDrop(e, id) {
+  e.preventDefault(); const files = e.dataTransfer?.files; if (!files) return;
+  for (const file of files) {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const compressed = await dsaCompressImage(reader.result, 1200, 0.65);
+        const card = document.querySelector('[data-memo-id="' + id + '"]');
+        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, compressed); saveDsaLocal(); }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+}
+function dsaHandleDragOver(e) { e.preventDefault(); }
+
+async function dsaToggleRecording(id) {
+  const btn = document.getElementById('recbtn-' + id); if (!btn) return;
+  if (mediaRecorders[id]) { mediaRecorders[id].stop(); delete mediaRecorders[id]; btn.classList.remove('recording'); btn.innerHTML = '\uD83C\uDFA4 Record'; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const chunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    const recorder = new MediaRecorder(stream, { mimeType: mimeType, audioBitsPerSecond: 24000 });
+    mediaRecorders[id] = recorder; const startTime = Date.now();
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: recorder.mimeType });
+      const duration = Math.round((Date.now() - startTime) / 100) / 10;
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const card = document.querySelector('[data-memo-id="' + id + '"]');
+        if (card) { const container = card.querySelector('.audio-attachments'); if (container) { const aid = 'a-' + id + '-' + Date.now(); appendAudioPlayer(container, reader.result, duration, new Date().toISOString(), aid); saveDsaLocal(); } }
+      };
+      reader.readAsDataURL(blob);
+    };
+    recorder.start(); btn.classList.add('recording'); btn.innerHTML = '\uD83D\uDD34 Stop';
+  } catch (e) { alert('Microphone access denied: ' + e.message); }
+}
+
+function appendAudioPlayer(container, dataUrl, duration, createdAt, audioId) {
+  const div = document.createElement('div'); div.className = 'audio-attachment';
+  div.dataset.audioData = dataUrl; div.dataset.duration = duration; div.dataset.createdAt = createdAt; div.dataset.audioId = audioId;
+  const info = document.createElement('span'); info.className = 'audio-info';
+  const d = duration ? (duration < 60 ? duration + 's' : Math.floor(duration/60) + 'm ' + Math.floor(duration%60) + 's') : '';
+  info.textContent = '\uD83C\uDFA4 ' + d;
+  const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = dataUrl;
+  const del = document.createElement('button'); del.className = 'audio-del'; del.textContent = '\u2715';
+  del.title = 'Delete recording'; del.onclick = (e) => { e.stopPropagation(); div.remove(); saveDsaLocal(); };
+  div.appendChild(info); div.appendChild(audio); div.appendChild(del); container.appendChild(div);
+}
+
+// Filter Questions
+function filterQuestions(type) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
+        if (type === 'all') { card.style.display = ''; }
+        else { card.style.display = card.dataset.type === type ? '' : 'none'; }
+    });
+}
+
+// Search
+function handleSearch() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.tip-card, .solved-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+// Theme Toggle
+document.getElementById('themeToggle').addEventListener('click', function() {
+    document.body.classList.toggle('dark');
+    this.textContent = document.body.classList.contains('dark') ? '🌙' : '☀️';
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (getDsaToken()) loadDsaFromGithub();
+  else { const saved = localStorage.getItem('dsaExamState_martabe-ha-ye-amari-complete-exam-prep'); if (saved) try { applyDsaState(JSON.parse(saved)); } catch(e) {} updateDsaSyncStatus('gray', 'no token'); }
+  document.querySelectorAll('.memo-cell textarea').forEach(ta => {
+    const card = ta.closest('.tip-card, .solved-card');
+    const id = card?.dataset.memoId || '';
+    ta.addEventListener('paste', (e) => dsaHandlePaste(e, id));
+    ta.addEventListener('drop', (e) => dsaHandleDrop(e, id));
+    ta.addEventListener('dragover', dsaHandleDragOver);
+  });
+});
     </script>
+
+<div style="position:fixed;bottom:16px;right:16px;z-index:100;display:flex;align-items:center;gap:8px;background:var(--card);padding:8px 14px;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border);font-size:12px">
+  <span class="dot gray" id="dsa-sync-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#9ca3af"></span>
+  <span id="dsa-sync-label" style="color:var(--text-secondary)">offline</span>
+  <button id="dsa-save-btn" onclick="dsaSaveToGithub()" style="background:#d1fae5;color:#065f46;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">\u2601\uFE0F Save</button>
+  <button onclick="openDsaTokenModal()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:inherit">\u2699\uFE0F</button>
+</div>
+<div id="dsa-token-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3000;justify-content:center;align-items:center">
+  <div style="background:var(--card);border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <h3 style="margin-bottom:8px;color:var(--accent)">\u2699\uFE0F GitHub Sync</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Enter a GitHub PAT with Contents R/W access to <code>alirzaMhd/dars-arshad</code>.</p>
+    <input type="text" id="dsa-token-input" placeholder="github_pat_..." style="width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeDsaTokenModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--bg);color:var(--text);cursor:pointer;font-size:13px">Cancel</button>
+      <button onclick="saveDsaTokenFromModal()" style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:13px;font-weight:600">Save & Sync</button>
+    </div>
+  </div>
+</div>
+<div id="dsa-img-preview" class="img-preview-overlay" onclick="this.classList.remove('open')"><img src="" alt="Preview"></div>
+<script>
+function openDsaTokenModal(){document.getElementById('dsa-token-input').value=getDsaToken();document.getElementById('dsa-token-modal').style.display='flex'}
+function closeDsaTokenModal(){document.getElementById('dsa-token-modal').style.display='none'}
+function saveDsaTokenFromModal(){var t=document.getElementById('dsa-token-input').value.trim();setDsaToken(t);closeDsaTokenModal();if(t)loadDsaFromGithub()}
+async function dsaSaveToGithub(){
+  var token=getDsaToken(); if(!token){openDsaTokenModal();return;}
+  var valid=await validateDsaToken(token); if(!valid){updateDsaSyncStatus('red','invalid token');alert('GitHub token is invalid or expired.');openDsaTokenModal();return;}
+  var btn=document.getElementById('dsa-save-btn'); btn.textContent='\u2601\uFE0F Saving...'; btn.style.opacity='.6'; btn.style.pointerEvents='none';
+  updateDsaSyncStatus('yellow','saving...');
+  try{
+    var state=collectDsaState(); var jsonStr=JSON.stringify(state);
+    if(jsonStr.length>900000){var proceed=confirm('Memo data is large ('+Math.round(jsonStr.length/1024)+' KB). GitHub API may reject files over 1 MB. Proceed anyway?');if(!proceed){updateDsaSyncStatus('gray','cancelled');btn.textContent='\u2601\uFE0F Save';btn.style.opacity='1';btn.style.pointerEvents='auto';return;}}
+    var content=btoa(unescape(encodeURIComponent(jsonStr)));
+    var filePath=DSA_STATE_DIR+'/martabe-ha-ye-amari-complete-exam-prep-state.json';
+    var urlPath=filePath.split('/').map(encodeURIComponent).join('/');
+    var getUrl='https://api.github.com/repos/'+DSA_GITHUB_REPO+'/contents/'+urlPath;
+    var getRes=await fetch(getUrl,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(getRes.ok){var d=await getRes.json();dsaGithubSha=d.sha;} else{dsaGithubSha=null;}
+    var body={message:'Update DSA memo (martabe-ha-ye-amari-complete-exam-prep) '+new Date().toISOString().slice(0,10),content};
+    if(dsaGithubSha)body.sha=dsaGithubSha;
+    var res=await fetch(getUrl,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok){var errText=await res.text();if(res.status===401){updateDsaSyncStatus('red','unauthorized');alert('GitHub token is invalid or expired.');openDsaTokenModal();}else if(res.status===422){updateDsaSyncStatus('red','too large');alert('GitHub API rejected the file (422). The data exceeds the 1 MB size limit.');}else{throw new Error('HTTP '+res.status+': '+errText);}return;}
+    var result=await res.json(); dsaGithubSha=result.content.sha;
+    updateDsaSyncStatus('green','saved at '+new Date().toLocaleTimeString());
+  }catch(e){console.error('DSA save error:',e);updateDsaSyncStatus('red','save error');alert('Save failed: '+e.message);}
+  finally{btn.textContent='\u2601\uFE0F Save';btn.style.opacity='1';btn.style.pointerEvents='auto';}
+}
+async function validateDsaToken(token) {
+  try { var res = await fetch('https://api.github.com/user', { headers: { 'Authorization': 'Bearer ' + token } }); return res.ok; }
+  catch(e) { return false; }
+}
+</script>
+
 </body>
 </html>
