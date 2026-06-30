@@ -462,29 +462,12 @@ The HTML has TWO main sections:
     }
 
     // ── Image handling ──
-    async function compressImage(dataUrl, maxWidth, quality) {
-      maxWidth = maxWidth || 800; quality = quality || 0.7;
-      return new Promise(function(resolve) {
-        var img = new Image();
-        img.onload = function() {
-          var w = img.width, h = img.height;
-          if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.src = dataUrl;
-      });
-    }
     async function dsaUploadImage(id) {
       const card = document.querySelector(`[data-memo-id="${id}"]`); if (!card) return;
       const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*';
       input.onchange = async (e) => { const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader(); reader.onloadend = async () => {
-          var compressed = await compressImage(reader.result);
-          const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); };
+          const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); };
         reader.readAsDataURL(file); }; input.click();
     }
     function addImageToContainer(container, src) {
@@ -502,68 +485,19 @@ The HTML has TWO main sections:
       const items = e.clipboardData?.items; if (!items) return;
       for (const item of items) { if (item.type.startsWith('image/')) { e.preventDefault();
         const reader = new FileReader(); reader.onloadend = async () => {
-          var compressed = await compressImage(reader.result);
           const card = document.querySelector(`[data-memo-id="${id}"]`);
-          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); } };
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
         reader.readAsDataURL(item.getAsFile()); break; } }
     }
     async function dsaHandleDrop(e, id) {
       e.preventDefault(); const files = e.dataTransfer?.files; if (!files) return;
       for (const file of files) { if (file.type.startsWith('image/')) {
         const reader = new FileReader(); reader.onloadend = async () => {
-          var compressed = await compressImage(reader.result);
           const card = document.querySelector(`[data-memo-id="${id}"]`);
-          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, compressed); saveDsaLocal(); } };
+          if (card) { const c = card.querySelector('.memo-images'); if (c) addImageToContainer(c, reader.result); saveDsaLocal(); } };
         reader.readAsDataURL(file); } }
     }
     function dsaHandleDragOver(e) { e.preventDefault(); }
-
-    // ── Audio compression ──
-    async function compressAudio(dataUrl) {
-      if (!dataUrl || dataUrl.length < 200000) return dataUrl;
-      try {
-        var res = await fetch(dataUrl);
-        var blob = await res.blob();
-        var buf = await blob.arrayBuffer();
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var audioBuf = await ctx.decodeAudioData(buf);
-        var dur = audioBuf.duration;
-        if (dur < 30) { ctx.close(); return dataUrl; }
-        var targetRate = 16000;
-        var offlineCtx = new OfflineAudioContext(1, Math.ceil(dur * targetRate), targetRate);
-        var src = offlineCtx.createBufferSource();
-        src.buffer = audioBuf;
-        src.connect(offlineCtx.destination);
-        src.start();
-        var rendered = await offlineCtx.startRendering();
-        ctx.close();
-        var playCtx = new AudioContext({ sampleRate: targetRate });
-        if (playCtx.state === 'suspended') await playCtx.resume();
-        var dest = playCtx.createMediaStreamDestination();
-        var bufSrc = playCtx.createBufferSource();
-        bufSrc.buffer = rendered;
-        bufSrc.connect(dest);
-        bufSrc.start();
-        var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-        var rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 24000 });
-        return await new Promise(function(resolve) {
-          var ch = [];
-          rec.ondataavailable = function(e) { if (e.data.size > 0) ch.push(e.data); };
-          rec.onstop = function() {
-            playCtx.close();
-            var b = new Blob(ch, { type: rec.mimeType });
-            var r = new FileReader();
-            r.onloadend = function() { resolve(r.result); };
-            r.readAsDataURL(b);
-          };
-          rec.onerror = function() { playCtx.close(); resolve(dataUrl); };
-          rec.start();
-          setTimeout(function() { try { rec.stop(); } catch(e) { playCtx.close(); resolve(dataUrl); } }, Math.ceil(dur * 1000) + 1500);
-        });
-      } catch(e) {
-        return dataUrl;
-      }
-    }
 
     // ── Voice Recording ──
     const mediaRecorders = {};
@@ -591,14 +525,12 @@ The HTML has TWO main sections:
           const duration = Math.round((Date.now() - startTime) / 100) / 10;
           const reader = new FileReader();
           reader.onloadend = async () => {
-            var dataUrl = reader.result;
-            if (duration > 30) dataUrl = await compressAudio(dataUrl) || dataUrl;
             const card = document.querySelector(`[data-memo-id="${id}"]`);
             if (card) {
               const container = card.querySelector('.audio-attachments');
               if (container) {
                 const aid = 'a-' + id + '-' + Date.now();
-                appendAudioPlayer(container, dataUrl, duration, new Date().toISOString(), aid);
+                appendAudioPlayer(container, reader.result, duration, new Date().toISOString(), aid);
                 saveDsaLocal();
               }
             }
@@ -649,21 +581,6 @@ The HTML has TWO main sections:
         var res = await fetch('https://api.github.com/user', { headers: { 'Authorization': 'Bearer ' + token } });
         return res.ok;
       } catch(e) { return false; }
-    }
-
-    // ── Compress audio in state before GitHub save ──
-    async function compressStateAudio(state) {
-      if (!state.audio) return state;
-      for (var id of Object.keys(state.audio)) {
-        var recs = state.audio[id];
-        for (var i = 0; i < recs.length; i++) {
-          if (recs[i].data && recs[i].data.length > 300000) {
-            var compressed = await compressAudio(recs[i].data);
-            if (compressed !== recs[i].data) recs[i].data = compressed;
-          }
-        }
-      }
-      return state;
     }
 
     // ── Manual Save ──

@@ -2242,9 +2242,8 @@ async function dsaUploadImage(id) {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onloadend = async () => {
-      var compressed = await compressImage(reader.result);
       const container = card.querySelector('.memo-images');
-      if (container) addImageToContainer(container, compressed);
+      if (container) addImageToContainer(container, reader.result);
       saveDsaLocal();
     };
     reader.readAsDataURL(file);
@@ -2273,9 +2272,8 @@ async function dsaHandlePaste(e, id) {
       e.preventDefault(); const blob = item.getAsFile();
       const reader = new FileReader();
       reader.onloadend = async () => {
-        var compressed = await compressImage(reader.result);
         const card = document.querySelector('[data-memo-id="' + id + '"]');
-        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, compressed); saveDsaLocal(); }
+        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, reader.result); saveDsaLocal(); }
       };
       reader.readAsDataURL(blob); break;
     }
@@ -2287,9 +2285,8 @@ async function dsaHandleDrop(e, id) {
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        var compressed = await compressImage(reader.result);
         const card = document.querySelector('[data-memo-id="' + id + '"]');
-        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, compressed); saveDsaLocal(); }
+        if (card) { const container = card.querySelector('.memo-images'); if (container) addImageToContainer(container, reader.result); saveDsaLocal(); }
       };
       reader.readAsDataURL(file);
     }
@@ -2297,44 +2294,7 @@ async function dsaHandleDrop(e, id) {
 }
 function dsaHandleDragOver(e) { e.preventDefault(); }
 
-async function compressImage(dataUrl, maxWidth, quality) {
-  maxWidth = maxWidth || 800; quality = quality || 0.7;
-  return new Promise(function(resolve) {
-    var img = new Image();
-    img.onload = function() {
-      var w = img.width, h = img.height;
-      if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
-      var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
-      var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.src = dataUrl;
-  });
-}
 
-async function compressAudio(dataUrl) {
-  if (!dataUrl || dataUrl.length < 200000) return dataUrl;
-  try {
-    var res = await fetch(dataUrl); var blob = await res.blob(); var buf = await blob.arrayBuffer();
-    var ctx = new (window.AudioContext || window.webkitAudioContext)(); var audioBuf = await ctx.decodeAudioData(buf);
-    var dur = audioBuf.duration; if (dur < 30) { ctx.close(); return dataUrl; }
-    var targetRate = 16000; var offlineCtx = new OfflineAudioContext(1, Math.ceil(dur * targetRate), targetRate);
-    var src = offlineCtx.createBufferSource(); src.buffer = audioBuf; src.connect(offlineCtx.destination); src.start();
-    var rendered = await offlineCtx.startRendering(); ctx.close();
-    var playCtx = new AudioContext({ sampleRate: targetRate });
-    if (playCtx.state === 'suspended') await playCtx.resume();
-    var dest = playCtx.createMediaStreamDestination(); var bufSrc = playCtx.createBufferSource();
-    bufSrc.buffer = rendered; bufSrc.connect(dest); bufSrc.start();
-    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-    var rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 24000 });
-    return await new Promise(function(resolve) {
-      var ch = []; rec.ondataavailable = function(e) { if (e.data.size > 0) ch.push(e.data); };
-      rec.onstop = function() { playCtx.close(); var b = new Blob(ch, { type: rec.mimeType }); var r = new FileReader(); r.onloadend = function() { resolve(r.result); }; r.readAsDataURL(b); };
-      rec.onerror = function() { playCtx.close(); resolve(dataUrl); };
-      rec.start(); setTimeout(function() { try { rec.stop(); } catch(e) { playCtx.close(); resolve(dataUrl); } }, Math.ceil(dur * 1000) + 1500);
-    });
-  } catch(e) { return dataUrl; }
-}
 
 async function dsaToggleRecording(id) {
   const btn = document.getElementById('recbtn-' + id); if (!btn) return;
@@ -2351,10 +2311,8 @@ async function dsaToggleRecording(id) {
       const duration = Math.round((Date.now() - startTime) / 100) / 10;
       const reader = new FileReader();
       reader.onloadend = async () => {
-        var dataUrl = reader.result;
-        if (duration > 30) dataUrl = await compressAudio(dataUrl) || dataUrl;
         const card = document.querySelector('[data-memo-id="' + id + '"]');
-        if (card) { const container = card.querySelector('.audio-attachments'); if (container) { const aid = 'a-' + id + '-' + Date.now(); appendAudioPlayer(container, dataUrl, duration, new Date().toISOString(), aid); saveDsaLocal(); } }
+        if (card) { const container = card.querySelector('.audio-attachments'); if (container) { const aid = 'a-' + id + '-' + Date.now(); appendAudioPlayer(container, reader.result, duration, new Date().toISOString(), aid); saveDsaLocal(); } }
       };
       reader.readAsDataURL(blob);
     };
