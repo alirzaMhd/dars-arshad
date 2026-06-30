@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head><title>Image Compression Test</title></head>
+<body>
+<h2>Upload a large image — check if it compresses</h2>
+<input type="file" id="fileInput" accept="image/*">
+<div id="results"></div>
+<script>
+async function dsaCompressImage(dataUrl, maxW, quality) {
+  return new Promise((resolve) => {
+    const img = new Image(); img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    }; img.src = dataUrl;
+  });
+}
+
+document.getElementById('fileInput').onchange = async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onloadend = async () => {
+    const original = reader.result;
+    const origKB = Math.round(original.length * 3 / 4 / 1024);
+    const compressed = await dsaCompressImage(original, 1200, 0.65);
+    const compKB = Math.round(compressed.length * 3 / 4 / 1024);
+    const ratio = Math.round((1 - compKB / origKB) * 100);
+    document.getElementById('results').innerHTML =
+      '<p>Original: ' + origKB + ' KB</p>' +
+      '<p>Compressed: ' + compKB + ' KB</p>' +
+      '<p>Saved: ' + ratio + '%</p>' +
+      '<img src="' + compressed + '" style="max-width:400px">';
+  };
+  reader.readAsDataURL(file);
+};
+</script>
+</body>
+</html>
