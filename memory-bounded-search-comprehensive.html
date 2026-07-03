@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory-Bounded Search (IDA*, RBFS, SMA*) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0f0a; padding: 10px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    ul { margin-left: 20px; margin-top: 8px; }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>Memory-Bounded Search (IDA*, RBFS, SMA*) - Comprehensive</h1>
+  <p class="subtitle">Informed Search Algorithms — Chapter 3</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">IDA* Algorithm</button>
+      <button class="tab" onclick="showSection('tab2')">RBFS Algorithm</button>
+      <button class="tab" onclick="showSection('tab3')">SMA* Algorithm</button>
+      <button class="tab" onclick="showSection('tab4')">Comparison & Analysis</button>
+    </div>
+
+    <!-- Tab 1: IDA* Algorithm -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Overview</h2>
+        <p>Iterative Deepening A* (IDA*) reduces the memory footprint of A* by using depth-first search with an increasing cost threshold. It never stores more than a single path, so memory use is linear in path length. It is particularly useful when the search tree is very large and memory is limited.</p>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> IDA* explores nodes in best-first order only within a threshold. Do not confuse it with full A*, which uses a priority queue and can revisit states.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Core Concept: f-Limit Contour</h2>
+        <p>IDA* performs a series of depth-first searches. In each iteration, a threshold <span class="highlight">C</span> limits the maximum f-value allowed along the current path. Only paths whose f-cost exceeds the threshold generate successors; otherwise they are pruned.</p>
+
+        <div class="formula">
+          <div class="label">Evaluation function:</div>
+          <div class="expr">f(n) = g(n) + h(n)</div>
+          <div class="desc">g(n) = path cost from root to n; h(n) = heuristic estimate from n to goal.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Threshold progression:</div>
+          <div class="expr">C_{i+1} = min { f(n) | n is a cutoff node in iteration i }</div>
+          <div class="desc">The next threshold is the minimum f-value among pruned frontier nodes.</div>
+        </div>
+
+        <p>Each contour is the set of nodes whose f-value equals or exceeds the current threshold. IDA* expands all nodes with f-value below or equal to the threshold before raising it.</p>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> If heuristics are inconsistent, IDA* may re-expand states. Use consistent or monotonic heuristics to avoid duplicates, or add a visited set.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pseudocode</h2>
+        <div class="code">function IDA*(root):
+    threshold = h(root)
+    while true:
+        result, next_threshold = DFS(root, 0, threshold)
+        if result == FOUND:
+            return solution
+        if next_threshold == INF:
+            return FAILURE
+        threshold = next_threshold
+
+function DFS(node, g, threshold):
+    f = g + h(node)
+    if f > threshold:
+        return FAILURE, f
+    if node is goal:
+        return FOUND, null
+    min_next = INF
+    for each child of node:
+        stat, child_threshold = DFS(child, g + cost(node, child), threshold)
+        if stat == FOUND:
+            return FOUND, null
+        min_next = min(min_next, child_threshold)
+    return FAILURE, min_next</div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Simple 3-Node Expansion Tree</div>
+          <p>Consider four states: Start (S), A, B, and Goal (G). Edge costs: S→A = 1, S→B = 2, A→G = 2, B→G = 10. Heuristics: h(S)=4, h(A)=2, h(B)=6, h(G)=0.</p>
+          <p><strong>Iteration 1, threshold 4:</strong></p>
+          <ul>
+            <li>Expand S: f(S) = 0+4 = 4 → within threshold. Expand children.</li>
+            <li>A: f(A) = 1+2 = 3 → within threshold. Not goal, continue.</li>
+            <li>From A, G: f(G) = 1+2+0 = 3 → not goal? Actually g(G)=3, h(G)=0, so f(G)=3 &lt; 4. Goal reached within threshold.</li>
+          </ul>
+          <p class="result">Result: Solution path S→A→G with cost 3. Only nodes on the solution path are opened.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Multiple Contours in Same Iteration</div>
+          <p>Same graph but with h(A)=7, h(B)=1. Then f(A)=8, f(B)=3. Threshold starts at h(S)=4.</p>
+          <p><strong>Iteration 1, threshold 4:</strong></p>
+          <ul>
+            <li>Expand S. Child A has f=8 > 4, so A becomes a cutoff with candidate next threshold 8.</li>
+            <li>Child B has f=3 ≤ 4. Expand B. B→G gives g=2+10=12, h=0 → f=12 > 4, cutoff for next threshold 8.</li>
+          </ul>
+          <p><strong>Iteration 2, threshold 8:</strong></p>
+          <ul>
+            <li>Expand S. A has f=8 ≤ threshold, so expand A→G. f(G)=1+2+0=3 ≤ 8. Goal.</li>
+          </ul>
+          <p class="result">Result: Two iterations; the first prunes A and B→G, raising threshold to 8.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Pathological Case with Repeated States in DFS Tree</div>
+          <p>Tree: S has child A; A has child S again. h(S)=2. g(S→A)=1, g(A→S)=1, costs remain consistent.</p>
+          <p>Threshold=2. Expand S, A: f(A)=1+0=1? Wait if h(A)=0 and A not goal assume h(A)=1, then f=2. Expand S→A→S'. f(S')=1+1+2=4 > threshold, cutoff 4. Next threshold 4, expand A→S', S'→A'... loops unless we track path.</p>
+          <p class="result">Result: Without a visited-set along the current path, cycles can occur. IDA* with a path-based duplicate check handles this safely.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Cost Progression Over Several Iterations</div>
+          <p>Linear chain: n0 (start) → n1 → n2 → n3 (goal). Costs: 2 per edge. Heuristics: h(n0)=6, h(n1)=4, h(n2)=2, h(n3)=0.</p>
+          <p>Threshold = 6. f(n0)=0+6=6. Expand n1: f(n1)=2+4=6. Expand n2: f(n2)=4+2=6. Expand n3: f(n3)=6+0=6. Goal.</p>
+          <p class="result">Result: Every layer f-cost equals 6; algorithm finds goal in a single iteration without changing thresholds.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Many Cutoff Nodes and Threshold Selection</div>
+          <p>Branching factor 3, depth 3. g-values: 0,1,2,3. h-values: 7,5,3,0 respectively on every child. Threshold starts at h(root)=7.</p>
+          <p>At depth 1, children have f=8; 8 > threshold, so min cutoff = 8. At depth 2, deeper nodes have f higher. Next threshold 8 expands those depth-1 nodes. Their children inside the threshold lead to goal at depth 3.</p>
+          <p class="result">Result: Demonstrates why next_threshold picks the minimum discarded f-cost across all pruned frontier nodes.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Properties</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Time</h3>
+            <p>Worst case is exponential: <span class="highlight">O(b^d)</span> in depth d with branching factor b, similar to depth-first A*.</p>
+          </div>
+          <div class="card">
+            <h3>Space</h3>
+            <p><span class="highlight">O(d)</span> because it maintains only a single path plus siblings on the current stack.</p>
+          </div>
+          <div class="card">
+            <h3>Optimality</h3>
+            <p>Optimal when h(n) is admissible (never overestimates true cost to goal).</p>
+          </div>
+          <div class="card">
+            <h3>Completeness</h3>
+            <p>Complete on infinite trees when every step has a positive minimum cost and h is admissible.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: RBFS Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Overview</h2>
+        <p>Recursive Best-First Search (RBFS) explores the search tree recursively while remembering only the best alternative path available at each level. It uses linear space and still behaves like best-first search by always pursuing the node with the smallest f-value.</p>
+      </div>
+
+      <div class="section">
+        <h2>Core Idea: Best-Node Tracking with Backtracking</h2>
+        <p>RBFS operates on the current path and, for each node, keeps an <span class="highlight">f-limit</span> representing the best alternative path not yet expanded. If the current child's f exceeds that alternative, RBFS backs up and switches to the better alternative. It therefore performs implicit reevaluation of previously generated siblings.</p>
+
+        <div class="formula">
+          <div class="label">RBFS update rule:</div>
+          <div class="expr">f(n) = min{ f(n), min_{child∈children(n)} f(child) }</div>
+          <div class="desc">The stored f-value of n is recursively replaced if a descendant offers a cheaper continuation.</div>
+        </div>
+
+        <p>Because RBFS only stores nodes along the current path and one alternative per level, its memory consumption is linear in depth d.</p>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Do not permanently discard regenerated successors. RBFS may revisit subtrees under different f-limits; that is expected and keeps behavior best-first.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pseudocode</h2>
+        <div class="code">function RBFS(node, f_limit):
+    if node is goal:
+        return SOLUTION, f(node)
+    if node has no children:
+        return FAILURE, f(node)
+    for each child in node.children:
+        child.f = max(g(child) + h(child), node.f)
+    while true:
+        best = child with smallest f
+        alternative = child with second smallest f
+        if best.f > f_limit:
+            return FAILURE, best.f
+        result, best.f = RBFS(best, min(f_limit, alternative.f))
+        if result != FAILURE:
+            return result, best.f
+    return FAILURE, best.f</div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Two-Way Branch with Single Backtrack</div>
+          <p>Root R has children A and B. g(A)=1, h(A)=4 => f(A)=5. g(B)=2, h(B)=1 => f(B)=3. Start with f_limit = ∞.</p>
+          <p>best = B (f=3), alternative = A (f=5). Recurse on B. At B the goal is found. RBFS returns success upward. No explicit storing of A required beyond f-value.</p>
+          <p class="result">Result: Memory only kept one path and one alternative f-value; no priority queue needed.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Forced Backtrack When Cheaper Path Found Deeper</div>
+          <p>Root R with child X. X gives g=1, h=5, f=6. X also has sibling Y under same parent? Reconstruct: R has two children X and Y. Suppose X leads left deeper, Y is local best f=4.</p>
+          <p>Expanding X: X generates child Z with g=2, h=6, f=8. Compare alternative Y (f=4) vs Z (f=8). Since 8 > current f_limit (initially ∞ or lower bound 6), backtrack and pursue Y.</p>
+          <p class="result">Result: RBFS discards deeper but more expensive branch automatically.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Memory Profile Over Depth</div>
+          <p>Test depth 5, branching factor 2. At any time RBFS stores the path plus at most 1 sibling f-value per depth, totaling ≤ 2d nodes.</p>
+          <p>Suppose we go down left spine to depth 5. Each activation stores the right sibling info only at decision points. At depth 5, call stack depth = 6 and sibling info ≤ 6.</p>
+          <p class="result">Result: Confirms linear space: O(d).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Repeated State Without Caching</div>
+          <p>Tree contains cycle root→A→root. RBFS from root goes to A, then A sees child root again.</p>
+          <p>Without duplicate detection, RBFS may rebuild from root again. Because it uses recursion, cycles inflate runtime but still eventually prune by f-limits if goal unreachable.</p>
+          <p class="result">Result: RBFS benefits from adding a closed list when states can repeat; otherwise pure RBFS may loop.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Simulating Continuous f-Limit at Parent</div>
+          <p>For node n with children f-values 9, 10, 14, parent current f=8. best child f updates to max(g+ h, parent.f). Let child f be 9. Path goes down to child. sibling alternative returns 10. min(current f_limit=∞, alternative.f) keeps exploring 9. Child returns failure 17. Next iteration picks alternative child 10.</p>
+          <p class="result">Result: Parent automatically updates the next candidate using 10 instead of revisiting unavailable child.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Properties</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Time</h3>
+            <p>Worst-case exponential: <span class="highlight">O(b^d)</span>, but often behaves better than iterative deepening by reordering near-best-first.</p>
+          </div>
+          <div class="card">
+            <h3>Space</h3>
+            <p><span class="highlight">O(d)</span> because only a single path plus recursive stack is stored.</p>
+          </div>
+          <div class="card">
+            <h3>Optimality</h3>
+            <p>Optimal if heuristic h is admissible.</p>
+          </div>
+          <div class="card">
+            <h3>Completeness</h3>
+            <p>Complete under same conditions as A*: positive step costs and finite branching.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: SMA* Algorithm -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Overview</h2>
+        <p>Simplified Memory-bounded A* (SMA*) is a general-purpose bounded-memory search that expands the most promising leaf nodes first, but when memory is exhausted it forgets the worst leaf and backtracks to continue from the best remembered sibling.</p>
+      </div>
+
+      <div class="section">
+        <h2>Key Concepts</h2>
+        <p>SMA* keeps a priority queue of frontier nodes and increments path cost information upwards. Once memory is full, the least promising leaf node is removed. Its parent may then resume expansion from another child if available.</p>
+
+        <div class="formula">
+          <div class="label">Key heuristic for forgetting:</div>
+          <div class="expr">worst(n) = f-value of worst leaf in subtree rooted at n</div>
+          <div class="desc">SMA* stores this at every internal node while children are loaded.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Leaf choice rule:</div>
+          <div class="expr">choose leaf n with minimal f(n); prune worst leaf when memory bound exceeded</div>
+          <div class="desc">removing that leaf updates parent's remembered best continuation.</div>
+        </div>
+
+        <h3>How SMA* Selects Which Node to Forget</h3>
+        <p>When the memory limit is exceeded, SMA* evaluates all current leaf nodes and removes the one with highest f-value. If multiple leaves share that value, it removes the one whose subtree contains the most expensive forgotten continuation, because that removal loses the least globally useful information. The parent node instead remembers the cost of the forgotten subtree so that resumption is possible.</p>
+
+        <p>If the currently expanding node is itself removed, SMA* backtracks to its parent and continues with the next-best child.</p>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> SMA* does not discard arbitrary nodes; always forgets the *worst* leaf first. If you forget a better leaf, you lose optimality.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pseudocode</h2>
+        <div class="code">function SMA*(memory):
+    open = PriorityQueue()
+    insert root into open
+    while open not empty:
+        node = pop(open)                       # lowest f-node
+        if node is goal:
+            return solution
+        if node is leaf with untried actions:
+            for each child generated:
+                child.f = max(g(child) + h(child), node.f)
+                insert child into open
+                update node.remembered_f = max(
+                    node.remembered_f, min(child.f)
+                )
+        else:
+            # expand remembered best continuation
+            regenerate best available child of node
+            if open is full:
+                worst = leaf with highest f
+                remove worst from open
+                update worst.parent.remembered_f from next-best child
+    return NO_PATH_FOUND</div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Memory Bound Exceeded at Leaf Level</div>
+          <p>Memory allows only 3 stored nodes. Tree: Root→A (f=4), Root→B (f=6), B→C (f=7). Insert root, then A and B (open size 3). While expanding B, generate C. Open size 4 &gt; 3, so prune highest-f leaf C (f=7).</p>
+          <p class="result">Result: B remains, but its remembered continuation updates to reflect that C was pruned. If future exploration requires B, it resumes from the cached f-value of 7 or alternative.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Backtracking After Forgetting Best Leaf</div>
+          <p>Left subtree has inexpensive goal at f=5; right subtree has nodes f=8,9,12. Memory allows 2 nodes. Open starts with root + left child. Expanding left pushes its parent to reopen right child at f=8. Memory is tight and requires removal of some leaf.</p>
+          <p class="result">Result: SMA* sacrifices right-side leaves at f=12, then backtracks to evaluate cheaper siblings, still arriving optimally because no cheaper path existed.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Interaction Between Remembered f-values and Pruning</div>
+          <p>Parent P has children C1 (f=6) and C2 (f=9). P stores worst leaf value = 9 from C2. Memory fills. Because C2 is more expensive, when pruning begins, SMA* removes subtrees containing C2's leaves before removing C1's. This means search directions tied to lower cost survive longer.</p>
+          <p class="result">Result: Remembered worst-leaf values enforce search direction biased toward low-cost frontiers.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Pathological Memory Exhaustion with Goal on Forbidden Side</div>
+          <p>Goal lies behind a problematic high-cost branch; low-cost subtree is long but memory-limited. SMA* remembers the better f continuation at every memory-limit hit, saving the path cost at pruned nodes. Once memory becomes available again, it can restore the best-forgotten branch and proceed.</p>
+          <p class="result">Result: Shows SMA* can degrade gracefully by suspending the expensive subtree and resuming it later.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Optimal Efficiency Under Memory Constraints</div>
+          <p>Given depth 8, branching 4, memory = 20 nodes. A* with full queue cannot run. SMA* expands all nodes with f-cost less than or equal to the optimal solution path, plus at most one additional node per layer. This is the best possible given limited memory because every other node must be deferred.</p>
+          <p class="result">Result: Because SMA* never discards a node with f less than a kept node, it is optimal among memory-limited strategies.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Properties</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Time</h3>
+            <p>Worst case exponential like IDA* and RBFS: <span class="highlight">O(b^d)</span>. In some problems, time is comparable to A*.</p>
+          </div>
+          <div class="card">
+            <h3>Space</h3>
+            <p>Bounded by user-specified limit <span class="highlight">O(k)</span>, where k is memory.</p>
+          </div>
+          <div class="card">
+            <h3>Optimality</h3>
+            <p>Optimal if heuristic is admissible; it never expends more time than any other bounded-memory algorithm.</p>
+          </div>
+          <div class="card">
+            <h3>Completeness</h3>
+            <p>Complete when a solution exists, memory ≥ 1 and step costs &gt; 0.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Comparison & Analysis -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Algorithm Comparison Table</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>Time</th>
+              <th>Space</th>
+              <th>Optimal</th>
+              <th>Complete</th>
+              <th>Memory Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A*</td>
+              <td>Exp in worst case</td>
+              <td>O(b^d)</td>
+              <td class="result">Yes</td>
+              <td class="result">Yes</td>
+              <td>Exponential</td>
+            </tr>
+            <tr>
+              <td>IDA*</td>
+              <td>Exp, revisits nodes</td>
+              <td class="result">O(d)</td>
+              <td class="result">Yes</td>
+              <td class="result">Yes</td>
+              <td>Linear, repeats work</td>
+            </tr>
+            <tr>
+              <td>RBFS</td>
+              <td>Exp; fewer reexpansions than IDA*</td>
+              <td class="result">O(d)</td>
+              <td class="result">Yes</td>
+              <td class="result">Yes</td>
+              <td>Linear, best-first behavior</td>
+            </tr>
+            <tr>
+              <td>SMA*</td>
+              <td>Exp; optimal given memory bound</td>
+              <td>Bounded by k</td>
+              <td class="result">Yes</td>
+              <td class="result">Yes</td>
+              <td>Controlled user limit</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Space vs Time Tradeoffs</h2>
+        <p>A* stores the entire frontier, giving the fewest node reexpansions but the largest memory usage. IDA*, RBFS, and SMA* trade memory for extra work. IDA* is simplest and cheapest to implement, but may rebuild nodes many times. RBFS improves upon IDA* by keeping one alternative per level, reducing redundant regeneration. SMA* explicitly manages the frontier with user-defined memory, making it the only algorithm here with a hard guarantee to succeed in bounded hardware.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>IDA* Pros</h3>
+            <ul>
+              <li>Minimal memory</li>
+              <li>Simple implementation</li>
+              <li>No priority queue</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>IDA* Cons</h3>
+            <ul>
+              <li>Reexpansions every iteration</li>
+              <li>Weakness without good heuristics</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>RBFS Pros</h3>
+            <ul>
+              <li>Best-first like A*</li>
+              <li>Linear memory</li>
+              <li>Fewer duplicates than IDA*</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>RBFS Cons</h3>
+            <ul>
+              <li>Recursion overhead</li>
+              <li>Struggles with noise in h</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>SMA* Pros</h3>
+            <ul>
+              <li>Hard memory bound</li>
+              <li>Optimal under memory limits</li>
+              <li>Resumes forgotten nodes</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>SMA* Cons</h3>
+            <ul>
+              <li>Complex bookkeeping</li>
+              <li>Higher constant factor</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Optimal Efficiency Under Memory Constraints</h2>
+        <p>Optimal efficiency means no memory-bounded algorithm expands fewer nodes than SMA* for a given memory bound. SMA* ensures this because every node it discards has f-value worse than every kept node. Any algorithm that discards a node with lower f-value would therefore be strictly inferior on at least one instance.</p>
+
+        <div class="formula">
+          <div class="label">Optimal efficiency guarantee:</div>
+          <div class="expr">For any memory-bound algorithm B, number of nodes expanded by SMA* ≤ nodes expanded by B</div>
+          <div class="desc">Assuming both use the same admissible heuristic and face the same problem instance and memory limit.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Completeness Conditions Summary</h2>
+        <ul>
+          <li>Branching factor must be finite.</li>
+          <li>Minimum step cost > 0.</li>
+          <li>Heuristic admissible (never overestimates actual cost to goal).</li>
+          <li>For IDA*, tree must be infinite-depth safe when step costs positive; duplicity can be addressed by remembering a path set or relying on monotonic heuristics.</li>
+          <li>For SMA*, memory bound must be at least 1 node.</li>
+        </ul>
+
+        <div class="warning">
+          <strong>Common Exam Pitfall:</strong> Optimism does not guarantee finite completion. Even with perfect heuristic, infinite graphs require infinite or at least sufficient time; positive costs ensure progress toward goal depth.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complexity Summary Table</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>Time Complexity</th>
+              <th>Space Complexity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A*</td>
+              <td>O(b^d) worst</td>
+              <td>O(b^d)</td>
+            </tr>
+            <tr>
+              <td>IDA*</td>
+              <td>O(b^d) worst</td>
+              <td class="result">O(d)</td>
+            </tr>
+            <tr>
+              <td>RBFS</td>
+              <td>O(b^d) worst</td>
+              <td class="result">O(d)</td>
+            </tr>
+            <tr>
+              <td>SMA*</td>
+              <td>O(b^d) worst</td>
+              <td>Bounded by k</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="note">Linearithmic or polynomial lower bounds do not apply in this general setting because search problems can encode arbitrarily hard combinatorial structures.</p>
+      </div>
+
+      <div class="section">
+        <h2>Important Pseudocode Quick Reference</h2>
+        <div class="code">IDA*:
+threshold = h(start)
+repeat threshold += next_min until goal found
+
+RBFS:
+recurse best child; track alternative; back up best f on return
+
+SMA*:
+queue lowest-f frontier nodes; if full, free worst leaf and propagate cost upward</div>
+      </div>
+
+      <div class="section">
+        <h2>What to Remember for Exams</h2>
+        <ul>
+          <li>IDA* uses threshold iterations based on f = g + h.</li>
+          <li>RBFS is recursive, best-first, and linear in memory.</li>
+          <li>SMA* is the optimal algorithm under an explicit memory bound through forgetting worst leaves.</li>
+          <li>Optimality across all three requires an admissible heuristic.</li>
+          <li>Completeness needs finite branching and positive step cost.</li>
+          <li>Space is the defining difference: IDA*/RBFS use O(d), SMA* is user-limited.</li>
+          <li>Time remains exponential in the worst case for all three algorithms.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
