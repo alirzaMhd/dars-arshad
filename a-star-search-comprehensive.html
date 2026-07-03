@@ -48,6 +48,7 @@
       <button class="tab" onclick="showSection('tab2')">Optimality Proofs</button>
       <button class="tab" onclick="showSection('tab3')">Consistency</button>
       <button class="tab" onclick="showSection('tab4')">Contours & Memory</button>
+      <button class="tab" onclick="showSection('tab5')">Online Search</button>
     </div>
     <div class="content active" id="tab1">
       <div class="section">
@@ -101,6 +102,16 @@
         </table>
         <div class="warning">
           <strong>Common Mistake:</strong> A* with Tree-Search needs admissible h for optimality. A* with Graph-Search needs consistent h for optimality. Admissibility alone is NOT enough for Graph-Search.
+        </div>
+        <h3>Heuristic Path Search</h3>
+        <p><strong>Heuristic Path Search</strong> generalizes A* by weighting the heuristic more aggressively. Its evaluation function is:</p>
+        <div class="formula">
+          <div class="label">Weighted A* / Heuristic Path Search:</div>
+          <div class="expr">f(n) = (2 - W) g(n) + W h(n)</div>
+          <div class="desc">W controls the tradeoff between exploring cheap paths and moving toward the goal. Special cases: W=1 gives standard A*. W=0 gives uniform-cost search. W=2 gives greedy best-first search. W&gt;1 trades optimality for fewer node expansions. With W&gt;1 the solution cost is bounded by W*C*.</div>
+        </div>
+        <div class="warning">
+          <strong>Warning:</strong> Only W=1 guarantees optimality with an admissible heuristic. For W&gt;1, the algorithm is not optimal, but can expand far fewer nodes. In practice W=1.2 to W=2 is common when fast approximate answers are needed.
         </div>
       </div>
     </div>
@@ -178,6 +189,54 @@
             <h3>SMA*</h3>
             <p>Time: exponential in M Space: O(M) Optimal if reachable</p>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Online Search</h2>
+        <p>In <strong>online search</strong>, the agent has no prior model of its environment. It does not know the states, actions, or results in advance. It must discover them by acting and sensing. This contrasts with the standard A* assumption that the problem is fully known beforehand.</p>
+        <h3>When Online Search Is Needed</h3>
+        <ul>
+          <li>The environment is not known in advance, e.g., a robot in an unknown maze.</li>
+          <li>No action model is available; the agent must try actions to learn what they do.</li>
+          <li>There is no heuristic function available; the agent must learn heuristics online.</li>
+        </ul>
+        <h3>Heuristic Path Search with Online Learning</h3>
+        <p>When online exploration is necessary, the agent can use <strong>online heuristic path search</strong>. The evaluation function still guides exploration, but the heuristic h(n) is updated as new information arrives.</p>
+        <div class="formula">
+          <div class="label">Online Heuristic Update:</div>
+          <div class="expr">h_new(n) = min( h_old(n), actual_cost_to_goal_from_n )</div>
+          <div class="desc">As the agent reaches goal states or terminal states, it backpropagates real costs to update heuristic estimates. This is similar to learning from experience but happens during a single search.</div>
+        </div>
+        <h3>Online A* and LRTA*</h3>
+        <p><strong>Learning Real-Time A* (LRTA*)</strong> is an online variant that updates the heuristic at each step and commits to the best neighbor. It guarantees finding the goal under certain conditions, but may not be optimal.</p>
+        <div class="code">function LRTA*(problem, initial_state)
+  h ← initial heuristic values
+  state ← initial_state
+  while GOAL-TEST(problem, state) is false do
+    for each successor s of state do
+      h(s) ← min(h(s), actual_cost(state, s) + h(s))
+    n ← successor with minimum h(s)
+    take action to n
+    state ← n</div>
+        <h3>Worked Example: Online Search in a Maze</h3>
+        <div class="example">
+          <div class="title">Unknown Grid Maze</div>
+          <p>An agent starts at (0,0) in an unknown grid. It does not know the maze walls. It uses Manhattan distance as a rough initial heuristic, then updates h values as it discovers dead ends.</p>
+          <p>At (0,0), h=7 toward goal at (3,4). Agent tries moving east, discovers a wall. Updates h((0,0)) = 7. Backtracks, tries south. Eventually explores a path to goal. Final cost may exceed optimal because of explored dead ends, but the agent will find the goal.</p>
+        </div>
+        <h3>Comparison: Offline vs Online Search</h3>
+        <table>
+          <tr><th>Aspect</th><th>Offline A*</th><th>Online / LRTA*</th></tr>
+          <tr><td>Problem model</td><td>Fully known</td><td>Unknown, discovered during search</td></tr>
+          <tr><td>Heuristic</td><td>Precomputed</td><td>Updated online from experience</td></tr>
+          <tr><td>Optimality</td><td class="result">Yes (with admissible h)</td><td class="dim">Not guaranteed</td></tr>
+          <tr><td>Completeness</td><td class="result">Yes</td><td class="highlight">Yes (with finite states)</td></tr>
+          <tr><td>Memory</td><td>O(b^d)</td><td>O(depth) or O(1)</td></tr>
+        </table>
+        <div class="warning">
+          <strong>Warning:</strong> Online search cannot guarantee optimality because the agent may commit to a suboptimal path before discovering a better one. The best guarantees are completeness and bounded suboptimality under certain conditions.
         </div>
       </div>
     </div>
