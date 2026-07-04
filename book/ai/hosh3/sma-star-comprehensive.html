@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMA* — Simplified Memory-Bounded A* - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .vis { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 10px 0; text-align: center; border: 1px solid #333; }
+    .vis pre { font-family: monospace; color: #00ff88; font-size: 0.75em; line-height: 1.3; }
+  </style>
+</head>
+<body>
+  <h1>SMA* — Simplified Memory-Bounded A*</h1>
+  <p class="subtitle">Artificial Intelligence — Informed Search</p>
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm</button>
+      <button class="tab" onclick="showSection('tab2')">Memory Management</button>
+      <button class="tab" onclick="showSection('tab3')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Algorithm Overview</h2>
+        <p>SMA* uses <em>all available memory</em> efficiently. It behaves like A* (expanding the best leaf first) until the memory is full. Once full, it drops the worst leaf (highest f-value), "forgetting" it but propagating its f-value back to the parent, so the parent remembers the quality of the best path in that subtree.</p>
+
+        <h3>Pseudocode</h3>
+        <div class="code">function SMA*(problem) returns a solution
+  Queue ← MAKE-QUEUE(MAKE-NODE(INITIAL-STATE[problem]))
+  loop do
+    if Queue is empty then return failure
+    n ← deepest least-f-cost node in Queue
+    if GOAL-TEST(n) then return success
+    s ← NEXT-SUCCESSOR(n)
+    if s is not goal and at max depth then f(s) ← ∞
+    else f(s) ← MAX(f(n), g(s)+h(s))
+    if all successors of n generated then update n's f-cost and ancestors
+    if memory is full then
+      delete shallowest highest-f-cost leaf in Queue
+      remove it from parent's successor list
+      insert parent on Queue if necessary
+    insert s on Queue
+    if all successors of n in memory then remove n from Queue</div>
+
+        <h3>Key Properties</h3>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+          <div class="card">
+            <div class="highlight">Complete</div>
+            <div style="margin-top:5px;font-size:0.85em;">Yes — if depth of shallowest goal ≤ memory capacity (in nodes)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Optimal</div>
+            <div style="margin-top:5px;font-size:0.85em;">Yes — if memory can store the shallowest optimal solution path</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Space</div>
+            <div style="margin-top:5px;font-size:0.85em;">User-specified: uses all available memory</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Best for</div>
+            <div style="margin-top:5px;font-size:0.85em;">General-purpose optimal search with limited RAM, non-uniform step costs, graph state spaces</div>
+          </div>
+        </div>
+
+        <h3>Comparison: All Memory-Bounded Algorithms</h3>
+        <table>
+          <tr><th>Feature</th><th>A*</th><th>IDA*</th><th>RBFS</th><th>SMA*</th></tr>
+          <tr><td>Space</td><td>Exponential</td><td>Linear O(bd)</td><td>Linear O(bd)</td><td>User-defined</td></tr>
+          <tr><td>Optimal</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
+          <tr><td>Complete</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
+          <tr><td>Graphs OK</td><td>Yes</td><td>Yes</td><td>Limited</td><td>Yes</td></tr>
+          <tr><td>Non-uniform costs</td><td>Yes</td><td>Limited</td><td>Limited</td><td>Yes</td></tr>
+          <tr><td>Re-expansion</td><td>None</td><td>Very high</td><td>Moderate</td><td>Moderate</td></tr>
+          <tr><td>Thrashing</td><td>No</td><td>Partial</td><td>Possible</td><td>Yes (worst case)</td></tr>
+        </table>
+        <div class="note">*SMA* is optimal/complete only if memory is sufficient to store the shallowest optimal path. If memory is tighter, it may fail.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Memory Management Strategy</h2>
+
+        <h3>When Memory is Full</h3>
+        <div class="vis">
+          <pre>
+  Memory Full! Decision Process:
+  ┌────────────────────────────────────────────────────────┐
+  │  Queue (sorted by f-cost, deepest first for tiebreak) │
+  │                                                        │
+  │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐    │
+  │  │best  │→│  ... │→│ ...  │→│ worst│→│worst │   │
+  │  │leaf  │  │      │  │      │  │ leaf │  │ leaf │   │
+  │  │f=10  │  │f=15  │  │f=20  │  │f=30  │  │f=35  │   │
+  │  └──────┘  └──────┘  └──────┘  └──────┘  └──────┘    │
+  │                                    ↑                   │
+  │                          DELETE this leaf              │
+  │                          (shallowest highest-f)        │
+  │                                                        │
+  │  1. Remove worst leaf from queue                       │
+  │  2. Remove it from parent's successor list             │
+  │  3. Update parent's f = min(parent's f, deleted f)    │
+  │  4. Reinsert parent on queue if it was removed         │
+  │  5. Insert new successor s on queue                    │
+  └────────────────────────────────────────────────────────┘
+</pre>
+        </div>
+
+        <h3>f-Value Propagation</h3>
+        <div class="formula">
+          <div class="label">Parent Update Rule</div>
+          <div class="expr">f(parent) = min(f(child₁), f(child₂), ..., f(childₖ))</div>
+          <div class="desc">When all successors of a node are generated, the node's f is updated to the minimum f of its children. This is propagated up to ancestors.</div>
+        </div>
+
+        <div class="card">
+          <div class="highlight">Parent Remembers</div>
+          <div style="margin-top:5px;font-size:0.85em;">
+            When a leaf is deleted, its f-value is stored in the parent. If all children of a node are eventually forgotten, the node still "knows" the best cost through that subtree. This allows SMA* to regenerate the subtree later if all other paths become more expensive.
+          </div>
+        </div>
+
+        <h3>Tie-Breaking Rules</h3>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+          <div class="card">
+            <div class="highlight">Expansion: Newest Best Leaf</div>
+            <div style="margin-top:5px;font-size:0.85em;">When multiple leaves have the same f-cost, SMA* expands the <em>newest</em> best leaf</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Deletion: Oldest Worst Leaf</div>
+            <div style="margin-top:5px;font-size:0.85em;">When deleting, SMA* drops the <em>oldest</em> worst leaf (shallowest highest-f)</div>
+          </div>
+        </div>
+
+        <h3>Thrashing Problem</h3>
+        <div class="warning">
+          <strong>Thrashing:</strong> SMA* may expand and delete the same node repeatedly, similar to page faults in virtual memory. This happens when:<br>
+          • Memory is too small to hold the critical path<br>
+          • Heuristic values are close together, causing frequent swaps<br>
+          The algorithm regenerates a subtree, but before it finds the goal, the subtree is evicted again.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: SMA* Tree with Memory Limit = 3 Nodes</div>
+          <div class="vis">
+            <pre>
+  Tree:
+         A (f=5)
+       /     \
+    B(7)      C(8)
+    /  \      /  \
+  D(9) E(10) F(9) G(11)
+
+  Memory limit: 3 nodes. Goal: F.
+
+  Step 1: Queue = [A(5)]. Expand A.
+     Generate B(7), C(8). Queue = [B(7), C(8)]. Memory: 3/3 full.
+
+  Step 2: Expand B(7) (best leaf).
+     Generate D(9), E(10). Queue = [C(8), D(9), E(10)].
+     Memory full (4 nodes)! Delete shallowest highest-f leaf.
+     Candidates: D(9) depth=2, E(10) depth=2, C(8) depth=1.
+     Shallowest highest-f = C(8) depth=1? No — C(8) has f=8, lower than D(9), E(10).
+     Delete E(10) — highest f among deepest? Shallowest highest-f: E(10) depth 2.
+
+  Step 3: Delete E. f[B] = min(D(9), E(10)) = 9. Queue = [C(8), D(9)].
+     But wait — D(9) is also pending. Expand C(8).
+
+  Step 4: Expand C(8). Generate F(9), G(11). Queue full again.
+     Current: D(9) f=9, F(9) f=9. Delete shallowest highest-f: both same f.
+     Delete D(9) (oldest). f[C] = min(F(9), G(11)) = 9.
+
+  Step 5: Queue = [F(9), G(11)]. Expand F(9) → goal found!
+
+  SMA* found the optimal path (A→C→F) using only 3 memory slots.
+</pre>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Romania with Memory Limit = 4 Nodes</div>
+          <table>
+            <tr><th>Step</th><th>Queue (f-values)</th><th>Action</th></tr>
+            <tr><td>1</td><td>Arad(366)</td><td>Expand Arad</td></tr>
+            <tr><td>2</td><td>Sibiu(393), Timisoara(447), Zerind(449)</td><td>Memory full (3/3). Expand Sibiu</td></tr>
+            <tr><td>3</td><td>Sibiu(393), Timisoara(447), Zerind(449), Rimnicu(413), Fagaras(417), Oradea(415)</td><td>Memory overfull! Delete Zerind(449) shallowest, f updated</td></tr>
+            <tr><td>4</td><td>Sibiu(393), Timisoara(447), Rimnicu(413), Fagaras(417), Oradea(415)</td><td>Delete Timisoara(447). Expand Rimnicu</td></tr>
+            <tr><td>5</td><td>Sibiu(393), ... Pitesti(417), Craiova(526)</td><td>Delete Craiova(526). f[Rimnicu] = 417</td></tr>
+            <tr><td>6</td><td>Sibiu(393), ... Pitesti(417), Oradea(415)</td><td>Expand Pitesti → Bucuresti found!</td></tr>
+          </table>
+          <div class="note">With only 4 memory slots, SMA* found the optimal path by strategically dropping unpromising branches</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Thrashing Scenario</div>
+          <div class="vis">
+            <pre>
+  Memory = 3 nodes. Problem: Goal reachable only through path of length 5.
+
+  Tree:
+      A (f=5)
+     /     \
+   B(6)    C(6)
+   /        \
+  D(7)      E(7)
+   \        /
+    F(8)   G(8)
+     \    /
+      H(9)   ← goal
+
+  With memory=3, SMA* must traverse A→B→D→F→H but only remembers 3 nodes.
+
+  Trace:
+  1. Queue: [A]. Expand A → [B, C]
+  2. Queue: [B, C]. Expand B → [C, D]. Delete C (shallowest)
+  3. Queue: [D]. → B remembers f(B)=7, C is gone
+  4. Expand D → [F]. Delete? Queue has room.
+  5. Expand F → [H]. Goal found!
+  
+  But if tree were bushier (many siblings at each level), SMA* would
+  constantly swap nodes in and out:
+
+  Frustrating case:
+  - Expand A → [B(6), C(6), D(6)] (memory full)
+  - Expand B(6) → [C(6), D(6), E(7)] (delete deepest? f=7 > rest)
+  - Delete E(7), f[B]=E(7)
+  - Now best leaf is C(6) → expand → G(7) → delete deepest
+  - Eventually revisit B, but E(7) was deleted, so re-expand B→E
+  - This cycle repeats — thrashing!
+</pre>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Thrashing Warning:</strong> When memory is severely limited, SMA* can "thrash" — repeatedly deleting and regenerating the same subtree. This is analogous to thrashing in virtual memory systems where the working set doesn't fit in physical memory. Increasing the memory limit or improving the heuristic can mitigate this.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>When to Use Each Algorithm</h2>
+        <table>
+          <tr><th>Situation</th><th>Recommended</th><th>Reason</th></tr>
+          <tr><td>Ample memory, need speed</td><td>A*</td><td>Fastest, no re-expansion</td></tr>
+          <tr><td>Very limited memory, simple heuristic</td><td>IDA*</td><td>Simplest to implement, linear space</td></tr>
+          <tr><td>Moderate memory, need optimality</td><td>RBFS</td><td>Better than IDA*, less overhead</td></tr>
+          <tr><td>Fixed memory budget, graph states</td><td>SMA*</td><td>Best general-purpose for limited RAM</td></tr>
+          <tr><td>Non-uniform costs, limited memory</td><td>SMA*</td><td>Handles varying step costs naturally</td></tr>
+          <tr><td>Thrashing observed with SMA*</td><td>RBFS or increase memory</td><td>SMA* thrashing means memory is too tight</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

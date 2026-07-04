@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heuristic Functions for the 8-Puzzle - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .puzzle-grid { display: inline-grid; grid-template-columns: repeat(3, 50px); gap: 2px; margin: 10px; vertical-align: top; }
+    .puzzle-cell { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: #1a1a2e; border: 1px solid #555; font-weight: bold; }
+    .puzzle-cell.blank { background: #0a0a1a; color: #555; }
+    .puzzle-cell.goal { border-color: #00ff88; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Heuristic Functions for the 8-Puzzle</h1>
+  <p class="subtitle">Artificial Intelligence — Informed Search</p>
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Introduction</button>
+      <button class="tab" onclick="showSection('tab2')">h1 - Misplaced Tiles</button>
+      <button class="tab" onclick="showSection('tab3')">h2 - Manhattan Distance</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The 8-Puzzle Problem</h2>
+        <p>The 8-puzzle was one of the first heuristic search problems studied in AI. It consists of a 3&times;3 grid with tiles numbered 1 through 8 and one blank space. A tile adjacent to the blank can slide into the blank position.</p>
+
+        <h3>Standard Start and Goal States</h3>
+        <div style="text-align:center;">
+          <div class="puzzle-grid">
+            <div class="puzzle-cell">7</div><div class="puzzle-cell">2</div><div class="puzzle-cell">4</div>
+            <div class="puzzle-cell">5</div><div class="puzzle-cell blank">_</div><div class="puzzle-cell">6</div>
+            <div class="puzzle-cell">8</div><div class="puzzle-cell">3</div><div class="puzzle-cell">1</div>
+          </div>
+          <span style="color:#888; vertical-align:top; line-height:100px;">&rarr;</span>
+          <div class="puzzle-grid">
+            <div class="puzzle-cell goal">1</div><div class="puzzle-cell goal">2</div><div class="puzzle-cell goal">3</div>
+            <div class="puzzle-cell goal">4</div><div class="puzzle-cell goal">5</div><div class="puzzle-cell goal">6</div>
+            <div class="puzzle-cell goal">7</div><div class="puzzle-cell goal">8</div><div class="puzzle-cell blank goal">_</div>
+          </div>
+        </div>
+
+        <h3>Complexity</h3>
+        <div class="grid">
+          <div class="card"><span class="highlight">Average Solution</span><br>22 steps</div>
+          <div class="card"><span class="highlight">Branching Factor</span><br>&asymp; 3</div>
+          <div class="card"><span class="highlight">Brute Force 22-step</span><br>3<sup>22</sup> &asymp; 3.1 &times; 10<sup>10</sup> states</div>
+          <div class="card"><span class="highlight">With Repeated States</span><br>181,440 reachable states</div>
+        </div>
+
+        <div class="warning">The full state space is huge, but with repeated-state removal only 181,440 distinct states exist. Good heuristics dramatically reduce search.</div>
+
+        <h3>Comparison: 15-Puzzle</h3>
+        <p>The 15-puzzle (4&times;4 grid) has about 10<sup>13</sup> reachable states &mdash; making uninformed search infeasible. A good heuristic is essential.</p>
+
+        <div class="example">
+          <div class="title">Example 1: Average Solution Cost</div>
+          <p>The average solution cost for a random 8-puzzle instance is 22 steps. With branching factor ~3, a brute-force search to depth 22 would explore roughly 3.1 &times; 10<sup>10</sup> nodes. By detecting repeated states, the true reachable state space is only 181,440 &mdash; but uninformed BFS/DFS still explores a large fraction of those before finding the goal.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Why Heuristics Matter</div>
+          <p>Without a heuristic, IDS solving a depth-22 8-puzzle would expand roughly 3<sup>22</sup> &asymp; 3.1 &times; 10<sup>10</sup> nodes. With a good heuristic like Manhattan distance, A* expands only a few thousand nodes &mdash; a speedup factor of over 10 million.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: 15-Puzzle Scaling</div>
+          <p>The 15-puzzle has 16! / 2 &asymp; 10<sup>13</sup> reachable states. Even with repeated state detection, uninformed search cannot find optimal solutions. However, with a well-designed heuristic (e.g., Manhattan distance or pattern databases), A* can solve random 15-puzzle instances in seconds.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Heuristic Cost vs Search Effort</div>
+          <p>For the standard start state above, the true optimal solution cost is 26 steps. h<sub>1</sub> (misplaced tiles) = 8 and h<sub>2</sub> (Manhattan) = 18. A* with h<sub>2</sub> expands far fewer nodes because h<sub>2</sub> gives a much tighter lower bound, pruning more of the search tree.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>h<sub>1</sub> &mdash; Misplaced Tiles</h2>
+        <p><strong>Definition:</strong> Count the number of tiles not in their goal position. The blank is not counted.</p>
+
+        <div class="formula">
+          <div class="label">h<sub>1</sub>(n) = number of misplaced tiles</div>
+          <div class="desc">Admissible: each misplaced tile requires at least 1 move to reach its goal position.</div>
+        </div>
+
+        <h3>Walkthrough for Start State</h3>
+        <div style="text-align:center;">
+          <div class="puzzle-grid">
+            <div class="puzzle-cell">7</div><div class="puzzle-cell">2</div><div class="puzzle-cell">4</div>
+            <div class="puzzle-cell">5</div><div class="puzzle-cell blank">_</div><div class="puzzle-cell">6</div>
+            <div class="puzzle-cell">8</div><div class="puzzle-cell">3</div><div class="puzzle-cell">1</div>
+          </div>
+        </div>
+        <table>
+          <tr><th>Tile</th><th>Goal Position</th><th>Current Position</th><th>Misplaced?</th></tr>
+          <tr><td>1</td><td>(1,1)</td><td>(3,3)</td><td class="result">Yes</td></tr>
+          <tr><td>2</td><td>(1,2)</td><td>(1,2)</td><td>No</td></tr>
+          <tr><td>3</td><td>(1,3)</td><td>(3,2)</td><td class="result">Yes</td></tr>
+          <tr><td>4</td><td>(2,1)</td><td>(1,3)</td><td class="result">Yes</td></tr>
+          <tr><td>5</td><td>(2,2)</td><td>(2,1)</td><td class="result">Yes</td></tr>
+          <tr><td>6</td><td>(2,3)</td><td>(2,3)</td><td>No</td></tr>
+          <tr><td>7</td><td>(3,1)</td><td>(1,1)</td><td class="result">Yes</td></tr>
+          <tr><td>8</td><td>(3,2)</td><td>(3,1)</td><td class="result">Yes</td></tr>
+        </table>
+        <p><span class="result">h<sub>1</sub> = 8</span> (tiles 1,3,4,5,7,8 are misplaced; tiles 2 and 6 are correct)</p>
+
+        <div class="example">
+          <div class="title">Example 1: Nearly Solved State</div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell goal">1</div><div class="puzzle-cell goal">2</div><div class="puzzle-cell goal">3</div>
+              <div class="puzzle-cell goal">4</div><div class="puzzle-cell goal">5</div><div class="puzzle-cell goal">6</div>
+              <div class="puzzle-cell goal">7</div><div class="puzzle-cell blank">_</div><div class="puzzle-cell">8</div>
+            </div>
+          </div>
+          <p>Only tile 8 is misplaced (it should be in the bottom-center, not bottom-right). <span class="result">h<sub>1</sub> = 1</span>. This is a tight lower bound &mdash; only 1 move needed.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Random Shuffle</div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell">2</div><div class="puzzle-cell">8</div><div class="puzzle-cell">3</div>
+              <div class="puzzle-cell">1</div><div class="puzzle-cell goal">5</div><div class="puzzle-cell">4</div>
+              <div class="puzzle-cell">7</div><div class="puzzle-cell">6</div><div class="puzzle-cell blank">_</div>
+            </div>
+          </div>
+          <p>Misplaced tiles: 1(2,1), 2(1,1), 4(2,3), 6(3,2), 8(1,2). <span class="result">h<sub>1</sub> = 5</span>. Correct tiles: 3,5,7.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Two-Tile Swap</div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell goal">1</div><div class="puzzle-cell goal">2</div><div class="puzzle-cell goal">3</div>
+              <div class="puzzle-cell goal">4</div><div class="puzzle-cell">6</div><div class="puzzle-cell">5</div>
+              <div class="puzzle-cell goal">7</div><div class="puzzle-cell goal">8</div><div class="puzzle-cell blank">_</div>
+            </div>
+          </div>
+          <p>Tiles 5 and 6 are swapped. Both are misplaced. <span class="result">h<sub>1</sub> = 2</span>. But the actual optimal cost is 3 &mdash; h<sub>1</sub> underestimates because moving one tile out of the way requires an extra step.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Worst Case for h<sub>1</sub></div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell">7</div><div class="puzzle-cell">8</div><div class="puzzle-cell">4</div>
+              <div class="puzzle-cell">1</div><div class="puzzle-cell">2</div><div class="puzzle-cell">3</div>
+              <div class="puzzle-cell">6</div><div class="puzzle-cell">5</div><div class="puzzle-cell blank">_</div>
+            </div>
+          </div>
+          <p>All 8 tiles are misplaced. <span class="result">h<sub>1</sub> = 8</span>. Actual optimal cost might be significantly higher, so h<sub>1</sub> gives a very loose bound here.</p>
+        </div>
+
+        <div class="warning"><strong>Limitation:</strong> h<sub>1</sub> ignores the distance each tile must travel. It only counts whether the tile is in the right place or not, making it a weak heuristic for complex states.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>h<sub>2</sub> &mdash; Manhattan Distance</h2>
+        <p><strong>Definition:</strong> Sum of the horizontal and vertical distances from each tile's current position to its goal position. The blank is not counted.</p>
+
+        <div class="formula">
+          <div class="label">h<sub>2</sub>(n) = &Sigma; |x<sub>i</sub> &minus; x<sub>i</sub><sup>goal</sup>| + |y<sub>i</sub> &minus; y<sub>i</sub><sup>goal</sup>|</div>
+          <div class="desc">Admissible: each move reduces the Manhattan distance of exactly one tile by at most 1.</div>
+        </div>
+
+        <h3>Walkthrough for Start State</h3>
+        <div style="text-align:center;">
+          <div class="puzzle-grid">
+            <div class="puzzle-cell">7</div><div class="puzzle-cell">2</div><div class="puzzle-cell">4</div>
+            <div class="puzzle-cell">5</div><div class="puzzle-cell blank">_</div><div class="puzzle-cell">6</div>
+            <div class="puzzle-cell">8</div><div class="puzzle-cell">3</div><div class="puzzle-cell">1</div>
+          </div>
+        </div>
+        <table>
+          <tr><th>Tile</th><th>Current</th><th>Goal</th><th>&Delta;x</th><th>&Delta;y</th><th>Distance</th></tr>
+          <tr><td>1</td><td>(3,3)</td><td>(1,1)</td><td>2</td><td>2</td><td class="result">4</td></tr>
+          <tr><td>2</td><td>(1,2)</td><td>(1,2)</td><td>0</td><td>0</td><td class="result">0</td></tr>
+          <tr><td>3</td><td>(3,2)</td><td>(1,3)</td><td>2</td><td>1</td><td class="result">3</td></tr>
+          <tr><td>4</td><td>(1,3)</td><td>(2,1)</td><td>1</td><td>2</td><td class="result">3</td></tr>
+          <tr><td>5</td><td>(2,1)</td><td>(2,2)</td><td>0</td><td>1</td><td class="result">1</td></tr>
+          <tr><td>6</td><td>(2,3)</td><td>(2,3)</td><td>0</td><td>0</td><td class="result">0</td></tr>
+          <tr><td>7</td><td>(1,1)</td><td>(3,1)</td><td>2</td><td>0</td><td class="result">2</td></tr>
+          <tr><td>8</td><td>(3,1)</td><td>(3,2)</td><td>0</td><td>1</td><td class="result">1</td></tr>
+          <tr><td colspan="5"><strong>Total h<sub>2</sub></strong></td><td class="result"><strong>18</strong></td></tr>
+        </table>
+        <p><span class="result">h<sub>2</sub> = 4 + 0 + 3 + 3 + 1 + 0 + 2 + 1 = 18</span></p>
+        <p>True optimal cost for this state is 26 steps. h<sub>2</sub> = 18 provides a much tighter lower bound than h<sub>1</sub> = 8.</p>
+
+        <h3>h<sub>2</sub> Dominates h<sub>1</sub></h3>
+        <div class="formula">
+          <div class="label">Dominance: h<sub>2</sub>(n) &ge; h<sub>1</sub>(n) for all states n</div>
+          <div class="desc">If a tile is misplaced, its Manhattan distance is at least 1. If it is correct, both are 0. Therefore every misplaced tile contributes 1 to h<sub>1</sub> but potentially &ge;1 to h<sub>2</sub>.</div>
+        </div>
+        <p>A* with h<sub>2</sub> expands fewer nodes than A* with h<sub>1</sub> because h<sub>2</sub> is more informed.</p>
+
+        <div class="example">
+          <div class="title">Example 1: Manhattan for Two-Tile Swap</div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell goal">1</div><div class="puzzle-cell goal">2</div><div class="puzzle-cell goal">3</div>
+              <div class="puzzle-cell goal">4</div><div class="puzzle-cell">6</div><div class="puzzle-cell">5</div>
+              <div class="puzzle-cell goal">7</div><div class="puzzle-cell goal">8</div><div class="puzzle-cell blank">_</div>
+            </div>
+          </div>
+          <p>Tile 5 is at (2,3) goal (2,2): &Delta;x=0, &Delta;y=1 &rarr; distance=1. Tile 6 is at (2,2) goal (2,3): &Delta;x=0, &Delta;y=1 &rarr; distance=1. <span class="result">h<sub>2</sub> = 2</span>, equal to h<sub>1</sub> here.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Manhattan Better Than h<sub>1</sub></div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell">7</div><div class="puzzle-cell">2</div><div class="puzzle-cell">3</div>
+              <div class="puzzle-cell">1</div><div class="puzzle-cell blank">_</div><div class="puzzle-cell">6</div>
+              <div class="puzzle-cell">4</div><div class="puzzle-cell">5</div><div class="puzzle-cell">8</div>
+            </div>
+          </div>
+          <p>h<sub>1</sub> = 5 (tiles 1,4,5,7,8 misplaced). Manhattan: 1 needs |2-1|+|1-1|=1, 4 needs |3-1|+|1-2|=3, 5 needs |3-2|+|2-2|=1, 7 needs |1-3|+|1-1|=2, 8 needs |3-3|+|2-3|=1. <span class="result">h<sub>2</sub> = 1+3+1+2+1 = 8</span>. Notice h<sub>2</sub> &gt; h<sub>1</sub>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: All Tiles Far From Home</div>
+          <div style="text-align:center;">
+            <div class="puzzle-grid">
+              <div class="puzzle-cell">5</div><div class="puzzle-cell">3</div><div class="puzzle-cell">1</div>
+              <div class="puzzle-cell">6</div><div class="puzzle-cell">7</div><div class="puzzle-cell">2</div>
+              <div class="puzzle-cell">8</div><div class="puzzle-cell">4</div><div class="puzzle-cell blank">_</div>
+            </div>
+          </div>
+          <p>h<sub>1</sub> = 8. But Manhattan: tile 1 needs 4, tile 2 needs 3, tile 3 needs 3, tile 4 needs 4, tile 5 needs 4, tile 6 needs 3, tile 7 needs 3, tile 8 needs 1. <span class="result">h<sub>2</sub> = 4+3+3+4+4+3+3+1 = 25</span> &mdash; much tighter bound.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: 15-Puzzle Manhattan Distance</div>
+          <p>For the 15-puzzle (4&times;4), Manhattan distance is computed identically. For a state where tile 14 is at (1,1) instead of (4,3): &Delta;x=3, &Delta;y=2, distance=5. Summing over all 15 tiles yields h<sub>2</sub>. Manhattan for the 15-puzzle is still admissible and typically reduces search by many orders of magnitude compared to h<sub>1</sub>.</p>
+        </div>
+
+        <div class="warning"><strong>Warning:</strong> While h<sub>2</sub> dominates h<sub>1</sub>, it is not always the best possible heuristic. More sophisticated heuristics (pattern databases, linear conflict) can be even more informed, at the cost of additional computation per node.</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

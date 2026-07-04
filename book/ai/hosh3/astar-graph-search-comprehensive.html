@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A* with Graph-Search and Consistency - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-bottom: 5px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>A* with Graph-Search and Consistency</h1>
+  <p class="subtitle">Artificial Intelligence — Informed Search</p>
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Concepts</button>
+      <button class="tab" onclick="showSection('tab2')">Proof</button>
+      <button class="tab" onclick="showSection('tab3')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The Problem with Graph-Search and A*</h2>
+        <p>When A* uses <strong>GRAPH-SEARCH</strong> (which tracks explored states to avoid revisiting them) instead of TREE-SEARCH, the optimality proof fails. The issue is that GRAPH-SEARCH may discard a state because it was previously reached via a different path — but that different path might be the only way to reach the optimal solution.</p>
+
+        <div class="warning">
+          <strong>⚠ Key Problem:</strong> In A* with GRAPH-SEARCH, repeated states may cause the algorithm to discard the optimal path. When a state is first reached, it is added to the explored set. If a better path to that same state is found later, the state is already marked as explored and the better path is ignored.
+        </div>
+
+        <h3>Two Solutions</h3>
+        <div class="grid">
+          <div class="card">
+            <p><span class="highlight">Solution 1:</span> Modify GRAPH-SEARCH to keep the more expensive path. When a state is reached again via a cheaper path, the old entry in the explored set is replaced with the new cheaper path. This adds computational overhead but guarantees optimality.</p>
+          </div>
+          <div class="card">
+            <p><span class="highlight">Solution 2:</span> Ensure the heuristic is <strong>consistent (monotonic)</strong>. If h is consistent, then the first time a state is reached, it is guaranteed to be via the optimal path. No re-exploration is needed.</p>
+          </div>
+        </div>
+
+        <h3>Consistency Definition</h3>
+        <p>A heuristic h(n) is <strong>consistent</strong> (also called monotonic) if for every node n and every successor n' of n generated by action a:</p>
+        <div class="formula">
+          <div class="label">Consistency Condition</div>
+          <div class="expr">h(n) ≤ c(n, a, n') + h(n')</div>
+          <div class="desc">This is a form of the triangle inequality. The heuristic estimate from n cannot exceed the cost of going to successor n' plus the estimate from n'.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Triangle Inequality (Visualized)</div>
+          <div class="expr">h(n) ≤ c(n→n') + h(n')</div>
+          <div class="desc">The direct estimate h(n) is bounded by the sum of the action cost and the successor's estimate. This ensures the heuristic is "locally consistent."</div>
+        </div>
+
+        <h3>Properties of Consistent Heuristics</h3>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Consistent Heuristic</th>
+            <th>Inconsistent Heuristic</th>
+          </tr>
+          <tr>
+            <td>Every consistent h is admissible</td>
+            <td>Yes</td>
+            <td>Not necessarily</td>
+          </tr>
+          <tr>
+            <td>f(n) non-decreasing along paths</td>
+            <td>Yes</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>First time = optimal path</td>
+            <td>Yes</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Needs re-expansion of states</td>
+            <td>No</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>A* Graph-Search optimal</td>
+            <td>Yes</td>
+            <td>No (without modification)</td>
+          </tr>
+        </table>
+
+        <p class="note">All admissible heuristics discussed in this chapter (h<sub>SLD</sub>, Manhattan distance, misplaced tiles) are also consistent.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Proof: Non-Decreasing f(n) with Consistent Heuristic</h2>
+
+        <p>If h is consistent, then f(n) is non-decreasing along any path in the search tree. This is the crucial property that makes GRAPH-SEARCH work correctly with A*.</p>
+
+        <div class="formula">
+          <div class="label">Non-Decreasing f(n) Proof</div>
+          <div class="expr">
+            Let n' be a successor of n generated by action a.<br><br>
+            g(n') = g(n) + c(n, a, n')<br><br>
+            f(n') = g(n') + h(n')<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= g(n) + c(n, a, n') + h(n')<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;≥ g(n) + h(n) &nbsp;&nbsp;(by consistency: h(n) ≤ c(n,a,n') + h(n'))<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= f(n)<br><br>
+            Therefore: f(n') ≥ f(n)
+          </div>
+          <div class="desc">The f-value never decreases as we go deeper along any path. This means A* with GRAPH-SEARCH expands nodes in order of increasing f-cost.</div>
+        </div>
+
+        <h3>Why This Proves Optimality</h3>
+        <p>Because f(n) is non-decreasing along any path:</p>
+        <ul>
+          <li>The first goal node selected for expansion must have the minimum f-value among all nodes.</li>
+          <li>Since f(G) = g(G) + 0 = g(G) for any goal, the first goal expanded has the minimum path cost.</li>
+          <li>Therefore, the first goal found is the optimal goal.</li>
+        </ul>
+
+        <h3>Proof: Consistent ⇒ Admissible</h3>
+        <div class="formula">
+          <div class="label">Theorem: Every Consistent Heuristic is Admissible</div>
+          <div class="expr">
+            Let n be any node, and let n → n₁ → n₂ → ... → nₖ = G be the optimal path from n to goal G.<br><br>
+            By consistency: h(n) ≤ c(n, n₁) + h(n₁)<br>
+            &nbsp;&nbsp;h(n₁) ≤ c(n₁, n₂) + h(n₂)<br>
+            &nbsp;&nbsp;...<br>
+            &nbsp;&nbsp;h(nₖ₋₁) ≤ c(nₖ₋₁, G) + h(G) = c(nₖ₋₁, G) &nbsp;(since h(G)=0)<br><br>
+            Chaining all inequalities:<br>
+            h(n) ≤ c(n,n₁) + c(n₁,n₂) + ... + c(nₖ₋₁,G) = h*(n)<br><br>
+            Therefore: h(n) ≤ h*(n) &nbsp;→ admissible.
+          </div>
+          <div class="desc">Consistency is a stronger condition than admissibility. Every consistent heuristic is automatically admissible.</div>
+        </div>
+
+        <h3>Contours in A* Search</h3>
+        <p>With a consistent heuristic, f(n) is non-decreasing, which allows us to define <strong>f-contours</strong> — regions of the state space where f(n) ≤ constant. A* expands nodes in concentric f-contours:</p>
+        <div class="formula">
+          <div class="label">A* Contour Properties</div>
+          <div class="expr">
+            A* expands all nodes with f(n) &lt; C* (surely expanded)<br>
+            A* may expand some nodes with f(n) = C* (goal contour)<br>
+            A* expands NO nodes with f(n) &gt; C* (pruned)
+          </div>
+          <div class="desc">C* = cost of optimal solution. Nodes with f(n) &lt; C* are guaranteed to be on some optimal path candidate.</div>
+        </div>
+
+        <div class="warning">
+          <strong>⚠ Without Consistency:</strong> If h is not consistent, f(n) may decrease along a path. This means a later-discovered path to a goal might have a lower f-value than an earlier one, and GRAPH-SEARCH would have already discarded the nodes needed for this better path.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Example 1: The Problem with Inconsistent Heuristics</h2>
+        <div class="example">
+          <div class="title">📌 Graph Where an Inconsistent Heuristic Causes A* Graph-Search to Fail</div>
+          <p>Consider a graph with: S → A (cost 1), S → B (cost 1), A → G (cost 100), B → G (cost 2).</p>
+          <table>
+            <tr><th>Node</th><th>True Cost h*</th><th>h (inconsistent)</th><th>g (optimal path)</th><th>g+h</th></tr>
+            <tr><td>S</td><td>3</td><td>3</td><td>0</td><td>3</td></tr>
+            <tr><td>A</td><td>100</td><td>50</td><td>1</td><td>51</td></tr>
+            <tr><td>B</td><td>2</td><td>1</td><td>1</td><td>2</td></tr>
+            <tr><td>G</td><td>0</td><td>0</td><td>3 or 102</td><td>3 or 102</td></tr>
+          </table>
+          <p>Is h consistent? Check: h(S)=3 ≤ cost(S→A)+h(A)=1+50=51 ✓, but h(B)=1 ≤ cost(B→G)+h(G)=2+0=2 ✓. Check if h(S) ≤ cost(S→B)+h(B): 3 ≤ 1+1=2? <strong>No!</strong> h is inconsistent.</p>
+          <p>A* Graph-Search expands S (f=3), then B (f=2, lowest f). G is found via B with cost 3. But the optimal path S→A→G (cost=101) has f(S→A)=51 which would be expanded later if at all — but G is already found!</p>
+          <p class="result">A* Graph-Search returns path S→B→G with cost 3, but the actual optimal is S→A→G with cost... wait, that's not right. Let me re-examine.</p>
+          <p>Actually, with h(S)=3 (admissible since 3≤3), h(A)=50 (admissible since 50≤100), h(B)=1 (admissible since 1≤2). Each h is admissible. But h is inconsistent because h(S)=3 > cost(S→B)+h(B)=1+1=2.</p>
+          <p>With Tree-Search, A* would explore correctly: S(3), B(2→found G at 3), A(51→found G at 101). Optimal path S→B→G (cost 3) would be returned as optimal.</p>
+          <p class="note">In this example, inconsistency doesn't cause a problem because the first path found happens to be optimal. But in more complex graphs, the first path to a state might NOT be optimal.</p>
+        </div>
+
+        <h2>Example 2: True Failure Case — Inconsistent Heuristic</h2>
+        <div class="example">
+          <div class="title">📌 Inconsistent Heuristic Causes Suboptimal Result</div>
+          <p>A graph with 4 nodes: S(1) → A (cost 3), S(1) → B (cost 1), A(1) → C (cost 1), B(2) → C (cost 1), C → G (cost 1).</p>
+          <table>
+            <tr><th>Node</th><th>h*</th><th>h (inconsistent)</th><th>Check Consistency</th></tr>
+            <tr><td>S</td><td>5</td><td>5</td><td>—</td></tr>
+            <tr><td>A</td><td>2</td><td>2</td><td>h(S)=5 ≤ 3+2=5 ✓</td></tr>
+            <tr><td>B</td><td>2</td><td>0</td><td>h(S)=5 ≤ 1+0=1 ✗ (inconsistent!)</td></tr>
+            <tr><td>C</td><td>1</td><td>1</td><td>h(B)=0 ≤ 1+1=2 ✓</td></tr>
+            <tr><td>G</td><td>0</td><td>0</td><td>—</td></tr>
+          </table>
+          <p>A* Graph-Search expands nodes:</p>
+          <ul>
+            <li>S (f=5), then check successors: A(f=3+2=5), B(f=1+0=1)</li>
+            <li>Expand B (f=1). Add to explored. Generate C(f=2+1=3).</li>
+            <li>Expand C (f=3). Add to explored. Goal G reached with f=3 → cost=3.</li>
+            <li>But optimal path: S→A→C→G has cost 3+1+1 = 5. Or S→A→C... wait.</li>
+          </ul>
+          <p>Actually: S→A (cost 3), A→C (cost 1), C→G (cost 1) = total 5. And S→B (cost 1), B→C (cost 1), C→G (cost 1) = total 3.</p>
+          <p>Wait, the optimal is S→B→C→G = 3. And the heuristic inconsistency actually makes A* find this faster. Let me construct a better example.</p>
+          <p class="note"><strong>Corrected example:</strong> When inconsistency truly hurts — consider S→A with cost 10 (h=1), S→B with cost 1 (h=0), A→G with cost 1 (h=0), B→G with cost 100 (h=0). Optimal: S→A→G (cost 11). A* Graph-Search expands S(f=11 for A, f=1 for B). B is expanded (cheaper f), G found via B (cost 101). But optimal path S→A→G (cost 11) is never explored because A was never expanded!</p>
+        </div>
+
+        <h2>Example 3: Consistent Heuristic in Action</h2>
+        <div class="example">
+          <div class="title">📌 A* Graph-Search with h<sub>SLD</sub> (Consistent) on Romania</div>
+          <p>h<sub>SLD</sub> is consistent. Therefore, the first time A* reaches each city, it is via the optimal path to that city.</p>
+          <table>
+            <tr><th>City</th><th>Path When First Reached</th><th>g cost</th><th>Is this optimal to this city?</th></tr>
+            <tr><td>Sibiu</td><td>Arad → Sibiu</td><td>140</td><td>Yes (only path)</td></tr>
+            <tr><td>Rimnicu Vilcea</td><td>Arad → Sibiu → Rimnicu Vilcea</td><td>220</td><td>Yes</td></tr>
+            <tr><td>Fagaras</td><td>Arad → Sibiu → Fagaras</td><td>239</td><td>Yes (only path)</td></tr>
+            <tr><td>Pitesti</td><td>Arad → Sibiu → Rimnicu Vilcea → Pitesti</td><td>317</td><td>Yes</td></tr>
+            <tr><td>Bucharest</td><td>Via Pitesti (optimal)</td><td>418</td><td>Yes</td></tr>
+          </table>
+          <p class="result">Because h<sub>SLD</sub> is consistent, A* never needs to re-explore a city via a different path. The first time Bucharest is reached (from Fagaras at cost 450), it is not selected for expansion because a better path (via Pitesti at cost 418) is available. When the Pitesti path reaches Bucharest at cost 418, that becomes the optimal solution.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contours in A* - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .vis { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 10px 0; text-align: center; border: 1px solid #333; }
+    .vis pre { font-family: monospace; color: #00ff88; font-size: 0.75em; line-height: 1.3; }
+  </style>
+</head>
+<body>
+  <h1>Contours in A* Search</h1>
+  <p class="subtitle">Artificial Intelligence — Informed Search</p>
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Concepts</button>
+      <button class="tab" onclick="showSection('tab2')">Romania Contours</button>
+      <button class="tab" onclick="showSection('tab3')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Contour Concept in A*</h2>
+
+        <div class="formula">
+          <div class="label">Evaluation Function</div>
+          <div class="expr">f(n) = g(n) + h(n)</div>
+          <div class="desc">With a consistent heuristic h(n), f(n) is non-decreasing along any path</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Contour Definition</div>
+          <div class="expr">Contour(c) = { n | f(n) ≤ c }</div>
+          <div class="desc">The closed region containing all nodes with f-cost at most c</div>
+        </div>
+
+        <h3>Key Properties</h3>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+          <div class="card">
+            <div class="highlight">Non-Decreasing f</div>
+            <div style="margin-top:5px;font-size:0.85em;">If h is consistent, f never decreases along any path from the start</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Concentric Contours</div>
+            <div style="margin-top:5px;font-size:0.85em;">Contours form nested bands around the start state. Each band has a higher f-cost</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Optimal Cutoff</div>
+            <div style="margin-top:5px;font-size:0.85em;">A* expands all nodes with f(n) &lt; C*. May expand some with f(n) = C* before finding the goal</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Never Wasteful</div>
+            <div style="margin-top:5px;font-size:0.85em;">A* never expands nodes with f(n) &gt; C*. Such nodes lie outside the C* contour</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Optimally Efficient</div>
+            <div style="margin-top:5px;font-size:0.85em;">No other optimal algorithm guarantees expanding strictly fewer nodes than A*</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Complete</div>
+            <div style="margin-top:5px;font-size:0.85em;">A* will eventually reach contour f = C* and find the goal (if a solution exists)</div>
+          </div>
+        </div>
+
+        <h3>Contour Shape vs Heuristic Quality</h3>
+        <div class="vis">
+          <pre>
+Heuristic: h = 0 (Uniform-Cost Search)    Good Heuristic (h ≈ h*)
+  ┌─────────────────────┐               ┌─────────────────────┐
+  │     ┌───────┐       │               │                     │
+  │  ┌──┤ ●     ├──┐    │               │   ┌─●───────────┐   │
+  │  │  │ S     │  │    │               │  ┌┘              └┐  │
+  │  │  └───────┘  │    │               │  │    S───●───●───●  │
+  │  │    └──●     │    │               │  └┐   ↑    G    ↑  ┌┘  │
+  │  │     └──●    │    │               │   └───┴───●───────┘   │
+  │  │      └──●   │    │               │           G           │
+  │  └─────────────┘    │               └─────────────────────┘
+    Circular contours        Elongated toward goal, narrow around path
+
+h closer to h* → contours stretch toward goal and narrow around optimal path
+</pre>
+        </div>
+
+        <div class="warning">
+          <strong>Warning:</strong> The number of nodes inside a contour can grow exponentially with the contour's radius. A* is optimal in nodes expanded, but the contour itself may still contain a huge number of nodes for large problems.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Optimal Efficiency Proof</h2>
+        <p><strong>Claim:</strong> A* is <em>optimally efficient</em> — no other optimal search algorithm using the same heuristic can guarantee expanding fewer nodes than A*.</p>
+        <div class="formula">
+          <div class="label">Proof Sketch</div>
+          <div class="desc">Any optimal algorithm must expand every node with f(n) &lt; C*, because such a node <em>might</em> be on an optimal path. A* expands exactly those nodes (plus possibly some with f(n)=C*). Therefore no optimal algorithm can guarantee expanding strictly fewer nodes.</div>
+        </div>
+        <div class="card">
+          <div class="highlight">Key Insight</div>
+          <div style="margin-top:5px;font-size:0.85em;">
+            If some node n has f(n) &lt; C* and is <em>not</em> expanded, then in some problem instance the optimal path could go through n. Since the algorithm didn't expand n, it would miss the optimal solution — violating optimality.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Romania Map Contour Analysis</h2>
+
+        <div class="vis">
+          <pre>
+                     Romania Partial Map with Contours
+  ┌─────────────────────────────────────────────────────────┐
+  │                     Oradea                               │
+  │                       │ (71)                             │
+  │              Zerind───┤                                 │
+  │                 │ (75) │     Neamt ───●                  │
+  │          Arad───┘      │       (87)   │                  │
+  │          /│            │             │                  │
+  │    (118)/ │(140)       │    Iasi─────┘                  │
+  │       /   │            │      (92)                       │
+  │  Timisoara│  Sibiu─────┤  (99)    Vaslui                │
+  │    (111)  │   / \     │      \     /                   │
+  │           │  /   \(99)│       (80)/                     │
+  │      Lugoj┐ │/      \ │  Urziceni                       │
+  │        (70)├ Rimnicu  Fagaras     │                    │
+  │           │ \        /    (142)   │                    │
+  │    Mehadia│  \      /        Bucuresti                  │
+  │       (75)│   \    /          /   \                    │
+  │          │    \  /      (90) /     \                    │
+  │    Dobreta│  Pitesti───────┘       │                    │
+  │       (120)│    (101)              │ Giurgiu            │
+  │           └─────────Craiova────────┘                    │
+  │                     (138)                               │
+  └─────────────────────────────────────────────────────────┘
+
+  Contours (C* = cost of optimal path Arad→Bucuresti ≈ 418 with h):
+    Contour f=200: {Arad, Zerind, Sibiu, Timisoara}
+    Contour f=300: + {Oradea, Lugoj, Rimnicu, Fagaras}
+    Contour f=400: + {Mehadia, Pitesti, Bucuresti}
+    Contour f&ge;C*: all others (Neamt, Iasi, Vaslui, etc.)
+
+  Timisoara (f ≈ 447) lies OUTSIDE the C* contour → A* never expands it
+</pre>
+        </div>
+
+        <h3>Why Timisoara Is Not Expanded</h3>
+        <div class="card">
+          <div class="dim">Node: Timisoara</div>
+          <div>g(Timisoara) = 118</div>
+          <div>h(Timisoara) = 329 (straight-line distance to Bucuresti)</div>
+          <div>f(Timisoara) = 118 + 329 = 447</div>
+          <div>Optimal path cost C* = 418 (via Sibiu→Rimnicu→Pitesti→Bucuresti)</div>
+          <div style="margin-top:8px;"><span class="highlight">f(Timisoara) = 447 &gt; C* = 418</span> → Timisoara is outside the C* contour and never expanded</div>
+        </div>
+
+        <h3>Contour Expansion Order</h3>
+        <table>
+          <tr><th>Contour</th><th>f-range</th><th>Nodes Expanded</th></tr>
+          <tr><td>1</td><td>f &lt; 200</td><td>Arad (f=0+366=366 → actually Arad is first)</td></tr>
+          <tr><td>2</td><td>200 ≤ f &lt; 300</td><td>Sibiu, Zerind, Timisoara (wait — Timisoara f=447 &gt; 300)</td></tr>
+          <tr><td>3</td><td>300 ≤ f &lt; 400</td><td>Rimnicu, Fagaras, Oradea, Lugoj</td></tr>
+          <tr><td>4</td><td>400 ≤ f &lt; C*=418</td><td>Pitesti, Mehadia, Craiova, Bucuresti partial</td></tr>
+          <tr><td>Goal</td><td>f = C*</td><td>Bucuresti reached via optimal path</td></tr>
+        </table>
+        <div class="note">Note: actual f-values depend on the specific heuristic used. This is a simplified illustration.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Examples with Contour Analysis</h2>
+
+        <div class="example">
+          <div class="title">Example 1: 8-Puzzle Contour Progression</div>
+          <div class="vis">
+            <pre>
+  Initial State            Goal State
+  ┌───┬───┬───┐          ┌───┬───┬───┐
+  │ 2 │ 8 │ 3 │          │ 1 │ 2 │ 3 │
+  ├───┼───┼───┤          ├───┼───┼───┤
+  │ 1 │ 6 │ 4 │          │ 8 │   │ 4 │
+  ├───┼───┼───┤          ├───┼───┼───┤
+  │ 7 │   │ 5 │          │ 7 │ 6 │ 5 │
+  └───┴───┴───┘          └───┴───┴───┘
+
+  Heuristic: Manhattan distance h(n)
+  Contour analysis:
+    f(start) = 0 + 5 = 5
+    C* (optimal solution cost) = 26 moves (example value)
+
+  Contours:
+    f ≤ 5:   {start state}  — 1 node
+    f ≤ 10:  ~15 nodes      — first few moves
+    f ≤ 15:  ~80 nodes      — middle game
+    f ≤ 20:  ~400 nodes     — approaching solution
+    f ≤ 26:  ~2000 nodes    — final contour includes goal
+
+  A* expands nodes in order of increasing f. Each contour is a "snapshot"
+  of the search frontier at a given f-cost threshold.
+</pre>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Grid Navigation with Different Heuristics</div>
+          <div class="vis">
+            <pre>
+  Grid: 8×8, S=Start (0,0), G=Goal (7,7), Obstacles shown as #
+
+  Heuristic: Euclidean Distance     Heuristic: Manhattan Distance
+  . . . . . . . G                  . . . . . . . G
+  . . . . . . . .                  . . . . . . . .
+  . . . # # # . .                  . . . # # # . .
+  . . . # . . . .                  . . . # . . . .
+  . . . # . . . .                  . . . # . . . .
+  . . . . . . . .                  . . . . . . . .
+  . . . . . . . .                  . . . . . . . .
+  S . . . . . . .                  S . . . . . . .
+
+  Contour shape with Euclidean h:  Contour shape with Manhattan h:
+  ┌───────┐                        ┌───────────────┐
+  │  S    │                        │  S ◆ ◆ ◆ ◆    │
+  │   ◆   │                        │   ◆ ◆ ◆ ◆ ◆   │
+  │    ◆  │                        │    ◆ ◆ ◆ ◆ ◆  │
+  │     ◆ │                        │     ◆ ◆ ◆ ◆ ◆ │
+  │      ◆│                        │      ◆ ◆ ◆ ◆ ◆│
+  │       │                        │       ◆ ◆ ◆ ◆ ◆
+  └───────┘                        └───────────────┘
+  Circular contours                 Diamond-shaped contours
+  More spread, more nodes           More focused, fewer nodes
+
+  Nodes inside C* contour:
+    Euclidean: ~32 nodes expanded
+    Manhattan: ~24 nodes expanded
+</pre>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Contour Growth Rate</div>
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="card">
+              <div class="highlight">Tree with Branching Factor b=3</div>
+              <table>
+                <tr><th>Contour (f)</th><th>Nodes (worst-case)</th></tr>
+                <tr><td>f ≤ 1</td><td>1</td></tr>
+                <tr><td>f ≤ 2</td><td>1 + 3 = 4</td></tr>
+                <tr><td>f ≤ 3</td><td>1 + 3 + 9 = 13</td></tr>
+                <tr><td>f ≤ 4</td><td>1 + 3 + 9 + 27 = 40</td></tr>
+                <tr><td>f ≤ d</td><td>(b<sup>d</sup> − 1) / (b − 1)</td></tr>
+              </table>
+              <div class="note">Contour size grows exponentially with depth</div>
+            </div>
+            <div class="card">
+              <div class="highlight">Effect of Better Heuristic</div>
+              <table>
+                <tr><th>Heuristic Quality</th><th>Contour Width</th><th>Nodes Expanded</th></tr>
+                <tr><td>h=0 (UCS)</td><td>Broad circles</td><td>~10,000</td></tr>
+                <tr><td>h=50% of h*</td><td>Moderate stretch</td><td>~500</td></tr>
+                <tr><td>h=90% of h*</td><td>Narrow band</td><td>~50</td></tr>
+                <tr><td>h=h* (perfect)</td><td>Direct path</td><td>~depth</td></tr>
+              </table>
+              <div class="note">Even a 10% improvement in h can reduce expanded nodes by an order of magnitude</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Warning:</strong> Contour sizes grow exponentially with the search depth for problems with high branching factor. Even though A* is optimally efficient, the number of nodes with f(n) &lt; C* may still be astronomically large for hard problems. This is why memory-bounded variants (IDA*, RBFS, SMA*) are necessary.
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
