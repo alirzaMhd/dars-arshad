@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alpha-Beta Pruning Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .tree-canvas-wrapper {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    .tree-canvas-wrapper canvas {
+      display: block;
+      margin: 0 auto;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .bounds-display {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin: 10px 0;
+    }
+    .bound-box {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 8px 18px;
+      text-align: center;
+      min-width: 100px;
+    }
+    .bound-box .blabel {
+      color: #888;
+      font-size: 0.8em;
+      display: block;
+    }
+    .bound-box .bval {
+      color: #ffcc00;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8em;
+      color: #888;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+    .pruned-display {
+      display: none;
+      background: #2a0a0a;
+      border: 1px solid #ff3333;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin: 10px 0;
+      text-align: center;
+      color: #ff6666;
+      font-size: 0.9em;
+      animation: prunedPulse 0.5s ease;
+    }
+    @keyframes prunedPulse {
+      0% { transform: scale(0.9); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ALPHA-BETA PRUNING</h1>
+  <p class="subtitle">Game Tree Search — Minimax with Alpha-Beta Pruning</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#ff6600;background:#1a0a00;"></div>
+          MAX node
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#00ccff;background:#001a2a;"></div>
+          MIN node
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#00ff88;background:#0a1a12;"></div>
+          Terminal
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="border-color:#ff3333;background:#2a0a0a;"></div>
+          Pruned
+        </div>
+      </div>
+
+      <div class="tree-canvas-wrapper">
+        <canvas id="treeCanvas" width="760" height="320"></canvas>
+      </div>
+
+      <div class="bounds-display">
+        <div class="bound-box">
+          <span class="blabel">α (alpha)</span>
+          <span class="bval" id="alphaDisplay">-∞</span>
+        </div>
+        <div class="bound-box">
+          <span class="blabel">β (beta)</span>
+          <span class="bval" id="betaDisplay">+∞</span>
+        </div>
+        <div class="bound-box">
+          <span class="blabel">Current Node</span>
+          <span class="bval" id="currentNodeDisplay">—</span>
+        </div>
+        <div class="bound-box">
+          <span class="blabel">Returned Value</span>
+          <span class="bval" id="returnValueDisplay">—</span>
+        </div>
+      </div>
+
+      <div class="pruned-display" id="prunedDisplay">
+        ✂️ PRUNED — Remaining children skipped!
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="value">Alpha-Beta Pruning</span> &nbsp;|&nbsp;
+        <span class="label">Tree:</span> <span class="value">3-level, 8 nodes</span> &nbsp;|&nbsp;
+        <span class="label">Phase:</span> <span class="highlight" id="phaseDisplay">Ready — Press Play</span> &nbsp;|&nbsp;
+        <span class="label">Computation:</span> <span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+      </div>
+
+      <div class="result-section" id="resultSection">
+        <h2>Optimal Play Found</h2>
+        <p style="color:#ccc;margin:8px 0;">The MAX player should choose <span class="result-line" id="bestMove" style="display:inline;">—</span></p>
+        <p style="color:#ccc;margin:8px 0;">Guaranteed utility: <span class="result-line" id="finalValue" style="display:inline;">—</span></p>
+        <p style="color:#aaa;font-size:0.85em;margin-top:10px;">
+          Nodes evaluated: <span id="nodesEvaluated" style="color:#00ff88;">—</span> &nbsp;|&nbsp;
+          Nodes pruned: <span id="nodesPruned" style="color:#ff3333;">—</span> &nbsp;|&nbsp;
+          Savings: <span id="pruningSavings" style="color:#ffcc00;">—</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>We have a <b>two-player game tree</b> where <span class="dim">MAX</span> tries to maximize the utility and <span class="dim">MIN</span> tries to minimize it.</p>
+          <p>The tree has <span class="dim">3 levels</span>: root (MAX) → middle (MIN) → leaves (terminals).</p>
+          <h3 style="margin-top:10px;">Alpha-Beta Bounds</h3>
+          <span class="formula-line">α = best value MAX can guarantee (starts at -∞)</span>
+          <span class="formula-line">β = best value MIN can guarantee (starts at +∞)</span>
+          <p>When <span class="split-info">α ≥ β</span>, the remaining branch is <b>pruned</b> — it cannot affect the final decision.</p>
+          <h3 style="margin-top:10px;">Game Tree</h3>
+          <span class="formula-line">         0 (MAX)</span>
+          <span class="formula-line">        / \</span>
+          <span class="formula-line">       1   2</span>
+          <span class="formula-line">      (MIN)(MIN)</span>
+          <span class="formula-line">     / \  / \</span>
+          <span class="formula-line">    3  7 1   9</span>
+          <p class="note">Leaf values: Node3=3, Node4=7, Node5=1, Node6=9</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game tree definition
+    const tree = {
+      id: 0, type: 'MAX', children: [
+        { id: 1, type: 'MIN', children: [
+          { id: 3, type: 'terminal', value: 3 },
+          { id: 4, type: 'terminal', value: 7 }
+        ]},
+        { id: 2, type: 'MIN', children: [
+          { id: 5, type: 'terminal', value: 1 },
+          { id: 6, type: 'terminal', value: 9 }
+        ]}
+      ]
+    };
+
+    // Node positions for drawing
+    const nodePos = {
+      0: { x: 380, y: 50,  label: '0', type: 'MAX' },
+      1: { x: 200, y: 150, label: '1', type: 'MIN' },
+      2: { x: 560, y: 150, label: '2', type: 'MIN' },
+      3: { x: 110, y: 260, label: '3', type: 'terminal', value: 3 },
+      4: { x: 290, y: 260, label: '4', type: 'terminal', value: 7 },
+      5: { x: 470, y: 260, label: '5', type: 'terminal', value: 1 },
+      6: { x: 650, y: 260, label: '6', type: 'terminal', value: 9 }
+    };
+
+    const edges = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]];
+
+    // Node runtime state
+    const nodeState = {};
+
+    // Animation state
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    // Canvas
+    const canvas = document.getElementById('treeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawNode(x, y, text, color, glow, strikeThrough) {
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0d1a';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = glow ? 3 : 2;
+      ctx.stroke();
+
+      if (glow) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(x, y, 22, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.fillStyle = color;
+      ctx.font = 'bold 14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+
+      if (strikeThrough) {
+        ctx.beginPath();
+        ctx.moveTo(x - 20, y - 20);
+        ctx.lineTo(x + 20, y + 20);
+        ctx.strokeStyle = '#ff3333';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 20, y - 20);
+        ctx.lineTo(x - 20, y + 20);
+        ctx.stroke();
+      }
+    }
+
+    function drawEdge(x1, y1, x2, y2, color) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1 + 22);
+      ctx.lineTo(x2, y2 - 22);
+      ctx.strokeStyle = color || '#333';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    function drawValueLabel(x, y, val, color) {
+      ctx.fillStyle = color;
+      ctx.font = 'bold 13px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(val, x, y);
+    }
+
+    function drawAlphaBeta(x, y, alpha, beta) {
+      const aText = alpha === -Infinity ? '-∞' : String(alpha);
+      const bText = beta === Infinity ? '+∞' : String(beta);
+      ctx.fillStyle = '#555';
+      ctx.font = '11px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(`α=${aText} β=${bText}`, x, y);
+    }
+
+    function drawTree() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw edges
+      for (const [from, to] of edges) {
+        const fp = nodePos[from];
+        const tp = nodePos[to];
+        const ns = nodeState[to];
+        const pruned = ns && ns.pruned;
+        const visited = ns && ns.visited;
+        let edgeColor = '#333';
+        if (pruned) edgeColor = '#ff333366';
+        else if (visited) edgeColor = '#555';
+        drawEdge(fp.x, fp.y, tp.x, tp.y, edgeColor);
+      }
+
+      // Draw nodes
+      for (const [id, pos] of Object.entries(nodePos)) {
+        const nid = parseInt(id);
+        const ns = nodeState[nid] || {};
+        let color = '#555';
+        let glow = false;
+        let strikeThrough = false;
+        let displayText = pos.label;
+
+        if (ns.pruned) {
+          color = '#ff3333';
+          strikeThrough = true;
+          displayText = pos.label;
+        } else if (ns.current) {
+          color = '#ff6600';
+          glow = true;
+          displayText = ns.value !== undefined ? String(ns.value) : pos.label;
+        } else if (ns.visited) {
+          if (pos.type === 'terminal') {
+            color = '#00ff88';
+            displayText = String(pos.value);
+          } else {
+            color = '#00ccff';
+            displayText = ns.value !== undefined ? String(ns.value) : pos.label;
+          }
+        } else if (pos.type === 'terminal') {
+          color = '#00ff88';
+          displayText = String(pos.value);
+        } else if (pos.type === 'MAX') {
+          color = '#ff6600';
+        } else {
+          color = '#00ccff';
+        }
+
+        drawNode(pos.x, pos.y, displayText, color, glow, strikeThrough);
+
+        // Alpha-beta labels for non-terminal visited nodes
+        if (ns.visited && !ns.pruned && pos.type !== 'terminal' && (ns.alpha !== undefined || ns.beta !== undefined)) {
+          drawAlphaBeta(pos.x, pos.y + 38, ns.alpha, ns.beta);
+        }
+
+        // Value label for terminal nodes
+        if (pos.type === 'terminal' && ns.visited && !ns.pruned) {
+          drawValueLabel(pos.x, pos.y - 32, `v=${pos.value}`, '#00ff88');
+        }
+      }
+    }
+
+    // Algorithm trace — manually defined steps
+    function buildSteps() {
+      steps = [];
+      // Step 1: Initialize
+      steps.push({
+        type: 'init',
+        explanation: buildInitExplanation()
+      });
+      // Step 2: Visit root (MAX node 0)
+      steps.push({
+        type: 'visit_max',
+        nodeId: 0,
+        alpha: -Infinity, beta: Infinity,
+        explanation: buildVisitMaxExplanation(0, -Infinity, Infinity)
+      });
+      // Step 3: Visit node 1 (MIN)
+      steps.push({
+        type: 'visit_min',
+        nodeId: 1, parentId: 0,
+        alpha: -Infinity, beta: Infinity,
+        explanation: buildVisitMinExplanation(1, 0, -Infinity, Infinity)
+      });
+      // Step 4: Evaluate terminal node 3
+      steps.push({
+        type: 'evaluate_terminal',
+        nodeId: 3, parentId: 1,
+        value: 3,
+        alpha: -Infinity, beta: Infinity,
+        explanation: buildEvaluateTerminalExplanation(3, 1, 3, -Infinity, Infinity)
+      });
+      // Step 5: Update node 1 value to 3
+      steps.push({
+        type: 'update_min',
+        nodeId: 1, parentId: 0,
+        value: 3, beta: 3,
+        alpha: -Infinity,
+        explanation: buildUpdateMinExplanation(1, 0, 3, 3, -Infinity)
+      });
+      // Step 6: Evaluate terminal node 4
+      steps.push({
+        type: 'evaluate_terminal',
+        nodeId: 4, parentId: 1,
+        value: 7,
+        alpha: -Infinity, beta: 3,
+        explanation: buildEvaluateTerminalExplanation(4, 1, 7, -Infinity, 3)
+      });
+      // Step 7: Node 1 keeps value 3 (min of 3,7)
+      steps.push({
+        type: 'min_keeps',
+        nodeId: 1, parentId: 0,
+        value: 3, newValue: 3,
+        alpha: -Infinity, beta: 3,
+        explanation: buildMinKeepsExplanation(1, 0, 3, 7, -Infinity)
+      });
+      // Step 8: Return 3 from node 1 to root
+      steps.push({
+        type: 'return_value',
+        fromNode: 1, toNode: 0,
+        value: 3,
+        explanation: buildReturnValueExplanation(1, 0, 3)
+      });
+      // Step 9: Update root alpha to 3
+      steps.push({
+        type: 'update_alpha',
+        nodeId: 0,
+        value: 3, alpha: 3,
+        beta: Infinity,
+        explanation: buildUpdateAlphaExplanation(0, 3, 3, Infinity)
+      });
+      // Step 10: Visit node 2 (MIN)
+      steps.push({
+        type: 'visit_min',
+        nodeId: 2, parentId: 0,
+        alpha: 3, beta: Infinity,
+        explanation: buildVisitMinExplanation(2, 0, 3, Infinity)
+      });
+      // Step 11: Evaluate terminal node 5
+      steps.push({
+        type: 'evaluate_terminal',
+        nodeId: 5, parentId: 2,
+        value: 1,
+        alpha: 3, beta: Infinity,
+        explanation: buildEvaluateTerminalExplanation(5, 2, 1, 3, Infinity)
+      });
+      // Step 12: Update node 2 value to 1
+      steps.push({
+        type: 'update_min',
+        nodeId: 2, parentId: 0,
+        value: 1, beta: 1,
+        alpha: 3,
+        explanation: buildUpdateMinExplanation(2, 0, 1, 1, 3)
+      });
+      // Step 13: PRUNE! 1 ≤ α=3, skip node 6
+      steps.push({
+        type: 'prune',
+        nodeId: 2, prunedNodeId: 6,
+        value: 1, alpha: 3,
+        explanation: buildPruneExplanation(2, 6, 1, 3)
+      });
+      // Step 14: Return 1 from node 2 to root
+      steps.push({
+        type: 'return_value',
+        fromNode: 2, toNode: 0,
+        value: 1,
+        explanation: buildReturnValueExplanation(2, 0, 1)
+      });
+      // Step 15: Final result
+      steps.push({
+        type: 'final',
+        value: 3,
+        bestChild: 1,
+        nodesEvaluated: 6,
+        nodesPruned: 1,
+        explanation: buildFinalExplanation(3, 1, 6, 1)
+      });
+    }
+
+    // Explanation builders
+    function buildInitExplanation() {
+      return `<div class="explain-section active">
+        <h3>Initialization</h3>
+        <p>Set up the Alpha-Beta search with initial bounds:</p>
+        <span class="formula-line">α = -∞  (best MAX can guarantee)</span>
+        <span class="formula-line">β = +∞  (best MIN can guarantee)</span>
+        <p>The root is a <span class="dim">MAX</span> node — it will try to maximize the utility value.</p>
+        <p class="note">Alpha-Beta pruning is an optimization of Minimax that skips branches that cannot influence the final decision.</p>
+      </div>`;
+    }
+
+    function buildVisitMaxExplanation(nodeId, alpha, beta) {
+      const aText = alpha === -Infinity ? '-∞' : String(alpha);
+      const bText = beta === Infinity ? '+∞' : String(beta);
+      return `<div class="explain-section active">
+        <h3>Visit MAX Node ${nodeId}</h3>
+        <p>We are at the <span class="dim">MAX</span> node (the root). MAX will choose the child with the <b>highest</b> value.</p>
+        <span class="formula-line">v = max(children) starting with v = -∞</span>
+        <p>Current bounds: <span class="split-info">α = ${aText}, β = ${bText}</span></p>
+        <p>Explore left child first (depth-first).</p>
+        <p class="note">MAX nodes initialize v = -∞ and update α as they find better options.</p>
+      </div>`;
+    }
+
+    function buildVisitMinExplanation(nodeId, parentId, alpha, beta) {
+      const aText = alpha === -Infinity ? '-∞' : String(alpha);
+      const bText = beta === Infinity ? '+∞' : String(beta);
+      return `<div class="explain-section active">
+        <h3>Visit MIN Node ${nodeId}</h3>
+        <p>We descend to <span class="dim">MIN</span> node ${nodeId}. MIN will choose the child with the <b>lowest</b> value.</p>
+        <span class="formula-line">v = min(children) starting with v = +∞</span>
+        <p>Bounds inherited from parent: <span class="split-info">α = ${aText}, β = ${bText}</span></p>
+        <p class="note">MIN nodes initialize v = +∞ and update β as they find worse options for MAX.</p>
+      </div>`;
+    }
+
+    function buildEvaluateTerminalExplanation(nodeId, parentId, value, alpha, beta) {
+      const aText = alpha === -Infinity ? '-∞' : String(alpha);
+      const bText = beta === Infinity ? '+∞' : String(beta);
+      return `<div class="explain-section active">
+        <h3>Evaluate Terminal Node ${nodeId}</h3>
+        <p>Leaf node — the game ends here with utility <span class="result-line" style="display:inline;">${value}</span>.</p>
+        <span class="formula-line">UTILITY(node ${nodeId}) = ${value}</span>
+        <p>Parent (MIN node ${parentId}) receives value <span class="dim">${value}</span>.</p>
+        <p>Bounds: <span class="split-info">α = ${aText}, β = ${bText}</span></p>
+        <p class="note">Terminal nodes return their stored utility immediately — no recursion needed.</p>
+      </div>`;
+    }
+
+    function buildUpdateMinExplanation(nodeId, parentId, value, beta, alpha) {
+      const aText = alpha === -Infinity ? '-∞' : String(alpha);
+      return `<div class="explain-section active">
+        <h3>Update MIN Node ${nodeId}</h3>
+        <p>MIN node ${nodeId} updates: <span class="dim">v = min(+∞, ${value}) = ${value}</span></p>
+        <span class="formula-line">β = min(+∞, ${value}) = ${beta}</span>
+        <p>Current best: MIN can guarantee <span class="result-line" style="display:inline;">${value}</span></p>
+        <p>α = ${aText}, β = ${beta}</p>
+        <p class="note">MIN tightens β — MAX cannot do better than ${value} through this path (so far).</p>
+      </div>`;
+    }
+
+    function buildMinKeepsExplanation(nodeId, parentId, keptValue, triedValue, alpha) {
+      return `<div class="explain-section active">
+        <h3>MIN Node ${nodeId} — Value Kept</h3>
+        <p>MIN evaluates child with value <span class="dim">${triedValue}</span>.</p>
+        <span class="formula-line">v = min(${keptValue}, ${triedValue}) = ${keptValue}</span>
+        <p>MIN keeps <span class="result-line" style="display:inline;">${keptValue}</span> because ${keptValue} ≤ ${triedValue}.</p>
+        <p class="note">MIN always picks the minimum — since ${keptValue} is already lower, it stays.</p>
+      </div>`;
+    }
+
+    function buildReturnValueExplanation(fromNode, toNode, value) {
+      return `<div class="explain-section active">
+        <h3>Return Value ${value}</h3>
+        <p>Node ${fromNode} returns <span class="result-line" style="display:inline;">${value}</span> to its parent (node ${toNode}).</p>
+        <span class="formula-line">MIN-VALUE(node ${fromNode}) = ${value}</span>
+        <p class="note">The recursion unwinds — parent now has this child's value to consider.</p>
+      </div>`;
+    }
+
+    function buildUpdateAlphaExplanation(nodeId, value, alpha, beta) {
+      const bText = beta === Infinity ? '+∞' : String(beta);
+      return `<div class="explain-section active">
+        <h3>Update MAX Alpha</h3>
+        <p>MAX node ${nodeId} updates: <span class="dim">v = max(-∞, ${value}) = ${value}</span></p>
+        <span class="formula-line">α = max(-∞, ${value}) = ${alpha}</span>
+        <p>MAX has found a guaranteed <span class="result-line" style="display:inline;">${value}</span> through this path.</p>
+        <p>Bounds: <span class="split-info">α = ${alpha}, β = ${bText}</span></p>
+        <p class="note">MAX tightens α — MIN must do better than ${alpha} to beat this option.</p>
+      </div>`;
+    }
+
+    function buildPruneExplanation(nodeId, prunedNodeId, value, alpha) {
+      return `<div class="explain-section active" style="border-left-color:#ff3333;">
+        <h3>✂️ PRUNING at Node ${nodeId}</h3>
+        <p>MIN node ${nodeId} found value <span class="dim">${value}</span>.</p>
+        <span class="formula-line">v = ${value} ≤ α = ${alpha}  →  PRUNE!</span>
+        <p>Since <span class="split-info">${value} ≤ ${alpha}</span>, MAX already has a better option elsewhere. MIN will never let MAX reach this value anyway.</p>
+        <p>Skip remaining child <span class="dim">node ${prunedNodeId}</span> entirely!</p>
+        <p class="note">This is the key insight of Alpha-Beta: we don't need to evaluate every node — some branches provably don't matter.</p>
+      </div>`;
+    }
+
+    function buildFinalExplanation(value, bestChild, evaluated, pruned) {
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Algorithm Complete!</h3>
+        <p>Alpha-Beta search is done. The minimax value is <span class="result-line" style="display:inline;">${value}</span>.</p>
+        <p>The MAX player should choose <span class="split-info">child ${bestChild}</span> to guarantee utility ${value}.</p>
+        <h3 style="margin-top:10px;">Pruning Summary</h3>
+        <p>Nodes evaluated: <span class="dim">${evaluated}</span> &nbsp;|&nbsp; Nodes pruned: <span class="dim" style="color:#ff3333;">${pruned}</span></p>
+        <p>Without pruning, all <span class="dim">7</span> nodes would need evaluation. Alpha-Beta saved <span class="result-line" style="display:inline;">${pruned}</span> node(s)!</p>
+        <h3 style="margin-top:10px;">Complexity</h3>
+        <p><span class="dim">Worst case:</span> O(b^d) — same as Minimax (no pruning occurs)</p>
+        <p><span class="dim">Best case:</span> O(b^(d/2)) — with perfect move ordering, twice as fast</p>
+        <p><span class="dim">Space:</span> O(b·d) — recursion stack depth</p>
+        <p class="note">The effectiveness depends on move ordering. Better ordering → more pruning.</p>
+      </div>`;
+    }
+
+    // Initialize table (no DP table needed — tree is the display)
+    function initTables() {
+      // Tree canvas handles display
+    }
+
+    // Apply a step to the visualization
+    function applyStep(step) {
+      // Clear current highlights
+      for (const id in nodeState) {
+        nodeState[id].current = false;
+      }
+      document.getElementById('prunedDisplay').style.display = 'none';
+
+      switch(step.type) {
+        case 'init':
+          // Just show init explanation
+          break;
+        case 'visit_max':
+          nodeState[step.nodeId] = { visited: true, current: true, alpha: step.alpha, beta: step.beta };
+          updateDisplays(step);
+          break;
+        case 'visit_min':
+          nodeState[step.nodeId] = { visited: true, current: true, alpha: step.alpha, beta: step.beta };
+          updateDisplays(step);
+          break;
+        case 'evaluate_terminal':
+          nodeState[step.nodeId] = { visited: true, current: true };
+          nodeState[step.parentId] = { ...nodeState[step.parentId], current: false, visited: true };
+          updateDisplays(step);
+          break;
+        case 'update_min':
+          nodeState[step.nodeId] = { visited: true, current: true, value: step.value, beta: step.beta, alpha: step.alpha };
+          updateDisplays(step);
+          break;
+        case 'min_keeps':
+          nodeState[step.nodeId] = { visited: true, current: true, value: step.value };
+          updateDisplays(step);
+          break;
+        case 'return_value':
+          nodeState[step.fromNode] = { visited: true, value: step.value };
+          nodeState[step.toNode] = { visited: true, current: true };
+          document.getElementById('returnValueDisplay').textContent = step.value;
+          updateDisplays(step);
+          break;
+        case 'update_alpha':
+          nodeState[step.nodeId] = { visited: true, current: true, value: step.value, alpha: step.alpha, beta: step.beta };
+          updateDisplays(step);
+          break;
+        case 'prune':
+          nodeState[step.prunedNodeId] = { visited: true, pruned: true };
+          nodeState[step.nodeId] = { visited: true, current: true, value: step.value, alpha: step.alpha, beta: step.value };
+          document.getElementById('prunedDisplay').style.display = 'block';
+          document.getElementById('prunedDisplay').innerHTML = `✂️ PRUNED — Node ${step.prunedNodeId} skipped! (${step.value} ≤ α=${step.alpha})`;
+          updateDisplays(step);
+          break;
+        case 'final':
+          nodeState[0] = { visited: true, value: step.value };
+          document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+          document.getElementById('computingDisplay').textContent = `minimax = ${step.value}`;
+          document.getElementById('resultSection').style.display = 'block';
+          document.getElementById('bestMove').textContent = `Child ${step.bestChild}`;
+          document.getElementById('finalValue').textContent = step.value;
+          document.getElementById('nodesEvaluated').textContent = step.nodesEvaluated;
+          document.getElementById('nodesPruned').textContent = step.nodesPruned;
+          const total = step.nodesEvaluated + step.nodesPruned;
+          const pct = Math.round((step.nodesPruned / total) * 100);
+          document.getElementById('pruningSavings').textContent = `${pct}%`;
+          break;
+      }
+
+      // Update sidebar
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${getStepDescription(step)}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+
+      drawTree();
+    }
+
+    function getStepDescription(step) {
+      switch(step.type) {
+        case 'init': return 'Initializing α and β';
+        case 'visit_max': return `Visiting MAX node ${step.nodeId}`;
+        case 'visit_min': return `Visiting MIN node ${step.nodeId}`;
+        case 'evaluate_terminal': return `Evaluating terminal node ${step.nodeId} = ${step.value}`;
+        case 'update_min': return `Node ${step.nodeId} v = ${step.value}`;
+        case 'min_keeps': return `Node ${step.nodeId} keeps v = ${step.value}`;
+        case 'return_value': return `Returning ${step.value} from node ${step.fromNode}`;
+        case 'update_alpha': return `α updated to ${step.alpha}`;
+        case 'prune': return `✂️ PRUNING node ${step.prunedNodeId}!`;
+        case 'final': return '✅ Complete!';
+        default: return '';
+      }
+    }
+
+    function updateDisplays(step) {
+      if (step.alpha !== undefined) {
+        document.getElementById('alphaDisplay').textContent =
+          step.alpha === -Infinity ? '-∞' : String(step.alpha);
+      }
+      if (step.beta !== undefined) {
+        document.getElementById('betaDisplay').textContent =
+          step.beta === Infinity ? '+∞' : String(step.beta);
+      }
+      if (step.nodeId !== undefined) {
+        document.getElementById('currentNodeDisplay').textContent = `Node ${step.nodeId}`;
+      } else if (step.fromNode !== undefined) {
+        document.getElementById('currentNodeDisplay').textContent = `Node ${step.fromNode}`;
+      }
+      if (step.value !== undefined) {
+        document.getElementById('computingDisplay').textContent = `v = ${step.value}`;
+      }
+      if (step.type === 'return_value') {
+        document.getElementById('returnValueDisplay').textContent = step.value;
+      }
+    }
+
+    function clearHighlights() {
+      for (const id in nodeState) {
+        delete nodeState[id];
+      }
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      clearHighlights();
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('prunedDisplay').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('alphaDisplay').textContent = '-∞';
+      document.getElementById('betaDisplay').textContent = '+∞';
+      document.getElementById('currentNodeDisplay').textContent = '—';
+      document.getElementById('returnValueDisplay').textContent = '—';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>We have a <b>two-player game tree</b> where <span class="dim">MAX</span> tries to maximize the utility and <span class="dim">MIN</span> tries to minimize it.</p>
+        <p>The tree has <span class="dim">3 levels</span>: root (MAX) → middle (MIN) → leaves (terminals).</p>
+        <h3 style="margin-top:10px;">Alpha-Beta Bounds</h3>
+        <span class="formula-line">α = best value MAX can guarantee (starts at -∞)</span>
+        <span class="formula-line">β = best value MIN can guarantee (starts at +∞)</span>
+        <p>When <span class="split-info">α ≥ β</span>, the remaining branch is <b>pruned</b> — it cannot affect the final decision.</p>
+        <h3 style="margin-top:10px;">Game Tree</h3>
+        <span class="formula-line">         0 (MAX)</span>
+        <span class="formula-line">        / \\</span>
+        <span class="formula-line">       1   2</span>
+        <span class="formula-line">      (MIN)(MIN)</span>
+        <span class="formula-line">     / \\  / \\</span>
+        <span class="formula-line">    3  7 1   9</span>
+        <p class="note">Leaf values: Node3=3, Node4=7, Node5=1, Node6=9</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>`;
+      buildSteps();
+      drawTree();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const lastStep = steps[steps.length - 1];
+      applyStep(lastStep);
+    }
+
+    // Speed slider listener
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    // Initialize
+    buildSteps();
+    drawTree();
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>
