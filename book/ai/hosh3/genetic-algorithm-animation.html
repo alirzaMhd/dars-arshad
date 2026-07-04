@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genetic Algorithm Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.selected {
+  background: #001a2a !important;
+  color: #00ccff !important;
+  border-color: #00ccff !important;
+  box-shadow: 0 0 12px #00ccff44;
+}
+td.crossover-pair {
+  background: #1a0030 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+  box-shadow: 0 0 12px #ff66ff44;
+}
+td.mutated {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 12px #ffff0044;
+}
+td.best {
+  background: #0a1a12 !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 14px #00ff8855;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+
+/* GA-specific styles */
+.population-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 15px 0;
+}
+.individual-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  transition: all 0.4s;
+}
+.individual-row.active {
+  border-color: #ff6600;
+  background: #1a0a00;
+}
+.individual-row.selected-row {
+  border-color: #00ccff;
+  background: #001a2a;
+}
+.individual-row.crossover-row {
+  border-color: #ff66ff;
+  background: #1a0030;
+}
+.individual-row.mutated-row {
+  border-color: #ffff00;
+  background: #1a1a00;
+}
+.individual-row.best-row {
+  border-color: #00ff88;
+  background: #0a1a12;
+}
+.ind-label {
+  color: #888;
+  font-size: 0.8em;
+  min-width: 30px;
+}
+.ind-chrom {
+  display: flex;
+  gap: 2px;
+}
+.bit-cell {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #aaa;
+  transition: all 0.3s;
+}
+.bit-cell.bit-1 {
+  color: #00ff88;
+  background: #0a1a12;
+}
+.bit-cell.bit-flip {
+  color: #ffff00 !important;
+  background: #1a1a00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 8px #ffff0044;
+}
+.bit-cell.crossover-point {
+  border-left: 2px solid #ff66ff;
+}
+.ind-value {
+  color: #ffcc00;
+  font-size: 0.85em;
+  min-width: 50px;
+  text-align: right;
+}
+.ind-fitness {
+  font-size: 0.85em;
+  min-width: 70px;
+  text-align: right;
+}
+.ind-bar-container {
+  flex: 1;
+  height: 20px;
+  background: #0d0d1a;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.ind-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.gen-display {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 15px 0;
+  font-size: 0.9em;
+}
+.gen-display .gen-label { color: #888; }
+.gen-display .gen-value { color: #ffcc00; font-weight: bold; }
+.gen-display .best-label { color: #888; }
+.gen-display .best-value { color: #00ff88; font-weight: bold; }
+.fitness-chart {
+  margin: 15px 0;
+  padding: 15px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+.fitness-chart-title {
+  color: #00ccff;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.chart-canvas {
+  width: 100%;
+  height: 150px;
+}
+.op-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.op-tag {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  font-weight: bold;
+  border: 1px solid;
+}
+.op-tag.op-select { color: #00ccff; border-color: #00ccff; background: #001a2a; }
+.op-tag.op-crossover { color: #ff66ff; border-color: #ff66ff; background: #1a0030; }
+.op-tag.op-mutate { color: #ffff00; border-color: #ffff00; background: #1a1a00; }
+.op-tag.op-elitism { color: #00ff88; border-color: #00ff88; background: #0a1a12; }
+.op-tag.active { box-shadow: 0 0 10px; }
+.arrow-indicator {
+  text-align: center;
+  color: #ff6600;
+  font-size: 1.4em;
+  margin: 8px 0;
+  animation: pulse 1s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<h1>GENETIC ALGORITHM</h1>
+<p class="subtitle">Evolutionary Optimization — Natural Selection Inspired Search</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="op-indicator" id="opIndicator">
+      <span class="op-tag op-select">Selection</span>
+      <span class="op-tag op-crossover">Crossover</span>
+      <span class="op-tag op-mutate">Mutation</span>
+      <span class="op-tag op-elitism">Elitism</span>
+    </div>
+
+    <div class="gen-display">
+      <div><span class="gen-label">Generation: </span><span class="gen-value" id="genNum">0</span></div>
+      <div><span class="best-label">Best Fitness: </span><span class="best-value" id="bestFitDisplay">—</span></div>
+      <div><span class="gen-label">Avg Fitness: </span><span class="gen-value" id="avgFitDisplay">—</span></div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title" id="popTitle">Population — Initial Random individuals</div>
+      <div class="population-display" id="populationDisplay"></div>
+    </div>
+
+    <div class="fitness-chart">
+      <div class="fitness-chart-title">Fitness Over Generations</div>
+      <canvas class="chart-canvas" id="fitnessChart"></canvas>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <span class="label">Algorithm: </span><span class="value">Genetic Algorithm</span><br>
+      <span class="label">Objective: </span><span class="highlight">Maximize f(x) = x²</span><br>
+      <span class="label">Encoding: </span><span class="value">6-bit binary string</span><br>
+      <span class="label">Population: </span><span class="value">6 individuals</span><br>
+      <span class="label">Selection: </span><span class="value">Tournament (size 2)</span><br>
+      <span class="label">Crossover: </span><span class="value">Single-point (pc=0.8)</span><br>
+      <span class="label">Mutation: </span><span class="value">Bit-flip (pm=0.1)</span><br>
+      <span class="label">Elitism: </span><span class="value">Top 1 survives</span>
+    </div>
+
+    <div class="result-section" id="resultSection" style="display:none;">
+      <h2>🏆 Optimization Complete</h2>
+      <p>Best individual found across all generations:</p>
+      <p class="result-line" id="finalResult">—</p>
+      <p style="color:#ccc; margin-top:8px;" id="finalDetail">—</p>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>We want to <b>maximize f(x) = x²</b> where <span class="dim">x</span> is an integer encoded as a <b>6-bit binary string</b>.</p>
+        <p>The search space has <span class="dim">2⁶ = 64</span> possible values (0–63). The global maximum is <span class="result-line" style="display:inline;">f(63) = 3969</span>.</p>
+        <h3 style="margin-top:10px;">How It Works</h3>
+        <p>A <span class="dim">population</span> of candidate solutions evolves over <span class="dim">generations</span>:</p>
+        <p>1. <b>Evaluate</b> fitness of each individual</p>
+        <p>2. <b>Select</b> parents via tournament selection</p>
+        <p>3. <b>Crossover</b> parents to create offspring</p>
+        <p>4. <b>Mutate</b> offspring with small probability</p>
+        <p>5. <b>Replace</b> population with new generation (elitism keeps best)</p>
+        <span class="formula-line">fitness(x) = x², where x = decode(binary string)</span>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const POP_SIZE = 6;
+const CHROM_LEN = 6;
+const CROSSOVER_RATE = 0.8;
+const MUTATION_RATE = 0.1;
+const TOURNAMENT_SIZE = 2;
+const MAX_GENERATIONS = 8;
+
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+let population = [];
+let generation = 0;
+let bestEver = null;
+let bestEverFit = -1;
+let fitnessHistory = [];
+let selectedIndices = [];
+let crossoverPairs = [];
+let mutatedBits = [];
+let phase = 'eval';
+
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function randBit() { return Math.random() < 0.5 ? 0 : 1; }
+
+function randomChrom() {
+  let c = [];
+  for (let i = 0; i < CHROM_LEN; i++) c.push(randBit());
+  return c;
+}
+
+function decode(chrom) {
+  let val = 0;
+  for (let i = 0; i < CHROM_LEN; i++) val = val * 2 + chrom[i];
+  return val;
+}
+
+function fitness(chrom) {
+  let v = decode(chrom);
+  return v * v;
+}
+
+function chromStr(chrom) { return chrom.join(''); }
+
+function initPopulation() {
+  population = [];
+  for (let i = 0; i < POP_SIZE; i++) {
+    let c = randomChrom();
+    population.push({ chrom: c, value: decode(c), fit: fitness(c) });
+  }
+  generation = 0;
+  bestEver = null;
+  bestEverFit = -1;
+  fitnessHistory = [];
+  updateBestEver();
+}
+
+function updateBestEver() {
+  for (let ind of population) {
+    if (ind.fit > bestEverFit) {
+      bestEverFit = ind.fit;
+      bestEver = [...ind.chrom];
+    }
+  }
+}
+
+function tournamentSelect(pop, size) {
+  let best = null;
+  for (let i = 0; i < size; i++) {
+    let idx = randInt(0, pop.length - 1);
+    if (!best || pop[idx].fit > best.fit) best = { ...pop[idx], idx };
+  }
+  return best;
+}
+
+function singlePointCrossover(p1, p2) {
+  let pt = randInt(1, CHROM_LEN - 1);
+  let c1 = [...p1.chrom.slice(0, pt), ...p2.chrom.slice(pt)];
+  let c2 = [...p2.chrom.slice(0, pt), ...p1.chrom.slice(pt)];
+  return { c1, c2, point: pt };
+}
+
+function mutate(chrom) {
+  let flips = [];
+  for (let i = 0; i < CHROM_LEN; i++) {
+    if (Math.random() < MUTATION_RATE) {
+      chrom[i] = 1 - chrom[i];
+      flips.push(i);
+    }
+  }
+  return { chrom, flips };
+}
+
+function buildSteps() {
+  steps = [];
+  let pop = population.map(p => ({ chrom: [...p.chrom], value: p.value, fit: p.fit }));
+
+  // Step 1: Initial evaluation
+  steps.push({
+    type: 'eval',
+    gen: 0,
+    pop: pop.map(p => ({ ...p, chrom: [...p.chrom] })),
+    phase: 'eval',
+    explanation: buildEvalExplanation(0, pop)
+  });
+
+  for (let gen = 1; gen <= MAX_GENERATIONS; gen++) {
+    let currentPop = pop.map(p => ({ ...p, chrom: [...p.chrom] }));
+
+    // Sort by fitness descending
+    let ranked = currentPop.map((p, i) => ({ ...p, idx: i })).sort((a, b) => b.fit - a.fit);
+
+    // Elitism: keep best
+    let elite = { ...ranked[0], chrom: [...ranked[0].chrom] };
+
+    // Selection
+    let selected = [];
+    let selIndices = [];
+    for (let i = 0; i < POP_SIZE; i++) {
+      let t = tournamentSelect(currentPop, TOURNAMENT_SIZE);
+      selected.push({ ...currentPop[t.idx], idx: t.idx });
+      selIndices.push(t.idx);
+    }
+    steps.push({
+      type: 'select',
+      gen: gen,
+      selected: selected.map(s => ({ ...s, chrom: [...s.chrom] })),
+      selIndices: [...selIndices],
+      phase: 'select',
+      explanation: buildSelectExplanation(gen, selected, selIndices, ranked)
+    });
+
+    // Crossover
+    let offspring = [];
+    let crossPairs = [];
+    for (let i = 0; i < POP_SIZE - 1; i += 2) {
+      let p1 = selected[i];
+      let p2 = selected[i + 1];
+      if (Math.random() < CROSSOVER_RATE) {
+        let { c1, c2, point } = singlePointCrossover(p1, p2);
+        offspring.push({ chrom: c1, value: decode(c1), fit: fitness(c1) });
+        offspring.push({ chrom: c2, value: decode(c2), fit: fitness(c2) });
+        crossPairs.push({ i, i1: i + 1, point });
+      } else {
+        offspring.push({ chrom: [...p1.chrom], value: p1.value, fit: p1.fit });
+        offspring.push({ chrom: [...p2.chrom], value: p2.value, fit: p2.fit });
+      }
+    }
+    if (offspring.length < POP_SIZE) {
+      let last = selected[selected.length - 1];
+      offspring.push({ chrom: [...last.chrom], value: last.value, fit: last.fit });
+    }
+    steps.push({
+      type: 'crossover',
+      gen: gen,
+      offspring: offspring.map(o => ({ ...o, chrom: [...o.chrom] })),
+      crossPairs: crossPairs,
+      phase: 'crossover',
+      explanation: buildCrossoverExplanation(gen, crossPairs, offspring)
+    });
+
+    // Mutation
+    let mutated = [];
+    let mutInfo = [];
+    for (let i = 0; i < offspring.length; i++) {
+      let { chrom: mc, flips } = mutate([...offspring[i].chrom]);
+      mutated.push({ chrom: mc, value: decode(mc), fit: fitness(mc) });
+      if (flips.length > 0) mutInfo.push({ idx: i, flips });
+    }
+    steps.push({
+      type: 'mutate',
+      gen: gen,
+      mutated: mutated.map(m => ({ ...m, chrom: [...m.chrom] })),
+      mutInfo: mutInfo,
+      phase: 'mutate',
+      explanation: buildMutateExplanation(gen, mutInfo, mutated)
+    });
+
+    // Replace (elitism)
+    mutated[0] = { chrom: [...elite.chrom], value: elite.value, fit: elite.fit };
+    pop = mutated;
+    steps.push({
+      type: 'replace',
+      gen: gen,
+      pop: pop.map(p => ({ ...p, chrom: [...p.chrom] })),
+      eliteIdx: 0,
+      phase: 'replace',
+      explanation: buildReplaceExplanation(gen, pop, elite)
+    });
+  }
+}
+
+function buildEvalExplanation(gen, pop) {
+  let fitSum = pop.reduce((s, p) => s + p.fit, 0);
+  let maxFit = Math.max(...pop.map(p => p.fit));
+  let avgFit = (fitSum / pop.length).toFixed(1);
+  let items = pop.map((p, i) =>
+    `<span class="dim">${chromStr(p.chrom)}</span>→${p.value} (f=${p.fit})`
+  ).join(', ');
+  return `<div class="explain-section active">
+    <h3>Generation ${gen} — Evaluate Population</h3>
+    <p>Evaluate fitness for each individual in the population.</p>
+    <span class="formula-line">f(x) = x², where x = decode(binary)</span>
+    <p>Population: ${items}</p>
+    <p>Best fitness: <span class="result-line" style="display:inline;">${maxFit}</span> | Avg: <span class="dim">${avgFit}</span></p>
+    <p class="note">Higher fitness = better candidate solution.</p>
+  </div>`;
+}
+
+function buildSelectExplanation(gen, selected, selIndices, ranked) {
+  let items = selected.map((s, i) =>
+    `<span class="dim">${chromStr(s.chrom)}</span>→f=${s.fit}`
+  ).join(', ');
+  return `<div class="explain-section active">
+    <h3>Generation ${gen} — Tournament Selection</h3>
+    <p>Select parents via <b>tournament selection</b> (pick 2 random, keep the fitter one).</p>
+    <p>Ranked best: <span class="result-line" style="display:inline;">${chromStr(ranked[0].chrom)} (f=${ranked[0].fit})</span></p>
+    <span class="formula-line">for i in 0..${POP_SIZE-1}: pick 2 random → keep fitter</span>
+    <p>Selected: ${items}</p>
+    <p class="note">Fitter individuals have higher chance of being selected as parents.</p>
+  </div>`;
+}
+
+function buildCrossoverExplanation(gen, crossPairs, offspring) {
+  let pairs = crossPairs.map(cp =>
+    `pair(${cp.i},${cp.i1}) at point ${cp.point}`
+  ).join(', ');
+  let noCross = POP_SIZE - crossPairs.length * 2;
+  return `<div class="explain-section active">
+    <h3>Generation ${gen} — Single-Point Crossover</h3>
+    <p>With probability <span class="dim">pc=${CROSSOVER_RATE}</span>, swap chromosome tails at a random point.</p>
+    <span class="formula-line">if rand() < ${CROSSOVER_RATE}: crossover(parent1, parent2, point)</span>
+    <p>Crossover events: ${pairs || 'none'}</p>
+    <p>No crossover: ${noCross > 0 ? noCross + ' pairs copied directly' : 'all pairs crossed'}</p>
+    <p class="note">Crossover combines genetic material from two parents.</p>
+  </div>`;
+}
+
+function buildMutateExplanation(gen, mutInfo, mutated) {
+  let mutDesc = mutInfo.length > 0
+    ? mutInfo.map(m => `ind[${m.idx}] flip bits: ${m.flips.join(',')}`).join('; ')
+    : 'no mutations';
+  return `<div class="explain-section active">
+    <h3>Generation ${gen} — Bit-Flip Mutation</h3>
+    <p>Each bit flips with probability <span class="dim">pm=${MUTATION_RATE}</span>.</p>
+    <span class="formula-line">for each bit: if rand() < ${MUTATION_RATE}: bit = 1 - bit</span>
+    <p>Mutations: ${mutDesc}</p>
+    <p class="note">Mutation maintains genetic diversity and prevents premature convergence.</p>
+  </div>`;
+}
+
+function buildReplaceExplanation(gen, pop, elite) {
+  let fitSum = pop.reduce((s, p) => s + p.fit, 0);
+  let maxFit = Math.max(...pop.map(p => p.fit));
+  let avgFit = (fitSum / pop.length).toFixed(1);
+  return `<div class="explain-section active">
+    <h3>Generation ${gen} — Replacement + Elitism</h3>
+    <p>Replace population with offspring. <b>Elitism:</b> best individual from previous generation is preserved.</p>
+    <span class="formula-line">pop[0] = elite (${chromStr(elite.chrom)} f=${elite.fit})</span>
+    <p>New generation best: <span class="result-line" style="display:inline;">${maxFit}</span> | Avg: <span class="dim">${avgFit}</span></p>
+    <p class="note">Elitism ensures the best solution is never lost.</p>
+  </div>`;
+}
+
+function buildFinishedExplanation() {
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>After ${MAX_GENERATIONS} generations, the best individual found is:</p>
+    <span class="result-line">${chromStr(bestEver)} → x=${decode(bestEver)} → f(x)=${bestEverFit}</span>
+    <h3 style="margin-top:10px;">Key Takeaways</h3>
+    <p><span class="dim">Selection</span> drives exploitation (fitter survive)</p>
+    <p><span class="dim">Crossover</span> combines good partial solutions</p>
+    <p><span class="dim">Mutation</span> maintains exploration diversity</p>
+    <p><span class="dim">Elitism</span> prevents losing the best found solution</p>
+    <h3 style="margin-top:10px;">Complexity</h3>
+    <p><span class="dim">Per generation:</span> O(n·L) where n=pop size, L=chrom length</p>
+    <p><span class="dim">Total:</span> O(g·n·L) where g=generations</p>
+    <p class="note">GA provides no optimality guarantee but works well on large, complex search spaces.</p>
+  </div>`;
+}
+
+function initPopDisplay() {
+  let container = document.getElementById('populationDisplay');
+  container.innerHTML = '';
+  let maxFit = Math.max(...population.map(p => p.fit), 1);
+  for (let i = 0; i < POP_SIZE; i++) {
+    let p = population[i];
+    let barColor = p.fit === bestEverFit ? '#00ff88' : '#00ccff';
+    let barWidth = (p.fit / maxFit * 100).toFixed(0);
+    let chromCells = p.chrom.map((b, bi) =>
+      `<div class="bit-cell ${b ? 'bit-1' : ''}" id="bit-${i}-${bi}">${b}</div>`
+    ).join('');
+    let html = `
+      <div class="individual-row" id="indRow-${i}">
+        <span class="ind-label">#${i}</span>
+        <div class="ind-chrom">${chromCells}</div>
+        <span class="ind-value">x=${p.value}</span>
+        <span class="ind-fitness">f=${p.fit}</span>
+        <div class="ind-bar-container">
+          <div class="ind-bar" id="indBar-${i}" style="width:${barWidth}%;background:${barColor};"></div>
+        </div>
+      </div>`;
+    container.innerHTML += html;
+  }
+}
+
+function drawFitnessChart() {
+  let canvas = document.getElementById('fitnessChart');
+  let ctx = canvas.getContext('2d');
+  let W = canvas.width = canvas.offsetWidth * 2;
+  let H = canvas.height = canvas.offsetHeight * 2;
+  ctx.clearRect(0, 0, W, H);
+  if (fitnessHistory.length < 2) return;
+
+  let maxFit = Math.max(...fitnessHistory.map(h => h.best), 1);
+  let pad = 40;
+  let gW = W - pad * 2;
+  let gH = H - pad * 2;
+
+  // Grid
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    let y = pad + (gH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.font = '20px Courier New';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxFit * (1 - i / 4)), pad - 5, y + 5);
+  }
+
+  // Best line
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i < fitnessHistory.length; i++) {
+    let x = pad + (gW / (fitnessHistory.length - 1)) * i;
+    let y = pad + gH * (1 - fitnessHistory[i].best / maxFit);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Avg line
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < fitnessHistory.length; i++) {
+    let x = pad + (gW / (fitnessHistory.length - 1)) * i;
+    let y = pad + gH * (1 - fitnessHistory[i].avg / maxFit);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Points
+  for (let i = 0; i < fitnessHistory.length; i++) {
+    let x = pad + (gW / (fitnessHistory.length - 1)) * i;
+    let yB = pad + gH * (1 - fitnessHistory[i].best / maxFit);
+    let yA = pad + gH * (1 - fitnessHistory[i].avg / maxFit);
+    ctx.fillStyle = '#00ff88';
+    ctx.beginPath(); ctx.arc(x, yB, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.arc(x, yA, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Legend
+  ctx.fillStyle = '#00ff88';
+  ctx.fillRect(W - 180, 10, 16, 4);
+  ctx.fillStyle = '#ccc';
+  ctx.font = '18px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('Best', W - 160, 18);
+  ctx.fillStyle = '#ff6600';
+  ctx.fillRect(W - 100, 10, 16, 4);
+  ctx.fillStyle = '#ccc';
+  ctx.fillText('Avg', W - 80, 18);
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.individual-row').forEach(el => {
+    el.className = 'individual-row';
+  });
+  document.querySelectorAll('.bit-cell').forEach(el => {
+    el.classList.remove('bit-flip', 'crossover-point');
+  });
+  document.querySelectorAll('.op-tag').forEach(el => {
+    el.classList.remove('active');
+  });
+}
+
+function applyStep(step) {
+  clearHighlights();
+  generation = step.gen;
+
+  if (step.type === 'eval') {
+    population = step.pop;
+    let fitSum = population.reduce((s, p) => s + p.fit, 0);
+    let maxFit = Math.max(...population.map(p => p.fit));
+    let avgFit = (fitSum / POP_SIZE).toFixed(1);
+    document.getElementById('genNum').textContent = step.gen;
+    document.getElementById('bestFitDisplay').textContent = maxFit;
+    document.getElementById('avgFitDisplay').textContent = avgFit;
+    document.getElementById('popTitle').textContent = `Population — Evaluate Generation ${step.gen}`;
+    initPopDisplay();
+    drawChart();
+
+  } else if (step.type === 'select') {
+    document.getElementById('popTitle').textContent = `Generation ${step.gen} — Selection (Tournament)`;
+    for (let i = 0; i < step.selIndices.length; i++) {
+      let row = document.getElementById('indRow-' + i);
+      if (row) row.classList.add('selected-row');
+    }
+    let selTag = document.querySelector('.op-tag.op-select');
+    if (selTag) selTag.classList.add('active');
+
+  } else if (step.type === 'crossover') {
+    document.getElementById('popTitle').textContent = `Generation ${step.gen} — Crossover`;
+    for (let cp of step.crossPairs) {
+      let r1 = document.getElementById('indRow-' + cp.i);
+      let r2 = document.getElementById('indRow-' + cp.i1);
+      if (r1) r1.classList.add('crossover-row');
+      if (r2) r2.classList.add('crossover-row');
+      for (let bi = cp.point; bi < CHROM_LEN; bi++) {
+        let b1 = document.getElementById('bit-' + cp.i + '-' + bi);
+        let b2 = document.getElementById('bit-' + cp.i1 + '-' + bi);
+        if (b1) b1.classList.add('crossover-point');
+        if (b2) b2.classList.add('crossover-point');
+      }
+    }
+    let crTag = document.querySelector('.op-tag.op-crossover');
+    if (crTag) crTag.classList.add('active');
+
+  } else if (step.type === 'mutate') {
+    document.getElementById('popTitle').textContent = `Generation ${step.gen} — Mutation`;
+    for (let mi of step.mutInfo) {
+      let row = document.getElementById('indRow-' + mi.idx);
+      if (row) row.classList.add('mutated-row');
+      for (let f of mi.flips) {
+        let b = document.getElementById('bit-' + mi.idx + '-' + f);
+        if (b) b.classList.add('bit-flip');
+      }
+    }
+    let mtTag = document.querySelector('.op-tag.op-mutate');
+    if (mtTag) mtTag.classList.add('active');
+
+  } else if (step.type === 'replace') {
+    population = step.pop;
+    let fitSum = population.reduce((s, p) => s + p.fit, 0);
+    let maxFit = Math.max(...population.map(p => p.fit));
+    let avgFit = (fitSum / POP_SIZE).toFixed(1);
+    document.getElementById('genNum').textContent = step.gen;
+    document.getElementById('bestFitDisplay').textContent = maxFit;
+    document.getElementById('avgFitDisplay').textContent = avgFit;
+    document.getElementById('popTitle').textContent = `Generation ${step.gen} — New Population (Elitism applied)`;
+    initPopDisplay();
+    let eliteRow = document.getElementById('indRow-0');
+    if (eliteRow) eliteRow.classList.add('best-row');
+    let elTag = document.querySelector('.op-tag.op-elitism');
+    if (elTag) elTag.classList.add('active');
+    drawChart();
+  }
+
+  fitnessHistory.push({
+    best: Math.max(...population.map(p => p.fit)),
+    avg: population.reduce((s, p) => s + p.fit, 0) / POP_SIZE
+  });
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.type.charAt(0).toUpperCase() + step.type.slice(1)} (Gen ${step.gen})`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function drawChart() { drawFitnessChart(); }
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  generation = 0;
+  bestEver = null;
+  bestEverFit = -1;
+  fitnessHistory = [];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('genNum').textContent = '0';
+  document.getElementById('bestFitDisplay').textContent = '—';
+  document.getElementById('avgFitDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+    <h3>Problem Setup</h3>
+    <p>We want to <b>maximize f(x) = x²</b> where <span class="dim">x</span> is an integer encoded as a <b>6-bit binary string</b>.</p>
+    <p>The search space has <span class="dim">2⁶ = 64</span> possible values (0–63). The global maximum is <span class="result-line" style="display:inline;">f(63) = 3969</span>.</p>
+    <h3 style="margin-top:10px;">How It Works</h3>
+    <p>A <span class="dim">population</span> of candidate solutions evolves over <span class="dim">generations</span>:</p>
+    <p>1. <b>Evaluate</b> fitness of each individual</p>
+    <p>2. <b>Select</b> parents via tournament selection</p>
+    <p>3. <b>Crossover</b> parents to create offspring</p>
+    <p>4. <b>Mutate</b> offspring with small probability</p>
+    <p>5. <b>Replace</b> population with new generation (elitism keeps best)</p>
+    <span class="formula-line">fitness(x) = x², where x = decode(binary string)</span>
+    <p class="note">Press Play or Step to begin.</p>
+  </div>`;
+  document.getElementById('popTitle').textContent = 'Population — Initial Random individuals';
+  clearHighlights();
+  initPopulation();
+  buildSteps();
+  initPopDisplay();
+  document.getElementById('totalSteps').textContent = steps.length;
+  let canvas = document.getElementById('fitnessChart');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function finishAnimation() {
+  animating = false;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('finalResult').textContent = `${chromStr(bestEver)} → x = ${decode(bestEver)} → f(x) = ${bestEverFit}`;
+  document.getElementById('finalDetail').textContent = `Found after ${MAX_GENERATIONS} generations. Global optimum is f(63) = 3969.`;
+  document.getElementById('sidebarPhase').textContent = `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+  drawChart();
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initPopulation();
+buildSteps();
+initPopDisplay();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
