@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forward Chaining - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .step { background: #0d0d1a; padding: 10px; border-radius: 6px; margin: 8px 0; border-left: 3px solid #ffcc00; }
+    .step-num { color: #ffcc00; font-weight: bold; }
+    .trace-table td { font-size: 0.8em; }
+    .trace-table .new { color: #00ff88; font-weight: bold; }
+    .trace-table .old { color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Forward Chaining</h1>
+  <p class="subtitle">Artificial Intelligence — Logical Agents Chapter</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Step-by-Step Trace</button>
+      <button class="tab" onclick="showSection('tab3')">AND-OR Graphs</button>
+      <button class="tab" onclick="showSection('tab4')">Comparison & Properties</button>
+    </div>
+
+    <!-- Tab 1: Algorithm Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>PL-FC-ENTAILS Algorithm</h2>
+        <p><span class="result">Forward chaining</span> is a data-driven inference algorithm for Horn clauses. It starts from known facts and derives new facts by applying rules whose premises are all satisfied.</p>
+
+        <div class="formula">
+          <div class="label">Algorithm: PL-FC-ENTAILS(KB, q)</div>
+          <div class="expr">
+            function PL-FC-ENTAILS?(KB, q) returns true or false<br>
+            inputs: KB — knowledge base (set of Horn clauses)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;q — query (proposition symbol)<br>
+            local variables: count — table, indexed by clause, initially the number of premises<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inferred — table, indexed by symbol, initially false<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;agenda — list of symbols, initially the facts in KB<br><br>
+            while agenda is not empty do<br>
+            &nbsp;&nbsp;p ← Pop(agenda)<br>
+            &nbsp;&nbsp;unless inferred[p] do<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;inferred[p] ← true<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;for each Horn clause c in whose premise p appears do<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;decrement count[c]<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if count[c] = 0 then<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;head ← the head of c<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if head = q then return true<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;add head to agenda<br>
+            return false
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Data Structures</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Count Table</h3>
+            <p class="highlight">Tracks remaining premises</p>
+            <p>For each Horn clause, stores how many of its premises have NOT yet been proven. When count reaches 0, the rule fires.</p>
+          </div>
+          <div class="card">
+            <h3>Agenda</h3>
+            <p class="highlight">Symbols to process</p>
+            <p>A queue of symbols that have been newly inferred but not yet processed. Popped one at a time.</p>
+          </div>
+          <div class="card">
+            <h3>Inferred Table</h3>
+            <p class="highlight">Tracks processed symbols</p>
+            <p>Boolean array marking which symbols have already been popped from the agenda. Prevents re-processing.</p>
+          </div>
+          <div class="card">
+            <h3>Head Lookup</h3>
+            <p class="highlight">Reverse index</p>
+            <p>For each symbol, which clauses have it in their premise. Allows efficient rule firing when a new fact is derived.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>How It Works (Intuition)</h2>
+        <div class="step">
+          <span class="step-num">1. Initialize:</span>
+          <p>Put all known facts (positive literals with no premises) into the agenda.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">2. Pop & Process:</span>
+          <p>Remove a symbol p from the agenda. For every rule where p appears in the body, decrement its remaining premise count.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">3. Fire Rules:</span>
+          <p>When a rule's count reaches 0, ALL its premises are satisfied. Add its head to the agenda (new fact derived!).</p>
+        </div>
+        <div class="step">
+          <span class="step-num">4. Repeat:</span>
+          <p>Continue until the query q is found (return true) or the agenda is empty (return false).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Step-by-Step Trace -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Example: Forward Chaining Trace</h2>
+        <p>Knowledge Base (Horn clauses):</p>
+        <div class="code">
+          1. A (fact)<br>
+          2. B (fact)<br>
+          3. A ∧ B → C  (CNF: ¬A ∨ ¬B ∨ C)<br>
+          4. B ∧ C → D  (CNF: ¬B ∨ ¬C ∨ D)<br>
+          5. C → E      (CNF: ¬C ∨ E)
+        </div>
+        <p class="note">Query: Is E entailed?</p>
+      </div>
+
+      <div class="section">
+        <h2>Initialization</h2>
+        <table>
+          <tr><th>Clause</th><th>Premises</th><th>Count</th></tr>
+          <tr><td>A</td><td>—</td><td class="highlight">0 (fact)</td></tr>
+          <tr><td>B</td><td>—</td><td class="highlight">0 (fact)</td></tr>
+          <tr><td>A ∧ B → C</td><td>{A, B}</td><td>2</td></tr>
+          <tr><td>B ∧ C → D</td><td>{B, C}</td><td>2</td></tr>
+          <tr><td>C → E</td><td>{C}</td><td>1</td></tr>
+        </table>
+        <p><strong>Agenda:</strong> [A, B]</p>
+        <p><strong>Inferred:</strong> {A: false, B: false, C: false, D: false, E: false}</p>
+      </div>
+
+      <div class="section">
+        <h2>Trace Table</h2>
+        <table class="trace-table">
+          <tr><th>Step</th><th>p (popped)</th><th>Agenda After</th><th>Count Updates</th><th>New Inference</th></tr>
+          <tr><td>1</td><td class="new">A</td><td>[B]</td><td>C3: 2→1</td><td>None</td></tr>
+          <tr><td>2</td><td class="new">B</td><td>[]</td><td>C3: 1→0, C4: 2→1</td><td class="new">C fires → add C</td></tr>
+          <tr><td>3</td><td class="new">C</td><td>[D, E]</td><td>C4: 1→0, C5: 1→0</td><td class="new">D fires → add D<br>E fires → add E</td></tr>
+          <tr><td>4</td><td class="new">D</td><td>[E]</td><td>—</td><td>None</td></tr>
+          <tr><td>5</td><td class="new">E</td><td>[]</td><td>—</td><td><span class="result">Query E found! Return true</span></td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Wumpus World Forward Chaining</h2>
+        <div class="code">
+          KB:<br>
+          R₁,₁ (agent at [1,1])<br>
+          ¬B₁,₁ (no breeze at [1,1])<br>
+          R₁,₁ ∧ ¬B₁,₁ → OK₁,₂ (safe at [1,2])<br>
+          R₁,₁ ∧ ¬B₁,₁ → OK₂,₁ (safe at [2,1])
+        </div>
+
+        <div class="step">
+          <span class="step-num">Trace:</span>
+          <p>Agenda starts with: [R₁,₁, ¬B₁,₁]</p>
+          <p>Pop R₁,₁ → decrements count of rules 3 and 4 (both now 1)</p>
+          <p>Pop ¬B₁,₁ → decrements count of rules 3 and 4 (both now 0)</p>
+          <p>Rule 3 fires: OK₁,₂ added to agenda</p>
+          <p>Rule 4 fires: OK₂,₁ added to agenda</p>
+          <p class="result">Both OK₁,₂ and OK₂,₁ are inferred as safe squares!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: No Inference Possible</h2>
+        <div class="code">
+          KB:<br>
+          A (fact)<br>
+          B ∧ C → D (CNF: ¬B ∨ ¬C ∨ D)<br>
+          D → E (CNF: ¬D ∨ E)
+        </div>
+
+        <div class="step">
+          <span class="step-num">Trace:</span>
+          <p>Agenda: [A]</p>
+          <p>Pop A → no rules have A in premise → no count changes</p>
+          <p>Agenda empty → return false</p>
+          <p class="result">E is NOT entailed because B and C are unknown, so D cannot be derived.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: AND-OR Graphs -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>AND-OR Graph Visualization</h2>
+        <p>Forward chaining can be visualized as exploring an <span class="result">AND-OR graph</span>. In this graph:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>AND Links (Arcs)</h3>
+            <p class="highlight">Connected by arc</p>
+            <p>Represent conjunction (all must be true). These correspond to the premises of a rule that ALL must be satisfied.</p>
+          </div>
+          <div class="card">
+            <h3>OR Links (No Arc)</h3>
+            <p class="highlight">Not connected by arc</p>
+            <p>Represent disjunction (at least one true). Multiple rules can derive the same conclusion — any one suffices.</p>
+          </div>
+          <div class="card">
+            <h3>Leaf Nodes</h3>
+            <p class="highlight">Known facts</p>
+            <p>The bottom nodes are the initial facts. Forward chaining propagates upward from known leaves.</p>
+          </div>
+          <div class="card">
+            <h3>Root Node</h3>
+            <p class="highlight">Query / Conclusion</p>
+            <p>The top node is what we want to prove. If reachable from leaves via AND-OR paths, the query is entailed.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>AND-OR Graph Example</h2>
+        <p>For the KB: {A, B, A∧B→C, B∧C→D, C→E}</p>
+
+        <div class="example">
+          <div class="title">Graph Structure (Bottom-Up)</div>
+          <div class="code">
+Level 0 (leaves):  A, B  [known facts]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;|<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arc+arc&nbsp;&nbsp;&nbsp;|<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\ /&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+Level 1:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/ \&nbsp;&nbsp;&nbsp;|<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;arc&nbsp;&nbsp;arc+arc<br>
+Level 2:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;&nbsp;E
+          </div>
+          <p class="note">AND links shown with arcs: A,B→C (both needed), B,C→D (both needed). OR: C can come from A∧B→C only. C→E is a single-premise AND link.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Key Insight:</strong> Forward chaining proves nodes bottom-up. It starts at the known leaves (A, B) and fires rules when all premises of an AND node are satisfied. This is equivalent to proving the root is reachable in the AND-OR graph.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Soundness of Forward Chaining</h2>
+        <div class="formula">
+          <div class="label">Soundness Theorem:</div>
+          <div class="expr">Forward chaining is sound: every inference is an application of modus ponens</div>
+          <div class="desc">If forward chaining derives a symbol, it is logically entailed by the KB</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Completeness Theorem:</div>
+          <div class="expr">Forward chaining is complete for Horn clauses</div>
+          <div class="desc">If KB ⊨ q (query entailed), forward chaining will eventually infer q</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Comparison & Properties -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Forward vs Backward Chaining</h2>
+        <table>
+          <tr><th>Property</th><th>Forward Chaining</th><th>Backward Chaining</th></tr>
+          <tr><td>Direction</td><td>Bottom-up (facts → conclusions)</td><td>Top-down (query → supporting facts)</td></tr>
+          <tr><td>Start</td><td>Known facts in KB</td><td>Query symbol q</td></tr>
+          <tr><td>Data structure</td><td>Count table + Agenda</td><td>Proof tree / recursion stack</td></tr>
+          <tr><td>Best when</td><td>Many facts, want all conclusions</td><td>Specific query, sparse facts</td></tr>
+          <tr><td>Waste</td><td>May derive irrelevant facts</td><td>May explore irrelevant subgoals</td></tr>
+          <tr><td>Time complexity</td><td class="highlight">O(n) for Horn KB</td><td class="highlight">O(n) for Horn KB</td></tr>
+          <tr><td>Completeness</td><td class="result">Complete for Horn</td><td class="result">Complete for Horn</td></tr>
+          <tr><td>Soundness</td><td class="result">Sound (modus ponens)</td><td class="result">Sound (modus ponens)</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Time Complexity Analysis</h2>
+        <div class="formula">
+          <div class="label">Complexity:</div>
+          <div class="expr">O(n) where n = size of KB</div>
+          <div class="desc">Each clause's count is decremented at most once per premise. Each symbol is popped from agenda at most once. Total work is proportional to the sum of clause sizes.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Why Linear?</h3>
+            <p>• Each clause is "fired" at most once</p>
+            <p>• Each symbol is processed at most once</p>
+            <p>• Count decrements total = total premises = O(n)</p>
+          </div>
+          <div class="card">
+            <h3>Space Complexity</h3>
+            <p class="highlight">O(n)</p>
+            <p>• Count table: one entry per clause</p>
+            <p>• Agenda: at most n symbols</p>
+            <p>• Inferred table: one entry per symbol</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison with Resolution</h2>
+        <table>
+          <tr><th>Property</th><th>Forward Chaining</th><th>Resolution</th></tr>
+          <tr><td>Input</td><td>Horn clauses only</td><td>General CNF</td></tr>
+          <tr><td>Completeness</td><td>For Horn only</td><td>Complete for all propositional logic</td></tr>
+          <tr><td>Time</td><td class="highlight">O(n) linear</td><td class="dim">O(2ⁿ) worst case</td></tr>
+          <tr><td>Used for</td><td>Logic programming, expert systems</td><td>Theorem proving, SAT</td></tr>
+          <tr><td>Derives</td><td>New facts only</td><td>New clauses (including contradictions)</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Warning: Non-Horn Limitations</h2>
+        <div class="warning">
+          <strong>Forward chaining ONLY works for Horn clauses!</strong> If the KB contains clauses with multiple positive literals (non-Horn), forward chaining cannot be directly applied. For general CNF, use resolution or DPLL instead.
+        </div>
+
+        <div class="example">
+          <div class="title">Non-Horn Example That Forward Chaining Cannot Handle</div>
+          <div class="code">(A ∨ B) — two positive literals, not Horn</div>
+          <p class="note">Forward chaining has no rule to fire here. Resolution can handle this clause.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

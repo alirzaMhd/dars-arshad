@@ -36,371 +36,339 @@
     .tab:hover { border-color: #00ff88; color: #00ff88; }
     .content { display: none; }
     .content.active { display: block; }
-    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
-    .grid-cell { display: inline-block; width: 40px; height: 40px; border: 1px solid #444; text-align: center; line-height: 40px; font-size: 1.2em; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .grid-diagram { font-size: 0.85em; line-height: 1.6; margin: 15px 0; }
+    .grid-diagram .cell { display: inline-block; width: 60px; height: 60px; border: 1px solid #444; text-align: center; line-height: 1.2; vertical-align: top; padding: 4px; font-size: 0.75em; }
+    .grid-diagram .cell.safe { background: #002a1a; border-color: #00ff88; }
+    .grid-diagram .cell.danger { background: #2a0a0a; border-color: #ff4444; }
+    .grid-diagram .cell.visited { background: #1a1a3e; border-color: #00ccff; }
+    .grid-diagram .cell.start { background: #2a2a00; border-color: #ffcc00; }
+    .grid-diagram .cell.gold { background: #3a2a00; border-color: #ffaa00; }
   </style>
 </head>
 <body>
   <h1>Wumpus World</h1>
-  <p class="subtitle">Artificial Intelligence — Logical Agents</p>
+  <p class="subtitle">Artificial Intelligence — Logical Agents Chapter (6.2)</p>
   <div class="container">
     <div class="tabs">
-      <button class="tab active" onclick="showSection('sec-overview')">Overview</button>
-      <button class="tab" onclick="showSection('sec-peas')">PEAS Description</button>
-      <button class="tab" onclick="showSection('sec-reasoning')">Step-by-Step Reasoning</button>
-      <button class="tab" onclick="showSection('sec-examples')">Examples</button>
-      <button class="tab" onclick="showSection('sec-strategy')">Strategy & Analysis</button>
+      <button class="tab active" onclick="showSection('tab1')">Environment & PEAS</button>
+      <button class="tab" onclick="showSection('tab2')">Sensors & Percepts</button>
+      <button class="tab" onclick="showSection('tab3')">Agent Reasoning</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
     </div>
 
-    <div id="sec-overview" class="content active">
+    <div class="content active" id="tab1">
       <div class="section">
-        <h2>The Wumpus World Environment</h2>
-        <p>The Wumpus World is a classic AI benchmark environment — a grid of rooms containing hazards and treasure. It illustrates how a knowledge-based agent can reason with partial information.</p>
+        <h2>Environment Description</h2>
+        <p>The Wumpus World is a cave consisting of connected rooms arranged in a 4×4 grid. A Wumpus (a dangerous creature) lurks somewhere in the cave. Pits are scattered throughout, and the agent's goal is to find gold while avoiding death.</p>
 
         <div class="formula">
-          <div class="label">Environment Setup</div>
-          <div class="expr">4 × 4 grid of rooms, connected by passages</div>
-          <div class="desc">Agent starts at [1,1] (bottom-left). One Wumpus, multiple pits, one piece of gold placed randomly.</div>
+          <div class="label">Environment Specification</div>
+          <div class="expr">4×4 grid of rooms</div>
+          <div class="desc">Agent starts at [1,1] facing right. Gold and Wumpus placed uniformly at random. Each non-start cell has probability 1/2 of containing a pit.</div>
         </div>
 
-        <h3>Key Elements</h3>
+        <div class="grid-diagram">
+          <strong>Sample Grid (one possible configuration):</strong><br>
+          <div style="margin-top:10px;">
+            <span class="cell">[1,4]<br>Empty</span>
+            <span class="cell">[2,4]<br>Empty</span>
+            <span class="cell">[3,4]<br>Pit?</span>
+            <span class="cell">[4,4]<br>Empty</span>
+          </div>
+          <div>
+            <span class="cell">[1,3]<br>Empty</span>
+            <span class="cell">[2,3]<br>Empty</span>
+            <span class="cell">[3,3]<br>Empty</span>
+            <span class="cell">[4,3]<br>Empty</span>
+          </div>
+          <div>
+            <span class="cell">[1,2]<br>Stench</span>
+            <span class="cell">[2,2]<br>Pit!</span>
+            <span class="cell">[3,2]<br>Breeze</span>
+            <span class="cell">[4,2]<br>Empty</span>
+          </div>
+          <div>
+            <span class="cell start">[1,1]<br>START</span>
+            <span class="cell">[2,1]<br>Breeze</span>
+            <span class="cell">[3,1]<br>Pit!</span>
+            <span class="cell">[4,1]<br>Empty</span>
+          </div>
+        </div>
+        <p class="note">P = Pit, W = Wumpus, G = Gold, S = Stench, B = Breeze, V = Visited, OK = Safe, A = Agent</p>
+
+        <h2 style="margin-top:20px;">PEAS Description</h2>
         <div class="grid">
           <div class="card">
-            <div class="highlight">Wumpus</div>
-            <div class="dim">A creature that eats anyone who enters its room. Can be killed by shooting an arrow into its room.</div>
+            <div class="highlight">Performance Measure</div>
+            <div class="dim">Score calculation</div>
+            <p style="margin-top:8px; font-size:0.85em;">
+              +1000 for picking up gold<br>
+              -1000 for falling into pit<br>
+              -1000 for eaten by Wumpus<br>
+              -1 for each time step (move)<br>
+              -10 for shooting an arrow
+            </p>
           </div>
           <div class="card">
-            <div class="highlight">Pits</div>
-            <div class="dim">Deadly traps in some rooms. Agent dies if it enters a pit room.</div>
+            <div class="highlight">Environment</div>
+            <div class="dim">4×4 grid cave</div>
+            <p style="margin-top:8px; font-size:0.85em;">
+              Rooms connected by passages<br>
+              One Wumpus (can be killed)<br>
+              One gold pile<br>
+              Pits in random rooms<br>
+              Agent starts at [1,1]
+            </p>
           </div>
           <div class="card">
-            <div class="highlight">Gold</div>
-            <div class="dim">The goal — agent receives +1000 for finding and grabbing it.</div>
+            <div class="highlight">Actuators</div>
+            <div class="dim">Agent actions</div>
+            <p style="margin-top:8px; font-size:0.85em;">
+              Forward — move ahead<br>
+              Turn Left — rotate 90°<br>
+              Turn Right — rotate 90°<br>
+              Grab — pick up gold<br>
+              Shoot — fire arrow forward
+            </p>
           </div>
           <div class="card">
-            <div class="highlight">Agent</div>
-            <div class="dim">Starts at [1,1] — this room is always safe (no pit, no wumpus).</div>
+            <div class="highlight">Sensors</div>
+            <div class="dim">5 sensors</div>
+            <p style="margin-top:8px; font-size:0.85em;">
+              Stench — Wumpus nearby<br>
+              Breeze — Pit nearby<br>
+              Glitter — Gold in room<br>
+              Bump — hit wall<br>
+              Scream — Wumpus killed
+            </p>
           </div>
         </div>
 
         <div class="warning">
-          <strong>Challenge:</strong> The agent cannot directly see the Wumpus, pits, or gold. It must infer their locations from indirect sensor readings — a classic example of reasoning under partial observability.
+          <strong>Difficulty:</strong> About 21% of environments are unfair — the gold is in a pit or completely surrounded by pits. In these cases, no agent can win. The challenge is dealing with partial observability: the agent can only see its current room.
         </div>
-      </div>
-
-      <div class="section">
-        <h2>Why Wumpus World?</h2>
-        <ul style="padding-left:20px;line-height:2;">
-          <li><strong>Simple but non-trivial:</strong> Easy to describe but requires logical reasoning</li>
-          <li><strong>Partial observability:</strong> Agent must infer hidden state from indirect clues</li>
-          <li><strong>Sequential reasoning:</strong> Information gathered at different times/locations must be combined</li>
-          <li><strong>Unfair environments:</strong> ~21% of environments are "unfair" (gold in a pit or surrounded by pits)</li>
-          <li><strong>Classic benchmark:</strong> Used to test reasoning algorithms since the 1980s</li>
-        </ul>
       </div>
     </div>
 
-    <div id="sec-peas" class="content">
+    <div class="content" id="tab2">
       <div class="section">
-        <h2>PEAS Description</h2>
+        <h2>Sensors in Detail</h2>
+
         <table>
-          <tr><th>Component</th><th>Description</th></tr>
           <tr>
-            <td><strong>P</strong>erformance</td>
-            <td>
-              +1000 for picking up the gold<br>
-              -1000 for death (falling into pit or eaten by Wumpus)<br>
-              -1 per action taken<br>
-              -10 for using the arrow (shooting)
-            </td>
+            <th>Sensor</th>
+            <th>When Activated</th>
+            <th>Meaning</th>
           </tr>
           <tr>
-            <td><strong>E</strong>nvironment</td>
-            <td>
-              4×4 grid of rooms<br>
-              Start at [1,1] (always safe)<br>
-              Random placement of gold, wumpus, and pits<br>
-              Squares adjacent to wumpus have stench<br>
-              Squares adjacent to pits have breeze
-            </td>
+            <td class="result">Stench</td>
+            <td>In Wumpus's room and adjacent rooms</td>
+            <td>Wumpus is in a neighboring room</td>
           </tr>
           <tr>
-            <td><strong>A</strong>ctuators</td>
-            <td>
-              <strong>Forward</strong> — move one square in the direction the agent faces<br>
-              <strong>TurnLeft(90°)</strong> — rotate counterclockwise<br>
-              <strong>TurnRight(90°)</strong> — rotate clockwise<br>
-              <strong>Grab</strong> — pick up gold (if in same room)<br>
-              <strong>Shoot</strong> — fire arrow in the direction facing (kills wumpus if it's in that direction)
-            </td>
+            <td class="result">Breeze</td>
+            <td>In rooms adjacent to pits</td>
+            <td>A pit is in a neighboring room</td>
           </tr>
           <tr>
-            <td><strong>S</strong>ensors</td>
-            <td>
-              5-tuple percept: <strong>[Stench, Breeze, Glitter, Bump, Scream]</strong><br>
-              <strong>Stench</strong> — perceived in rooms adjacent to the Wumpus<br>
-              <strong>Breeze</strong> — perceived in rooms adjacent to a pit<br>
-              <strong>Glitter</strong> — perceived in the room containing gold<br>
-              <strong>Bump</strong> — perceived when walking into a wall<br>
-              <strong>Scream</strong> — perceived when the Wumpus is killed (heard everywhere)
-            </td>
+            <td class="result">Glitter</td>
+            <td>In the room with gold</td>
+            <td>Gold is in this room — grab it!</td>
+          </tr>
+          <tr>
+            <td class="result">Bump</td>
+            <td>When agent moves forward into a wall</td>
+            <td>The room ahead is blocked</td>
+          </tr>
+          <tr>
+            <td class="result">Scream</td>
+            <td>When Wumpus is killed by arrow</td>
+            <td>Heard throughout the cave</td>
           </tr>
         </table>
 
-        <h3>Percept Format</h3>
+        <h2 style="margin-top:20px;">Percept Vector</h2>
         <div class="formula">
-          <div class="label">Percept Vector</div>
-          <div class="expr">Percept = [Stench, Breeze, Glitter, Bump, Scream]</div>
-          <div class="desc">Each value is either True or False. Example: [True, False, False, False, False] means stench detected, no breeze, no glitter, no bump, no scream.</div>
-        </div>
-
-        <h3>Sensor Diagram</h3>
-        <div class="formula">
-          <div class="label">Sensor Mapping</div>
-          <div class="code">
-Wumpus at [x,y]:
-  Stench at [x-1,y], [x+1,y], [x,y-1], [x,y+1] (if within bounds)
-
-Pit at [x,y]:
-  Breeze at [x-1,y], [x+1,y], [x,y-1], [x,y+1] (if within bounds)
-
-Gold at [x,y]:
-  Glitter only at [x,y]
-
-Arrow kills Wumpus:
-  Scream heard everywhere (one-time event)
-          </div>
+          <div class="label">Percept Format</div>
+          <div class="expr">[Stench, Breeze, Glitter, Bump, Scream]</div>
+          <div class="desc">Each element is either present (True) or None (False). Only one percept per time step in the current room only.</div>
         </div>
 
         <div class="example">
-          <div class="title">Example: Percept Interpretation</div>
-          <p><strong>Scenario:</strong> Agent is at [2,1] and receives percept [False, True, False, False, False]</p>
-          <p><strong>Interpretation:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>Stench = False → No Wumpus in [1,1], [2,2], or [3,1] (adjacent squares)</li>
-            <li>Breeze = True → There IS a pit in [1,1], [2,2], or [3,1]</li>
-            <li>But [1,1] is the start room (known safe) → pit must be in [2,2] or [3,1]</li>
-            <li>Glitter = False → no gold here</li>
-            <li>Bump = False → didn't hit a wall</li>
-            <li>Scream = False → Wumpus is still alive</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div id="sec-reasoning" class="content">
-      <div class="section">
-        <h2>Step-by-Step Reasoning Walkthrough</h2>
-        <p>This is the canonical Wumpus World reasoning example showing how the agent infers safe squares from its percepts over time.</p>
-
-        <h3>Initial State: Agent at [1,1]</h3>
-        <div class="example">
-          <div class="title">Step 1: First Percept (Start Room)</div>
-          <p><strong>Percept at [1,1]:</strong> [None, None, None, None, None] — no stench, no breeze, no glitter, no bump, no scream</p>
-          <p><strong>Inference:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>No stench → Wumpus is NOT in [1,2] or [2,1] (adjacent squares)</li>
-            <li>No breeze → Pit is NOT in [1,2] or [2,1]</li>
-            <li><strong>Conclusion:</strong> Both [1,2] and [2,1] are safe</li>
-          </ul>
-          <p><strong>Action:</strong> Move to [2,1] (or [1,2]) — the agent chooses [2,1]</p>
+          <div class="title">Percept Examples</div>
+          <p style="font-size:0.85em;">
+            [None, None, None, None, None] — Empty room, no hazards nearby<br>
+            [Stench, None, None, None, None] — Wumpus is adjacent<br>
+            [None, Breeze, None, None, None] — Pit is adjacent<br>
+            [Stench, Breeze, None, None, None] — Both Wumpus and pit nearby<br>
+            [None, None, Glitter, None, None] — Gold is here!<br>
+            [None, None, None, Bump, None] — Hit a wall<br>
+            [None, None, None, None, Scream] — Wumpus was killed
+          </p>
         </div>
 
-        <div class="example">
-          <div class="title">Step 2: Second Room [2,1]</div>
-          <p><strong>Percept at [2,1]:</strong> [None, Breeze, None, None, None] — breeze detected!</p>
-          <p><strong>Inference:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>Breeze → pit exists in one of [1,1], [2,2], or [3,1]</li>
-            <li>[1,1] is already known safe → pit is in [2,2] OR [3,1]</li>
-            <li>No stench → no Wumpus in [1,1], [2,2], or [3,1]</li>
-            <li><strong>Conclusion so far:</strong> Pit at [2,2] or [3,1]; Wumpus location unknown</li>
-          </ul>
-          <p><strong>Action:</strong> Return to [1,1] (safe), then go to [1,2]</p>
-        </div>
-
-        <div class="example">
-          <div class="title">Step 3: Room [1,2]</div>
-          <p><strong>Percept at [1,2]:</strong> [Stench, None, None, None, None] — stench detected!</p>
-          <p><strong>Inference:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>Stench → Wumpus is in [1,1], [1,3], or [2,2]</li>
-            <li>[1,1] is the start room (no stench before) → Wumpus NOT in [1,1]</li>
-            <li>When at [2,1], there was no stench → Wumpus NOT in [2,2]</li>
-            <li><strong>Conclusion:</strong> Wumpus MUST be in [1,3]!</li>
-          </ul>
-          <p><strong>Additional Inference:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>No breeze at [1,2] → no pit in [1,1], [1,3], or [2,2]</li>
-            <li>Earlier we concluded pit is in [2,2] or [3,1]</li>
-            <li>Since [2,2] has no pit → pit MUST be in [3,1]!</li>
-          </ul>
-          <p><strong>Action:</strong> Go to [2,2] (now known to be safe)</p>
-        </div>
-
-        <div class="example">
-          <div class="title">Step 4: Room [2,2] and Beyond</div>
-          <p><strong>Percept at [2,2]:</strong> [None, None, None, None, None] — no stench, no breeze</p>
-          <p><strong>Inference:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>No stench → no Wumpus in [1,2], [2,3], [3,2], or [2,1] (all consistent)</li>
-            <li>No breeze → no pit in [1,2], [2,3], [3,2], or [2,1] (all consistent)</li>
-            <li><strong>[2,3] and [3,2] are now known safe!</strong></li>
-          </ul>
-          <p><strong>Action:</strong> Proceed to [2,3]</p>
-        </div>
-
-        <div class="example">
-          <div class="title">Step 5: Gold Found!</div>
-          <p><strong>Percept at [2,3]:</strong> [None, None, Glitter, None, None] — GOLD!</p>
-          <p><strong>Inference:</strong> Gold is in this room. The goal is reached.</p>
-          <p><strong>Action:</strong> Grab gold, then navigate back to [1,1] to exit.</p>
-          <p><strong>Output:</strong> <span class="result">Agent successfully found gold and returned to start! Total score: +1000 - (number of actions × 1).</span></p>
-        </div>
-
-        <h3>Complete Inference Chain Summary</h3>
+        <h2 style="margin-top:20px;">Actions and Effects</h2>
         <table>
-          <tr><th>Step</th><th>Room</th><th>Percept</th><th>What We Learn</th></tr>
-          <tr><td>1</td><td>[1,1]</td><td>[None,None,None,None,None]</td><td>[1,2] and [2,1] are safe</td></tr>
-          <tr><td>2</td><td>[2,1]</td><td>[None,Breeze,None,None,None]</td><td>Pit in [2,2] or [3,1]</td></tr>
-          <tr><td>3</td><td>[1,2]</td><td>[Stench,None,None,None,None]</td><td>Wumpus in [1,3]; pit in [3,1]</td></tr>
-          <tr><td>4</td><td>[2,2]</td><td>[None,None,None,None,None]</td><td>[2,3] and [3,2] are safe</td></tr>
-          <tr><td>5</td><td>[2,3]</td><td>[None,None,Glitter,None,None]</td><td>Gold found! Grab it.</td></tr>
-        </table>
-      </div>
-    </div>
-
-    <div id="sec-examples" class="content">
-      <div class="section">
-        <h2>Different Wumpus World Scenarios</h2>
-
-        <div class="example">
-          <div class="title">Example 1: Wumpus Adjacent to Start</div>
-          <p><strong>Setup:</strong> Wumpus at [1,2], gold at [2,2], no pits</p>
-          <p><strong>Step 1:</strong> Agent at [1,1] — percept [Stench, None, None, None, None]</p>
-          <p><strong>Inference:</strong> Stench means Wumpus in [1,2] or [2,1]. Both are adjacent. Agent cannot be sure which one yet.</p>
-          <p><strong>Step 2:</strong> Move to [2,1] — percept [None, None, None, None, None] (no stench, no breeze)</p>
-          <p><strong>Inference:</strong> No stench at [2,1] → Wumpus not in [1,1], [2,2], or [3,1]. Since Wumpus must be in [1,2] or [2,1], and [2,1] is clear → Wumpus at [1,2].</p>
-          <p><strong>Step 3:</strong> Cannot go to [1,2] (Wumpus there). Shoot arrow at [1,2] — if Scream heard, Wumpus is dead.</p>
-          <p><strong>Step 4:</strong> Enter [1,2], then [2,2] to grab gold.</p>
-          <p><strong>Output:</strong> <span class="result">Agent shot the Wumpus and retrieved gold safely.</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 2: Multiple Pits with Gold in Corner</div>
-          <p><strong>Setup:</strong> Pits at [2,1] and [3,2]; Wumpus at [4,4]; gold at [4,3]</p>
-          <p><strong>Step 1:</strong> [1,1] — [None, None, None, None, None] → [1,2] and [2,1] are safe</p>
-          <p><strong>Step 2:</strong> Move to [1,2] — [None, None, None, None, None] → safe; [1,3] and [2,2] are safe</p>
-          <p><strong>Step 3:</strong> Move to [2,2] — [None, None, None, None, None] → safe; [2,3] and [3,2] and [2,1] safe</p>
-          <p><strong>Step 4:</strong> Move to [2,3] — [None, Breeze, None, None, None] → pit in [1,3], [2,4], or [3,3]</p>
-          <p><strong>Inference:</strong> [1,3] was visited earlier (no breeze) → pit in [2,4] or [3,3]</p>
-          <p><strong>Step 5:</strong> Move to [3,3] — [None, Breeze, None, None, None] → pit in [2,3], [3,2], [3,4], or [4,3]. [2,3] visited (no pit) → [3,2] or [3,4] or [4,3]</p>
-          <p><strong>Step 6:</strong> Move to [4,3] — [None, None, Glitter, None, None] → GOLD!</p>
-          <p><strong>Output:</strong> <span class="result">Agent navigated through a minefield of pits to reach the gold.</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 3: Wumpus on the Path — Agent Must Shoot</div>
-          <p><strong>Setup:</strong> Wumpus at [2,2]; pit at [3,1]; gold at [4,4]</p>
-          <p><strong>Step 1:</strong> [1,1] — [None, None, None, None, None] → [1,2] and [2,1] safe</p>
-          <p><strong>Step 2:</strong> [2,1] — [None, Breeze, None, None, None] → pit in [2,2] or [3,1]</p>
-          <p><strong>Step 3:</strong> Return to [1,1]; go to [1,2] — [Stench, None, None, None, None] → Wumpus in [1,1], [1,3], or [2,2]. [1,1] known safe → [1,3] or [2,2]</p>
-          <p><strong>Step 4:</strong> No breeze at [1,2] → no pit in [1,3] or [2,2]. Earlier [2,2] or [3,1] had pit. Since [2,2] is clear → pit at [3,1].</p>
-          <p><strong>Step 5:</strong> Wumpus in [1,3] or [2,2]. [1,2] has stench (Wumpus adjacent) → [1,3] or [2,2] or [1,1]. [1,1] no stench. Move to [2,2]... if stench at [2,2] → Wumpus at [2,2]. Shoot!</p>
-          <p><strong>Step 6:</strong> After killing Wumpus, proceed to [2,3], [2,4], [3,4], [4,4] for gold.</p>
-          <p><strong>Output:</strong> <span class="result">Agent killed the Wumpus blocking the path and reached the gold.</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 4: Unfair Environment — No Safe Path</div>
-          <p><strong>Setup:</strong> Gold at [2,2], pits at [1,2] and [2,1] — the gold is surrounded by pits.</p>
-          <p><strong>Step 1:</strong> [1,1] — [None, Breeze, None, None, None] → pit in [1,2] or [2,1]</p>
-          <p><strong>Both adjacent rooms have pits!</strong> The agent cannot reach the gold without a path.</p>
-          <p><strong>Possible strategies:</strong></p>
-          <ul style="padding-left:20px;line-height:1.8;">
-            <li>Give up: return to [1,1] and exit with score = -(actions taken)</li>
-            <li>Risk: there's ~21% chance the environment is unfair — best to cut losses</li>
-          </ul>
-          <p><strong>Output:</strong> <span class="result">Unfair environment detected — agent chose to exit with minimal losses rather than risk death.</span></p>
-        </div>
-
-        <div class="example">
-          <div class="title">Example 5: Wumpus in Corner, Gold in Center</div>
-          <p><strong>Setup:</strong> Wumpus at [1,4]; pits at [3,1] and [4,2]; gold at [3,3]</p>
-          <p><strong>Step 1:</strong> [1,1] — [None, None, None, None, None] → [1,2] and [2,1] safe</p>
-          <p><strong>Step 2:</strong> [2,1] — [None, None, None, None, None] → [2,2] and [3,1] safe (no breeze)</p>
-          <p><strong>Wait — no breeze at [2,1] means no pit in [1,1], [2,2], or [3,1]. But we only knew [1,1] safe. Now [2,2] and [3,1] are also safe.</strong></p>
-          <p><strong>Step 3:</strong> [2,2] — [None, None, None, None, None] → [2,3] and [3,2] safe</p>
-          <p><strong>Step 4:</strong> [3,2] — [None, None, None, None, None] → [3,3] and [4,2] safe</p>
-          <p><strong>Step 5:</strong> [3,3] — [None, None, Glitter, None, None] → GOLD!</p>
-          <p><strong>Output:</strong> <span class="result">Agent found a clear path to gold by systematically exploring safe squares.</span></p>
-        </div>
-      </div>
-    </div>
-
-    <div id="sec-strategy" class="content">
-      <div class="section">
-        <h2>Strategy & Analysis</h2>
-
-        <h3>Agent Decision Making</h3>
-        <p>The Wumpus World agent must decide between exploration and exploitation:</p>
-        <table>
-          <tr><th>Situation</th><th>Action</th><th>Rationale</th></tr>
           <tr>
-            <td>Known safe unexplored room</td>
-            <td>Go there</td>
-            <td>Gather more information; find gold</td>
+            <th>Action</th>
+            <th>Effect</th>
+            <th>Cost</th>
           </tr>
           <tr>
-            <td>Gold glitter detected</td>
-            <td>Grab gold, then exit</td>
-            <td>Primary goal achieved</td>
+            <td>Forward</td>
+            <td>Move one cell in facing direction. If wall → stay. If pit/wumpus → die.</td>
+            <td>-1 point</td>
           </tr>
           <tr>
-            <td>Wumpus location known</td>
-            <td>Avoid it or shoot it</td>
-            <td>Remove threat if path is blocked</td>
+            <td>Turn Left</td>
+            <td>Rotate 90° counterclockwise. No position change.</td>
+            <td>-1 point</td>
           </tr>
           <tr>
-            <td>No safe unexplored rooms</td>
-            <td>Exit (return to [1,1])</td>
-            <td>Cannot achieve goal; minimize losses</td>
+            <td>Turn Right</td>
+            <td>Rotate 90° clockwise. No position change.</td>
+            <td>-1 point</td>
           </tr>
           <tr>
-            <td>Certain death implied</td>
-            <td>Exit immediately</td>
-            <td>Risk-averse strategy for unfair envs</td>
+            <td>Grab</td>
+            <td>Pick up gold in current room (game ends on success).</td>
+            <td>-1 point</td>
+          </tr>
+          <tr>
+            <td>Shoot</td>
+            <td>Fire arrow forward. Kills Wumpus if in path. Only first shot is effective (one arrow only).</td>
+            <td>-10 points</td>
           </tr>
         </table>
 
-        <h3>Logical Reasoning Complexity</h3>
-        <div class="grid">
-          <div class="card">
-            <div class="highlight">Number of possible worlds</div>
-            <div class="dim">With 16 rooms × 3 features (pit/wumpus/gold), the state space is enormous. Logical inference prunes this dramatically.</div>
-          </div>
-          <div class="card">
-            <div class="highlight">Inference difficulty</div>
-            <div class="dim">Combining information from different times and locations is cognitively demanding — most animals cannot do it, but logical agents can.</div>
-          </div>
-          <div class="card">
-            <div class="highlight">Soundness guarantee</div>
-            <div class="dim">If the initial knowledge is correct and inference rules are sound, every derived conclusion is guaranteed true in the real world.</div>
-          </div>
+        <div class="warning">
+          <strong>Partial Observability:</strong> The agent only perceives the current room's sensors. It has no global view of the cave. This makes the Wumpus World a partially observable environment — the agent must maintain a KB to track what it has learned.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Agent Reasoning Process</h2>
+        <p>The KB-agent combines background rules with observations to deduce safe squares, pit locations, and Wumpus locations. Here is the step-by-step reasoning process from the textbook example.</p>
+
+        <div class="example">
+          <div class="title">Step 1: Start at [1,1]</div>
+          <p style="font-size:0.85em;"><strong>Percept:</strong> [None, None, None, None, None]</p>
+          <p style="font-size:0.85em;"><strong>Inference:</strong> No stench → Wumpus is not adjacent. No breeze → no pit adjacent.</p>
+          <p style="font-size:0.85em;"><strong>KB Update:</strong> [1,2] and [2,1] are safe (OK). Agent moves to [2,1].</p>
+          <p style="font-size:0.85em;"><strong>Actions:</strong> Forward</p>
         </div>
 
-        <div class="formula">
-          <div class="label">Key Learning</div>
-          <div class="expr">Wumpus World demonstrates: Knowledge + Inference = Intelligent Action under Uncertainty</div>
-          <div class="desc">The agent never directly sees the Wumpus, pits, or gold — yet it can act intelligently by combining partial information over time.</div>
+        <div class="example">
+          <div class="title">Step 2: At [2,1]</div>
+          <p style="font-size:0.85em;"><strong>Percept:</strong> [None, Breeze, None, None, None]</p>
+          <p style="font-size:0.85em;"><strong>Inference:</strong> Breeze → pit in [2,2] or [3,1]. Pit cannot be in [1,1] (already known safe). So pit is in [2,2] or [3,1] (or both).</p>
+          <p style="font-size:0.85em;"><strong>KB Update:</strong> [2,2] is dangerous (P?), [3,1] is dangerous (P?).</p>
+          <p style="font-size:0.85em;"><strong>Actions:</strong> Only [1,2] is still safe and unvisited. Return to [1,1], then go to [1,2].</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 3: At [1,2]</div>
+          <p style="font-size:0.85em;"><strong>Percept:</strong> [Stench, None, None, None, None]</p>
+          <p style="font-size:0.85em;"><strong>Inference:</strong> Stench → Wumpus is adjacent. Wumpus cannot be in [1,1] (known safe). Wumpus cannot be in [2,2] (no stench was felt at [2,1], so Wumpus not adjacent to [2,1], ruling out [2,2]... wait, actually we need to check: at [2,1] there was no stench, so Wumpus is NOT adjacent to [2,1]. [2,2] is adjacent to [2,1], so Wumpus cannot be at [2,2]. Therefore Wumpus must be at [1,3]!</p>
+          <p style="font-size:0.85em;"><strong>KB Update:</strong> Wumpus at [1,3] (W!). Also: no breeze at [1,2] → no pit at [2,2]. Combined with earlier knowledge (pit at [2,2] or [3,1]), pit must be at [3,1]!</p>
+          <p style="font-size:0.85em;"><strong>Actions:</strong> Go to [2,1] (known safe, proves no pit at [2,2]), then proceed to [2,3] and grab gold.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 4: At [2,2] then [2,3]</div>
+          <p style="font-size:0.85em;"><strong>At [2,2]:</strong> Proves safe (no pit). Agent proved this by combining information from [1,1], [2,1], and [1,2].</p>
+          <p style="font-size:0.85em;"><strong>At [2,3]:</strong> Perceives [None, None, Glitter, None, None]. Gold found!</p>
+          <p style="font-size:0.85em;"><strong>Action:</strong> Grab → Game won with score 1000 - 6 = 994 (6 moves × -1 each).</p>
         </div>
 
         <div class="warning">
-          <strong>Important:</strong> The reasoning shown here is <strong>logical deduction</strong> — the agent doesn't guess. Each conclusion is guaranteed true if the premises are true. This is the foundation of logical AI.
+          <strong>Key Insight:</strong> This reasoning combines information from different times and locations. The agent deduces the Wumpus is at [1,3] by combining the stench at [1,2] with the absence of stench at [2,1]. This kind of cross-temporal, cross-spatial inference is what makes logical agents powerful.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Example 1: Proving Safe Squares</h2>
+        <div class="example">
+          <div class="title">Why is [1,2] safe after starting at [1,1]?</div>
+          <p style="font-size:0.85em;"><strong>KB contains:</strong></p>
+          <div class="code" style="margin-top:8px;">1. "If no breeze at [x,y], then no pit in any adjacent cell"
+2. "If no stench at [x,y], then no Wumpus in any adjacent cell"
+3. "At [1,1]: no breeze, no stench" (from percept at t=0)
+4. "[1,2] is adjacent to [1,1]"</div>
+          <p style="font-size:0.85em; margin-top:8px;"><strong>Inference:</strong></p>
+          <div class="code" style="margin-top:8px;">From 3 and 4: No pit adjacent to [1,1] → no pit at [1,2]
+From 3 and 4: No Wumpus adjacent to [1,1] → no Wumpus at [1,2]
+∴ [1,2] is safe (OK)</div>
+          <p class="note">Similarly, [2,1] is proven safe by the same logic.</p>
+        </div>
+
+        <h2 style="margin-top:20px;">Worked Example 2: Locating the Wumpus</h2>
+        <div class="example">
+          <div class="title">How does the agent know the Wumpus is at [1,3]?</div>
+          <div class="code" style="margin-top:8px;">KB at this point:
+1. Stench at [1,2] → Wumpus in [1,1], [2,2], or [1,3]
+2. No stench at [1,1] → Wumpus NOT in [1,2], [2,1]
+3. No stench at [2,1] → Wumpus NOT in [1,1], [2,2], [3,1]
+4. [1,1] is safe (Wumpus not there)
+
+From 1: candidates are { [1,1], [2,2], [1,3] }
+From 3: remove [1,1] and [2,2] from candidates
+∴ Wumpus must be at [1,3]</div>
+          <p class="note">This deduction uses the absence of stench at [2,1] to eliminate [2,2] as a candidate. This is negative reasoning — using what is NOT present.</p>
+        </div>
+
+        <h2 style="margin-top:20px;">Worked Example 3: Performance Score Calculation</h2>
+        <div class="example">
+          <div class="title">Optimal Agent Play Score</div>
+          <p style="font-size:0.85em;">Consider the textbook scenario: Agent starts at [1,1], moves to [2,1], returns to [1,1], moves to [1,2], returns to [1,1], moves to [2,1], then [2,2], then [2,3] (finds gold), then grabs.</p>
+          <div class="code" style="margin-top:8px;">Actions performed:
+1. Forward [1,1]→[2,1]    (-1)
+2. Forward [2,1]→[1,1]    (-1)  [backtrack]
+3. Forward [1,1]→[1,2]    (-1)
+4. Forward [1,2]→[1,1]    (-1)  [backtrack]
+5. Forward [1,1]→[2,1]    (-1)
+6. Forward [2,1]→[2,2]    (-1)
+7. Forward [2,2]→[2,3]    (-1)
+8. Grab                     (-1)
+
+Total moves: 8 × (-1) = -8
+Gold bonus: +1000
+Final score: 1000 - 8 = 992</div>
+          <p style="font-size:0.85em; margin-top:8px;">If the agent also needed to kill the Wumpus first: -10 for shooting = score would be 1000 - 10 - moves = 1000 - 10 - 10 = 980.</p>
+        </div>
+
+        <h2 style="margin-top:20px;">Worked Example 4: Model Counting for Pit Location</h2>
+        <div class="example">
+          <div class="title">Can the agent be sure about pits at [2,2] and [3,1]?</div>
+          <p style="font-size:0.85em;">The agent knows: pit is at [2,2] OR [3,1] (from breeze at [2,1]). There are 2³ = 8 possible models for pits in [1,2], [2,2], [3,1].</p>
+          <div class="code" style="margin-top:8px;">Models where KB is true (only 3 survive):
+Model 1: P₁₂=F, P₂₂=F, P₃₁=T  → KB ✓, "no pit at [1,2]" ✓
+Model 2: P₁₂=F, P₂₂=T, P₃₁=F  → KB ✓, "no pit at [1,2]" ✓
+Model 3: P₁₂=F, P₂₂=T, P₃₁=T  → KB ✓, "no pit at [1,2]" ✓
+
+In ALL models where KB is true, "no pit at [1,2]" is also true.
+∴ KB ⊨ "no pit at [1,2]"
+
+In 2 of 3 models, "no pit at [2,2]" is FALSE.
+∴ KB ⊭ "no pit at [2,2]" (agent cannot conclude this)
+∴ KB ⊭ "pit at [2,2]" (agent cannot conclude this either)
+
+Agent can only calculate probability, not certainty.</div>
+          <p class="note">This demonstrates model checking: enumerate all models, check which satisfy KB, then check if the query is true in all of them.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Key Takeaway:</strong> The Wumpus World demonstrates why knowledge representation and logical inference are essential. A simple reactive agent would die immediately. Only by maintaining a KB and reasoning about observations can the agent safely navigate and find the gold.
         </div>
       </div>
     </div>
   </div>
+
   <script>
     function showSection(id) {
       document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
