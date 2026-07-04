@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IDA* Animation</title>
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.85em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 4px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.table-section { margin: 20px 0; }
+.table-title {
+  font-size: 1em;
+  color: #00ccff;
+  margin-bottom: 10px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  padding: 5px;
+}
+table {
+  border-collapse: collapse;
+  margin: 0 auto;
+}
+th, td {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  border: 1px solid #333;
+  font-size: 0.78em;
+  transition: all 0.3s;
+}
+th {
+  background: #1a1a2e;
+  color: #00ccff;
+  font-weight: bold;
+}
+td {
+  background: #0d0d1a;
+  color: #aaa;
+}
+td.filled {
+  background: #0a1a12;
+  color: #00ff88;
+  border-color: #00ff8855;
+}
+td.current {
+  background: #1a0a00 !important;
+  color: #ff6600 !important;
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 15px #ff660044;
+  transform: scale(1.05);
+  font-weight: bold;
+}
+td.computing {
+  background: #1a1a00 !important;
+  color: #ffff00 !important;
+  border-color: #ffff00 !important;
+  box-shadow: 0 0 10px #ffff0033;
+}
+td.pruned {
+  background: #1a0008 !important;
+  color: #ff4444 !important;
+  border-color: #ff4444 !important;
+  box-shadow: 0 0 10px #ff444433;
+}
+td.found {
+  background: #002a1a !important;
+  color: #00ff88 !important;
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 14px #00ff8855;
+  transform: scale(1.1);
+  font-weight: bold;
+}
+td.iteration {
+  background: #1a0030 !important;
+  color: #ff66ff !important;
+  border-color: #ff66ff !important;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+  display: none;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.graph-canvas {
+  display: block;
+  margin: 0 auto;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+.iteration-banner {
+  text-align: center;
+  padding: 10px;
+  margin: 12px 0;
+  background: #1a0030;
+  border: 1px solid #ff66ff;
+  border-radius: 8px;
+  font-size: 0.9em;
+}
+.iteration-banner .iter-label {
+  color: #ff66ff;
+  font-weight: bold;
+}
+.iteration-banner .iter-limit {
+  color: #ffcc00;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+.stack-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  min-height: 36px;
+  align-items: center;
+}
+.stack-display .stack-label {
+  color: #888;
+  font-size: 0.8em;
+  margin-right: 6px;
+}
+.stack-node {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #555;
+  border-radius: 6px;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #ccc;
+  background: #0d0d1a;
+  transition: all 0.3s;
+}
+.stack-node.on-path {
+  border-color: #00ccff;
+  color: #00ccff;
+  background: #001a2a;
+}
+.stack-node.current-top {
+  border-color: #ff6600;
+  color: #ff6600;
+  background: #1a0a00;
+  box-shadow: 0 0 10px #ff660044;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px 0;
+  font-size: 0.75em;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+</style>
+</head>
+<body>
+
+<h1>IDA*</h1>
+<p class="subtitle">Graph Search — Iterative Deepening A* Search</p>
+
+<div class="layout">
+  <div class="main-panel">
+    <canvas class="graph-canvas" id="graphCanvas" width="700" height="380"></canvas>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6600;"></div>Current Node</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00ccff;"></div>On Current Path</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00ff88;"></div>Goal Found</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff4444;"></div>Pruned (f &gt; limit)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#555;"></div>Unvisited</div>
+    </div>
+
+    <div id="iterationBanner" class="iteration-banner" style="display:none;">
+      <span class="iter-label">Iteration </span><span class="iter-limit" id="iterNum">1</span>
+      <span class="iter-label"> — f-limit = </span><span class="iter-limit" id="iterLimit">—</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Algorithm: </span><span class="value">IDA* (Iterative Deepening A*)</span><br>
+      <span class="label">Current Phase: </span><span class="highlight" id="phaseDisplay">Ready — Press Play</span><br>
+      <span class="label">Current Node: </span><span class="value" id="currentNodeDisplay">—</span><br>
+      <span class="label">g(n): </span><span class="value" id="gDisplay">—</span>
+      <span class="label">h(n): </span><span class="value" id="hDisplay">—</span>
+      <span class="label">f(n): </span><span class="value" id="fDisplay">—</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="stack-display">
+      <span class="stack-label">Stack:</span>
+      <div id="stackDisplay"></div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Heuristic Table</div>
+      <div class="table-wrapper">
+        <table id="heuristicTable"></table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">Visited / Cost Table</div>
+      <div class="table-wrapper">
+        <table id="visitedTable"></table>
+      </div>
+    </div>
+
+    <div class="result-section" id="resultSection">
+      <h2>Goal Found!</h2>
+      <p><span class="label">Optimal Path: </span><span class="result-line" id="resultPath">—</span></p>
+      <p><span class="label">Total Cost: </span><span class="result-line" id="resultCost">—</span></p>
+      <p><span class="label">Iterations Completed: </span><span class="result-line" id="resultIterations">—</span></p>
+      <p><span class="label">Nodes Expanded: </span><span class="result-line" id="resultExpanded">—</span></p>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea"></div>
+  </div>
+</div>
+
+<script>
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+const graph = {
+  nodes: ['S', 'A', 'B', 'C', 'D', 'G'],
+  edges: [
+    { from: 'S', to: 'A', weight: 1 },
+    { from: 'S', to: 'B', weight: 4 },
+    { from: 'A', to: 'C', weight: 3 },
+    { from: 'A', to: 'D', weight: 7 },
+    { from: 'B', to: 'D', weight: 2 },
+    { from: 'C', to: 'G', weight: 5 },
+    { from: 'D', to: 'G', weight: 3 }
+  ],
+  heuristic: { S: 7, A: 5, B: 3, C: 4, D: 2, G: 0 },
+  start: 'S',
+  goal: 'G',
+  positions: {
+    S: { x: 100, y: 190 },
+    A: { x: 230, y: 100 },
+    B: { x: 230, y: 280 },
+    C: { x: 400, y: 100 },
+    D: { x: 400, y: 280 },
+    G: { x: 560, y: 190 }
+  }
+};
+
+let nodeColors = {};
+let nodeGlow = {};
+let pathHighlights = [];
+let iterationLog = [];
+let currentIteration = 0;
+let nodesExpanded = 0;
+
+function getNeighbors(node) {
+  const neighbors = [];
+  graph.edges.forEach(e => {
+    if (e.from === node) neighbors.push({ node: e.to, weight: e.weight });
+    if (e.to === node) neighbors.push({ node: e.from, weight: e.weight });
+  });
+  return neighbors;
+}
+
+function drawGraph() {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  graph.edges.forEach(e => {
+    const p1 = graph.positions[e.from];
+    const p2 = graph.positions[e.to];
+    const isOnPath = pathHighlights.some(ph =>
+      (ph.from === e.from && ph.to === e.to) || (ph.from === e.to && ph.to === e.from)
+    );
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = isOnPath ? '#00ccff' : '#555';
+    ctx.lineWidth = isOnPath ? 3 : 1.5;
+    ctx.stroke();
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    ctx.fillStyle = '#ff9944';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(e.weight, mx + (p1.y === p2.y ? 0 : 12), my + (p1.x === p2.x ? 0 : -10));
+  });
+
+  graph.nodes.forEach(n => {
+    const p = graph.positions[n];
+    const color = nodeColors[n] || '#555';
+    const glow = nodeGlow[n];
+
+    if (glow) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 24, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n, p.x, p.y - 2);
+
+    ctx.fillStyle = '#888';
+    ctx.font = '10px Courier New';
+    ctx.fillText('h=' + graph.heuristic[n], p.x, p.y + 14);
+  });
+}
+
+function initHeuristicTable() {
+  const table = document.getElementById('heuristicTable');
+  let html = '<tr><th>Node</th>';
+  graph.nodes.forEach(n => { html += `<th>${n}</th>`; });
+  html += '</tr><tr><td>h(n)</td>';
+  graph.nodes.forEach(n => { html += `<td id="hCell_${n}">${graph.heuristic[n]}</td>`; });
+  html += '</tr>';
+  table.innerHTML = html;
+}
+
+function initVisitedTable() {
+  const table = document.getElementById('visitedTable');
+  let html = '<tr><th>Node</th>';
+  graph.nodes.forEach(n => { html += `<th>${n}</th>`; });
+  html += '</tr><tr><td>Best g</td>';
+  graph.nodes.forEach(n => { html += `<td id="gCell_${n}">∞</td>`; });
+  html += '</tr><tr><td>Visited</td>';
+  graph.nodes.forEach(n => { html += `<td id="vCell_${n}">—</td>`; });
+  html += '</tr>';
+  table.innerHTML = html;
+}
+
+function updateHeuristicHighlight(node, cls) {
+  const cell = document.getElementById('hCell_' + node);
+  if (cell) {
+    cell.className = cls;
+  }
+}
+
+function updateVisitedCell(node, gVal, cls) {
+  const cell = document.getElementById('gCell_' + node);
+  if (cell) {
+    cell.textContent = gVal;
+    cell.className = cls;
+  }
+  const vCell = document.getElementById('vCell_' + node);
+  if (vCell) {
+    vCell.textContent = cls === 'found' ? '✓' : (cls === 'pruned' ? '✗' : (cls === 'filled' ? '✓' : '—'));
+    vCell.className = cls;
+  }
+}
+
+function buildStackDisplay(stack) {
+  const div = document.getElementById('stackDisplay');
+  if (!stack || stack.length === 0) {
+    div.innerHTML = '<span style="color:#555;">empty</span>';
+    return;
+  }
+  div.innerHTML = stack.map((s, i) => {
+    const cls = i === stack.length - 1 ? 'current-top' : 'on-path';
+    return `<div class="stack-node ${cls}">${s}</div>`;
+  }).join('<span style="color:#555;">→</span>');
+}
+
+function buildIterationBanner(iter, fLimit) {
+  document.getElementById('iterationBanner').style.display = 'block';
+  document.getElementById('iterNum').textContent = iter;
+  document.getElementById('iterLimit').textContent = fLimit === Infinity ? '∞' : fLimit;
+}
+
+function clearAllHighlights() {
+  nodeColors = {};
+  nodeGlow = {};
+  pathHighlights = [];
+  drawGraph();
+}
+
+function buildSteps() {
+  steps = [];
+  iterationLog = [];
+  nodesExpanded = 0;
+  let iterations = 0;
+  let fLimit = graph.heuristic[graph.start];
+
+  while (fLimit < Infinity) {
+    iterations++;
+    let stack = [{ node: graph.start, g: 0, path: [graph.start] }];
+    let nextFLimit = Infinity;
+    let visited = {};
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+      const { node, g, path } = current;
+      const h = graph.heuristic[node];
+      const f = g + h;
+
+      if (f > fLimit) {
+        steps.push({
+          type: 'prune',
+          node: node,
+          g: g,
+          h: h,
+          f: f,
+          fLimit: fLimit,
+          iteration: iterations,
+          path: [...path],
+          stack: stack.map(s => s.node),
+          nextFLimit: Math.min(nextFLimit, f),
+          explanation: buildPruneExplanation(node, g, h, f, fLimit, iterations, path, stack.map(s => s.node))
+        });
+        nextFLimit = Math.min(nextFLimit, f);
+        continue;
+      }
+
+      if (node === graph.goal) {
+        steps.push({
+          type: 'found',
+          node: node,
+          g: g,
+          h: h,
+          f: f,
+          fLimit: fLimit,
+          iteration: iterations,
+          path: [...path],
+          stack: stack.map(s => s.node),
+          explanation: buildFoundExplanation(node, g, h, f, fLimit, iterations, path)
+        });
+        iterationLog.push({
+          iteration: iterations,
+          fLimit: fLimit,
+          found: true,
+          path: [...path],
+          cost: g
+        });
+        return;
+      }
+
+      nodesExpanded++;
+
+      steps.push({
+        type: 'visit',
+        node: node,
+        g: g,
+        h: h,
+        f: f,
+        fLimit: fLimit,
+        iteration: iterations,
+        path: [...path],
+        stack: stack.map(s => s.node),
+        explanation: buildVisitExplanation(node, g, h, f, fLimit, iterations, path, stack.map(s => s.node))
+      });
+
+      const neighbors = getNeighbors(node);
+      for (let i = neighbors.length - 1; i >= 0; i--) {
+        const nb = neighbors[i];
+        const newG = g + nb.weight;
+        const newPath = [...path, nb.node];
+        stack.push({ node: nb.node, g: newG, path: newPath });
+      }
+
+      steps.push({
+        type: 'expand',
+        node: node,
+        g: g,
+        h: h,
+        f: f,
+        fLimit: fLimit,
+        iteration: iterations,
+        path: [...path],
+        stack: [...stack.map(s => s.node), ...neighbors.map(n => n.node)],
+        neighbors: neighbors.map(n => n.node),
+        explanation: buildExpandExplanation(node, g, h, f, fLimit, iterations, path, neighbors, stack.map(s => s.node))
+      });
+    }
+
+    iterationLog.push({
+      iteration: iterations,
+      fLimit: fLimit,
+      found: false,
+      nextFLimit: nextFLimit
+    });
+
+    steps.push({
+      type: 'iteration_end',
+      iteration: iterations,
+      fLimit: fLimit,
+      nextFLimit: nextFLimit,
+      explanation: buildIterationEndExplanation(iterations, fLimit, nextFLimit)
+    });
+
+    fLimit = nextFLimit;
+  }
+
+  steps.push({
+    type: 'no_solution',
+    explanation: buildNoSolutionExplanation()
+  });
+}
+
+function buildSetupExplanation() {
+  return `
+    <div class="explain-section active">
+      <h3>Problem Setup</h3>
+      <p>ID A* (Iterative Deepening A*) combines <b>iterative deepening</b> with the <b>A* heuristic</b> to find optimal paths with minimal memory usage.</p>
+      <p><span class="dim">Start:</span> S &nbsp; <span class="dim">Goal:</span> G</p>
+      <h3 style="margin-top:10px;">Key Formula</h3>
+      <span class="formula-line">f(n) = g(n) + h(n)</span>
+      <p><span class="dim">g(n)</span> = cost from start to n &nbsp; <span class="dim">h(n)</span> = heuristic estimate to goal</p>
+      <h3 style="margin-top:10px;">Algorithm</h3>
+      <p>1. Set <span class="split-info">f-limit = h(start)</span></p>
+      <p>2. Run DFS pruning any node where <span class="dim">f(n) &gt; f-limit</span></p>
+      <p>3. If goal not found, raise <span class="split-info">f-limit</span> to minimum exceeded f-value</p>
+      <p>4. Repeat until goal found or no solution</p>
+      <p class="note">Press Play or Step to begin.</p>
+    </div>`;
+}
+
+function buildVisitExplanation(node, g, h, f, fLimit, iteration, path, stack) {
+  const pathStr = path.join(' → ');
+  return `
+    <div class="explain-section active">
+      <h3>Iteration ${iteration} — Visiting ${node}</h3>
+      <p>Pop <span class="dim">${node}</span> from the stack and expand it.</p>
+      <span class="formula-line">f(${node}) = g(${node}) + h(${node}) = ${g} + ${h} = ${f}</span>
+      <p><span class="dim">f-limit:</span> ${fLimit} &nbsp; <span class="dim">f(${node}):</span> ${f} → ${f <= fLimit ? '<span style="color:#00ff88;">✓ within limit</span>' : '<span style="color:#ff4444;">✗ exceeds limit</span>'}</p>
+      <p><span class="split-info">Path:</span> ${pathStr}</p>
+    </div>`;
+}
+
+function buildExpandExplanation(node, g, h, f, fLimit, iteration, path, neighbors, stack) {
+  const nbList = neighbors.map(n => `${n.node}(w=${n.weight})`).join(', ');
+  return `
+    <div class="explain-section active">
+      <h3>Iteration ${iteration} — Expanding ${node}</h3>
+      <p>Push successors of <span class="dim">${node}</span> onto the stack (reversed for DFS order).</p>
+      <p style="margin-left:8px;">• <span class="dim">Successors:</span> ${nbList}</p>
+      <p style="margin-left:8px;">• Each child gets <span class="dim">g = ${g} + weight</span></p>
+      <span class="formula-line">Stack now: [${stack.join(', ')}]</span>
+      <p class="note">DFS explores deepest nodes first — this is what makes IDA* memory-efficient.</p>
+    </div>`;
+}
+
+function buildPruneExplanation(node, g, h, f, fLimit, iteration, path, stack) {
+  const pathStr = path.join(' → ');
+  return `
+    <div class="explain-section active" style="border-left-color:#ff4444;">
+      <h3>Iteration ${iteration} — Pruning ${node}</h3>
+      <p><span class="dim">${node}</span> has f-value exceeding the limit — <b>pruned!</b></p>
+      <span class="formula-line">f(${node}) = ${g} + ${h} = ${f}  >  f-limit = ${fLimit}</span>
+      <p><span class="split-info">Path:</span> ${pathStr}</p>
+      <p class="note">This node (and all its descendants) are skipped. This saves computation!</p>
+    </div>`;
+}
+
+function buildFoundExplanation(node, g, h, f, fLimit, iteration, path) {
+  const pathStr = path.join(' → ');
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>Iteration ${iteration} — Goal Found!</h3>
+      <p>Reached goal node <span class="result-line" style="display:inline;">${node}</span> with cost <span class="result-line" style="display:inline;">${g}</span>.</p>
+      <span class="formula-line">f(${node}) = ${g} + ${h} = ${f}  ≤  f-limit = ${fLimit}</span>
+      <p><span class="split-info">Optimal Path:</span> ${pathStr}</p>
+      <p class="note">Since IDA* uses consistent heuristics, the first solution found is optimal.</p>
+    </div>`;
+}
+
+function buildIterationEndExplanation(iteration, fLimit, nextFLimit) {
+  return `
+    <div class="explain-section active" style="border-left-color:#ff66ff;">
+      <h3>Iteration ${iteration} Complete</h3>
+      <p>All reachable nodes explored with <span class="dim">f-limit = ${fLimit}</span>. Goal not found.</p>
+      <span class="formula-line">New f-limit = min(f > ${fLimit}) = ${nextFLimit === Infinity ? '∞' : nextFLimit}</span>
+      <p class="note">Raising the threshold to try again with more nodes reachable.</p>
+    </div>`;
+}
+
+function buildNoSolutionExplanation() {
+  return `
+    <div class="explain-section active" style="border-left-color:#ff4444;">
+      <h3>No Solution Found</h3>
+      <p>ID A* has exhausted all reachable nodes. No path from <span class="dim">S</span> to <span class="dim">G</span> exists.</p>
+    </div>`;
+}
+
+function buildFinishedExplanation() {
+  const log = iterationLog.find(l => l.found);
+  if (!log) return buildNoSolutionExplanation();
+  const pathStr = log.path.join(' → ');
+  return `
+    <div class="explain-section active" style="border-left-color:#00ff88;">
+      <h3>✅ Algorithm Complete!</h3>
+      <p>IDA* found the optimal path in <span class="result-line" style="display:inline;">${log.iteration}</span> iterations.</p>
+      <h3 style="margin-top:10px;">Result</h3>
+      <p><span class="split-info">Path:</span> ${pathStr}</p>
+      <p><span class="split-info">Total Cost:</span> ${log.cost}</p>
+      <h3 style="margin-top:10px;">Why IDA*?</h3>
+      <p>• <span class="dim">Memory:</span> O(b·d) — only stores current path + frontier</p>
+      <p>• <span class="dim">Optimal:</span> guaranteed with consistent heuristic</p>
+      <p>• <span class="dim">Trade-off:</span> re-explores nodes across iterations, but saves memory vs A*</p>
+      <h3 style="margin-top:10px;">Complexity</h3>
+      <p><span class="dim">Time:</span> O(b<sup>d</sup>) where b=branching, d=depth of solution</p>
+      <p><span class="dim">Space:</span> O(b·d) — the key advantage over A*</p>
+    </div>`;
+}
+
+function clearHighlights() {
+  nodeColors = {};
+  nodeGlow = {};
+  pathHighlights = [];
+  document.querySelectorAll('td').forEach(td => {
+    td.className = '';
+  });
+}
+
+function applyStep(step) {
+  clearHighlights();
+
+  if (step.type === 'iteration_end' || step.type === 'no_solution') {
+    document.getElementById('phaseDisplay').textContent =
+      step.type === 'iteration_end' ? `Iteration ${step.iteration} done` : 'No solution';
+    document.getElementById('currentNodeDisplay').textContent = '—';
+    document.getElementById('gDisplay').textContent = '—';
+    document.getElementById('hDisplay').textContent = '—';
+    document.getElementById('fDisplay').textContent = '—';
+    buildStackDisplay([]);
+    drawGraph();
+    return;
+  }
+
+  buildIterationBanner(step.iteration, step.fLimit);
+
+  step.path.forEach(n => {
+    nodeColors[n] = '#00ccff';
+  });
+
+  if (step.type === 'visit') {
+    nodeColors[step.node] = '#ff6600';
+    nodeGlow[step.node] = '#ff660033';
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration} — Visiting ${step.node}`;
+  } else if (step.type === 'expand') {
+    nodeColors[step.node] = '#00ccff';
+    step.neighbors.forEach(n => {
+      if (!nodeColors[n]) nodeColors[n] = '#888';
+    });
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration} — Expanding ${step.node}`;
+  } else if (step.type === 'prune') {
+    nodeColors[step.node] = '#ff4444';
+    nodeGlow[step.node] = '#ff444433';
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration} — Pruning ${step.node}`;
+  } else if (step.type === 'found') {
+    nodeColors[step.node] = '#00ff88';
+    nodeGlow[step.node] = '#00ff8844';
+    step.path.forEach((n, i) => {
+      if (i < step.path.length - 1) {
+        pathHighlights.push({ from: step.path[i], to: step.path[i + 1] });
+      }
+    });
+    document.getElementById('phaseDisplay').textContent = `Iteration ${step.iteration} — Goal Found!`;
+  }
+
+  document.getElementById('currentNodeDisplay').textContent = step.node;
+  document.getElementById('gDisplay').textContent = step.g;
+  document.getElementById('hDisplay').textContent = step.h;
+  document.getElementById('fDisplay').textContent = step.f;
+
+  updateHeuristicHighlight(step.node, step.type === 'found' ? 'found' : (step.type === 'prune' ? 'pruned' : 'current'));
+
+  if (step.type === 'found') {
+    updateVisitedCell(step.node, step.g, 'found');
+  } else if (step.type === 'prune') {
+    updateVisitedCell(step.node, step.g, 'pruned');
+  } else {
+    updateVisitedCell(step.node, step.g, 'filled');
+  }
+
+  const displayStack = step.type === 'found' ? [] : step.stack;
+  buildStackDisplay(displayStack);
+
+  drawGraph();
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — Iteration ${step.iteration}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  clearAllHighlights();
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('currentNodeDisplay').textContent = '—';
+  document.getElementById('gDisplay').textContent = '—';
+  document.getElementById('hDisplay').textContent = '—';
+  document.getElementById('fDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('iterationBanner').style.display = 'none';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildSetupExplanation();
+  initHeuristicTable();
+  initVisitedTable();
+  buildStackDisplay([]);
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  const log = iterationLog.find(l => l.found);
+  if (log) {
+    document.getElementById('phaseDisplay').textContent = '✓ Goal Found!';
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultPath').textContent = log.path.join(' → ');
+    document.getElementById('resultCost').textContent = log.cost;
+    document.getElementById('resultIterations').textContent = log.iteration;
+    document.getElementById('resultExpanded').textContent = nodesExpanded;
+    nodeColors[log.node] = '#00ff88';
+    nodeGlow[log.node] = '#00ff8844';
+    log.path.forEach((n, i) => {
+      nodeColors[n] = '#00ccff';
+      if (i < log.path.length - 1) {
+        pathHighlights.push({ from: log.path[i], to: log.path[i + 1] });
+      }
+    });
+    drawGraph();
+  } else {
+    document.getElementById('phaseDisplay').textContent = '✗ No Solution';
+  }
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+buildSteps();
+initHeuristicTable();
+initVisitedTable();
+buildStackDisplay([]);
+document.getElementById('totalSteps').textContent = steps.length;
+document.getElementById('explainArea').innerHTML = buildSetupExplanation();
+drawGraph();
+</script>
+</body>
+</html>
