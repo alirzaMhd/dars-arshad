@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Degree Heuristic &amp; LCV - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Degree Heuristic &amp; Least Constraining Value</h1>
+  <p class="subtitle">Variable Selection Tie-Breaker &amp; Value Ordering Heuristic</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('degree')">Degree Heuristic</button>
+      <button class="tab" onclick="showSection('lcv')">Least Constraining Value</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="degree">
+      <div class="section">
+        <h2>Degree Heuristic</h2>
+        <p>The <strong>Degree Heuristic</strong> selects the variable involved in the largest number of constraints with other unassigned variables. It is primarily used as a <strong>tie-breaker</strong> when MRV gives equal values.</p>
+
+        <div class="formula">
+          <div class="label">Selection Criterion:</div>
+          <div class="expr">var = argmax<sub>X<sub>i</sub></sub> Degree(X<sub>i</sub>)</div>
+          <div class="desc">Choose the variable with the highest degree (most constraints) among unassigned variables</div>
+        </div>
+
+        <h3>Australia Map Example</h3>
+        <p>In the Australia map coloring problem, the degrees of variables are:</p>
+        <table>
+          <tr><th>Variable</th><th>Degree</th><th>Constrains</th></tr>
+          <tr><td>SA</td><td><span class="highlight">5</span></td><td>WA, NT, Q, NSW, V</td></tr>
+          <tr><td>NT</td><td>3</td><td>WA, SA, Q</td></tr>
+          <tr><td>Q</td><td>3</td><td>NT, SA, NSW</td></tr>
+          <tr><td>NSW</td><td>3</td><td>Q, SA, V</td></tr>
+          <tr><td>WA</td><td>2</td><td>NT, SA</td></tr>
+          <tr><td>V</td><td>2</td><td>SA, NSW</td></tr>
+          <tr><td>T</td><td>0</td><td>None (isolated)</td></tr>
+        </table>
+
+        <p>The degree heuristic selects <span class="highlight">SA</span> first (highest degree = 5). In fact, choosing SA first allows the Australia problem to be solved <strong>without any backtracking</strong>!</p>
+      </div>
+    </div>
+
+    <div class="content" id="lcv">
+      <div class="section">
+        <h2>Least Constraining Value (LCV)</h2>
+        <p>Once a variable is chosen, LCV determines the <strong>order in which values are tried</strong>. It prefers the value that <strong>rules out the fewest choices</strong> for neighboring unassigned variables.</p>
+
+        <div class="formula">
+          <div class="label">Selection Criterion:</div>
+          <div class="expr">value = argmin<sub>v</sub> (choices removed from neighbors)</div>
+          <div class="desc">Pick the value that leaves the most flexibility for other variables</div>
+        </div>
+
+        <h3>Why LCV Makes Sense</h3>
+        <p>Unlike MRV (which is "fail-first" for variables), LCV is "succeed-first" for values:</p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• We only need <strong>one</strong> solution (typically)</li>
+          <li>• Choosing a value that preserves options for neighbors increases the chance of success</li>
+          <li>• LCV tries the most promising value first</li>
+        </ul>
+
+        <div class="warning">
+          <strong>Important:</strong> LCV only matters when finding a single solution. If we need all solutions (or detect unsatisfiability), the value order is irrelevant since all values must be tried anyway.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Australia — Degree Heuristic Tie-Breaker</div>
+          <p><strong>Situation:</strong> All domains initially have size 3. MRV gives no guidance.</p>
+          <p><strong>Degree heuristic:</strong> SA (degree 5) > NT/Q/NSW (degree 3) > WA/V (degree 2) > T (degree 0)</p>
+          <p><strong>Select SA first.</strong> Assign SA=red. Now NT, Q, NSW, V, WA all lose red from domains.</p>
+          <p>After SA assignment: MRV now guides effectively (NT, Q, NSW, V have 2 values remaining).</p>
+          <p class="result">With SA first, the problem solves without backtracking!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Australia — LCV for Q</div>
+          <p><strong>Situation:</strong> WA=red, NT=green assigned. Selecting value for Q.</p>
+          <p><strong>Q can be:</strong> red, blue (green conflicts with NT)</p>
+          <p><strong>LCV analysis:</strong></p>
+          <p>• Q=red: SA's domain becomes {blue} (loses red and green from neighbors) → removes 1 option for SA</p>
+          <p>• Q=blue: SA's domain becomes {red, green} (loses blue only) → removes no additional options</p>
+          <p><span class="highlight">LCV prefers Q=blue</span> because it leaves more options for SA.</p>
+          <p class="result">LCV correctly avoids prematurely constraining SA</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: 8-Queens — LCV for Row Selection</div>
+          <p><strong>Variable:</strong> Q<sub>3</sub> (queen in column 3), with Q<sub>1</sub>=1, Q<sub>2</sub>=3 already placed.</p>
+          <p><strong>Possible rows:</strong> {5, 6, 7, 8} (rows 1-4 conflict with Q<sub>1</sub> or Q<sub>2</sub>)</p>
+          <p><strong>LCV analysis:</strong> Which row removes the fewest options for Q<sub>4</sub>-Q<sub>8</sub>?</p>
+          <p>• Row 5: conflicts with Q<sub>4</sub> rows {2, 4, 5, 6} → removes 4 options</p>
+          <p>• Row 6: conflicts with Q<sub>4</sub> rows {3, 5, 6, 7} → removes 4 options</p>
+          <p>• Row 7: conflicts with Q<sub>4</sub> rows {4, 6, 7, 8} → removes 4 options</p>
+          <p>• Row 8: conflicts with Q<sub>4</sub> rows {5, 7, 8} → removes <span class="highlight">only 3 options</span></p>
+          <p>LCV selects row 8 first for Q<sub>3</sub>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Degree Heuristic for Global Impact</div>
+          <p><strong>Graph:</strong> A small constraint graph with variables {A, B, C, D}.</p>
+          <p>A connected to B, C<br>B connected to A, C, D<br>C connected to A, B, D<br>D connected to B, C</p>
+          <p><strong>Degrees:</strong> A=2, B=3, C=3, D=2</p>
+          <p><strong>Degree heuristic picks:</strong> B or C (tied at degree 3).</p>
+          <p class="note">Degree counts only unassigned neighboring variables, so it's dynamic.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Degree Heuristic</h3>
+            <p><span class="highlight">Variable ordering</span></p>
+            <p>• Selects most constrained variable</p>
+            <p>• Tie-breaker for MRV</p>
+            <p>• Based on constraint graph degree</p>
+            <p>• SA (degree 5) best for Australia</p>
+          </div>
+          <div class="card">
+            <h3>LCV Heuristic</h3>
+            <p><span class="highlight">Value ordering</span></p>
+            <p>• Selects least constraining value</p>
+            <p>• Preserves neighbor flexibility</p>
+            <p>• "Succeed-first" approach</p>
+            <p>• Irrelevant when finding all solutions</p>
+          </div>
+          <div class="card">
+            <h3>Combined Strategy</h3>
+            <p>1. MRV (fail-first for variables)</p>
+            <p>2. Degree (tie-break)</p>
+            <p>3. LCV (succeed-first for values)</p>
+            <p>This is the standard heuristic set for CSP!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

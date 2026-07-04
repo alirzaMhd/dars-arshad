@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arc Consistency (AC-3) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Arc Consistency (AC-3 Algorithm)</h1>
+  <p class="subtitle">Constraint Propagation for All Binary Constraints</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('concept')">Concept</button>
+      <button class="tab" onclick="showSection('algorithm')">AC-3 Algorithm</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="concept">
+      <div class="section">
+        <h2>What is Arc Consistency?</h2>
+        <p>An <strong>arc</strong> in a constraint graph is a directed edge from variable X<sub>i</sub> to X<sub>j</sub>. The arc (X<sub>i</sub>, X<sub>j</sub>) is <strong>consistent</strong> if for every value x in D<sub>i</sub>, there exists some value y in D<sub>j</sub> such that (x, y) satisfies all constraints between X<sub>i</sub> and X<sub>j</sub>.</p>
+
+        <div class="formula">
+          <div class="label">Arc Consistency Definition:</div>
+          <div class="expr">Arc (X<sub>i</sub>, X<sub>j</sub>) is consistent ⇔ ∀x ∈ D<sub>i</sub>: ∃y ∈ D<sub>j</sub> such that (x,y) satisfies C<sub>ij</sub></div>
+          <div class="desc">Every value in X<sub>i</sub>'s domain must have a compatible value in X<sub>j</sub>'s domain</div>
+        </div>
+
+        <h3>Forward Checking vs Arc Consistency</h3>
+        <table>
+          <tr><th>Feature</th><th>Forward Checking</th><th>Arc Consistency</th></tr>
+          <tr><td>Propagation</td><td>1-step (from assigned var)</td><td>Full (all arcs repeatedly)</td></tr>
+          <tr><td>Power</td><td>Catches neighbor conflicts</td><td>Catches all binary conflicts</td></tr>
+          <tr><td>Example missed</td><td>NT=blue, SA=blue (conflict)</td><td>Detects this via (NT,SA) arc</td></tr>
+          <tr><td>Overhead</td><td>Lower</td><td>Higher (O(n²·d³))</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Key Contrast:</strong> Forward checking only looks at arcs from an assigned variable. Arc consistency iteratively corrects ALL arcs, propagating changes through the entire constraint graph.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="algorithm">
+      <div class="section">
+        <h2>The AC-3 Algorithm</h2>
+
+        <div class="code">function AC-3(csp) returns the CSP, possibly with reduced domains
+    inputs: csp, a binary CSP with variables {X₁, X₂, ..., Xₙ}
+    local variables: queue, a queue of arcs, initially all arcs in csp
+    
+    while queue is not empty do
+        (Xᵢ, Xⱼ) ← REMOVE-FIRST(queue)
+        
+        if REMOVE-INCONSISTENT-VALUES(Xᵢ, Xⱼ) then
+            for each Xₖ in NEIGHBORS[Xᵢ] do
+                add (Xₖ, Xᵢ) to queue
+
+function REMOVE-INCONSISTENT-VALUES(Xᵢ, Xⱼ) returns true if domain changed
+    removed ← false
+    
+    for each x in DOMAIN[Xᵢ] do
+        if there is no y in DOMAIN[Xⱼ] such that (x,y) satisfies Cᵢⱼ then
+            delete x from DOMAIN[Xᵢ]
+            removed ← true
+    
+    return removed</div>
+
+        <h3>Complexity Analysis</h3>
+        <div class="formula">
+          <div class="label">Time Complexity:</div>
+          <div class="expr">O(n² · d³)</div>
+          <div class="desc">where n = number of variables, d = max domain size</div>
+        </div>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• At most O(n²) arcs in a binary CSP (n choose 2 pairs)</li>
+          <li>• Each arc is added to queue at most d times (each domain removal)</li>
+          <li>• Each consistency check takes O(d²) (checking all pairs of values)</li>
+          <li>• Total: O(n² · d · d²) = O(n² · d³)</li>
+        </ul>
+
+        <div class="warning">
+          <strong>Note:</strong> AC-3 can be used as a preprocessing step before search, or as a propagation step (called MAC — Maintaining Arc Consistency) after each assignment during search.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Australia — Arc Consistency Detects Hidden Conflict</div>
+          <p><strong>State:</strong> WA=red, Q=green, V=blue, with arcs not yet propagated.</p>
+          <p><strong>Domains after forward checking:</strong> NT={blue}, SA={blue}, NSW={red, blue}</p>
+          <p>Forward checking didn't detect that NT and SA would conflict (both must be blue, but they're adjacent).</p>
+          <p><strong>AC-3 checks arc (NT, SA):</strong></p>
+          <p>• NT=blue requires SA ≠ blue. But SA only has {blue}.</p>
+          <p>• No compatible value → remove blue from SA → SA becomes empty!</p>
+          <p class="result">AC-3 detects the inconsistency that forward checking missed!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Arc Consistency as Preprocessing</div>
+          <p><strong>Initial CSP:</strong> Variables A, B, C with domains {1, 2, 3}</p>
+          <p><strong>Constraints:</strong> A < B, B < C</p>
+          <p><strong>Preprocessing with AC-3:</strong></p>
+          <p>• Check arc (A, B): A must have a value less than some B value. A=3 has no partner in B → remove A=3. D<sub>A</sub> = {1, 2}</p>
+          <p>• Check arc (B, A): B must have a value greater than some A value. B=1 has no partner → remove B=1. D<sub>B</sub> = {2, 3}</p>
+          <p>• Check arc (B, C): B must have value less than some C. B=3 has no partner → remove B=3. D<sub>B</sub> = {2}</p>
+          <p>• Check arc (C, B): C must have value greater than some B. C=1,2 have no partner → remove them. D<sub>C</sub> = {3}</p>
+          <p><strong>Final domains:</strong> D<sub>A</sub>={1,2}, D<sub>B</sub>={2}, D<sub>C</sub>={3}</p>
+          <p class="result">The search now proceeds with no backtracking!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: AC-3 on a Small Constraint Graph</div>
+          <p><strong>Variables:</strong> X, Y with domains {a, b, c}</p>
+          <p><strong>Constraint:</strong> X ≠ Y</p>
+          <p><strong>Check arc (X, Y):</strong></p>
+          <p>• X=a → Y can be {b, c} ✓</p>
+          <p>• X=b → Y can be {a, c} ✓</p>
+          <p>• X=c → Y can be {a, b} ✓</p>
+          <p>Arc (X,Y) is consistent — no values removed.</p>
+          <p><strong>Check arc (Y, X):</strong> Same — all values have partners.</p>
+          <p class="note">No domain reduction possible with just binary inequality when both domains have ≥2 values.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: When Arc Consistency Cannot Detect the Problem</div>
+          <p>AC-3 checks binary arcs individually. It does <strong>not</strong> detect all inconsistencies.</p>
+          <p>Consider: WA=red, NT=red. AC-3 checks (WA, NT) and finds:</p>
+          <p>• WA=red needs NT≠red, but NT's remaining domain is {red} → remove red from WA → WA's domain becomes {green, blue}.</p>
+          <p>But if there are ternary constraints or complex interactions, AC-3 might not catch them.</p>
+          <p class="warning">K-consistency (for k>2) is needed for stronger propagation, but at exponential cost.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Arc Definition</h3>
+            <p>Directed edge (X<sub>i</sub>, X<sub>j</sub>)</p>
+            <p>Consistent: each X<sub>i</sub> value has a compatible X<sub>j</sub> value</p>
+            <p>Not symmetric! (X<sub>i</sub>,X<sub>j</sub>) can be consistent while (X<sub>j</sub>,X<sub>i</sub>) is not</p>
+          </div>
+          <div class="card">
+            <h3>AC-3 Properties</h3>
+            <p>• Time: <span class="highlight">O(n² · d³)</span></p>
+            <p>• Space: O(n²) for queue</p>
+            <p>• Complete for binary consistency</p>
+            <p>• Still misses some conflicts</p>
+          </div>
+          <div class="card">
+            <h3>Use Cases</h3>
+            <p>• <span class="highlight">Preprocessing</span> before search</p>
+            <p>• <span class="highlight">MAC</span> (Maintaining Arc Consistency) during search</p>
+            <p>• More powerful than forward checking</p>
+          </div>
+          <div class="card">
+            <h3>Limitations</h3>
+            <p>• Cannot detect n-ary inconsistencies</p>
+            <p>• SAT is a special case of CSP — no poly-time algorithm can detect all inconsistencies</p>
+            <p>• K-consistency is stronger but exponential</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

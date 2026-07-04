@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MRV Heuristic - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>MRV — Minimum Remaining Values Heuristic</h1>
+  <p class="subtitle">Choose the Most Constrained Variable First (Fail-First Heuristic)</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('concept')">Concept</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('performance')">Performance</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="concept">
+      <div class="section">
+        <h2>What is MRV?</h2>
+        <p>MRV (Minimum Remaining Values) is a heuristic for choosing the next variable to assign in backtracking search. It selects the variable with the <strong>fewest legal values</strong> remaining in its domain.</p>
+
+        <h3>Also Known As</h3>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• <span class="highlight">Most Constrained Variable</span> — the variable that is hardest to satisfy</li>
+          <li>• <span class="highlight">Fail-First Heuristic</span> — because it's likely to cause failure early, pruning the search tree</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Selection Criterion:</div>
+          <div class="expr">var = argmin<sub>X<sub>i</sub></sub> |D<sub>i</sub> — eliminated values|</div>
+          <div class="desc">Choose the variable with the smallest remaining domain size</div>
+        </div>
+
+        <h3>Why Fail-First Works</h3>
+        <p>At first glance, it seems counterintuitive: why choose a variable that's likely to fail? The reasoning:</p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>1. If a variable will eventually fail, it's better to discover this early</li>
+          <li>2. Early failure = smaller search tree = less backtracking</li>
+          <li>3. All paths lead to the same solution; pruning early saves work</li>
+        </ul>
+
+        <div class="warning">
+          <strong>Intuition:</strong> "If you're going to fail, fail fast!" A failure at a shallow node prunes an entire subtree. Finding dead ends early is exponentially beneficial.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Australia Map — MRV in Action</div>
+          <p><strong>Initial state:</strong> All 7 variables have domain size 3.</p>
+          <p>MRV doesn't help initially — all domains are equal. Fall back to degree heuristic.</p>
+          <p><strong>After WA=red:</strong> SA and NT lose red from their domains → both have 2 values remaining, others have 3.</p>
+          <p>MRV picks <span class="highlight">SA or NT</span> next (domain size 2 vs 3).</p>
+          <p class="result">This leads to faster constraint propagation and earlier dead-end detection</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: MRV with Forward Checking</div>
+          <p><strong>Assignment so far:</strong> WA=red, Q=green</p>
+          <p><strong>Domains after forward checking:</strong></p>
+          <table>
+            <tr><th>Variable</th><th>Remaining Values</th><th>Domain Size</th></tr>
+            <tr><td>NT</td><td>{blue}</td><td>1 ← MRV picks this!</td></tr>
+            <tr><td>SA</td><td>{blue}</td><td>1 ← Also domain size 1</td></tr>
+            <tr><td>NSW</td><td>{red, blue}</td><td>2</td></tr>
+            <tr><td>V</td><td>{red, blue}</td><td>2</td></tr>
+            <tr><td>T</td><td>{red, green, blue}</td><td>3</td></tr>
+          </table>
+          <p>MRV picks NT or SA next (domain size 1), exposing potential conflicts immediately.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: 8-Queens with MRV</div>
+          <p><strong>Partial assignment:</strong> Q<sub>1</sub>=1, Q<sub>2</sub>=3</p>
+          <p><strong>Domains remaining:</strong></p>
+          <p>Q<sub>3</sub>: {5, 6, 7, 8} (size 4)</p>
+          <p>Q<sub>4</sub>: {2, 6, 7, 8} (size 4)</p>
+          <p>Q<sub>5</sub>: {2, 4, 7, 8} (size 4)</p>
+          <p>Q<sub>6</sub>: {2, 4, 5, 8} (size 4)</p>
+          <p>Q<sub>7</sub>: {2, 4, 5, 6} (size 4)</p>
+          <p>Q<sub>8</sub>: {2, 4, 5, 6} (size 4)</p>
+          <p>All remaining have equal domain sizes at this point.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: When MRV Detects Immediate Failure</div>
+          <p><strong>Partial assignment:</strong> WA=red, NT=green, Q=blue</p>
+          <p><strong>SA's remaining domain:</strong> {} (all colors taken by neighbors)</p>
+          <p>MRV selects SA (domain size 0) and immediately detects failure.</p>
+          <p><span class="highlight">Without MRV:</span> Algorithm might assign other variables first, wasting time.</p>
+          <p><span class="highlight">With MRV:</span> Failure detected immediately → backtrack at the right point.</p>
+          <p class="result">MRV makes backtracking much more efficient</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="performance">
+      <div class="section">
+        <h2>Performance Impact</h2>
+
+        <h3>Empirical Results (from textbook)</h3>
+        <table>
+          <tr><th>Problem</th><th>BT (Backtracking)</th><th>BT + MRV</th><th>Improvement</th></tr>
+          <tr><td>USA Map</td><td>&gt;1,000K nodes</td><td>&gt;1,000K nodes</td><td>—</td></tr>
+          <tr><td>n-Queens</td><td>&gt;40,000K nodes</td><td>13,500K nodes</td><td>~3x faster</td></tr>
+          <tr><td>Zebra</td><td>3,859K nodes</td><td>1K nodes</td><td><span class="highlight">~3,859x faster!</span></td></tr>
+          <tr><td>Random 1</td><td>26K nodes</td><td>2K nodes</td><td>~13x faster</td></tr>
+          <tr><td>Random 2</td><td>77K nodes</td><td>15K nodes</td><td>~5x faster</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Important:</strong> MRV does not help when all initial domains are the same size (e.g., Australia at the start). In such cases, the Degree Heuristic is needed as a tie-breaker.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>MRV Heuristic</h3>
+            <p>• Pick variable with <span class="highlight">smallest domain</span></p>
+            <p>• Also called <span class="highlight">Most Constrained Variable</span></p>
+            <p>• Also called <span class="highlight">Fail-First</span> heuristic</p>
+          </div>
+          <div class="card">
+            <h3>Why It Works</h3>
+            <p>• Early failure = smaller search tree</p>
+            <p>• Works well with Forward Checking</p>
+            <p>• Forward checking efficiently computes domain sizes</p>
+          </div>
+          <div class="card">
+            <h3>Limitations</h3>
+            <p>• Needs tie-breaker when domains equal</p>
+            <p>• Degree heuristic complements MRV perfectly</p>
+            <p>• Adds overhead for computing domain sizes</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

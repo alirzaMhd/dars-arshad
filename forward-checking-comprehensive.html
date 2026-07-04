@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forward Checking - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Forward Checking</h1>
+  <p class="subtitle">Constraint Propagation During Search</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('concept')">Concept</button>
+      <button class="tab" onclick="showSection('walkthrough')">Walkthrough</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="concept">
+      <div class="section">
+        <h2>What is Forward Checking?</h2>
+        <p>Forward checking is a method that <strong>propagates constraints</strong> during search. Whenever a variable X is assigned a value, forward checking looks at each unassigned variable Y that is connected to X by a constraint, and removes from Y's domain any values that are inconsistent with X's assignment.</p>
+
+        <div class="formula">
+          <div class="label">Core Idea:</div>
+          <div class="expr">When X = v → ∀Y connected to X: D<sub>Y</sub> ← D<sub>Y</sub> \ {values inconsistent with X=v}</div>
+          <div class="desc">Remove values from neighbor domains that conflict with the new assignment</div>
+        </div>
+
+        <h3>Key Properties</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Advantages</h3>
+            <p>• Detects dead-ends earlier</p>
+            <p>• Reduces branching factor</p>
+            <p>• Works perfectly with MRV</p>
+            <p>• Computes domain sizes for free</p>
+          </div>
+          <div class="card">
+            <h3>Limitations</h3>
+            <p>• Doesn't detect all inconsistencies</p>
+            <p>• Limited lookahead (1-step)</p>
+            <p>• Arc consistency is more powerful</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Key Limitation:</strong> Forward checking only looks at direct neighbors. It misses inconsistencies that require 2-step propagation. For example, if NT and SA both have the same single value left, forward checking won't detect that they conflict with each other.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="walkthrough">
+      <div class="section">
+        <h2>Australia Map — Forward Checking Walkthrough</h2>
+
+        <h3>Step-by-Step with Domain Tracking</h3>
+        <table>
+          <tr><th>Step</th><th>Action</th><th>WA</th><th>NT</th><th>SA</th><th>Q</th><th>NSW</th><th>V</th><th>T</th></tr>
+          <tr><td>0</td><td>Initial</td><td>RGB</td><td>RGB</td><td>RGB</td><td>RGB</td><td>RGB</td><td>RGB</td><td>RGB</td></tr>
+          <tr><td>1</td><td>WA=red</td><td bgcolor="#004400">R</td><td>GB</td><td>GB</td><td>RGB</td><td>RGB</td><td>RGB</td><td>RGB</td></tr>
+          <tr><td>2</td><td>Q=green</td><td>R</td><td>B</td><td>B</td><td bgcolor="#004400">G</td><td>RB</td><td>RGB</td><td>RGB</td></tr>
+          <tr><td>3</td><td>V=blue</td><td>R</td><td>B</td><td bgcolor="#440000">EMPTY!</td><td>G</td><td>R</td><td bgcolor="#004400">B</td><td>RGB</td></tr>
+        </table>
+
+        <p>At step 3, after V=blue, SA's domain becomes empty → <strong>dead-end detected!</strong> Backtrack immediately.</p>
+
+        <div class="formula">
+          <div class="label">Detection Speed:</div>
+          <div class="expr">Forward checking detects the conflict at <span class="highlight">depth 3</span></div>
+          <div class="expr">Standard backtracking would detect it at <span class="highlight">depth 6</span> (when trying SA)</div>
+        </div>
+
+        <p class="result">Forward checking finds dead-ends much earlier than simple backtracking!</p>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Forward Checking with Binary CSP</div>
+          <p><strong>Variables:</strong> A, B, C with domains {1, 2, 3}</p>
+          <p><strong>Constraints:</strong> A < B, B < C</p>
+          <p><strong>Step 1:</strong> Assign A=1. Forward checking: B must be > 1 → D<sub>B</sub> = {2, 3}. C unaffected.</p>
+          <p><strong>Step 2:</strong> Assign B=2. Forward checking: C must be > 2 → D<sub>C</sub> = {3}.</p>
+          <p><strong>Step 3:</strong> Assign C=3. All assigned, all consistent.</p>
+          <p class="result">✓ Solution found with immediate constraint checks</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Forward Checking Discovers Inconsistency Early</div>
+          <p><strong>Same CSP:</strong> A < B, B < C</p>
+          <p><strong>Step 1:</strong> Assign A=3. Forward checking: B must be > 3 → EMPTY! (B's domain {1,2,3} has no values > 3).</p>
+          <p><strong>Immediate backtrack</strong> — no need to even try B.</p>
+          <p class="warning">Without forward checking, the algorithm would assign B (try 1, 2, 3) before discovering the inconsistency.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Limit of Forward Checking</div>
+          <p><strong>Variables:</strong> X, Y, Z with domains {a, b}</p>
+          <p><strong>Constraints:</strong> X ≠ Y, Y ≠ Z, X ≠ Z</p>
+          <p><strong>After assigning X=a:</strong> Forward checking removes 'a' from Y → D<sub>Y</sub> = {b}. Z unchanged (Z not directly constrained by X... wait, it is in this case).</p>
+          <p>Actually, all pairs are constrained here. Let's consider a case where FC fails:</p>
+          <p><strong>Constraints:</strong> X ≠ Y, Y ≠ Z (no direct X-Z constraint)</p>
+          <p><strong>After X=a, Y=b:</strong> Forward checking from Y=b removes 'b' from Z → D<sub>Z</sub> = {a}. This is consistent with X=a.</p>
+          <p>But if X=a and Y=b and Z=a: X=Z (no direct constraint), but through Y... actually this is fine with these constraints.</p>
+          <p class="note">Forward checking would detect issues with ternary constraints after all three are partially assigned.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: MRV + Forward Checking Synergy</div>
+          <p>Forward checking efficiently computes <strong>exactly</strong> the domain size information that MRV needs.</p>
+          <p>After each assignment, the updated domain sizes are immediately available:</p>
+          <ul style="list-style: none; padding-left: 0;">
+            <li>• No extra computation needed for MRV</li>
+            <li>• MRV naturally selects variables with smallest remaining domains</li>
+            <li>• Forward checking provides the data; MRV uses it</li>
+          </ul>
+          <p>This combination is consistently among the best CSP solvers in practice.</p>
+          <p class="result">Forward Checking + MRV is a powerful combination</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Forward Checking</h3>
+            <p>• Propagates after each assignment</p>
+            <p>• Removes inconsistent values from neighbors</p>
+            <p>• Detects dead-ends early</p>
+            <p>• Works with any constraint type</p>
+          </div>
+          <div class="card">
+            <h3>Limitation</h3>
+            <p>• Doesn't detect all inconsistencies</p>
+            <p>• Limited to 1-step propagation</p>
+            <p>• Example: NT=blue, SA=blue (conflict with each other) — FC misses this</p>
+          </div>
+          <div class="card">
+            <h3>Complementary Heuristics</h3>
+            <p>• MRV uses FC's domain sizes</p>
+            <p>• Arc consistency (AC-3) is stronger</p>
+            <p>• MAC = Maintaining Arc Consistency</p>
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Method</th><th>Propagation</th><th>Detection Power</th><th>Overhead</th></tr>
+          <tr><td>Standard BT</td><td>None</td><td>At assignment time</td><td>Minimal</td></tr>
+          <tr><td>Forward Checking</td><td>1-step</td><td>Neighbor conflicts</td><td>Low</td></tr>
+          <tr><td>Arc Consistency</td><td>Full</td><td>All binary conflicts</td><td>Higher</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

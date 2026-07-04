@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intelligent Backtracking (Backjumping) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Intelligent Backtracking — Backjumping</h1>
+  <p class="subtitle">Smarter Backtracking Using Conflict Sets</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('problem')">The Problem</button>
+      <button class="tab" onclick="showSection('solution')">Backjumping</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="problem">
+      <div class="section">
+        <h2>The Problem with Naive Backtracking</h2>
+        <p>Standard backtracking (chronological backtracking) always returns to the <strong>most recent</strong> variable when it reaches a dead end. But this is often wasteful.</p>
+
+        <div class="example">
+          <div class="title">Example: Wasted Backtracking</div>
+          <p><strong>Assignment order:</strong> WA → SA → T → V → NSW → Q → NT</p>
+          <p><strong>Partial assignment:</strong> {WA=red, SA=blue, T=red, V=green, NSW=red, Q=red}</p>
+          <p><strong>Next variable:</strong> NT has no valid color (neighbors WA=red, SA=blue, Q=red use all colors).</p>
+          <p><strong>Naive backtrack:</strong> Goes back to Q and tries a different color for Q.</p>
+          <p><strong>But:</strong> Changing Q's color won't help! The conflict is with WA and SA, not Q.</p>
+          <p class="warning">Naive backtracking wastes time exploring irrelevant alternatives.</p>
+        </div>
+
+        <h3>Chronological Backtracking Problem</h3>
+        <p>Standard backtracking jumps to the <strong>most recent variable</strong> regardless of whether that variable is related to the conflict. This can lead to <strong>thrashing</strong> — repeatedly exploring branches that are doomed to fail.</p>
+      </div>
+    </div>
+
+    <div class="content" id="solution">
+      <div class="section">
+        <h2>Backjumping with Conflict Sets</h2>
+        <p><strong>Backjumping</strong> (also called intelligent backtracking) uses the concept of a <strong>conflict set</strong> to jump back to the <strong>relevant variable</strong> — the one actually involved in the conflict.</p>
+
+        <div class="formula">
+          <div class="label">Conflict Set:</div>
+          <div class="expr">ConflictSet(X) = {previously assigned variables that are connected to X in the constraint graph}</div>
+          <div class="desc">Only variables in the conflict set can be responsible for X having no valid value</div>
+        </div>
+
+        <h3>How Backjumping Works</h3>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>1. When assigning X, track which previous variables eliminate which values</li>
+          <li>2. If all values for X are eliminated, the union of their conflict sets = the conflict set for X</li>
+          <li>3. Jump back to the <strong>most recent variable</strong> in X's conflict set</li>
+          <li>4. Return <strong>failure + conflict set</strong> so the target variable knows which conflicts remain</li>
+        </ul>
+
+        <h3>Implementation</h3>
+        <div class="code">function BACKTRACKING-SEARCH(csp) returns a solution or failure
+    return RECURSIVE-BACKJUMPING({}, csp)
+
+function RECURSIVE-BACKJUMPING(assignment, csp) returns (solution, conflictSet)
+    if assignment is complete then return (assignment, {})
+    
+    var ← SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)
+    
+    for each value in ORDER-DOMAIN-VALUES(var, assignment, csp) do
+        if value is consistent with assignment then
+            add {var = value} to assignment
+            (result, conflict) ← RECURSIVE-BACKJUMPING(assignment, csp)
+            if result ≠ failure then return (result, conflict)
+            remove {var = value} from assignment
+    
+    return (failure, ConflictSet(var))</div>
+
+        <div class="warning">
+          <strong>Key Point:</strong> Backjumping doesn't just go back one step — it goes back to the variable that actually caused the conflict, skipping irrelevant variables.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Australia Map — Backjumping in Action</div>
+          <p><strong>Assignment order:</strong> WA → SA → T → V → NSW → Q → NT</p>
+          <p><strong>Assignment:</strong> WA=red, SA=blue, T=red, V=green, NSW=red, Q=red</p>
+          <p><strong>NT fails:</strong> Needs color different from WA(red), SA(blue), Q(red). No color left.</p>
+          <p><strong>NT's conflict set:</strong> {WA, SA, Q} (the three variables connected to NT)</p>
+          <p><strong>Backjump to Q</strong> (most recent in conflict set), skipping V, NSW, T.</p>
+          <p>Try Q=green (instead of Q=red). Now NT can be blue.</p>
+          <p class="result">Backjumping saved 3 backtrack steps (T, V, NSW were skipped)!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Comparison — Chronological vs Intelligent</div>
+          <p><strong>Problem:</strong> Small CSP with variables {A, B, C, D, E}, ordering A→B→C→D→E</p>
+          <p><strong>Conflict:</strong> E conflicts with A and B only (not with C, D).</p>
+          <p><strong>Chronological:</strong> D fails → try D again → still fails → try C again → still fails → try B → success!</p>
+          <p><strong>Backjumping:</strong> E's conflict set = {A, B} → jump directly to B. Skip C, D entirely.</p>
+          <p class="result">Backjumping jumps from depth 5 (E) to depth 2 (B), skipping 2 irrelevant variables.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Forward Checking Does It Better</div>
+          <p>Forward checking (FC) naturally prevents reaching dead-ends that backjumping would handle.</p>
+          <p>With FC, when X is assigned, it eliminates values from neighbors. If a neighbor's domain becomes empty, backtrack happens <strong>immediately</strong> — without needing to assign the empty-domain variable.</p>
+          <p>In fact, it's been proven that <strong>every branch pruned by backjumping is also pruned by forward checking</strong>. Therefore, pure backjumping offers no advantage over FC.</p>
+          <p class="warning">Backjumping is redundant when using forward checking or arc consistency.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: MAC + Backjumping is Redundant</div>
+          <p>MAC (Maintaining Arc Consistency) is even more powerful than forward checking. After each assignment, AC-3 propagates all constraints until quiescence. This catches inconsistencies even earlier.</p>
+          <p>With MAC:</p>
+          <ul style="list-style: none; padding-left: 0;">
+            <li>• Inconsistencies are detected as early as possible</li>
+            <li>• The "culprit" variable is already identified by the propagation</li>
+            <li>• Backjumping adds no additional pruning power</li>
+          </ul>
+          <p class="result">Modern CSP solvers use FC or MAC; backjumping is mainly of historical interest.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Backjumping</h3>
+            <p>• Jumps to the <span class="highlight">relevant</span> variable</p>
+            <p>• Uses <span class="highlight">conflict sets</span></p>
+            <p>• Skips irrelevant variables</p>
+            <p>• Avoids thrashing</p>
+          </div>
+          <div class="card">
+            <h3>Conflict Set</h3>
+            <p>• Set of previously assigned variables connected to X</p>
+            <p>• Union of conflicts from each eliminated value</p>
+            <p>• Tells you where to jump back</p>
+          </div>
+          <div class="card">
+            <h3>Limitations</h3>
+            <p>• Redundant with Forward Checking</p>
+            <p>• Every branch backjumping prunes is pruned by FC</p>
+            <p>• No benefit with MAC either</p>
+            <p>• Mainly of historical importance</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
