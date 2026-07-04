@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMA* Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .graph-container {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    .graph-container canvas {
+      display: block;
+      margin: 0 auto;
+    }
+    .graph-legend {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75em;
+      color: #aaa;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+    .queue-section {
+      margin: 15px 0;
+    }
+    .queue-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .queue-display {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+    .queue-node {
+      padding: 6px 12px;
+      border: 2px solid #444;
+      border-radius: 8px;
+      background: #111;
+      font-size: 0.8em;
+      text-align: center;
+      min-width: 70px;
+      transition: all 0.3s;
+    }
+    .queue-node.current {
+      border-color: #ff6600;
+      background: #1a0a00;
+      color: #ff6600;
+      box-shadow: 0 0 10px #ff660044;
+    }
+    .queue-node.visited {
+      border-color: #00ff88;
+      background: #0a1a12;
+      color: #00ff88;
+    }
+    .queue-node.pruned {
+      border-color: #ff66ff;
+      background: #1a0030;
+      color: #ff66ff;
+      text-decoration: line-through;
+    }
+    .queue-node.frontier {
+      border-color: #00ccff;
+      background: #0a0a1a;
+      color: #00ccff;
+    }
+    .queue-node.goal {
+      border-color: #00ff88;
+      background: #002a1a;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8844;
+    }
+    .queue-node .node-name {
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .queue-node .node-info {
+      font-size: 0.8em;
+      color: #888;
+      margin-top: 2px;
+    }
+    .queue-node.current .node-info { color: #ff9944; }
+    .queue-node.visited .node-info { color: #00aa66; }
+    .queue-node.pruned .node-info { color: #cc66cc; }
+    .queue-node.frontier .node-info { color: #0099bb; }
+    .queue-node.goal .node-info { color: #00aa66; }
+    .memory-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0;
+      font-size: 0.85em;
+    }
+    .memory-bar .label { color: #888; }
+    .memory-bar .bar {
+      width: 200px;
+      height: 16px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    .memory-bar .fill {
+      height: 100%;
+      background: #00ccff;
+      transition: width 0.3s;
+      border-radius: 8px;
+    }
+    .memory-bar .fill.warning { background: #ff6600; }
+    .memory-bar .fill.danger { background: #ff3333; }
+    .memory-bar .count { color: #ffcc00; font-weight: bold; }
+    .path-section {
+      margin: 15px 0;
+      padding: 12px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .path-section .path-label {
+      color: #888;
+      font-size: 0.85em;
+      margin-bottom: 6px;
+    }
+    .path-section .path-value {
+      color: #00ff88;
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SMA*</h1>
+  <p class="subtitle">Graph Search — Simplified Memory-Bounded A*</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="graph-container">
+        <canvas id="graphCanvas" width="700" height="380"></canvas>
+        <div class="graph-legend">
+          <div class="legend-item"><div class="legend-dot" style="border-color:#00ccff;background:#111;"></div>Start</div>
+          <div class="legend-item"><div class="legend-dot" style="border-color:#ff6600;background:#1a0a00;"></div>Current</div>
+          <div class="legend-item"><div class="legend-dot" style="border-color:#00ff88;background:#0a1a12;"></div>Visited</div>
+          <div class="legend-item"><div class="legend-dot" style="border-color:#00ccff;background:#0a0a1a;"></div>Frontier</div>
+          <div class="legend-item"><div class="legend-dot" style="border-color:#ff66ff;background:#1a0030;"></div>Pruned</div>
+          <div class="legend-item"><div class="legend-dot" style="border-color:#00ff88;background:#002a1a;"></div>Goal</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm:</span> <span class="value">SMA* (Simplified Memory-Bounded A*)</span><br>
+        <span class="label">Memory Limit:</span> <span class="value" id="memLimit">3</span> <span class="label">nodes</span><br>
+        <span class="label">Phase:</span> <span class="highlight" id="phaseDisplay">Ready — Press Play</span><br>
+        <span class="label">Current Action:</span> <span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+      </div>
+
+      <div class="memory-bar">
+        <span class="label">Memory:</span>
+        <div class="bar"><div class="fill" id="memoryFill" style="width:0%"></div></div>
+        <span class="count" id="memoryCount">0 / 3</span>
+      </div>
+
+      <div class="queue-section">
+        <div class="queue-title">Priority Queue (sorted by f-cost)</div>
+        <div class="queue-display" id="queueDisplay"></div>
+      </div>
+
+      <div class="path-section">
+        <div class="path-label">Current Best Path</div>
+        <div class="path-value" id="pathDisplay">—</div>
+      </div>
+
+      <div class="result-section" id="resultSection">
+        <h2>Optimal Path Found!</h2>
+        <p style="color:#ccc;margin:8px 0;">The algorithm has terminated with the best solution within the memory bound.</p>
+        <p style="color:#ffcc00;font-size:1.1em;margin:10px 0;">Path: <span class="result-line" id="finalPath">—</span></p>
+        <p style="color:#ccc;">Total Cost: <span class="result-line" id="finalCost">—</span></p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>Find the <b>shortest path</b> from <span class="dim">S</span> to <span class="dim">G</span> using SMA* with a <b>memory limit of 3 nodes</b>.</p>
+          <p>SMA* extends A* by pruning the <b>shallowest highest f-cost leaf</b> when memory is full.</p>
+          <h3 style="margin-top:10px;">Key Formula</h3>
+          <span class="formula-line">f(s) = MAX(f(n), g(s) + h(s))</span>
+          <p>Where <span class="dim">n</span> is the parent, <span class="dim">g(s)</span> is actual cost, <span class="dim">h(s)</span> is heuristic estimate.</p>
+          <h3 style="margin-top:10px;">Pruning Rule</h3>
+          <span class="formula-line">When |Queue| > MEMORY_LIMIT:<br>  delete shallowest highest-f-cost leaf<br>  remove from parent's successor list<br>  re-add parent if needed</span>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MEM_LIMIT = 3;
+
+    const graph = {
+      nodes: {
+        S: { x: 80,  y: 190, h: 6 },
+        A: { x: 230, y: 80,  h: 5 },
+        B: { x: 230, y: 300, h: 5 },
+        C: { x: 400, y: 80,  h: 4 },
+        D: { x: 400, y: 300, h: 6 },
+        E: { x: 550, y: 190, h: 3 },
+        G: { x: 650, y: 190, h: 0 }
+      },
+      edges: [
+        { from: 'S', to: 'A', cost: 2 },
+        { from: 'S', to: 'B', cost: 1 },
+        { from: 'A', to: 'B', cost: 1 },
+        { from: 'A', to: 'C', cost: 3 },
+        { from: 'B', to: 'C', cost: 2 },
+        { from: 'B', to: 'D', cost: 3 },
+        { from: 'C', to: 'E', cost: 1 },
+        { from: 'D', to: 'E', cost: 2 },
+        { from: 'E', to: 'G', cost: 3 }
+      ]
+    };
+
+    const neighbors = {};
+    for (const n of Object.keys(graph.nodes)) neighbors[n] = [];
+    for (const e of graph.edges) {
+      neighbors[e.from].push({ node: e.to, cost: e.cost });
+      neighbors[e.to].push({ node: e.from, cost: e.cost });
+    }
+
+    function f(node, g) {
+      return Math.max(g, g + graph.nodes[node].h);
+    }
+
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    let queue = [];
+    let visited = new Set();
+    let pruned = new Set();
+    let parentOf = {};
+    let gCosts = {};
+    let bestPath = [];
+    let finalResult = null;
+
+    function buildSteps() {
+      steps = [];
+      queue = [];
+      visited = new Set();
+      pruned = new Set();
+      parentOf = {};
+      gCosts = { S: 0 };
+      bestPath = [];
+      finalResult = null;
+
+      queue.push({ node: 'S', g: 0, f: f('S', 0), depth: 0, parent: null });
+      parentOf['S'] = null;
+
+      steps.push({
+        type: 'init',
+        queue: JSON.parse(JSON.stringify(queue)),
+        visited: new Set(visited),
+        pruned: new Set(pruned),
+        explanation: buildInitExplanation()
+      });
+
+      let limitReached = false;
+
+      while (queue.length > 0 && !finalResult) {
+        queue.sort((a, b) => a.f - b.f || b.depth - a.depth);
+        const current = queue.shift();
+        const nodeName = current.node;
+
+        if (visited.has(nodeName)) continue;
+        visited.add(nodeName);
+
+        if (nodeName === 'G') {
+          bestPath = reconstructPath(parentOf, current);
+          finalResult = { path: bestPath, cost: current.g };
+          steps.push({
+            type: 'goal',
+            node: nodeName,
+            g: current.g,
+            fVal: current.f,
+            queue: JSON.parse(JSON.stringify(queue)),
+            visited: new Set(visited),
+            pruned: new Set(pruned),
+            path: [...bestPath],
+            explanation: buildGoalExplanation(nodeName, current.g, bestPath)
+          });
+          break;
+        }
+
+        steps.push({
+          type: 'expand',
+          node: nodeName,
+          g: current.g,
+          fVal: current.f,
+          depth: current.depth,
+          queue: JSON.parse(JSON.stringify(queue)),
+          visited: new Set(visited),
+          pruned: new Set(pruned),
+          explanation: buildExpandExplanation(nodeName, current)
+        });
+
+        for (const nb of neighbors[nodeName]) {
+          const succ = nb.node;
+          if (visited.has(succ)) continue;
+
+          const newG = current.g + nb.cost;
+          const newF = f(succ, newG);
+          const newDepth = current.depth + 1;
+
+          const existingIdx = queue.findIndex(q => q.node === succ);
+          if (existingIdx >= 0) {
+            if (newF < queue[existingIdx].f) {
+              queue[existingIdx].g = newG;
+              queue[existingIdx].f = newF;
+              queue[existingIdx].depth = newDepth;
+              queue[existingIdx].parent = nodeName;
+              gCosts[succ] = newG;
+              parentOf[succ] = nodeName;
+
+              steps.push({
+                type: 'update',
+                node: succ,
+                from: nodeName,
+                g: newG,
+                fVal: newF,
+                oldF: queue[existingIdx].f,
+                queue: JSON.parse(JSON.stringify(queue)),
+                visited: new Set(visited),
+                pruned: new Set(pruned),
+                explanation: buildUpdateExplanation(succ, nodeName, newG, newF)
+              });
+            }
+            continue;
+          }
+
+          gCosts[succ] = newG;
+          parentOf[succ] = nodeName;
+          queue.push({ node: succ, g: newG, f: newF, depth: newDepth, parent: nodeName });
+
+          steps.push({
+            type: 'add',
+            node: succ,
+            from: nodeName,
+            g: newG,
+            fVal: newF,
+            depth: newDepth,
+            queue: JSON.parse(JSON.stringify(queue)),
+            visited: new Set(visited),
+            pruned: new Set(pruned),
+            explanation: buildAddExplanation(succ, nodeName, newG, newF)
+          });
+
+          while (queue.length > MEM_LIMIT) {
+            queue.sort((a, b) => a.f - b.f || b.depth - a.depth);
+            let worstIdx = -1;
+            let worstF = -1;
+            let worstDepth = Infinity;
+            for (let i = 0; i < queue.length; i++) {
+              const q = queue[i];
+              if (q.depth < worstDepth || (q.depth === worstDepth && q.f > worstF)) {
+                worstF = q.f;
+                worstDepth = q.depth;
+                worstIdx = i;
+              }
+            }
+            if (worstIdx < 0) break;
+
+            const prunedNode = queue[worstIdx];
+            queue.splice(worstIdx, 1);
+            pruned.add(prunedNode.node);
+
+            if (prunedNode.parent) {
+              const parentIdx = queue.findIndex(q => q.node === prunedNode.parent);
+              if (parentIdx >= 0) {
+                const siblings = queue.filter(q => q.parent === prunedNode.parent);
+                if (siblings.length > 0) {
+                  const minSiblingF = Math.min(...siblings.map(s => s.f));
+                  if (minSiblingF > queue[parentIdx].f) {
+                    queue[parentIdx].f = minSiblingF;
+                  }
+                }
+              }
+            }
+
+            steps.push({
+              type: 'prune',
+              node: prunedNode.node,
+              fVal: prunedNode.f,
+              parent: prunedNode.parent,
+              queue: JSON.parse(JSON.stringify(queue)),
+              visited: new Set(visited),
+              pruned: new Set(pruned),
+              explanation: buildPruneExplanation(prunedNode)
+            });
+          }
+        }
+      }
+
+      if (!finalResult) {
+        steps.push({
+          type: 'fail',
+          queue: JSON.parse(JSON.stringify(queue)),
+          visited: new Set(visited),
+          pruned: new Set(pruned),
+          explanation: buildFailExplanation()
+        });
+      }
+    }
+
+    function reconstructPath(parents, goalNode) {
+      const path = [];
+      let cur = goalNode.node;
+      while (cur) {
+        path.unshift(cur);
+        cur = parents[cur];
+      }
+      return path;
+    }
+
+    function buildInitExplanation() {
+      return `<div class="explain-section active">
+        <h3>Initialize</h3>
+        <p>Create start node <span class="dim">S</span> with <span class="dim">g(S)=0</span>, <span class="dim">h(S)=6</span>.</p>
+        <span class="formula-line">f(S) = MAX(0, 0+6) = 6</span>
+        <p>Insert S into the priority queue. Memory: <span class="dim">1/${MEM_LIMIT}</span>.</p>
+      </div>`;
+    }
+
+    function buildExpandExplanation(node, info) {
+      const h = graph.nodes[node].h;
+      return `<div class="explain-section active">
+        <h3>Expand ${node}</h3>
+        <p>Dequeue <span class="dim">${node}</span> (f=${info.f}, g=${info.g}, depth=${info.depth}). It has the lowest f-cost in the queue.</p>
+        <span class="formula-line">${node} → h(${node}) = ${h}, g(${node}) = ${info.g}</span>
+        <p>Generate all unvisited successors and compute their f-costs.</p>
+      </div>`;
+    }
+
+    function buildAddExplanation(node, from, g, fVal) {
+      const h = graph.nodes[node].h;
+      return `<div class="explain-section active">
+        <h3>Add ${node} to Queue</h3>
+        <p>Successor <span class="dim">${node}</span> via <span class="dim">${from}</span>.</p>
+        <span class="formula-line">g(${node}) = g(${from}) + cost = ${g}</span>
+        <span class="formula-line">f(${node}) = MAX(f(${from}), g(${node})+h(${node})) = MAX(${g},${g}+${h}) = ${fVal}</span>
+        <p>Insert into queue. Memory: <span class="dim">${queue.length + 1}/${MEM_LIMIT}</span> (before potential pruning).</p>
+      </div>`;
+    }
+
+    function buildUpdateExplanation(node, from, g, fVal) {
+      return `<div class="explain-section active">
+        <h3>Update ${node} — Better Path Found</h3>
+        <p>Successor <span class="dim">${node}</span> via <span class="dim">${from}</span> has lower f-cost.</p>
+        <span class="formula-line">New f(${node}) = ${fVal} (improved)</span>
+        <p>Update ${node}'s g-cost and parent pointer in the queue.</p>
+      </div>`;
+    }
+
+    function buildPruneExplanation(info) {
+      return `<div class="explain-section active" style="border-left-color:#ff66ff;">
+        <h3>⚠ Prune ${info.node}</h3>
+        <p>Memory full! Remove the <b>shallowest highest f-cost leaf</b>.</p>
+        <span class="formula-line">Pruned: ${info.node} (f=${info.f}, depth=${info.depth})</span>
+        <p>Remove ${info.node} from parent <span class="dim">${info.parent || 'none'}${"'s"} successor list</span>.</p>
+        <p class="note">If the parent has no remaining unexpanded children, its f-cost may need updating.</p>
+      </div>`;
+    }
+
+    function buildGoalExplanation(node, g, path) {
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Goal Found!</h3>
+        <p>Dequeued <span class="result-line" style="display:inline;">${node}</span> — it's the goal!</p>
+        <span class="formula-line">Optimal path: ${path.join(' → ')}</span>
+        <span class="formula-line">Total cost: ${g}</span>
+        <p class="note">SMA* guarantees the optimal solution when the goal fits within the memory bound.</p>
+      </div>`;
+    }
+
+    function buildFailExplanation() {
+      return `<div class="explain-section active" style="border-left-color:#ff3333;">
+        <h3>❌ Search Failed</h3>
+        <p>The queue is empty and the goal was not found.</p>
+        <p class="note">The memory bound may have caused critical nodes to be pruned before the goal could be reached.</p>
+      </div>`;
+    }
+
+    function buildFinishedExplanation() {
+      if (!finalResult) return buildFailExplanation();
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Algorithm Complete!</h3>
+        <p>SMA* found the optimal path within the memory bound of <span class="dim">${MEM_LIMIT}</span> nodes.</p>
+        <span class="formula-line">Path: ${finalResult.path.join(' → ')}</span>
+        <span class="result-line">Total Cost: ${finalResult.cost}</span>
+        <h3 style="margin-top:10px;">How SMA* Works</h3>
+        <p>• Extends A* with <b>memory bounding</b></p>
+        <p>• When memory is full, prunes the <b>shallowest highest f-cost leaf</b></p>
+        <p>• Updates parent f-costs when children are pruned</p>
+        <p>• Uses <span class="dim">f(s) = MAX(f(n), g(s)+h(s))</span> to ensure consistency</p>
+        <h3 style="margin-top:10px;">Complexity</h3>
+        <p><span class="dim">Time:</span> O(b^d) — same as A*, may revisit pruned nodes</p>
+        <p><span class="dim">Space:</span> O(M) — bounded by memory limit M</p>
+        <p class="note">When M is large enough to hold the optimal solution, SMA* finds it.</p>
+      </div>`;
+    }
+
+    function drawGraph(step) {
+      const canvas = document.getElementById('graphCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const visitedSet = step ? step.visited : new Set();
+      const prunedSet = step ? step.pruned : new Set();
+      const currentNode = step ? (step.node || null) : null;
+      const goalNode = step && step.type === 'goal' ? step.node : null;
+      const prunedNode = step && step.type === 'prune' ? step.node : null;
+      const pathNodes = step && step.path ? new Set(step.path) : new Set();
+
+      for (const e of graph.edges) {
+        const n1 = graph.nodes[e.from];
+        const n2 = graph.nodes[e.to];
+        ctx.beginPath();
+        ctx.moveTo(n1.x, n1.y);
+        ctx.lineTo(n2.x, n2.y);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const mx = (n1.x + n2.x) / 2;
+        const my = (n1.y + n2.y) / 2;
+        ctx.fillStyle = '#555';
+        ctx.font = '10px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.cost, mx, my - 8);
+      }
+
+      for (const [name, pos] of Object.entries(graph.nodes)) {
+        let color = '#00ccff';
+        let bg = '#111';
+        let radius = 20;
+
+        if (name === currentNode) {
+          color = '#ff6600';
+          bg = '#1a0a00';
+        } else if (name === goalNode) {
+          color = '#00ff88';
+          bg = '#002a1a';
+        } else if (name === prunedNode) {
+          color = '#ff66ff';
+          bg = '#1a0030';
+        } else if (pathNodes.has(name)) {
+          color = '#00ff88';
+          bg = '#0a1a12';
+        } else if (visitedSet.has(name)) {
+          color = '#00ff88';
+          bg = '#0a1a12';
+        } else if (prunedSet.has(name)) {
+          color = '#ff66ff';
+          bg = '#1a0030';
+        }
+
+        if (name === 'S') { color = '#00ccff'; bg = '#111'; }
+        if (name === 'G') { color = '#00ff88'; bg = '#002a1a'; }
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = bg;
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        if (name === currentNode || name === goalNode) {
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.fillStyle = color;
+        ctx.font = 'bold 15px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name, pos.x, pos.y);
+
+        ctx.fillStyle = '#888';
+        ctx.font = '10px Courier New';
+        ctx.fillText(`h=${pos.h}`, pos.x, pos.y + 32);
+      }
+    }
+
+    function renderQueue(step) {
+      const display = document.getElementById('queueDisplay');
+      if (!step || !step.queue) {
+        display.innerHTML = '';
+        return;
+      }
+
+      const queueList = step.queue;
+      const currentNode = step.node || null;
+      const goalNode = step.type === 'goal' ? step.node : null;
+      const prunedNode = step.type === 'prune' ? step.node : null;
+
+      let html = '';
+      for (const q of queueList) {
+        let cls = 'frontier';
+        if (q.node === currentNode) cls = 'current';
+        else if (q.node === goalNode) cls = 'goal';
+        else if (step.pruned && step.pruned.has(q.node)) cls = 'pruned';
+
+        html += `<div class="queue-node ${cls}">
+          <div class="node-name">${q.node}</div>
+          <div class="node-info">f=${q.f} g=${q.g} d=${q.depth}</div>
+        </div>`;
+      }
+
+      if (prunedNode && step.type === 'prune') {
+        html += `<div class="queue-node pruned">
+          <div class="node-name">${prunedNode}</div>
+          <div class="node-info">PRUNED</div>
+        </div>`;
+      }
+
+      display.innerHTML = html;
+    }
+
+    function updateMemoryBar(step) {
+      const count = step ? step.queue.length : 0;
+      const pct = (count / MEM_LIMIT) * 100;
+      const fill = document.getElementById('memoryFill');
+      fill.style.width = Math.min(pct, 100) + '%';
+      fill.className = 'fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warning' : '');
+      document.getElementById('memoryCount').textContent = `${count} / ${MEM_LIMIT}`;
+    }
+
+    function updatePathDisplay(step) {
+      const display = document.getElementById('pathDisplay');
+      if (step && step.type === 'goal' && step.path) {
+        display.textContent = step.path.join(' → ');
+        display.style.color = '#00ff88';
+      } else if (step && step.node) {
+        const path = reconstructPathFromStep(step);
+        if (path.length > 1) {
+          display.textContent = path.join(' → ');
+          display.style.color = '#ffcc00';
+        } else {
+          display.textContent = '—';
+          display.style.color = '#888';
+        }
+      } else {
+        display.textContent = '—';
+        display.style.color = '#888';
+      }
+    }
+
+    function reconstructPathFromStep(step) {
+      const path = [];
+      let cur = step.node;
+      const qMap = {};
+      if (step.queue) {
+        for (const q of step.queue) qMap[q.node] = q;
+      }
+      for (let i = 0; i < 20; i++) {
+        path.unshift(cur);
+        if (cur === 'S') break;
+        const parent = parentOf[cur];
+        if (!parent) break;
+        cur = parent;
+      }
+      return path;
+    }
+
+    function applyStep(step) {
+      drawGraph(step);
+      renderQueue(step);
+      updateMemoryBar(step);
+      updatePathDisplay(step);
+
+      let phaseText = '';
+      let computingText = '';
+
+      switch (step.type) {
+        case 'init':
+          phaseText = 'Initialization';
+          computingText = `Enqueued S (f=${step.queue[0].f})`;
+          break;
+        case 'expand':
+          phaseText = `Expanding ${step.node}`;
+          computingText = `Dequeued ${step.node} (f=${step.fVal}, g=${step.g})`;
+          break;
+        case 'add':
+          phaseText = `Adding ${step.node}`;
+          computingText = `${step.from} → ${step.node} (f=${step.fVal})`;
+          break;
+        case 'update':
+          phaseText = `Updating ${step.node}`;
+          computingText = `Better path via ${step.from} (f=${step.fVal})`;
+          break;
+        case 'prune':
+          phaseText = `Pruning ${step.node}`;
+          computingText = `Removed ${step.node} (f=${step.fVal}) — memory full`;
+          break;
+        case 'goal':
+          phaseText = '✓ Goal Found!';
+          computingText = `${step.node} — cost ${step.g}`;
+          break;
+        case 'fail':
+          phaseText = '❌ Failed';
+          computingText = 'Queue empty, goal not found';
+          break;
+      }
+
+      document.getElementById('phaseDisplay').textContent = phaseText;
+      document.getElementById('computingDisplay').textContent = computingText;
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${phaseText}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      if (finalResult) {
+        document.getElementById('computingDisplay').textContent =
+          `Path: ${finalResult.path.join(' → ')} (cost ${finalResult.cost})`;
+        document.getElementById('resultSection').style.display = 'block';
+        document.getElementById('finalPath').textContent = finalResult.path.join(' → ');
+        document.getElementById('finalCost').textContent = finalResult.cost;
+      } else {
+        document.getElementById('computingDisplay').textContent = 'Goal not found';
+      }
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = `<div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>Find the <b>shortest path</b> from <span class="dim">S</span> to <span class="dim">G</span> using SMA* with a <b>memory limit of 3 nodes</b>.</p>
+        <p>SMA* extends A* by pruning the <b>shallowest highest f-cost leaf</b> when memory is full.</p>
+        <h3 style="margin-top:10px;">Key Formula</h3>
+        <span class="formula-line">f(s) = MAX(f(n), g(s) + h(s))</span>
+        <p>Where <span class="dim">n</span> is the parent, <span class="dim">g(s)</span> is actual cost, <span class="dim">h(s)</span> is heuristic estimate.</p>
+        <h3 style="margin-top:10px;">Pruning Rule</h3>
+        <span class="formula-line">When |Queue| > MEMORY_LIMIT:<br>  delete shallowest highest-f-cost leaf<br>  remove from parent's successor list<br>  re-add parent if needed</span>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>`;
+      updateMemoryBar(null);
+      updatePathDisplay(null);
+      renderQueue(null);
+      drawGraph(null);
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    drawGraph(null);
+    document.getElementById('totalSteps').textContent = steps.length;
+  </script>
+</body>
+</html>
