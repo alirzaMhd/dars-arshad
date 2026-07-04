@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wumpus World in FOL - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>WUMPUS WORLD IN FIRST-ORDER LOGIC</h1>
+  <p class="subtitle">Comprehensive Guide to FOL Representation of the Wumpus World Environment</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('tab1')">Percepts &amp; Actions</button>
+      <button class="tab" onclick="showTab('tab2')">Environment Rules</button>
+      <button class="tab" onclick="showTab('tab3')">Examples</button>
+      <button class="tab" onclick="showTab('tab4')">Key Points</button>
+    </div>
+
+    <!-- TAB 1: Percepts & Actions -->
+    <div id="tab1" class="content active">
+      <div class="section">
+        <h2>1. Percept Sequences with Time</h2>
+        <p>The Wumpus agent perceives its environment at each time step through a 5-component percept vector. Time is explicitly indexed using a numeric parameter.</p>
+
+        <div class="formula">
+          <div class="label">Percept Vector with Time Index</div>
+          <div class="expr">Percept([Stench, Breeze, Glitter, Bump, Scream], t)</div>
+          <div class="desc">
+            Where:<br>
+            - <strong>Stench</strong>: True if the wumpus is adjacent to the agent's current cell<br>
+            - <strong>Breeze</strong>: True if a pit is adjacent to the agent's current cell<br>
+            - <strong>Glitter</strong>: True if the agent is in the same cell as the gold<br>
+            - <strong>Bump</strong>: True if the agent walked into a wall<br>
+            - <strong>Scream</strong>: True if the wumpus was killed somewhere in the world<br>
+            - <strong>t</strong>: Time step index (0, 1, 2, ...)
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Example Percept at Time 0</div>
+          <div class="expr">Percept([Stench, Breeze, Glitter, None, None], 0)</div>
+          <div class="desc">
+            At the start, the agent smells a stench and feels a breeze. No gold glitter, no bump, no scream yet.
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Percept Interpretation Rules</div>
+          <table>
+            <tr><th>Percept Component</th><th>Possible Values</th><th>Meaning</th></tr>
+            <tr><td>Stench</td><td>Stench / None</td><td>Wumpus is in an adjacent cell</td></tr>
+            <tr><td>Breeze</td><td>Breeze / None</td><td>Pit is in an adjacent cell</td></tr>
+            <tr><td>Glitter</td><td>Glitter / None</td><td>Gold is in the current cell</td></tr>
+            <tr><td>Bump</td><td>Bump / None</td><td>Agent hit a wall (cannot move forward)</td></tr>
+            <tr><td>Scream</td><td>Scream / None</td><td>Wumpus was killed (arrow hit it)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Actions in FOL</h2>
+        <p>The agent can perform exactly one action at each time step. Actions are represented as FOL terms with a time parameter.</p>
+
+        <div class="grid">
+          <div class="card">
+            <div class="highlight">Turn(Right)</div>
+            <div class="dim">Rotate 90° clockwise</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Turn(Left)</div>
+            <div class="dim">Rotate 90° counter-clockwise</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Forward</div>
+            <div class="dim">Move one square in facing direction</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Shoot</div>
+            <div class="dim">Fire arrow in facing direction</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Grab</div>
+            <div class="dim">Pick up gold from current cell</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Release</div>
+            <div class="dim">Drop gold at current cell</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Climb</div>
+            <div class="dim">Exit cave from starting cell [1,1]</div>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">BestAction Function</div>
+          <div class="expr">BestAction(a, t)</div>
+          <div class="desc">
+            This predicate states that action <strong>a</strong> is the optimal action to take at time step <strong>t</strong>. A rational agent must select actions that maximize expected performance.
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Perception Rules in FOL</h2>
+        <p>FOL rules connect percept components to world properties. These are universally quantified axioms that the agent knows.</p>
+
+        <div class="formula">
+          <div class="label">Breeze Perception Rule</div>
+          <div class="expr">∀t, s, g, m, c: Percept([s, Breeze, g, m, c], t) → Breeze(t)</div>
+          <div class="desc">
+            For all time steps t and any values of stench s, glitter g, bump m, scream c: if the agent perceives a breeze at time t, then the Breeze predicate holds at time t. This connects the raw percept to an internal knowledge representation.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Glitter Perception Rule</div>
+          <div class="expr">∀t, s, b, m, c: Percept([s, b, Glitter, m, c], t) → Glitter(t)</div>
+          <div class="desc">
+            For all time steps t and any values of stench s, breeze b, bump m, scream c: if the agent perceives glitter at time t, then the Glitter predicate holds at time t. This means gold is present in the current cell.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Stench Perception Rule</div>
+          <div class="expr">∀t, b, g, m, c: Percept([Stench, b, g, m, c], t) → Stench(t)</div>
+          <div class="desc">
+            If the percept contains Stench at time t, then the wumpus is adjacent to the agent's current cell.
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Important:</strong> These perception rules bridge the gap between raw sensory input (percept vectors) and the agent's internal knowledge base. Without them, the agent cannot reason about what it perceives.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4. Reflex Agent</h2>
+        <p>A simple reflex agent acts based only on current percepts, ignoring percept history. In FOL, this is expressed as a condition-action rule.</p>
+
+        <div class="formula">
+          <div class="label">Reflex Rule for Gold</div>
+          <div class="expr">∀t: Glitter(t) → BestAction(Grab, t)</div>
+          <div class="desc">
+            Whenever glitter is perceived (gold is in the current cell), the best action at that time is to grab the gold. This is a direct mapping from percept to action.
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Reflex Agent Limitation</div>
+          <p>A reflex agent cannot reason about consequences beyond the immediate percept. For example, it cannot plan a path to escape after grabbing gold, or decide whether to shoot the wumpus to clear a path. It only reacts to the current situation.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Limitation:</strong> Reflex agents fail in partially observable environments like Wumpus World because they cannot maintain internal state about what they have already seen or done.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Environment Rules -->
+    <div id="tab2" class="content">
+      <div class="section">
+        <h2>5. Environment Representation</h2>
+        <p>To reason about the Wumpus World, the agent must represent spatial relationships and object locations using FOL predicates and functions.</p>
+
+        <div class="formula">
+          <div class="label">Adjacent Relation</div>
+          <div class="expr">Adjacent([x, y], [a, b]) = { [x+1, y], [x−1, y], [x, y+1], [x, y−1] }</div>
+          <div class="desc">
+            The adjacent relation defines the set of squares that are one step away from a given square [x, y] in the 4 cardinal directions (up, down, left, right). This is the connectivity graph of the grid.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Pit Predicate</div>
+          <div class="expr">Pit(s)</div>
+          <div class="desc">
+            A unary predicate that is true if square <strong>s</strong> contains a pit. Squares containing pits are dangerous — the agent falls in and dies if it enters them.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Wumpus Location Function</div>
+          <div class="expr">Home(Wumpus) = [x_w, y_w]</div>
+          <div class="desc">
+            A function that returns the coordinates of the wumpus. The wumpus occupies exactly one square and does not move. The wumpus is killed if an arrow reaches its square.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Agent Position Predicate</div>
+          <div class="expr">At(Agent, s, t)</div>
+          <div class="desc">
+            States that the agent is at square <strong>s</strong> at time step <strong>t</strong>. This tracks the agent's position over time, enabling temporal reasoning about movement.
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>6. Diagnostic Rules (Percept → World)</h2>
+        <p>Diagnostic rules work backwards from observed effects (percepts) to infer hidden causes in the environment. This is abductive reasoning.</p>
+
+        <div class="formula">
+          <div class="label">Breeze → Nearby Pit</div>
+          <div class="expr">∀s: Breezy(s) → ∃r (Adjacent(r, s) ∧ Pit(r))</div>
+          <div class="desc">
+            If square <strong>s</strong> is breezy, then there exists at least one adjacent square <strong>r</strong> that contains a pit. The breeze is a necessary consequence of having a pit nearby. Note: we cannot determine WHICH adjacent square has the pit — only that at least one does.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Stench → Nearby Wumpus</div>
+          <div class="expr">∀s: Stinky(s) → ∃r (Adjacent(r, s) ∧ Home(Wumpus) = r)</div>
+          <div class="desc">
+            If square <strong>s</strong> has a stench, then the wumpus is located at some adjacent square <strong>r</strong>.
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Diagnostic Reasoning Example</div>
+          <p>Suppose the agent is at [2,1] and feels a breeze. It knows:</p>
+          <p>Adjacent([2,1]) = { [3,1], [1,1], [2,2], [2,0] }</p>
+          <p>From the diagnostic rule: ∃r ∈ {[3,1], [1,1], [2,2], [2,0]} such that Pit(r).</p>
+          <p>The agent knows a pit exists in one of these four squares, but cannot determine which one without further exploration.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Uncertainty:</strong> Diagnostic rules produce existential conclusions — they tell you SOMETHING exists but not WHAT exactly. The agent must use additional percepts from other squares to narrow down possibilities.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>7. Causal Rules (World → Percept)</h2>
+        <p>Causal rules work forwards from known facts about the world to predict what percepts will be observed. This is deductive reasoning.</p>
+
+        <div class="formula">
+          <div class="label">Pit → Breezy Adjacent Squares</div>
+          <div class="expr">∀r: Pit(r) → [∀s (Adjacent(r, s) → Breezy(s))]</div>
+          <div class="desc">
+            If a square <strong>r</strong> contains a pit, then every square <strong>s</strong> adjacent to <strong>r</strong> is breezy. This is the causal relationship: pits CAUSE breezes in neighboring squares. Every adjacent square MUST have a breeze.
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Wumpus → Stench Adjacent Squares</div>
+          <div class="expr">∀r: (Home(Wumpus) = r) → [∀s (Adjacent(r, s) → Stinky(s))]</div>
+          <div class="desc">
+            If the wumpus is at square <strong>r</strong>, then every square adjacent to <strong>r</strong> has a stench.
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Causal vs Diagnostic — The Key Difference</div>
+          <table>
+            <tr><th>Aspect</th><th>Diagnostic (∵)</th><th>Causal (∴)</th></tr>
+            <tr><td>Direction</td><td>Effect → Cause</td><td>Cause → Effect</td></tr>
+            <tr><td>When Used</td><td>When observing a percept</td><td>When planning or predicting</td></tr>
+            <tr><td>Logical Form</td><td>Breezy(s) → ∃r Pit(r)</td><td>Pit(r) → ∀s Breezy(s)</td></tr>
+            <tr><td>Conclusion</td><td>Existential (∃)</td><td>Universal (∀)</td></tr>
+            <tr><td>Strength</td><td>Weaker (concludes existence)</td><td>Stronger (concludes for all)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Examples -->
+    <div id="tab3" class="content">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Initial Percept Interpretation</div>
+          <div class="code">Percept([Stench, Breeze, None, None, None], 0)</div>
+          <p style="margin-top:10px"><strong>Given:</strong> At time t=0, the agent is at [1,1] (starting square).</p>
+          <p><strong>Reasoning:</strong></p>
+          <ul style="margin-left:20px;color:#ccc">
+            <li>Stench(0) is true → ∃r Adjacent(r, [1,1]) ∧ Home(Wumpus) = r</li>
+            <li>Adjacent([1,1]) = {[2,1], [1,2]} (squares within bounds)</li>
+            <li>Therefore: Wumpus is at [2,1] OR [1,2]</li>
+            <li>Breeze(0) is true → ∃r Adjacent(r, [1,1]) ∧ Pit(r)</li>
+            <li>Therefore: A pit is at [2,1] OR [1,2]</li>
+          </ul>
+          <p class="result" style="margin-top:10px">Conclusion: The wumpus and at least one pit are in cells adjacent to [1,1].</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Reflex Action — Grabbing Gold</div>
+          <div class="code">Percept([None, None, Glitter, None, None], 5)</div>
+          <p style="margin-top:10px"><strong>Given:</strong> At time t=5, agent is at [3,3].</p>
+          <p><strong>Reasoning using reflex rule:</strong></p>
+          <p style="margin-left:20px">∀t: Glitter(t) → BestAction(Grab, t)</p>
+          <p style="margin-left:20px">Glitter(5) is true → BestAction(Grab, 5)</p>
+          <p class="result" style="margin-top:10px">Agent grabs the gold at [3,3] at time step 5.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Diagnostic Inference — Mapping a Pit</div>
+          <div class="code">Agent at [2,2] at t=3: Percept([None, Breeze, None, None, None], 3)
+Agent at [3,2] at t=4: Percept([None, None, None, None, None], 4)</div>
+          <p style="margin-top:10px"><strong>At t=3:</strong> Breeze(3) true at [2,2]</p>
+          <p style="margin-left:20px">→ Pit exists in one of: {[3,2], [1,2], [2,3], [2,1]}</p>
+          <p><strong>At t=4:</strong> No breeze at [3,2]</p>
+          <p style="margin-left:20px">→ ∀s Adjacent([3,2], s) → ¬Breezy(s) is NOT the right form</p>
+          <p style="margin-left:20px">→ ¬Breeze(4) at [3,2] means no pit adjacent to [3,2]</p>
+          <p style="margin-left:20px">→ Adjacent([3,2]) = {[4,2], [2,2], [3,3], [3,1]}</p>
+          <p style="margin-left:20px">→ Pit is NOT at [4,2], [2,2], [3,3], or [3,1]</p>
+          <p class="result" style="margin-top:10px">Combining: If [3,2] was a candidate from t=3 inference, it is now ruled out. The pit must be at [1,2], [2,3], or [2,1].</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Causal Prediction — Planning a Path</div>
+          <div class="code">Known: Pit([1,3])
+Agent wants to reach [1,2]</div>
+          <p style="margin-top:10px"><strong>Causal reasoning:</strong></p>
+          <p style="margin-left:20px">Pit([1,3]) → ∀s Adjacent([1,3], s) → Breezy(s)</p>
+          <p style="margin-left:20px">Adjacent([1,3]) = {[2,3], [1,2], [1,4]}</p>
+          <p style="margin-left:20px">→ Breezy([2,3]), Breezy([1,2]), Breezy([1,4])</p>
+          <p><strong>Agent checks adjacent cells for safe path:</strong></p>
+          <p style="margin-left:20px">If agent goes to [1,2], it will feel a breeze (expected). The breeze confirms the pit at [1,3] but [1,2] itself is safe (not a pit).</p>
+          <p class="result" style="margin-top:10px">Agent can safely pass through [1,2] since it is breezy (has a pit neighbor) but is not itself a pit.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Temporal Tracking with At Predicate</div>
+          <div class="code">t=0: At(Agent, [1,1], 0)    — Start
+t=1: At(Agent, [2,1], 1)    — Moved right
+t=2: At(Agent, [2,1], 2)    — Turned left
+t=3: At(Agent, [2,2], 3)    — Moved forward (up)</div>
+          <p style="margin-top:10px"><strong>Using At predicate to track position:</strong></p>
+          <p style="margin-left:20px">At(Agent, [1,1], 0) ∧ BestAction(Forward, 0) → At(Agent, [2,1], 1)</p>
+          <p style="margin-left:20px">At(Agent, [2,1], 1) ∧ BestAction(Turn(Left), 1) → At(Agent, [2,1], 2)</p>
+          <p style="margin-left:20px">At(Agent, [2,1], 2) ∧ BestAction(Forward, 2) → At(Agent, [2,2], 3)</p>
+          <p><strong>Path history stored as:</strong></p>
+          <p style="margin-left:20px">{ [1,1], [2,1], [2,1], [2,2] }</p>
+          <p class="result" style="margin-top:10px">The At predicate enables the agent to remember its trajectory and avoid revisiting squares.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Key Points -->
+    <div id="tab4" class="content">
+      <div class="section">
+        <h2>8. Synchronic vs Diachronic Sentences</h2>
+        <p>FOL sentences in Wumpus World can be classified by whether they describe relationships at a single time step or across multiple time steps.</p>
+
+        <div class="grid">
+          <div class="card" style="border-color:#00ccff">
+            <div class="highlight" style="color:#00ccff">Synchronic Sentences</div>
+            <p style="margin-top:8px;color:#ccc;font-size:0.9em">Describe relationships that hold <strong>at the same time step</strong>. They relate properties of the world that coexist simultaneously.</p>
+            <p style="margin-top:8px;color:#aaa;font-size:0.85em">Example: ∀s Breezy(s) → ∃r Adjacent(r,s) ∧ Pit(r)</p>
+            <p style="color:#aaa;font-size:0.85em">This relates breeziness and pit locations at the same moment — no time travel involved.</p>
+          </div>
+          <div class="card" style="border-color:#ff6600">
+            <div class="highlight" style="color:#ff6600">Diachronic Sentences</div>
+            <p style="margin-top:8px;color:#ccc;font-size:0.9em">Describe relationships that hold <strong>across different time steps</strong>. They capture how the world changes over time.</p>
+            <p style="margin-top:8px;color:#aaa;font-size:0.85em">Example: At(Agent,[1,1],0) ∧ BestAction(Forward,0) → At(Agent,[2,1],1)</p>
+            <p style="color:#aaa;font-size:0.85em">This relates the agent's position at t=0 to its position at t=1 — a temporal transition.</p>
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Property</th><th>Synchronic</th><th>Diachronic</th></tr>
+          <tr><td>Time scope</td><td>Single time step</td><td>Multiple time steps</td></tr>
+          <tr><td>Purpose</td><td>Describe static structure</td><td>Describe change and effects</td></tr>
+          <tr><td>Examples</td><td>Pit locations, adjacency, breeze causation</td><td>Agent movement, action effects, percept history</td></tr>
+          <tr><td>Key predicates</td><td>Pit(s), Adjacent(s1,s2), Breezy(s)</td><td>At(Agent,s,t), BestAction(a,t), Percept(p,t)</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Exam Tip:</strong> When asked to classify a FOL sentence, check if it involves multiple time indices (t, t+1, etc.). If yes → diachronic. If all variables refer to the same time → synchronic.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>9. Model-Based Reasoning Systems</h2>
+        <p>Model-based reasoning goes beyond simple reflex agents by maintaining an internal model of the world state, including unobserved properties.</p>
+
+        <div class="example">
+          <div class="title">Reflex Agent vs Model-Based Agent</div>
+          <table>
+            <tr><th>Aspect</th><th>Reflex Agent</th><th>Model-Based Agent</th></tr>
+            <tr><td>State tracking</td><td>Current percept only</td><td>Full world model over time</td></tr>
+            <tr><td>Memory</td><td>None</td><td>Percept history + inferred states</td></tr>
+            <tr><td>Handles partially observable?</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Handles unknown initial state?</td><td>No</td><td>Yes (builds model incrementally)</td></tr>
+            <tr><td>Reasoning type</td><td>Direct mapping</td><td>Inference over model</td></tr>
+          </table>
+        </div>
+
+        <div class="formula">
+          <div class="label">Model-Based Knowledge Base Structure</div>
+          <div class="expr">KB = { Percepts, Inferred_Properties, Action_Effects, Temporal_Rules }</div>
+          <div class="desc">
+            A model-based agent maintains a knowledge base containing:<br>
+            - <strong>Percepts:</strong> All observed percepts with their time indices<br>
+            - <strong>Inferred Properties:</strong> Deduced facts about pits, wumpus, safe squares<br>
+            - <strong>Action Effects:</strong> How actions change the world state<br>
+            - <strong>Temporal Rules:</strong> Diachronic sentences connecting time steps
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Updating the World Model</div>
+          <div class="expr">KB(t+1) = KB(t) ∪ NewPercept(t) ∪ Deductions(KB(t), NewPercept(t))</div>
+          <div class="desc">
+            At each time step, the agent updates its knowledge base by adding the new percept and computing all logical deductions that follow from the existing knowledge combined with the new information.
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Critical Concept:</strong> Model-based agents can distinguish between "I know this is safe" and "I don't know if this is dangerous." A reflex agent treats unknown squares the same as safe ones, which is fatal in Wumpus World.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: Complete FOL Knowledge Base</h2>
+        <p>The complete Wumpus World FOL knowledge base includes:</p>
+
+        <div class="grid">
+          <div class="card">
+            <div class="highlight">Predicates</div>
+            <div class="dim">Pit(s), Stinky(s), Breezy(s), Gold(s), Alive(Agent,t), Dead(Wumpus,t)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Functions</div>
+            <div class="dim">Home(Wumpus), At(Agent,s,t), BestAction(a,t)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Percept Rules</div>
+            <div class="dim">Percept([s,b,g,m,c],t) → Breeze(t), Glitter(t), Stench(t)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Diagnostic Rules</div>
+            <div class="dim">Breezy(s) → ∃r Adjacent(r,s) ∧ Pit(r)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Causal Rules</div>
+            <div class="dim">Pit(r) → ∀s Adjacent(r,s) → Breezy(s)</div>
+          </div>
+          <div class="card">
+            <div class="highlight">Action Effects</div>
+            <div class="dim">At(Agent,s,t) ∧ BestAction(Forward,t) → At(Agent,s',t+1)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
