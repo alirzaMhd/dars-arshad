@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursive Best-First Search (RBFS) Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+h1 {
+  text-align: center;
+  font-size: 1.6em;
+  color: #00ff88;
+  margin: 20px 0 5px;
+  text-shadow: 0 0 20px #00ff8855;
+  letter-spacing: 2px;
+}
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9em;
+  margin-bottom: 20px;
+}
+.layout {
+  display: flex;
+  gap: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 15px 30px;
+}
+.main-panel {
+  flex: 1;
+  min-width: 0;
+  padding-right: 15px;
+}
+.sidebar {
+  width: 440px;
+  min-width: 440px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  position: sticky;
+  top: 10px;
+  background: #0d0d20;
+  border: 1px solid #2a2a44;
+  border-radius: 12px;
+  padding: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    max-height: none;
+    position: static;
+    margin-top: 20px;
+  }
+}
+.sidebar h2 {
+  color: #ff6600;
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.sidebar .step-phase {
+  color: #00ccff;
+  font-size: 0.85em;
+  margin-bottom: 10px;
+}
+.explain-section {
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #111128;
+  border-radius: 8px;
+  border-left: 3px solid #444;
+  font-size: 0.84em;
+  line-height: 1.7;
+}
+.explain-section.active {
+  border-left-color: #ff6600;
+  background: #1a1020;
+}
+.explain-section h3 {
+  color: #ffcc00;
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+.explain-section h4 {
+  color: #ffcc00;
+  font-size: 0.9em;
+  margin: 8px 0 4px;
+}
+.explain-section p {
+  color: #ccc;
+  margin: 5px 0;
+}
+.explain-section .formula-line {
+  color: #00ccff;
+  background: #0a0a18;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 0.94em;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.explain-section .result-line {
+  color: #00ff88;
+  font-weight: bold;
+  margin: 6px 0;
+}
+.explain-section .note {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+.explain-section .concept-box {
+  background: #0a0a1a;
+  border: 1px solid #334;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+.explain-section .concept-box .term {
+  color: #00ccff;
+  font-weight: bold;
+}
+.explain-section .concept-box .defn {
+  color: #ddd;
+}
+.info-panel {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 15px 0;
+  font-size: 0.85em;
+  line-height: 1.8;
+}
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 8px 18px;
+  border: 2px solid #444;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+.btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+  box-shadow: 0 0 15px #00ff8833;
+}
+.btn:active { transform: scale(0.95); }
+.btn.primary {
+  background: #002a1a;
+  border-color: #00ff88;
+  color: #00ff88;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 0.85em;
+}
+.speed-control input {
+  width: 80px;
+  accent-color: #00ff88;
+}
+.step-counter {
+  text-align: center;
+  color: #888;
+  font-size: 0.85em;
+  margin: 8px 0;
+}
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section {
+  background: #0a1a12;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: center;
+}
+.result-section h2 {
+  color: #00ff88;
+  font-size: 1.2em;
+  margin-bottom: 12px;
+}
+.graph-container {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+.node-circle {
+  fill: #0d0d1a;
+  stroke: #555;
+  stroke-width: 2.5;
+  transition: all 0.4s;
+}
+.node-circle.current {
+  stroke: #ff6600;
+  stroke-width: 4;
+  fill: #1a0a00;
+}
+.node-circle.expanding {
+  stroke: #ffff00;
+  stroke-width: 3.5;
+  fill: #1a1a00;
+}
+.node-circle.frontier {
+  stroke: #00ccff;
+  stroke-width: 3;
+  fill: #0a1a2a;
+}
+.node-circle.visited {
+  stroke: #888;
+  stroke-width: 2;
+  fill: #111;
+}
+.node-circle.goal {
+  stroke: #00ff88;
+  stroke-width: 3.5;
+  fill: #0a1a12;
+}
+.node-circle.backtrack {
+  stroke: #ff66ff;
+  stroke-width: 3;
+  fill: #1a0030;
+}
+.node-text {
+  fill: #aaa;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  dominant-baseline: central;
+  text-anchor: middle;
+  transition: all 0.4s;
+}
+.node-text.current { fill: #ff6600; }
+.node-text.expanding { fill: #ffff00; }
+.node-text.frontier { fill: #00ccff; }
+.node-text.visited { fill: #888; }
+.node-text.goal { fill: #00ff88; }
+.node-text.backtrack { fill: #ff66ff; }
+.node-label {
+  fill: #888;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: all 0.4s;
+}
+.node-label.current { fill: #ff6600; }
+.node-label.expanding { fill: #ffff00; }
+.node-label.frontier { fill: #00ccff; }
+.node-label.visited { fill: #888; }
+.node-label.goal { fill: #00ff88; }
+.node-label.backtrack { fill: #ff66ff; }
+.edge-line {
+  stroke: #555;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.4s;
+}
+.edge-line.active {
+  stroke: #ff6600;
+  stroke-width: 3.5;
+}
+.edge-line.expanding {
+  stroke: #ffff00;
+  stroke-width: 3;
+}
+.edge-line.path {
+  stroke: #00ff88;
+  stroke-width: 3.5;
+}
+.stack-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  min-height: 60px;
+  flex-wrap: wrap;
+}
+.stack-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 12px;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  border-radius: 6px;
+  font-size: 0.8em;
+  transition: all 0.3s;
+}
+.stack-frame.active {
+  border-color: #ff6600;
+  background: #1a0a00;
+}
+.stack-frame .frame-name {
+  color: #00ccff;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+.stack-frame .frame-limit {
+  color: #ffcc00;
+  font-size: 0.85em;
+}
+.stack-label { color: #00ccff; font-weight: bold; font-size: 0.85em; }
+.node-info-table {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.node-info-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-size: 0.8em;
+  min-width: 80px;
+}
+.node-info-card .card-name {
+  color: #00ccff;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+.node-info-card .card-g { color: #ff9944; }
+.node-info-card .card-h { color: #ff66ff; }
+.node-info-card .card-f { color: #00ff88; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>RECURSIVE BEST-FIRST SEARCH</h1>
+<p class="subtitle">Search Algorithms — Optimal Pathfinding with Heuristics (RBFS)</p>
+
+<div class="layout">
+  <div class="main-panel">
+
+    <div class="graph-container">
+      <svg id="graphSvg" width="680" height="360" viewBox="0 0 680 360"></svg>
+    </div>
+
+    <div class="stack-display" id="stackDisplay">
+      <span class="stack-label">Recursion Stack:</span>
+      <span id="stackFrames" style="color:#555;font-size:0.85em;">Empty</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+      <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+      <button class="btn" onclick="stepForward()">⏭ Step</button>
+      <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="5">
+        <span id="speedLabel">5x</span>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">Current:</span> <span class="value" id="currentNodeDisplay">&mdash;</span>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span class="label">f-limit:</span> <span class="value" id="fLimitDisplay">&infin;</span>
+    </div>
+
+    <div class="step-counter">
+      Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+    </div>
+
+    <div class="node-info-table" id="nodeInfoTable"></div>
+
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2>✅ RBFS Complete!</h2>
+      <div id="resultContent"></div>
+    </div>
+
+  </div>
+
+  <div class="sidebar" id="sidebar">
+    <h2>📖 Step-by-Step Explanation</h2>
+    <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+    <div id="explainArea">
+      <div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p><b>Recursive Best-First Search (RBFS)</b> is a search algorithm that finds the optimal path using <span class="dim">heuristic guidance</span> while using only <span class="dim">linear space</span>.</p>
+        <p>Unlike A* which stores all frontier nodes, RBFS mimics depth-first search but can <b>backtrack</b> when a path exceeds its f-limit.</p>
+        <h3 style="margin-top:10px;">Key Formula</h3>
+        <span class="formula-line">f(n) = g(n) + h(n)</span>
+        <p><span class="dim">g(n)</span> = actual cost from start to n</p>
+        <p><span class="dim">h(n)</span> = heuristic estimate from n to goal</p>
+        <p><span class="dim">f(n)</span> = total estimated cost through n</p>
+        <h3 style="margin-top:10px;">How RBFS Works</h3>
+        <p>RBFS expands the node with the <b>lowest f-value</b>, keeping track of the <span class="split-info">f-value of the best alternative</span> (the f-limit).</p>
+        <p>If the best path exceeds the f-limit, RBFS <b>backtracks</b> and tries the alternative — all in <span class="result-line">O(b^d) space</span> like DFS.</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NODES = [
+  { id: 0, name: 'S', g: 0, h: 6, x: 340, y: 40,  children: [1, 2, 3] },
+  { id: 1, name: 'A', g: 2, h: 5, x: 140, y: 120, children: [4] },
+  { id: 2, name: 'B', g: 3, h: 4, x: 340, y: 120, children: [5, 6] },
+  { id: 3, name: 'C', g: 1, h: 6, x: 540, y: 120, children: [7] },
+  { id: 4, name: 'D', g: 4, h: 3, x: 140, y: 210, children: [8] },
+  { id: 5, name: 'E', g: 5, h: 2, x: 260, y: 210, children: [9] },
+  { id: 6, name: 'F', g: 6, h: 4, x: 420, y: 210, children: [] },
+  { id: 7, name: 'G', g: 3, h: 5, x: 540, y: 210, children: [10] },
+  { id: 8, name: 'H', g: 6, h: 1, x: 140, y: 300, children: [] },
+  { id: 9, name: 'I', g: 7, h: 1, x: 260, y: 300, children: [] },
+  { id: 10, name: 'J', g: 5, h: 3, x: 540, y: 300, children: [] }
+];
+
+const GOAL_NODE = 9;
+
+const EDGES = [];
+for (let n of NODES) {
+  for (let c of n.children) {
+    EDGES.push({ from: n.id, to: c });
+  }
+}
+
+const N = NODES.length;
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+let nodeStates = {};
+let edgeStates = {};
+let recursionStack = [];
+
+function f(node) { return node.g + node.h; }
+
+function precomputeAll() {
+  nodeStates = {};
+  edgeStates = {};
+  for (let n of NODES) {
+    nodeStates[n.id] = 'default';
+  }
+  for (let e of EDGES) {
+    edgeStates[e.from + '-' + e.to] = 'default';
+  }
+}
+
+function buildSteps() {
+  steps = [];
+  precomputeAll();
+
+  steps.push({
+    type: 'init',
+    nodeStates: getNodeStatesCopy(),
+    edgeStates: getEdgeStatesCopy(),
+    stack: [],
+    currentNode: -1,
+    fLimit: Infinity,
+    explanation: buildInitExplanation(),
+    phase: 'Initialized'
+  });
+
+  let result = rbfs(0, Infinity, []);
+
+  steps.push({
+    type: 'done',
+    nodeStates: getNodeStatesCopy(),
+    edgeStates: getEdgeStatesCopy(),
+    stack: [],
+    currentNode: -1,
+    fLimit: Infinity,
+    explanation: buildDoneExplanation(result),
+    phase: 'Complete!'
+  });
+}
+
+function rbfs(nodeId, fLimit, stack) {
+  let node = NODES[nodeId];
+
+  let stackFrame = { name: node.name, fLimit: fLimit };
+  let newStack = [...stack, stackFrame];
+
+  steps.push({
+    type: 'visit',
+    nodeId: nodeId,
+    nodeStates: getNodeStatesCopy(),
+    edgeStates: getEdgeStatesCopy(),
+    stack: newStack,
+    currentNode: nodeId,
+    fLimit: fLimit,
+    explanation: buildVisitExplanation(nodeId, fLimit, newStack),
+    phase: `Visiting ${node.name}`
+  });
+
+  if (nodeId === GOAL_NODE) {
+    steps.push({
+      type: 'goal_found',
+      nodeId: nodeId,
+      nodeStates: getNodeStatesCopy(),
+      edgeStates: getEdgeStatesCopy(),
+      stack: newStack,
+      currentNode: nodeId,
+      fLimit: fLimit,
+      explanation: buildGoalFoundExplanation(nodeId, newStack),
+      phase: `Goal ${node.name} found!`
+    });
+    return { result: nodeId, f: f(node) };
+  }
+
+  if (node.children.length === 0) {
+    steps.push({
+      type: 'dead_end',
+      nodeId: nodeId,
+      nodeStates: getNodeStatesCopy(),
+      edgeStates: getEdgeStatesCopy(),
+      stack: newStack,
+      currentNode: nodeId,
+      fLimit: fLimit,
+      explanation: buildDeadEndExplanation(nodeId, newStack),
+      phase: `Dead end at ${node.name}`
+    });
+    return { result: null, f: Infinity };
+  }
+
+  let children = node.children.map(cId => {
+    let c = NODES[cId];
+    return { id: cId, f: f(c) };
+  });
+
+  steps.push({
+    type: 'expand',
+    nodeId: nodeId,
+    children: children,
+    nodeStates: getNodeStatesCopy(),
+    edgeStates: getEdgeStatesCopy(),
+    stack: newStack,
+    currentNode: nodeId,
+    fLimit: fLimit,
+    explanation: buildExpandExplanation(nodeId, children, fLimit, newStack),
+    phase: `Expanding ${node.name}`
+  });
+
+  children.sort((a, b) => a.f - b.f);
+
+  let best = children[0];
+  let alternative = children.length > 1 ? children[1].f : Infinity;
+
+  while (best.f <= fLimit) {
+    let childStack = [...newStack];
+
+    steps.push({
+      type: 'recurse_into',
+      nodeId: nodeId,
+      childId: best.id,
+      childF: best.f,
+      alternative: alternative,
+      nodeStates: getNodeStatesCopy(),
+      edgeStates: getEdgeStatesCopy(),
+      stack: childStack,
+      currentNode: best.id,
+      fLimit: Math.min(fLimit, alternative),
+      explanation: buildRecurseExplanation(nodeId, best, alternative, fLimit, childStack),
+      phase: `Into ${NODES[best.id].name} (f=${best.f})`
+    });
+
+    let edgeKey = nodeId + '-' + best.id;
+    edgeStates[edgeKey] = 'active';
+
+    let result = rbfs(best.id, Math.min(fLimit, alternative), childStack);
+
+    edgeStates[edgeKey] = 'default';
+
+    if (result.result !== null) {
+      return result;
+    }
+
+    best.f = result.f;
+
+    children.sort((a, b) => a.f - b.f);
+    best = children[0];
+    alternative = children.length > 1 ? children[1].f : Infinity;
+
+    steps.push({
+      type: 'backtrack',
+      nodeId: nodeId,
+      bestId: best.id,
+      bestF: best.f,
+      alternative: alternative,
+      nodeStates: getNodeStatesCopy(),
+      edgeStates: getEdgeStatesCopy(),
+      stack: newStack,
+      currentNode: nodeId,
+      fLimit: fLimit,
+      explanation: buildBacktrackExplanation(nodeId, best, alternative, fLimit, newStack),
+      phase: `Backtrack to ${node.name}`
+    });
+  }
+
+  steps.push({
+    type: 'exceed_limit',
+    nodeId: nodeId,
+    bestF: best.f,
+    nodeStates: getNodeStatesCopy(),
+    edgeStates: getEdgeStatesCopy(),
+    stack: newStack,
+    currentNode: nodeId,
+    fLimit: fLimit,
+    explanation: buildExceedLimitExplanation(nodeId, best, fLimit, newStack),
+    phase: `${node.name}: best f=${best.f} > limit=${fLimit}`
+  });
+
+  return { result: null, f: best.f };
+}
+
+function getNodeStatesCopy() {
+  let copy = {};
+  for (let k in nodeStates) copy[k] = nodeStates[k];
+  return copy;
+}
+
+function getEdgeStatesCopy() {
+  let copy = {};
+  for (let k in edgeStates) copy[k] = edgeStates[k];
+  return copy;
+}
+
+function buildInitExplanation() {
+  return `<div class="explain-section active">
+    <h3>🎯 Initialization</h3>
+    <p>We start at node <span class="dim">S</span> with f-limit = <span class="split-info">&infin;</span>.</p>
+    <p>RBFS will explore the search tree, always following the path with the <b>lowest f-value</b>.</p>
+    <span class="formula-line">f(n) = g(n) + h(n)</span>
+    <p>Each node stores:</p>
+    <p style="margin-left:8px;">• <span class="dim">g(n)</span> — actual cost from start</p>
+    <p style="margin-left:8px;">• <span class="dim">h(n)</span> — heuristic estimate to goal</p>
+    <p style="margin-left:8px;">• <span class="dim">f(n) = g + h</span> — total estimated cost</p>
+    <div class="concept-box">
+      <p><span class="term">Key Idea:</span> <span class="defn">RBFS is like DFS but remembers the <b>f-value of the best alternative</b> it didn't take. If the current path becomes worse than that alternative, it <b>backtracks</b>.</span></p>
+    </div>
+    <p class="note">Goal node: <span class="result-line">I (f=8)</span>. Press Play or Step to begin.</p>
+  </div>`;
+}
+
+function buildVisitExplanation(nodeId, fLimit, stack) {
+  let node = NODES[nodeId];
+  let isGoal = nodeId === GOAL_NODE;
+  return `<div class="explain-section active">
+    <h3>📍 Visit Node ${node.name}</h3>
+    <p>RBFS enters node <span class="dim">${node.name}</span> with f-limit = <span class="split-info">${fLimit === Infinity ? '&infin;' : fLimit}</span>.</p>
+    <p style="margin-left:8px;">• g(${node.name}) = <span class="dim">${node.g}</span></p>
+    <p style="margin-left:8px;">• h(${node.name}) = <span class="dim">${node.h}</span></p>
+    <p style="margin-left:8px;">• f(${node.name}) = <span class="result-line">${f(node)}</span></p>
+    ${isGoal ? '<p class="result-line">🎯 This is the goal node!</p>' : ''}
+    <span class="formula-line">RBFS(${node.name}, f_limit=${fLimit === Infinity ? '∞' : fLimit})</span>
+    <p class="note">Stack depth: ${stack.length}</p>
+  </div>`;
+}
+
+function buildGoalFoundExplanation(nodeId, stack) {
+  let node = NODES[nodeId];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>🎯 Goal Found: ${node.name}!</h3>
+    <p>Node <span class="result-line">${node.name}</span> is the goal! RBFS returns success.</p>
+    <p style="margin-left:8px;">• g(${node.name}) = <span class="dim">${node.g}</span> (actual cost from start)</p>
+    <p style="margin-left:8px;">• h(${node.name}) = <span class="dim">0</span> (at goal)</p>
+    <p style="margin-left:8px;">• f(${node.name}) = <span class="result-line">${f(node)}</span></p>
+    <span class="formula-line">GOAL-TEST(${node.name}) → TRUE</span>
+    <p>The recursive calls will now unwind, propagating the solution back to the root.</p>
+    <p class="note">Optimal path cost: <span class="result-line">${node.g}</span></p>
+  </div>`;
+}
+
+function buildDeadEndExplanation(nodeId, stack) {
+  let node = NODES[nodeId];
+  return `<div class="explain-section active">
+    <h3>🚫 Dead End at ${node.name}</h3>
+    <p>Node <span class="dim">${node.name}</span> has <b>no children</b> and is not the goal.</p>
+    <span class="formula-line">EXPAND(${node.name}) → &empty;</span>
+    <p>RBFS returns <span class="split-info">failure</span> with f = <span class="dim">&infin;</span> (no path through this node).</p>
+    <p>The parent will now try its next-best alternative.</p>
+  </div>`;
+}
+
+function buildExpandExplanation(nodeId, children, fLimit, stack) {
+  let node = NODES[nodeId];
+  let childStr = children.map(c => `${NODES[c.id].name}(f=${c.f})`).join(', ');
+  return `<div class="explain-section active">
+    <h3>📂 Expand Node ${node.name}</h3>
+    <p>We expand <span class="dim">${node.name}</span> to generate its children:</p>
+    <p style="margin-left:8px;">• Children: <span class="dim">[${childStr}]</span></p>
+    <p>Sorted by f-value (lowest first):</p>
+    <p style="margin-left:8px;">• Best: <span class="result-line">${NODES[children[0].id].name} (f=${children[0].f})</span></p>
+    <p style="margin-left:8px;">• Alternative: <span class="split-info">${children.length > 1 ? NODES[children[1].id].name + ' (f=' + children[1].f + ')' : 'none (f=∞)'}</span></p>
+    <span class="formula-line">RBFS will explore ${NODES[children[0].id].name} first, keeping alternative as backup</span>
+    <p class="note">f-limit for recursion: min(${fLimit === Infinity ? '∞' : fLimit}, ${children.length > 1 ? children[1].f : '∞'}) = <span class="split-info">${children.length > 1 ? Math.min(fLimit === Infinity ? Infinity : fLimit, children[1].f) : fLimit === Infinity ? '∞' : fLimit}</span></p>
+  </div>`;
+}
+
+function buildRecurseExplanation(nodeId, best, alternative, fLimit, stack) {
+  let node = NODES[nodeId];
+  let child = NODES[best.id];
+  return `<div class="explain-section active">
+    <h3>⬇ Recurse into ${child.name}</h3>
+    <p>RBFS recurses into <span class="dim">${child.name}</span> (best f-value = <span class="result-line">${best.f}</span>).</p>
+    <p style="margin-left:8px;">• Current f-limit: <span class="dim">${fLimit === Infinity ? '∞' : fLimit}</span></p>
+    <p style="margin-left:8px;">• Alternative f: <span class="split-info">${alternative === Infinity ? '∞' : alternative}</span></p>
+    <p style="margin-left:8px;">• New f-limit: <span class="result-line">${Math.min(fLimit === Infinity ? Infinity : fLimit, alternative)}</span></p>
+    <span class="formula-line">RBFS(${child.name}, min(${fLimit === Infinity ? '∞' : fLimit}, ${alternative === Infinity ? '∞' : alternative}))</span>
+    <p>If ${child.name}'s best descendant exceeds <span class="dim">${Math.min(fLimit === Infinity ? Infinity : fLimit, alternative)}</span>, RBFS will <b>backtrack</b> to ${node.name}.</p>
+    <p class="note">This is the key insight: RBFS remembers what it's "missing" and can return to it.</p>
+  </div>`;
+}
+
+function buildBacktrackExplanation(nodeId, best, alternative, fLimit, stack) {
+  let node = NODES[nodeId];
+  let child = NODES[best.id];
+  return `<div class="explain-section active">
+    <h3>↩ Backtrack to ${node.name}</h3>
+    <p>The path through <span class="dim">${child.name}</span> returned with f = <span class="split-info">${best.f}</span>.</p>
+    <p>RBFS updates ${child.name}'s f-value and re-sorts children:</p>
+    <p style="margin-left:8px;">• New best: <span class="result-line">${NODES[best.id].name} (f=${best.f})</span></p>
+    <p style="margin-left:8px;">• Alternative: <span class="split-info">${alternative === Infinity ? 'none (∞)' : 'f=' + alternative}</span></p>
+    <span class="formula-line">f[${child.name}] updated to ${best.f} (propagated from deeper search)</span>
+    <p class="note">Unlike A*, RBFS doesn't store all nodes — it only remembers the current path and the best alternative at each level.</p>
+  </div>`;
+}
+
+function buildExceedLimitExplanation(nodeId, best, fLimit, stack) {
+  let node = NODES[nodeId];
+  return `<div class="explain-section active">
+    <h3>🚫 Exceeds f-limit at ${node.name}</h3>
+    <p>The best child has f = <span class="split-info">${best.f}</span> which exceeds f-limit = <span class="dim">${fLimit === Infinity ? '∞' : fLimit}</span>.</p>
+    <span class="formula-line">${best.f} > ${fLimit === Infinity ? '∞' : fLimit} → return failure</span>
+    <p>RBFS cannot explore ${node.name} further within the current limit.</p>
+    <p>It returns <span class="split-info">failure</span> with the new f-value = <span class="dim">${best.f}</span>.</p>
+    <p>The parent will now consider its alternative path.</p>
+    <p class="note">This is how RBFS uses linear space — it backtracks instead of storing all frontier nodes.</p>
+  </div>`;
+}
+
+function buildDoneExplanation(result) {
+  let goalNode = NODES[GOAL_NODE];
+  return `<div class="explain-section active" style="border-left-color:#00ff88;">
+    <h3>✅ Algorithm Complete!</h3>
+    <p>RBFS found the goal at node <span class="result-line">${goalNode.name}</span> with optimal cost <span class="result-line">${goalNode.g}</span>.</p>
+    <h4 style="margin-top:10px;">🔑 How RBFS Differs from A*</h4>
+    <div class="concept-box">
+      <p><span class="term">Space Complexity:</span> <span class="defn">RBFS uses <b>O(bd)</b> space (like DFS), while A* uses <b>O(b^d)</b> (stores all frontier nodes).</span></p>
+    </div>
+    <div class="concept-box">
+      <p><span class="term">Backtracking:</span> <span class="defn">When the best path exceeds the f-limit, RBFS <b>backtracks</b> and tries the alternative. It remembers the f-value it "left behind" so it can return later.</span></p>
+    </div>
+    <div class="concept-box">
+      <p><span class="term">Optimality:</span> <span class="defn">With an <b>admissible heuristic</b> (h never overestimates), RBFS finds the optimal solution, just like A*.</span></p>
+    </div>
+    <h4 style="margin-top:10px;">Complexity</h4>
+    <p><span class="dim">Time:</span> O(b^d) — may revisit nodes multiple times due to backtracking</p>
+    <p><span class="dim">Space:</span> O(bd) — only stores current path + alternatives at each level</p>
+    <p class="note">RBFS trades time for space: it uses linear space but may re-expand nodes when backtracking.</p>
+  </div>`;
+}
+
+function initSVG() {
+  let svg = document.getElementById('graphSvg');
+  let html = '';
+
+  for (let e of EDGES) {
+    let from = NODES[e.from];
+    let to = NODES[e.to];
+    html += `<line class="edge-line" id="edge-${e.from}-${e.to}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>`;
+  }
+
+  for (let n of NODES) {
+    html += `<circle class="node-circle" id="node-${n.id}" cx="${n.x}" cy="${n.y}" r="22"/>`;
+    html += `<text class="node-text" id="nodetext-${n.id}" x="${n.x}" y="${n.y}">${n.name}</text>`;
+    html += `<text class="node-label" id="nodelabel-${n.id}" x="${n.x}" y="${n.y + 34}">g=${n.g} h=${n.h} f=${f(n)}</text>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+function initNodeInfoTable() {
+  let html = '';
+  for (let n of NODES) {
+    let cardClass = n.id === GOAL_NODE ? 'goal-card' : '';
+    html += `<div class="node-info-card" id="card-${n.id}">
+      <span class="card-name">${n.name}${n.id === GOAL_NODE ? ' 🎯' : ''}</span>
+      <span class="card-g">g=${n.g}</span>
+      <span class="card-h">h=${n.h}</span>
+      <span class="card-f">f=${f(n)}</span>
+    </div>`;
+  }
+  document.getElementById('nodeInfoTable').innerHTML = html;
+}
+
+function updateStackDisplay(stack) {
+  let html = '';
+  if (stack.length === 0) {
+    html = '<span style="color:#555;font-size:0.85em;">Empty</span>';
+  } else {
+    for (let i = 0; i < stack.length; i++) {
+      let frame = stack[i];
+      let isActive = i === stack.length - 1;
+      html += `<div class="stack-frame ${isActive ? 'active' : ''}">
+        <span class="frame-name">${frame.name}</span>
+        <span class="frame-limit">limit=${frame.fLimit === Infinity ? '∞' : frame.fLimit}</span>
+      </div>`;
+      if (i < stack.length - 1) {
+        html += '<span style="color:#555;">→</span>';
+      }
+    }
+  }
+  document.getElementById('stackFrames').innerHTML = html;
+}
+
+function applyStep(step) {
+  for (let nId in step.nodeStates) {
+    let el = document.getElementById('node-' + nId);
+    let txt = document.getElementById('nodetext-' + nId);
+    let lbl = document.getElementById('nodelabel-' + nId);
+    if (el) {
+      el.className.baseVal = 'node-circle';
+      if (step.nodeStates[nId] !== 'default') {
+        el.classList.add(step.nodeStates[nId]);
+      }
+    }
+    if (txt) {
+      txt.className.baseVal = 'node-text';
+      if (step.nodeStates[nId] !== 'default') {
+        txt.classList.add(step.nodeStates[nId]);
+      }
+    }
+    if (lbl) {
+      lbl.className.baseVal = 'node-label';
+      if (step.nodeStates[nId] !== 'default') {
+        lbl.classList.add(step.nodeStates[nId]);
+      }
+    }
+  }
+
+  for (let eKey in step.edgeStates) {
+    let el = document.getElementById('edge-' + eKey);
+    if (el) {
+      el.className.baseVal = 'edge-line';
+      if (step.edgeStates[eKey] !== 'default') {
+        el.classList.add(step.edgeStates[eKey]);
+      }
+    }
+  }
+
+  if (step.type === 'visit' || step.type === 'expand' || step.type === 'goal_found') {
+    nodeStates[step.nodeId] = 'current';
+  }
+  if (step.type === 'expand') {
+    for (let c of step.children) {
+      if (nodeStates[c.id] === 'default') {
+        nodeStates[c.id] = 'frontier';
+      }
+    }
+  }
+  if (step.type === 'goal_found') {
+    nodeStates[step.nodeId] = 'goal';
+  }
+  if (step.type === 'dead_end') {
+    nodeStates[step.nodeId] = 'visited';
+  }
+  if (step.type === 'recurse_into') {
+    edgeStates[step.nodeId + '-' + step.childId] = 'active';
+  }
+  if (step.type === 'backtrack') {
+    nodeStates[step.nodeId] = 'backtrack';
+  }
+  if (step.type === 'exceed_limit') {
+    nodeStates[step.nodeId] = 'visited';
+  }
+
+  document.getElementById('phaseDisplay').textContent = step.phase;
+  document.getElementById('currentNodeDisplay').textContent =
+    step.currentNode >= 0 ? NODES[step.currentNode].name : '—';
+  document.getElementById('fLimitDisplay').innerHTML =
+    step.fLimit === Infinity ? '&infin;' : step.fLimit;
+
+  updateStackDisplay(step.stack);
+
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+  document.getElementById('explainArea').innerHTML = step.explanation;
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+  document.getElementById('currentNodeDisplay').textContent = '—';
+  document.getElementById('fLimitDisplay').innerHTML = '&infin;';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  document.getElementById('stackFrames').innerHTML = '<span style="color:#555;font-size:0.85em;">Empty</span>';
+  precomputeAll();
+  initSVG();
+  initNodeInfoTable();
+  buildSteps();
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  let goalNode = NODES[GOAL_NODE];
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('currentNodeDisplay').textContent = goalNode.name;
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultContent').innerHTML =
+    `<p style="color:#ccc;margin:8px 0;">Optimal path cost: <span class="result-line" style="display:inline;">${goalNode.g}</span></p>
+     <p style="color:#ccc;margin:8px 0;">Goal node: <span class="result-line" style="display:inline;">${goalNode.name}</span> (g=${goalNode.g}, h=${goalNode.h}, f=${f(goalNode)})</p>
+     <p style="color:#aaa;font-size:0.9em;margin-top:10px;">RBFS found the optimal solution using only O(bd) space by backtracking when paths exceeded the f-limit.</p>`;
+  document.getElementById('sidebarPhase').textContent =
+    `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+  document.getElementById('explainArea').innerHTML = buildDoneExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+initSVG();
+initNodeInfoTable();
+buildSteps();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
