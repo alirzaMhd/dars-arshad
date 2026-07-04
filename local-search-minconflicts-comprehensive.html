@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Search (Min-Conflicts) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Local Search — Min-Conflicts Heuristic</h1>
+  <p class="subtitle">Complete-State Formulation for CSP</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('concept')">Concept</button>
+      <button class="tab" onclick="showSection('algorithm')">Min-Conflicts</button>
+      <button class="tab" onclick="showSection('examples')">Examples</button>
+      <button class="tab" onclick="showSection('summary')">Summary</button>
+    </div>
+
+    <div class="content active" id="concept">
+      <div class="section">
+        <h2>Complete-State Formulation</h2>
+        <p>Unlike incremental search (start with ∅, add one var at a time), local search for CSP uses the <strong>complete-state formulation</strong>:</p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• <span class="highlight">Initial state:</span> Assign all variables (may violate constraints)</li>
+          <li>• <span class="highlight">Successor function:</span> Change one variable's value</li>
+          <li>• <span class="highlight">Goal test:</span> No constraints violated</li>
+        </ul>
+
+        <h3>Advantages of Local Search for CSP</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Speed</h3>
+            <p>Can solve million-queen problems in constant time (≈50 steps)!</p>
+          </div>
+          <div class="card">
+            <h3>Online Adaptation</h3>
+            <p>Can adapt to changing constraints without restarting</p>
+          </div>
+          <div class="card">
+            <h3>Memory</h3>
+            <p>Only stores current state, not the search tree</p>
+          </div>
+          <div class="card">
+            <h3>Optimization</h3>
+            <p>Naturally handles preference constraints via cost minimization</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="algorithm">
+      <div class="section">
+        <h2>Min-Conflicts Algorithm</h2>
+        <p>The <strong>Min-Conflicts</strong> heuristic selects a value for a variable that minimizes the number of constraint violations.</p>
+
+        <div class="formula">
+          <div class="label">Heuristic:</div>
+          <div class="expr">value = argmin<sub>v ∈ Domain</sub> Conflicts(var, v, current, csp)</div>
+          <div class="desc">Pick the value that causes the fewest conflicts with other variables</div>
+        </div>
+
+        <div class="code">function MIN-CONFLICTS(csp, max_steps) returns a solution or failure
+    inputs: csp, a constraint satisfaction problem
+            max_steps, number of steps allowed before giving up
+    
+    current ← an initial complete assignment for csp
+    
+    for i = 1 to max_steps do
+        if current is a solution for csp then return current
+        
+        var ← a randomly chosen conflicted variable from VARIABLES[csp]
+        value ← the value v for var that minimizes CONFLICTS(var, v, current, csp)
+        
+        set var = value in current
+    
+    return failure</div>
+
+        <h3>Initial Assignment Strategies</h3>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>• <strong>Random:</strong> Assign random values to all variables</li>
+          <li>• <strong>Greedy:</strong> Assign values that minimize conflicts one by one</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content" id="examples">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: 8-Queens with Min-Conflicts</div>
+          <p><strong>Initial state:</strong> Random placement of 8 queens in 8 columns (one per column).</p>
+          <p><strong>Step 1:</strong> Count conflicts for each queen. Pick a random conflicted queen.</p>
+          <p><strong>Step 2:</strong> For the chosen queen, try each row (1-8) in its column and count how many other queens it attacks.</p>
+          <p><strong>Step 3:</strong> Move the queen to the row with the <span class="highlight">fewest conflicts</span>.</p>
+          <p><strong>Step 4:</strong> Repeat until no conflicts remain.</p>
+          <p>Remarkably, for N-Queens with N up to 1,000,000, Min-Conflicts finds a solution in <span class="highlight">approximately 50 steps</span> (independent of N)!</p>
+          <p class="result">The million-queen problem is solved in roughly 50 iterations!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Min-Conflicts Trace on 4-Queens</h2>
+          <p><strong>Initial:</strong> Q<sub>1</sub>=1, Q<sub>2</sub>=1, Q<sub>3</sub>=1, Q<sub>4</sub>=1 (all in row 1)</p>
+          <p><strong>Conflicts:</strong> Q<sub>1</sub> attacks 3 others, Q<sub>2</sub> attacks 3, etc.</p>
+          <p><strong>Pick Q<sub>1</sub></strong> (random conflicted var):</p>
+          <p>• Row 1: 3 conflicts (current) • Row 2: 1 conflict • Row 3: 1 conflict • Row 4: 2 conflicts</p>
+          <p><strong>Move Q<sub>1</sub> to row 2</strong> (fewest conflicts = 1).</p>
+          <p>Continue until solution found or max_steps reached.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Hubble Telescope Scheduling</h2>
+          <p><strong>Problem:</strong> Schedule observations on the Hubble Space Telescope.</p>
+          <p><strong>Constraints:</strong> Time windows (celestial availability), no overlapping observations, instrument setup times.</p>
+          <p><strong>Preference:</strong> Maximize scientific value.</p>
+          <p><strong>Traditional backtracking:</strong> Took <span class="highlight">3 weeks</span> to schedule 1 week of observations.</p>
+          <p><strong>Min-Conflicts local search:</strong> Reduced to <span class="highlight">10 minutes</span>!</p>
+          <p class="result">A dramatic improvement — from weeks to minutes!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Online Adaptation — Airline Scheduling</h2>
+          <p><strong>Scenario:</strong> Weekly airline schedule with thousands of flights and crew assignments.</p>
+          <p><strong>Problem:</strong> Bad weather at one airport makes the schedule impossible.</p>
+          <p><strong>Local search approach:</strong></p>
+          <ul style="list-style: none; padding-left: 0;">
+            <li>• Start from the existing schedule (which was a solution before weather changed)</li>
+            <li>• Apply min-conflicts to fix violations incrementally</li>
+            <li>• Find solution with <span class="highlight">minimal changes</span> to the original schedule</li>
+          </ul>
+          <p>Backtracking would start from scratch and potentially change everything.</p>
+          <p class="result">Local search naturally supports online adaptation with minimal disruption!</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="summary">
+      <div class="section">
+        <h2>Quick Reference</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Min-Conflicts</h3>
+            <p>• Start with complete assignment</p>
+            <p>• Pick random conflicted variable</p>
+            <p>• Choose value with fewest conflicts</p>
+            <p>• Repeat until solved</p>
+          </div>
+          <div class="card">
+            <h3>Performance</h3>
+            <p>• 8-Queens: ~4 steps avg</p>
+            <p>• Million-Queens: ~50 steps avg</p>
+            <p>• Hubble: 3 weeks → 10 minutes</p>
+            <p>• Nearly constant in problem size!</p>
+          </div>
+          <div class="card">
+            <h3>When to Use</h3>
+            <p>• Large problems where BT fails</p>
+            <p>• Online/adaptive problems</p>
+            <p>• Optimization variants</p>
+            <p>• Dense solution spaces</p>
+          </div>
+          <div class="card">
+            <h3>Limitations</h3>
+            <p>• Not complete (may not find solution)</p>
+            <p>• Needs restart on failure</p>
+            <p>• Not good for proving unsatisfiability</p>
+            <p>• Depends on quality of initial state</p>
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Method</th><th>Formulation</th><th>Complete?</th><th>Best For</th></tr>
+          <tr><td>Backtracking</td><td>Incremental</td><td>Yes</td><td>Small/medium problems</td></tr>
+          <tr><td>Forward Checking</td><td>Incremental</td><td>Yes</td><td>Medium problems</td></tr>
+          <tr><td>Min-Conflicts</td><td>Complete-state</td><td>No</td><td><span class="highlight">Very large problems</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
