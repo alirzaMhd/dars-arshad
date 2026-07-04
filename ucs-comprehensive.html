@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UCS - Uniform-Cost Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 4px solid #ff6600; padding: 12px; margin: 15px 0; border-radius: 4px; color: #ffcc88; }
+    .warning .wtitle { color: #ff6600; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .step-table td { vertical-align: top; }
+    .step-table .step { color: #ffcc00; }
+    .step-table .cost { color: #00ff88; }
+    .step-table .action { color: #00ccff; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Uniform-Cost Search (UCS)</h1>
+  <p class="subtitle">Optimal Uninformed Search for Non-Uniform Costs</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Completeness &amp; Optimality</button>
+      <button class="tab" onclick="showSection('tab3')">Complexity Analysis</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Algorithm Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>UCS Algorithm Overview</h2>
+        <p>Uniform-Cost Search expands the node with the <strong>lowest path cost g(n)</strong> first. It is a generalization of BFS that works correctly when step costs are not all equal.</p>
+
+        <div class="formula">
+          <div class="label">Selection Criterion:</div>
+          <div class="expr">Expand node n with minimum g(n)</div>
+          <div class="desc">Where g(n) = total accumulated cost from the initial state to node n along the current path.</div>
+        </div>
+
+        <h3>How It Differs from BFS</h3>
+        <table>
+          <tr><th>Feature</th><th>BFS</th><th>UCS</th></tr>
+          <tr><td>Queue type</td><td>FIFO queue</td><td>Priority queue (min-heap)</td></tr>
+          <tr><td>Ordering</td><td>By depth (level)</td><td>By path cost g(n)</td></tr>
+          <tr><td>Optimal for</td><td>Uniform costs only</td><td>Any positive costs</td></tr>
+          <tr><td>When equal costs</td><td>BFS = UCS</td><td>UCS = BFS</td></tr>
+        </table>
+
+        <h3>Pseudocode</h3>
+        <div class="code">function UCS(problem) returns solution or failure
+  node ← Node(State: problem.INITIAL, Parent: nil, Action: nil, Path-Cost: 0)
+  frontier ← PRIORITY-QUEUE ordered by Path-Cost, containing node
+  explored ← empty set
+
+  loop do
+    if EMPTY?(frontier) then return failure
+    node ← POP(frontier)                     // node with lowest g(n)
+    if problem.GOAL-TEST(node.State) then return SOLUTION(node)
+    add node.State to explored
+
+    for each action in problem.ACTIONS(node.State) do
+      child ← CHILD-NODE(problem, node, action)
+      if child.State not in explored and child.State not in frontier then
+        frontier ← INSERT(child, frontier)
+      else if child.State in frontier with higher Path-Cost then
+        replace frontier node with child     // keep cheaper path
+</div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Data Structure</h3>
+            <p>• Priority Queue (min-heap)</p>
+            <p>• Key: g(n) path cost</p>
+            <p>• Extract minimum cost node</p>
+          </div>
+          <div class="card">
+            <h3>Key Insight</h3>
+            <p>• First goal popped = optimal</p>
+            <p>• Handles non-uniform costs</p>
+            <p>• Generalizes BFS</p>
+          </div>
+        </div>
+
+        <div class="note">UCS checks for goal <strong>when a node is selected for expansion</strong> (popped from queue), not when generated. This ensures the first goal found has the minimum cost path.</div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Completeness & Optimality -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Completeness of UCS</h2>
+
+        <div class="formula">
+          <div class="label">Completeness Condition:</div>
+          <div class="expr">UCS is complete if ε > 0 and all step costs ≥ ε</div>
+          <div class="desc">If every action has a minimum positive cost ε, then path costs increase monotonically along any path, ensuring the search does not loop indefinitely.</div>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">Danger: Zero-Cost Actions</div>
+          <p>If an action has cost 0 (e.g., a Noop "do nothing" action), UCS can get stuck in an infinite loop. The agent could repeatedly take the zero-cost action, accumulating no additional cost, and the search would never terminate.</p>
+          <p><strong>Example:</strong> If action A has cost 0, the sequence A, A, A, ... has the same total cost as doing nothing. UCS would keep generating longer and longer paths with the same cost, never converging.</p>
+        </div>
+
+        <h2>Optimality of UCS</h2>
+
+        <div class="formula">
+          <div class="label">Optimality Property:</div>
+          <div class="expr">The first goal node selected for expansion has the minimum path cost</div>
+          <div class="desc">When UCS pops a goal node from the priority queue, its g(n) value is ≤ the g-value of every other node in the frontier. Since all remaining unexplored paths have cost ≥ the smallest frontier g-value, the found goal is optimal.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Why UCS is Optimal: Proof Sketch</div>
+          <p>Let G be the first goal popped from the frontier. Its path cost is g(G). Any other node N in the frontier has g(N) ≥ g(G) (because the priority queue returns minimum first).</p>
+          <p>Any alternative path to a goal G' must pass through some frontier node N'. The path cost to G' is at least g(N') ≥ g(N) ≥ g(G). Therefore g(G) is the minimum possible.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>UCS Optimal ✓</h3>
+            <p>• Any step costs ≥ ε > 0</p>
+            <p>• First popped goal is optimal</p>
+            <p>• Handles non-uniform costs</p>
+          </div>
+          <div class="card">
+            <h3>When BFS = UCS</h3>
+            <p>• All step costs equal</p>
+            <p>• BFS is a special case of UCS</p>
+            <p>• Same behavior, same results</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Complexity Analysis -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Time &amp; Space Complexity</h2>
+        <p>UCS complexity depends on the <strong>actual path costs</strong>, not just the branching factor and depth. This is fundamentally different from BFS.</p>
+
+        <div class="formula">
+          <div class="label">Time &amp; Space Complexity:</div>
+          <div class="expr">O(b<sup>1 + ⌊C* / ε⌋</sup>)</div>
+          <div class="desc">
+            <p>Where:</p>
+            <p>• C* = cost of the optimal solution</p>
+            <p>• ε = minimum step cost (all actions have cost ≥ ε)</p>
+            <p>• b = branching factor</p>
+            <p>• ⌊x⌋ = floor function (largest integer ≤ x)</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Understanding the Exponent</div>
+          <p>The exponent 1 + ⌊C*/ε⌋ represents the maximum number of steps UCS might explore. If the optimal solution costs C* = 15 and each step costs at least ε = 3, then ⌊15/3⌋ = 5, so the maximum depth explored is 1 + 5 = 6 levels.</p>
+        </div>
+
+        <h3>UCS vs BFS Complexity</h3>
+        <table>
+          <tr><th>Factor</th><th>BFS (O(b<sup>d+1</sup>))</th><th>UCS (O(b<sup>1+⌊C*/ε⌋</sup>))</th></tr>
+          <tr><td>Based on</td><td>Depth d (number of steps)</td><td>Path cost C* and min cost ε</td></tr>
+          <tr><td>When costs equal</td><td>O(b<sup>d+1</sup>)</td><td>O(b<sup>d+1</sup>) — same</td></tr>
+          <tr><td>Cheap actions exist</td><td>Unaffected</td><td class="dim">Much worse — large exponent</td></tr>
+          <tr><td>Expensive actions</td><td>Unaffected</td><td class="highlight">Better — fewer steps explored</td></tr>
+        </table>
+
+        <div class="warning">
+          <div class="wtitle">Warning: Cheap Actions Hurt UCS</div>
+          <p>When many cheap actions exist (small ε), the ratio C*/ε becomes large, dramatically increasing the search space. UCS can be much worse than BFS when the minimum step cost is very small.</p>
+        </div>
+
+        <h3>Complexity Comparison Example</h3>
+        <table>
+          <tr><th>Scenario</th><th>C*</th><th>ε</th><th>⌊C*/ε⌋</th><th>Exponent</th><th>Relative Cost</th></tr>
+          <tr><td>Uniform costs (ε = 1)</td><td>10</td><td>1</td><td>10</td><td>11</td><td>O(b<sup>11</sup>) — BFS equivalent</td></tr>
+          <tr><td>Large minimum cost</td><td>100</td><td>25</td><td>4</td><td>5</td><td class="highlight">O(b<sup>5</sup>) — very efficient</td></tr>
+          <tr><td>Small minimum cost</td><td>100</td><td>1</td><td>100</td><td>101</td><td class="dim">O(b<sup>101</sup>) — extremely costly</td></tr>
+          <tr><td>Very small ε</td><td>10</td><td>0.1</td><td>100</td><td>101</td><td class="dim">O(b<sup>101</sup>) — wasteful</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Trace UCS on a Small Graph</div>
+          <p><strong>Problem:</strong> Graph with nodes S, A, B, C, G. Edges: S→A (cost 2), S→B (cost 5), S→C (cost 10), A→G (cost 9), B→G (cost 6), C→G (cost 2). Goal is G. Trace UCS step by step.</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>Frontier (node: g(n))</th><th>Expanded</th><th>Action</th></tr>
+            <tr><td>1</td><td class="cost">[S:0]</td><td>—</td><td class="action">Initialize with S(0)</td></tr>
+            <tr><td>2</td><td class="cost">[A:2, B:5, C:10]</td><td>S</td><td class="action">Pop S(0), expand → A(2), B(5), C(10)</td></tr>
+            <tr><td>3</td><td class="cost">[B:5, C:10, G:11]</td><td>A</td><td class="action">Pop A(2), expand → G(11)</td></tr>
+            <tr><td>4</td><td class="cost">[G:11, C:10, G:11]</td><td>B</td><td class="action">Pop B(5), expand → G(11)</td></tr>
+            <tr><td>5</td><td class="cost">[G:11, G:12]</td><td>C</td><td class="action">Pop C(10), expand → G(12)</td></tr>
+            <tr><td>6</td><td class="cost">[G:11, G:12]</td><td>—</td><td class="action">Pop G(11) — goal! Check if it's the minimum.</td></tr>
+          </table>
+          <p class="result">Optimal path: S→A→G, cost = 11. UCS correctly finds the cheapest path (S→C→G costs 12, S→B→G costs 11 — wait, S→B→G = 5+6 = 11 as well, tie!). Both cost 11 paths are optimal.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: UCS vs BFS on Non-Uniform Costs</div>
+          <p><strong>Problem:</strong> Graph: S→A (cost 1), S→B (cost 100), A→G (cost 100), B→G (cost 1). Goal is G.</p>
+          <p><strong>BFS trace:</strong> BFS explores by depth. S→A→G has depth 2, S→B→G has depth 2. BFS finds A→G first (assuming left-to-right), total cost = 1 + 100 = 101. Not optimal!</p>
+          <p><strong>UCS trace:</strong></p>
+          <table class="step-table">
+            <tr><th>Step</th><th>Frontier</th><th>Expanded</th><th>Action</th></tr>
+            <tr><td>1</td><td class="cost">[S:0]</td><td>—</td><td class="action">Initialize</td></tr>
+            <tr><td>2</td><td class="cost">[A:1, B:100]</td><td>S</td><td class="action">Expand S</td></tr>
+            <tr><td>3</td><td class="cost">[B:100, G:101]</td><td>A</td><td class="action">Pop A(1), expand → G(101)</td></tr>
+            <tr><td>4</td><td class="cost">[G:101, G:101]</td><td>B</td><td class="action">Pop B(100), expand → G(101)</td></tr>
+            <tr><td>5</td><td class="cost">[G:101, G:101]</td><td>—</td><td class="action">Both G nodes have cost 101, pick one</td></tr>
+          </table>
+          <p class="result">Wait — both paths have cost 101? No! S→A→G = 1+100 = 101, S→B→G = 100+1 = 101. Both optimal! UCS found optimal cost 101.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: UCS with Zero-Cost Action (Danger)</div>
+          <p><strong>Problem:</strong> State space: S, A, G. Actions: S→A (cost 5), A→A (cost 0 — Noop self-loop), A→G (cost 10). Goal is G.</p>
+          <p><strong>Trace:</strong></p>
+          <table class="step-table">
+            <tr><th>Step</th><th>Frontier</th><th>Action</th></tr>
+            <tr><td>1</td><td class="cost">[S:0]</td><td class="action">Initialize</td></tr>
+            <tr><td>2</td><td class="cost">[A:5]</td><td class="action">Pop S, expand to A(5)</td></tr>
+            <tr><td>3</td><td class="cost">[G:15, A:5]</td><td class="action">Pop A(5), expand to A(5+0=5) and G(15)</td></tr>
+          </table>
+          <p><strong>The problem:</strong> Since action A→A has cost 0, node A is re-inserted into the frontier with g(A) = 5 (same cost). UCS will keep popping A, generating another A(5), forever. The goal G(15) is never popped because the frontier always contains A(5) which has lower priority!</p>
+          <div class="warning">
+            <div class="wtitle">Infinite Loop!</div>
+            <p>Zero-cost actions (like Noop) cause UCS to generate identical-cost nodes indefinitely. The search never terminates because the minimum-cost node is perpetually re-generated. Solution: detect and eliminate zero-cost cycles.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Comparing UCS and BFS with Different Step Costs</div>
+          <p><strong>Problem:</strong> A 4-node graph with non-uniform costs. S→A (cost 1), S→B (cost 2), A→C (cost 10), B→C (cost 1), C→G (cost 1). Goal is G.</p>
+          <p><strong>BFS solution:</strong> BFS explores by depth. Depths: S(d=0), A/B(d=1), C(d=2), G(d=3). BFS finds S→A→C→G. Total cost = 1 + 10 + 1 = 12.</p>
+          <p><strong>UCS trace:</strong></p>
+          <table class="step-table">
+            <tr><th>Step</th><th>Frontier</th><th>Expanded</th><th>Action</th></tr>
+            <tr><td>1</td><td class="cost">[S:0]</td><td>—</td><td class="action">Init</td></tr>
+            <tr><td rowspan="2">2</td><td class="cost">[A:1, B:2]</td><td>S</td><td class="action">Pop S, expand</td></tr>
+            <tr><td class="cost">[B:2, C:11]</td><td>A</td><td class="action">Pop A(1), expand to C(11)</td></tr>
+            <tr><td>3</td><td class="cost">[C:3, C:11]</td><td>B</td><td class="action">Pop B(2), expand to C(3)</td></tr>
+            <tr><td>4</td><td class="cost">[C:3, C:11]</td><td>—</td><td class="action">C(3) is now cheaper! Removed C(11), keep C(3)</td></tr>
+            <tr><td>5</td><td class="cost">[G:4, C:11]</td><td>C</td><td class="action">Pop C(3), expand to G(4)</td></tr>
+            <tr><td>6</td><td class="cost">[G:4, C:11]</td><td>—</td><td class="action">Pop G(4) — goal found!</td></tr>
+          </table>
+          <p class="result">UCS finds optimal path: S→B→C→G, total cost = 2 + 1 + 1 = 4. BFS found S→A→C→G (cost 12). UCS is optimal, BFS is not when costs are non-uniform.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

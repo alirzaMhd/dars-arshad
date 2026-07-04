@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DLS - Depth-Limited Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 4px solid #ff6600; padding: 12px; margin: 15px 0; border-radius: 4px; color: #ffcc88; }
+    .warning .wtitle { color: #ff6600; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .step-table td { vertical-align: top; }
+    .step-table .step { color: #ffcc00; }
+    .step-table .stack { color: #00ff88; }
+    .step-table .action { color: #00ccff; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Depth-Limited Search (DLS)</h1>
+  <p class="subtitle">DFS with a Depth Cutoff — Avoiding Infinite Paths</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Completeness &amp; Optimality</button>
+      <button class="tab" onclick="showSection('tab3')">Cutoff Selection</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Algorithm Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>DLS Algorithm Overview</h2>
+        <p>Depth-Limited Search is a variant of DFS that imposes a <strong>depth limit l</strong>. Any node at depth l is treated as if it has no children (cutoff). This solves the infinite-path problem of standard DFS.</p>
+
+        <div class="formula">
+          <div class="label">Core Principle:</div>
+          <div class="expr">DFS with depth cutoff l — nodes at depth l have no children</div>
+          <div class="desc">DLS = DFS + depth bound. If l = ∞, DLS reduces to standard DFS.</div>
+        </div>
+
+        <h3>Three Possible Outcomes</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Solution Found</h3>
+            <p>Goal reached within depth l</p>
+            <p class="highlight">Return SOLUTION</p>
+          </div>
+          <div class="card">
+            <h3>Cutoff</h3>
+            <p>No goal found, but cutoff occurred (node at depth l could not be expanded)</p>
+            <p class="dim">Return CUTOFF</p>
+          </div>
+          <div class="card">
+            <h3>Failure</h3>
+            <p>No goal found, no cutoff occurred (entire tree exhausted within limit)</p>
+            <p class="dim">Return FAILURE</p>
+          </div>
+        </div>
+
+        <h3>Pseudocode: DEPTH-LIMITED-SEARCH</h3>
+        <div class="code">function DEPTH-LIMITED-SEARCH(problem, limit) returns solution/failure/cutoff
+  return RECURSIVE-DLS(Node(problem.INITIAL), problem, limit)
+
+function RECURSIVE-DLS(node, problem, limit) returns solution/failure/cutoff
+  if problem.GOAL-TEST(node.State) then return SOLUTION(node)
+  else if limit = 0 then return CUTOFF
+  else
+    cutoff-occurred? ← false
+    for each action in problem.ACTIONS(node.State) do
+      child ← CHILD-NODE(problem, node, action)
+      result ← RECURSIVE-DLS(child, problem, limit - 1)
+      if result = CUTOFF then cutoff-occurred? ← true
+      else if result ≠ failure then return result
+    if cutoff-occurred? then return CUTOFF
+    else return failure
+</div>
+
+        <div class="formula">
+          <div class="label">Relationship to DFS:</div>
+          <div class="expr">DFS = DLS with l = ∞</div>
+          <div class="desc">Standard DFS never limits depth. DLS generalizes DFS by adding a cutoff parameter. When the limit is infinite, DLS behaves identically to DFS.</div>
+        </div>
+
+        <div class="note">DLS returns a special CUTOFF signal (not FAILURE) when the limit prevents expansion. This distinction is crucial for Iterative Deepening DFS (IDDFS), which calls DLS repeatedly with increasing limits.</div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Completeness & Optimality -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Completeness of DLS</h2>
+
+        <div class="formula">
+          <div class="label">Completeness Condition:</div>
+          <div class="expr">DLS is complete if l ≥ d</div>
+          <div class="desc">Where l = depth limit, d = depth of shallowest goal. If the cutoff is at least as deep as the shallowest goal, DLS will eventually find a solution.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">When l < d: Incomplete</div>
+          <p>If the depth limit is smaller than the goal depth, DLS will cut off before reaching the goal. All nodes at depth l are treated as leaves, so the goal at depth l+1 is never generated. DLS returns CUTOFF, and we know a goal might exist beyond the limit.</p>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">Warning: l < d = Incomplete Search</div>
+          <p>Choosing a limit l that is too small guarantees incompleteness. However, DLS returns CUTOFF (not FAILURE) in this case, alerting us that a deeper search might succeed. This is the foundation of Iterative Deepening DFS.</p>
+        </div>
+
+        <h2>Optimality of DLS</h2>
+
+        <div class="formula">
+          <div class="label">Optimality:</div>
+          <div class="expr">DLS is NOT optimal, even when l ≥ d</div>
+          <div class="desc">Like DFS, DLS returns the <strong>first</strong> solution found based on the order of exploration, not the cheapest. The depth limit does not make it cost-aware.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Not Optimal</h3>
+            <p>• First found ≠ cheapest</p>
+            <p>• No cost consideration</p>
+            <p>• Same issue as DFS</p>
+          </div>
+          <div class="card">
+            <h3>DLS vs DFS vs BFS</h3>
+            <p>• DLS fixes DFS infinite paths</p>
+            <p>• But not optimal like BFS</p>
+            <p>• Space: O(bl) — better than BFS</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Cutoff Selection -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Choosing the Depth Limit</h2>
+        <p>The depth limit l is a critical parameter. Setting it correctly requires domain knowledge.</p>
+
+        <h3>Strategies for Choosing l</h3>
+        <table>
+          <tr><th>Strategy</th><th>Description</th><th>Example</th></tr>
+          <tr><td>Domain knowledge</td><td>Use known properties of the problem</td><td>Max 19 steps between any two cities on a map with 20 cities</td></tr>
+          <tr><td>Diameter of state space</td><td>Maximum path length between any two states</td><td>Romanian map: diameter = 9 (max 9 steps between any two cities)</td></tr>
+          <tr><td>Physical constraints</td><td>Real-world limits on path length</td><td>Robot with battery for 100 steps</td></tr>
+          <tr><td>Memory constraints</td><td>Maximum nodes that fit in memory</td><td>l = log<sub>b</sub>(memory/node_count)</td></tr>
+        </table>
+
+        <h3>Romanian Map Example</h3>
+        <p>Consider the Romanian road map problem with 20 cities:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Naive Bound</h3>
+            <p>• 20 cities total</p>
+            <p>• Max path length: 19</p>
+            <p>• l = 19 (all cities visited)</p>
+            <p class="dim">Works but wasteful</p>
+          </div>
+          <div class="card">
+            <h3>Diameter Bound</h3>
+            <p>• Max steps between any 2 cities: 9</p>
+            <p>• l = 9 (state space diameter)</p>
+            <p class="highlight">More efficient, still complete</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">State Space Diameter:</div>
+          <div class="expr">l = max<sub>s,t ∈ S</sub> shortest-path-length(s, t)</div>
+          <div class="desc">The diameter is the maximum shortest-path distance between any two states. Setting l to the diameter guarantees all states are reachable without wasteful deep exploration.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Impact of Cutoff Choice</div>
+          <table>
+            <tr><th>l</th><th>Effect</th><th>Nodes (b=10)</th><th>Complete?</th></tr>
+            <tr><td>l = 3</td><td>Too small, cuts off goals at depth 4+</td><td>11,110</td><td class="dim">No</td></tr>
+            <tr><td>l = 5</td><td>Still small, misses deep goals</td><td>1,111,110</td><td class="dim">No</td></tr>
+            <tr><td>l = 9 (diameter)</td><td>Optimal — covers all states</td><td>1.11 × 10<sup>9</sup></td><td class="highlight">Yes</td></tr>
+            <tr><td>l = 19 (naive)</td><td>Works but wasteful</td><td>1.11 × 10<sup>19</sup></td><td class="highlight">Yes</td></tr>
+          </table>
+          <p class="note">Choosing the diameter (9) instead of the naive bound (19) reduces the search space by a factor of 10<sup>10</sup> — a dramatic improvement!</p>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">Warning: Choosing l is Critical</div>
+          <p><strong>Too small (l < d):</strong> Incomplete — goals beyond the cutoff are missed.</p>
+          <p><strong>Too large (l >> d):</strong> DLS wastes time exploring useless deep branches, approaching the inefficiency of DFS.</p>
+          <p><strong>Solution:</strong> Use domain knowledge to estimate a good bound, or use Iterative Deepening DFS (IDDFS) which adaptively increases the limit.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: DLS with Different Limits — Finding the Sweet Spot</div>
+          <p><strong>Problem:</strong> A tree with b = 3, goals at depths 4 and 7. Run DLS with l = 3, l = 5, and l = 8.</p>
+          <p><strong>l = 3:</strong></p>
+          <p>• Nodes at depth 0,1,2,3 explored. Cutoff at depth 3.</p>
+          <p>• Both goals (depth 4 and 7) are missed.</p>
+          <p>• Result: CUTOFF (no goal found due to limit)</p>
+          <p class="result">Total nodes explored: 1 + 3 + 9 + 27 = 40. Incomplete.</p>
+
+          <p><strong>l = 5:</strong></p>
+          <p>• Nodes up to depth 5 explored.</p>
+          <p>• Goal at depth 4 found! (assuming goal is reached before exploring deeper)</p>
+          <p class="result">Total nodes explored: up to 1 + 3 + 9 + 27 + 81 + 243 = 364 (worst case if goal is last at depth 4). Complete for depth 4 goal.</p>
+
+          <p><strong>l = 8:</strong></p>
+          <p>• Both goals (depth 4 and 7) reachable.</p>
+          <p class="result">Total nodes explored: up to 9,841 (3<sup>9</sup>-3/2). More nodes but both goals reachable.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Calculate the State Space Diameter</div>
+          <p><strong>Problem:</strong> A state space has states A, B, C, D, E, F. Edges: A-B, A-C, B-D, C-D, D-E, E-F. What is the diameter? What depth limit should DLS use?</p>
+          <p><strong>Step 1:</strong> Find all-pairs shortest paths:</p>
+          <p>• A to F: A-C-D-E-F = 4 steps</p>
+          <p>• B to F: B-D-E-F = 3 steps</p>
+          <p>• A to D: A-B-D = 2 steps or A-C-D = 2 steps</p>
+          <p>• B to E: B-D-E = 2 steps</p>
+          <p>• F to any: F-E-D-... maximum 4 steps</p>
+          <p><strong>Step 2:</strong> Find the maximum shortest path:</p>
+          <p>• The farthest pair is A-F or B-F with path length 4.</p>
+          <p class="result">Diameter = 4. Set l = 4 for DLS to guarantee complete coverage.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: DLS Trace with l = d (Perfect Limit)</div>
+          <p><strong>Problem:</strong> Binary tree (b = 2), goal at depth 3 node "RLR". Run DLS with l = 3 (equal to goal depth).</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>Node</th><th>Depth</th><th>Stack</th><th>Action</th></tr>
+            <tr><td>1</td><td>Root</td><td>0</td><td class="stack">[Root]</td><td class="action">Initialize</td></tr>
+            <tr><td>2</td><td>L</td><td>1</td><td class="stack">[L, R]</td><td class="action">Expand Root → L (depth 1), R</td></tr>
+            <tr><td>3</td><td>LL</td><td>2</td><td class="stack">[LL, LR, R]</td><td class="action">Expand L → LL (depth 2), LR</td></tr>
+            <tr><td>4</td><td>LLL</td><td>3</td><td class="stack">[LLL, LLR, LR, R]</td><td class="action">Expand LL → LLL, LLR (depth 3)</td></tr>
+            <tr><td>5</td><td>LLL</td><td>3</td><td class="stack">[LLR, LR, R]</td><td class="action">Pop LLL, depth = l = 3 → cutoff (no expansion)</td></tr>
+            <tr><td>6</td><td>LLR</td><td>3</td><td class="stack">[LR, R]</td><td class="action">Pop LLR, depth = 3 → cutoff</td></tr>
+            <tr><td>7</td><td>LR</td><td>2</td><td class="stack">[LRL, LRR, R]</td><td class="action">Expand LR → LRL, LRR (depth 3)</td></tr>
+            <tr><td>8</td><td>LRL</td><td>3</td><td class="stack">[LRR, R]</td><td class="action">Pop LRL, depth = 3 → cutoff</td></tr>
+            <tr><td>9</td><td>LRR</td><td>3</td><td class="stack">[R]</td><td class="action">Pop LRR, depth = 3 → cutoff</td></tr>
+            <tr><td>10</td><td>R</td><td>1</td><td class="stack">[RL, RR]</td><td class="action">Expand R → RL, RR (depth 2)</td></tr>
+            <tr><td>11</td><td>RL</td><td>2</td><td class="stack">[RLL, RLR, RR]</td><td class="action">Expand RL → RLL, RLR (depth 3)</td></tr>
+            <tr><td>12</td><td>RLL</td><td>3</td><td class="stack">[RLR, RR]</td><td class="action">Pop RLL, depth = 3 → cutoff</td></tr>
+            <tr><td>13</td><td class="result">RLR ✓</td><td>3</td><td class="stack">[RR]</td><td class="action">Pop RLR — goal! Depth = 3 = l, found!</td></tr>
+          </table>
+          <p class="result">DLS found the goal at depth 3 (l = 3). Nodes expanded: many, but the limit prevented infinite exploration. Without the limit, DFS might have gone deeper than 3 in a different part of the tree.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avoiding Repeated States - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border: 1px solid #ff6600; border-radius: 8px; padding: 12px; margin: 10px 0; color: #ffcc88; }
+    .warning .warn-title { color: #ff6600; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .step { margin: 5px 0; color: #ccc; }
+    .bad { color: #ff4444; }
+    .good { color: #00ff88; }
+  </style>
+</head>
+<body>
+  <h1>Avoiding Repeated States</h1>
+  <p class="subtitle">Artificial Intelligence — Chapter 2: Problem Solving Using Search</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">The Problem</button>
+      <button class="tab" onclick="showSection('tab2')">Graph Search Solution</button>
+      <button class="tab" onclick="showSection('tab3')">Optimality Concerns</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: The Problem -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The Problem of Repeated States</h2>
+
+        <p>When a search algorithm revisits the same state multiple times, it causes <strong>exponential waste</strong>. In the worst case, a finite state space can produce an infinite search tree if repeated states are not detected.</p>
+
+        <div class="formula">
+          <div class="label">Tree Search (no repeat detection)</div>
+          <div class="expr">States explored: O(b<sup>d</sup>) &nbsp;—&nbsp; but many are redundant!</div>
+          <div class="desc">Without memoization, the same state may be expanded exponentially many times</div>
+        </div>
+
+        <h3>The Romanian Example</h3>
+        <p>Romania's road map has only 20 cities (states). But a tree search starting from Arad and trying to reach Bucharest would generate an <strong>infinite</strong> tree by cycling between cities (Arad → Zerind → Arad → Zerind → ...). With repeat detection, only 20 states need to be explored.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Without Repeat Detection</h3>
+            <p class="bad">• Infinite search tree from finite space</p>
+            <p class="bad">• Cycles cause infinite loops</p>
+            <p class="bad">• Same state expanded thousands of times</p>
+            <p class="bad">• DFS may never terminate</p>
+          </div>
+          <div class="card">
+            <h3>With Repeat Detection</h3>
+            <p class="good">• Graph search remembers visited states</p>
+            <p class="good">• Each state expanded at most once</p>
+            <p class="good">• Search terminates even with cycles</p>
+            <p class="good">• Dramatically fewer nodes explored</p>
+          </div>
+        </div>
+
+        <h3>Grid Example: Exponential Explosion</h3>
+        <div class="formula">
+          <div class="label">Tree Search on Grid (without repeats)</div>
+          <div class="expr">Nodes = O(4<sup>d</sup>)</div>
+          <div class="desc">Each step has ~4 moves (up, down, left, right), so branching factor = 4</div>
+        </div>
+        <div class="formula">
+          <div class="label">Graph Search on Grid (with repeats)</div>
+          <div class="expr">Nodes &asymp; &pi;d² &nbsp;(for a d &times; d reachable area)</div>
+          <div class="desc">Only unique grid cells are expanded — a quadratic number, not exponential!</div>
+        </div>
+
+        <div class="warning">
+          <div class="warn-title">&#9888; Critical Insight</div>
+          <p>A finite state space can produce an <strong>infinite search tree</strong> when using tree search. Without repeated state detection, DFS can loop forever even when a solution exists at depth 1! Always use graph search for cyclic state spaces.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Graph Search Solution -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Graph Search: The Solution</h2>
+
+        <p>Graph search maintains two data structures: the <strong>closed list</strong> (expanded nodes) and the <strong>open list</strong> (frontier). Before expanding a node, check if its state is already in the closed list.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Open List (Frontier)</h3>
+            <p>Nodes discovered but not yet expanded. Also called the fringe or frontier.</p>
+          </div>
+          <div class="card">
+            <h3>Closed List (Explored)</h3>
+            <p>Nodes that have been expanded. Typically implemented with a hash table for O(1) lookup.</p>
+          </div>
+        </div>
+
+        <h3>Pseudocode: GRAPH-SEARCH</h3>
+        <div class="code">
+function GRAPH-SEARCH(problem) returns solution or failure
+  closed ← empty set
+  frontier ← {MAKE-NODE(problem.INITIAL-STATE)}
+
+  loop do
+    if EMPTY?(frontier) then return failure
+    node ← POP(frontier)
+
+    if problem.GOAL-TEST(node.STATE) then
+      return SOLUTION(node)
+
+    if node.STATE not in closed then
+      add node.STATE to closed
+      for each action in problem.ACTIONS(node.STATE) do
+        child ← CHILD-NODE(problem, node, action)
+        if child.STATE not in closed and child not in frontier then
+          add child to frontier</div>
+
+        <h3>Hash Table Implementation</h3>
+        <p>The closed set is typically a hash table mapping state → best-known cost (or parent). This enables O(1) lookup to check if a state has been visited.</p>
+
+        <div class="formula">
+          <div class="label">Space Overhead for Repeat Detection</div>
+          <div class="expr">|closed| &le; |state space|</div>
+          <div class="desc">The closed list stores at most all unique states in the problem</div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>Tree Search</th>
+            <th>Graph Search</th>
+          </tr>
+          <tr>
+            <td>Repeat detection</td>
+            <td class="bad">No</td>
+            <td class="good">Yes (closed list)</td>
+          </tr>
+          <tr>
+            <td>Space complexity</td>
+            <td>Lower (no closed list)</td>
+            <td>Higher (stores all visited states)</td>
+          </tr>
+          <tr>
+            <td>Time in cyclic spaces</td>
+            <td class="bad">Infinite (cycles)</td>
+            <td class="good">Finite</td>
+          </tr>
+          <tr>
+            <td>Optimality preservation</td>
+            <td>N/A (may not find goal)</td>
+            <td>Depends on search strategy</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <div class="warn-title">&#9888; Trade-off Warning</div>
+          <p>Graph search trades space for time. By storing all visited states (potentially the entire state space), we save exponential time. For the Romania problem: 20 states stored vs infinite tree. For a 20&times;20 grid: 400 states stored vs 4<sup>20</sup> tree nodes.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Optimality Concerns -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Optimality Concerns with Graph Search</h2>
+
+        <p>Graph search always keeps the <strong>first path discovered</strong> to each state. This is a problem because the first path to a state might not be the cheapest path.</p>
+
+        <h3>Safe: BFS and UCS</h3>
+        <p>For <strong>BFS</strong> (with uniform costs) and <strong>UCS</strong> (with non-negative costs), the first time a state is reached is via the shortest path. This is guaranteed by the order of expansion.</p>
+
+        <div class="formula">
+          <div class="label">BFS/UCS: First Path = Optimal Path</div>
+          <div class="expr">If cost frontier is non-decreasing, first pop is optimal</div>
+          <div class="desc">BFS expands level by level, UCS expands in order of path cost</div>
+        </div>
+
+        <h3>Danger: DFS and IDS</h3>
+        <p>For <strong>DFS</strong> and <strong>IDS</strong>, the first path discovered to a state might be suboptimal. If we add the state to the closed list, we may miss a better path found later.</p>
+
+        <div class="formula">
+          <div class="label">DFS/IDS Problem</div>
+          <div class="expr">First path to S (cost = 10): S is closed &nbsp;→&nbsp; Better path (cost = 3) rejected!</div>
+          <div class="desc">Once a state is closed, alternative paths are ignored — even if cheaper</div>
+        </div>
+
+        <h3>Solutions for DFS/IDS</h3>
+        <ul style="margin-left:20px; line-height:1.8;">
+          <li><strong>Compare costs:</strong> When a state is re-encountered, if the new path is cheaper, update the node and propagate the cost change to children</li>
+          <li><strong>Accept suboptimality:</strong> In some problems, finding any solution quickly matters more than optimality</li>
+          <li><strong>Don't use closed list:</strong> Let DFS/IDS run as tree search (may loop but IDS with cycles is complex)</li>
+        </ul>
+
+        <h3>The Space-Time Trade-off</h3>
+        <table>
+          <tr>
+            <th>Strategy</th>
+            <th>Without Closed List</th>
+            <th>With Closed List</th>
+          </tr>
+          <tr>
+            <td>BFS</td>
+            <td>O(b<sup>d</sup>) time, O(b<sup>d</sup>) space</td>
+            <td style="color:#00ff88;">Optimal + complete</td>
+          </tr>
+          <tr>
+            <td>UCS</td>
+            <td>O(b<sup>C*/&epsilon;</sup>) time</td>
+            <td style="color:#00ff88;">Optimal (with non-negative costs)</td>
+          </tr>
+          <tr>
+            <td>DFS</td>
+            <td>O(b<sup>m</sup>) time, O(bm) space</td>
+            <td style="color:#ff9944;">Space becomes O(state space), may lose optimality</td>
+          </tr>
+          <tr>
+            <td>IDS</td>
+            <td>O(b<sup>d</sup>) time, O(bd) space</td>
+            <td style="color:#ff9944;">Adding closed list makes space O(b<sup>d</sup>) — defeats purpose!</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <div class="warn-title">&#9888; Key Understanding</div>
+          <p>Using a closed list with DFS/IDS converts their space complexity from O(bd) to O(|state space|). For DFS, this means the memory advantage over BFS is lost! There is no free lunch — you must choose between memory efficiency and repeat avoidance.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Tree Search vs Graph Search on a 3&times;3 Grid</div>
+          <p><strong>Problem:</strong> Robot on 3&times;3 grid, start at (0,0), goal at (2,2). Can move up, down, left, right (staying within bounds). Depth to goal = 4 moves.</p>
+          <p><strong>Tree Search (no repeat detection):</strong></p>
+          <p>At each step, the robot can go to 2-4 neighbors. Some moves lead back to previous cells. Tree search visits (0,0) → (0,1) → (0,0) → (0,1) → ... creating cycles.</p>
+          <p>Total nodes generated (BFS tree): ~4<sup>4</sup> = 256 nodes (many repeats).</p>
+          <p><strong>Graph Search (with closed list):</strong></p>
+          <p>There are only 9 unique cells. The closed list stores all 9. Each cell expanded once.</p>
+          <p>Total nodes expanded: <span class="result">9 unique cells</span> vs 256 tree nodes.</p>
+          <p><strong>Savings:</strong> 256/9 = <span class="result">28x fewer nodes expanded!</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Romanian Route Finding</div>
+          <p><strong>Problem:</strong> Find path from Arad to Bucharest in Romania road map (20 cities). Using DFS.</p>
+          <p><strong>Tree Search:</strong> DFS goes Arad → Zerind → Oradea → Sibiu → Fagaras → Bucharest. But without repeat detection, DFS might go Arad → Sibiu → Arad → Sibiu → ... cycling forever. Or: Arad → Timisoara → Lugoj → Mehadia → Lugoj → Timisoara → Arad → ... infinite.</p>
+          <p><strong>Graph Search:</strong> Closed list tracks which 20 cities have been visited. DFS with closed list: Arad → Sibiu → Fagaras → Bucharest. Found in 4 steps exploring only 4 of 20 cities. Total closed list size: 4 states.</p>
+          <p><strong>Result:</strong> Without graph search, DFS on Romanian map can loop infinitely. With graph search, it terminates quickly.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Suboptimal Path with DFS + Closed List</div>
+          <p><strong>Problem:</strong> Graph with states A, B, C, D, E, F, G. Start = A, Goal = G.</p>
+          <p>Edges: A→B(1), A→C(10), B→D(1), D→E(1), E→C(1), C→F(1), F→G(1)</p>
+          <p>The optimal path is A→B→D→E→C→F→G with total cost 5.</p>
+          <p><strong>DFS with closed list:</strong></p>
+          <p>DFS explores: A → B → D → E → C → F → G</p>
+          <p>But wait — DFS first reaches C via path A→C (cost 10) and closes C. Later, when the optimal path A→B→D→E→C (cost 4) reaches C, C is already closed! The better path is rejected.</p>
+          <p><strong>Result:</strong> DFS finds path A→C→F→G with cost 12, <span class="bad">not optimal</span>.</p>
+          <p><strong>Fix:</strong> When re-reaching C, compare costs. If new cost (4) &lt; old cost (10), update C's cost and revisit children.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Exponential Reduction with Graph Search</div>
+          <p><strong>Problem:</strong> 8-puzzle has 181,440 reachable states. A tree search for a solution at depth 20 would generate b<sup>20</sup> nodes. Branching factor b ≈ 2-3 (depends on blank position).</p>
+          <p><strong>Tree Search:</strong> ~3<sup>20</sup> = 3.4 billion nodes (many repeats)</p>
+          <p><strong>Graph Search:</strong> At most 181,440 unique states expanded.</p>
+          <p><strong>Savings:</strong> 3.4 billion / 181,440 = <span class="result">18,900x fewer nodes!</span></p>
+          <p>This is why every practical 8-puzzle solver uses graph search with a closed list.</p>
+        </div>
+
+        <div class="warning">
+          <div class="warn-title">&#9888; Exam Tip</div>
+          <p>When comparing tree search and graph search on an exam, always: (1) explain that tree search may explore the same state many times, (2) show the growth formula (b<sup>d</sup> for tree vs |states| for graph), (3) mention optimality concerns for DFS/IDS.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

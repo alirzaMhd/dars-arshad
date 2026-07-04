@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>8-Puzzle (Sliding Block Puzzle) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; color: #ff9944; }
+    .warning::before { content: "WARNING: "; font-weight: bold; color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .puzzle-board { display: grid; grid-template-columns: repeat(3, 60px); gap: 4px; margin: 10px auto; justify-content: center; }
+    .puzzle-cell { width: 60px; height: 60px; background: #1a1a2e; border: 2px solid #444; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.3em; font-weight: bold; }
+    .puzzle-cell.empty { background: transparent; border-color: transparent; }
+    .puzzle-cell.tile { color: #00ff88; border-color: #00ff88; }
+    .arrow { color: #ff6600; font-size: 1.5em; text-align: center; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>8-Puzzle (Sliding Block Puzzle)</h1>
+  <p class="subtitle">Classic Toy Problem for Heuristic Search — Complete Guide</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Problem Definition</button>
+      <button class="tab" onclick="showSection('tab2')">State Space</button>
+      <button class="tab" onclick="showSection('tab3')">Larger Puzzles</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Defining the 8-Puzzle</h2>
+        <p>The 8-puzzle is a 3&times;3 board with 8 numbered tiles (1-8) and one empty space. Tiles slide into the empty space.</p>
+
+        <div class="puzzle-board">
+          <div class="puzzle-cell tile">1</div>
+          <div class="puzzle-cell tile">2</div>
+          <div class="puzzle-cell tile">3</div>
+          <div class="puzzle-cell tile">4</div>
+          <div class="puzzle-cell tile">5</div>
+          <div class="puzzle-cell tile">6</div>
+          <div class="puzzle-cell tile">7</div>
+          <div class="puzzle-cell tile">8</div>
+          <div class="puzzle-cell empty"></div>
+        </div>
+        <p style="text-align:center;color:#888;">Goal state: tiles 1-8 in order, empty at bottom-right</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>State Representation</h3>
+            <p>A 3&times;3 grid specifying each cell's tile number or empty.</p>
+            <p class="dim">Equivalently: a permutation of {0,1,...,8} where 0 = empty</p>
+          </div>
+          <div class="card">
+            <h3>Actions</h3>
+            <p>Move empty space <span class="highlight">Up</span>, <span class="highlight">Down</span>, <span class="highlight">Left</span>, <span class="highlight">Right</span></p>
+            <p class="dim">Each action swaps the empty with an adjacent tile</p>
+          </div>
+          <div class="card">
+            <h3>Goal Test</h3>
+            <p>Check if state matches goal configuration.</p>
+            <p class="dim">Single goal state: [[1,2,3],[4,5,6],[7,8,0]]</p>
+          </div>
+          <div class="card">
+            <h3>Path Cost</h3>
+            <p><span class="highlight">1 per move</span></p>
+            <p class="dim">Optimal solution minimizes number of moves</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">5-Component Problem Formulation</div>
+          <div class="expr">P = (S, A, T, G, Cost)</div>
+          <div class="desc">
+            S = set of all 3x3 tile configurations (9! / 2 reachable from a given start)<br>
+            A = {Up, Down, Left, Right} (subject to edge constraints)<br>
+            T(s, a) = s' where empty cell moves in direction a<br>
+            G(s) = true iff s = [[1,2,3],[4,5,6],[7,8,0]]<br>
+            Cost(s, a, s') = 1 for all valid transitions
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Action Constraints at Edges</div>
+          <p>The empty space cannot move outside the board. If empty is at:</p>
+          <p><strong>Corner (0,0):</strong> Only Down and Right are valid.</p>
+          <p><strong>Edge (0,1):</strong> Only Down, Left, and Right are valid.</p>
+          <p><strong>Center (1,1):</strong> All 4 directions are valid.</p>
+          <p>Branching factor is 2-4 depending on the empty cell's position.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Representation Choices</h2>
+        <table>
+          <tr><th>Representation</th><th>Example</th><th>Pros/Cons</th></tr>
+          <tr><td>3&times;3 matrix</td><td>[[1,2,3],[4,5,6],[7,8,0]]</td><td>Intuitive, easy to visualize</td></tr>
+          <tr><td>1D array (9 elements)</td><td>[1,2,3,4,5,6,7,8,0]</td><td>Compact, easy to hash</td></tr>
+          <tr><td>Integer encoding</td><td>123456780</td><td>Fast comparison, limited to 9!</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>State Space Size</h2>
+        <p>The 8-puzzle has a total of 9! = 362,880 possible tile arrangements. However, not all are reachable from a given start state due to parity constraints.</p>
+
+        <div class="formula">
+          <div class="label">Reachable States</div>
+          <div class="expr">9! / 2 = 181,440</div>
+          <div class="desc">Exactly half of all permutations are reachable from any given starting state.</div>
+        </div>
+
+        <div class="warning">Half of all possible tile arrangements are <strong>unreachable</strong> from a given start state. The state space is split into two disjoint sets. If you start in one set, you can never reach any state in the other set. This is determined by the parity (even/odd) of the permutation.</div>
+
+        <div class="section">
+          <h2>Inversion Parity Explanation</h2>
+          <p>An <strong>inversion</strong> is a pair of tiles (a, b) where a &gt; b but a appears before b in the linearized row-major order (reading left-to-right, top-to-bottom, ignoring the empty space).</p>
+          <div class="formula">
+            <div class="label">Solvability Condition</div>
+            <div class="expr">(inversions mod 2) = (blank_row_from_bottom mod 2)</div>
+            <div class="desc">If the parity of inversions matches the parity of the row distance of the blank from the bottom, the puzzle is solvable from the given start.</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Checking Solvability</div>
+          <p><strong>State:</strong> [[1, 2, 3], [4, 5, 6], [8, 7, 0]]</p>
+          <p><strong>Linearized (ignoring 0):</strong> [1, 2, 3, 4, 5, 6, 8, 7]</p>
+          <p><strong>Inversions:</strong> (8,7) = 1 inversion. Inversion count = 1 (odd).</p>
+          <p><strong>Blank row from bottom:</strong> row 1 (bottom) &rarr; distance = 1 (odd).</p>
+          <p><strong>Parity match:</strong> odd = odd &rarr; <span class="result">SOLVABLE</span>.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complexity</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>8-Puzzle Reachable States</h3>
+            <p><span class="highlight">181,440</span></p>
+            <p class="dim">Brute-force searchable via BFS</p>
+          </div>
+          <div class="card">
+            <h3>Branching Factor</h3>
+            <p><span class="highlight">2.67 (average)</span></p>
+            <p class="dim">2 at corners, 3 at edges, 4 at center</p>
+          </div>
+          <div class="card">
+            <h3>Average Solution Length</h3>
+            <p><span class="highlight">~22 moves</span></p>
+            <p class="dim">Worst-case = 31 moves</p>
+          </div>
+          <div class="card">
+            <h3>Problem Class</h3>
+            <p><span class="highlight">NP-Complete</span></p>
+            <p class="dim">Scaled to n&times;n board</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Larger Sliding Puzzles</h2>
+        <p>The 8-puzzle generalizes to the 15-puzzle (4&times;4) and the 24-puzzle (5&times;5). As the board grows, the state space explodes dramatically.</p>
+
+        <div class="formula">
+          <div class="label">General State Count</div>
+          <div class="expr">N &times; N puzzle: (N<sup>2</sup>)! / 2 reachable states</div>
+        </div>
+
+        <table>
+          <tr><th>Puzzle</th><th>Board</th><th>Total Permutations</th><th>Reachable States</th><th>Searchable by BFS?</th></tr>
+          <tr><td>8-puzzle</td><td>3&times;3</td><td>9! = 362,880</td><td>181,440</td><td>Yes</td></tr>
+          <tr><td>15-puzzle</td><td>4&times;4</td><td>16! &asymp; 2.09 &times; 10<sup>13</sup></td><td>~1.05 &times; 10<sup>13</sup></td><td>No (too large)</td></tr>
+          <tr><td>24-puzzle</td><td>5&times;5</td><td>25! &asymp; 1.55 &times; 10<sup>25</sup></td><td>~7.75 &times; 10<sup>24</sup></td><td>No</td></tr>
+        </table>
+
+        <div class="example">
+          <div class="title">Example: 15-Puzzle Scale</div>
+          <p>The 15-puzzle has 16! = 20,922,789,888,000 (about <strong>20.9 trillion</strong>) total permutations. Half are reachable: about <strong>10.5 trillion</strong> states.</p>
+          <p>Even with a computer checking 1 billion states per second, exploring the full 15-puzzle state space would take <strong>~10,500 seconds (~3 hours)</strong>. In practice, heuristics are essential.</p>
+          <p>The optimal solution for any 15-puzzle instance requires at most <strong>80 moves</strong>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: 24-Puzzle Scale</div>
+          <p>The 24-puzzle has 25! &asymp; 1.55 &times; 10<sup>25</sup> total permutations. This is about <strong>1.55 septillion</strong> states.</p>
+          <p>Comparing scales:</p>
+          <p>24-puzzle states &asymp; number of grains of sand on Earth (&times; 1000)</p>
+          <p>Even with a computer checking 1 trillion states per second, it would take <strong>~500 billion years</strong> to explore all states.</p>
+          <p>The optimal solution for any 24-puzzle instance requires at most <strong>208 moves</strong>.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why NP-Complete?</h2>
+        <p>The generalized n&times;n sliding puzzle is NP-complete. This means:</p>
+        <ul>
+          <li>No polynomial-time algorithm exists (unless P = NP)</li>
+          <li>Finding the optimal (shortest) solution is computationally hard</li>
+          <li>Heuristic search (e.g., A* with Manhattan distance) is used in practice</li>
+          <li>Even finding <em>any</em> solution is easy (linear-time algorithms exist), but finding the <strong>optimal</strong> solution is hard</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Simple 2-Move Solution</div>
+          <p><strong>Start state:</strong></p>
+          <div class="puzzle-board">
+            <div class="puzzle-cell tile">1</div><div class="puzzle-cell tile">2</div><div class="puzzle-cell tile">3</div>
+            <div class="puzzle-cell tile">4</div><div class="puzzle-cell tile">5</div><div class="puzzle-cell empty"></div>
+            <div class="puzzle-cell tile">7</div><div class="puzzle-cell tile">8</div><div class="puzzle-cell tile">6</div>
+          </div>
+          <p><strong>Inversion check:</strong> Linear: [1,2,3,4,5,7,8,6] &rarr; (7,6), (8,6) = 2 inversions (even). Blank row from bottom = 1 (if blank row is 2 from top, distance from bottom row 3 is 1, odd). Even &ne; odd.</p>
+          <p><em>Wait — let's recompute properly. Blank at (1,2) = row 1 (0-indexed). From bottom: 3-1-1 = 1 (odd). Inversions = 2 (even). Mismatch = unsolvable.</em></p>
+          <p><strong>Let's use a solvable start instead:</strong></p>
+          <div class="puzzle-board">
+            <div class="puzzle-cell tile">1</div><div class="puzzle-cell tile">2</div><div class="puzzle-cell tile">3</div>
+            <div class="puzzle-cell tile">4</div><div class="puzzle-cell tile">5</div><div class="puzzle-cell tile">6</div>
+            <div class="puzzle-cell tile">8</div><div class="puzzle-cell tile">7</div><div class="puzzle-cell empty"></div>
+          </div>
+          <p>Linear: [1,2,3,4,5,6,8,7]. Inversions: (8,7)=1 (odd). Blank row from bottom: row 2 (bottom) = 1 (odd). odd=odd &rarr; <strong>solvable</strong>.</p>
+          <p><strong>Solution:</strong> Move 7 Down (or 8 Down) &rarr; then slide. Actually: empty at (2,2).</p>
+          <p>Move: Left (swap 7 and empty) &rarr; empty at (2,1). Then Up (swap 4 and empty) &rarr; ...</p>
+          <p class="result">Simple case: just move 7 right, then 8 down, then 7 left. 3 moves = cost 3.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Solving a Solvable Configuration Step by Step</div>
+          <p><strong>Start state:</strong></p>
+          <div class="puzzle-board">
+            <div class="puzzle-cell tile">1</div><div class="puzzle-cell tile">2</div><div class="puzzle-cell tile">3</div>
+            <div class="puzzle-cell tile">4</div><div class="puzzle-cell tile">5</div><div class="puzzle-cell empty"></div>
+            <div class="puzzle-cell tile">7</div><div class="puzzle-cell tile">8</div><div class="puzzle-cell tile">6</div>
+          </div>
+          <p><strong>Goal state:</strong></p>
+          <div class="puzzle-board">
+            <div class="puzzle-cell tile">1</div><div class="puzzle-cell tile">2</div><div class="puzzle-cell tile">3</div>
+            <div class="puzzle-cell tile">4</div><div class="puzzle-cell tile">5</div><div class="puzzle-cell tile">6</div>
+            <div class="puzzle-cell tile">7</div><div class="puzzle-cell tile">8</div><div class="puzzle-cell empty"></div>
+          </div>
+          <p><strong>Solution (3 moves):</strong></p>
+          <p>1. Move 6 <strong>Left</strong> (empty goes to (2,2) &rarr; empty to (1,2), 6 to (2,2))</p>
+          <p>2. Move 6 <strong>Down</strong> (empty to (2,2) &rarr; 6 slides down... Wait, careful with positions.</p>
+          <p><em>Let's trace precisely with row,col (0-indexed):</em></p>
+          <ol>
+            <li>Start: empty at (1,2). Move 6 Left &rarr; empty goes to (2,2). State: [[1,2,3],[4,5,6],[7,8, ]]</li>
+          </ol>
+          <p class="result">After 1 move: first two rows correct, last row has 7,8,empty. Goal reached in 1 move!</p>
+          <p class="result">Cost = 1. (The puzzle was nearly solved — only 6 was out of place.)</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Counting Reachable States from Different Random Starts</div>
+          <p><strong>Scenario:</strong> You randomly generate 1,000,000 initial tile arrangements for a 3&times;3 board. How many are solvable?</p>
+          <p><strong>Analysis:</strong></p>
+          <p>Total permutations = 9! = 362,880</p>
+          <p>Solvable from a given starting state = 9! / 2 = 181,440</p>
+          <p>If we consider all possible permutations as start states, each belongs to one of two equivalence classes (even parity or odd parity). The goal state [[1,2,3],[4,5,6],[7,8,0]] has a specific parity. Let's compute its parity:</p>
+          <p>Linearized goal: [1,2,3,4,5,6,7,8,0] (ignoring 0). Inversions = 0 (even). Blank row from bottom = 0 (bottom row, row 2, distance 0. Even = even).</p>
+          <p>Goal parity = even. So only states with matching parity (even inversions or matching row parity) are solvable to the standard goal.</p>
+          <p class="result">50% of random arrangements are solvable (181,440 out of 362,880).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Why 9!/2? Proof by Invariant</div>
+          <p>Every move in the 8-puzzle is a <strong>transposition</strong> (swap) of the empty tile with an adjacent numbered tile. Moving the empty tile horizontally does not change the permutation parity (it's a single swap + row change). Moving it vertically involves a swap plus two "wrap-around" effects that effectively change parity.</p>
+          <p><strong>Key invariant:</strong> The parity of (inversions + blank_row_distance) never changes with any move.</p>
+          <p>Since the goal state has this value = 0 (even), any solvable state must also have an even value.</p>
+          <p>Exactly half of all 9! permutations satisfy this constraint, giving us 9!/2 = <strong>181,440 reachable states</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
