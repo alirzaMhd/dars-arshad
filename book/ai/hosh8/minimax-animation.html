@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimax Algorithm Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      display: none;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .tree-canvas-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    canvas#gameTree {
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #0a0a12;
+    }
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 10px 0 5px;
+      font-size: 0.8em;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>MINIMAX ALGORITHM</h1>
+  <p class="subtitle">Game Trees — Optimal Decision Making in Zero-Sum Games</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="border-color:#00ccff; background:#111;"></div>
+          <span style="color:#00ccff;">MAX node</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="border-color:#ff66ff; background:#111;"></div>
+          <span style="color:#ff66ff;">MIN node</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="border-color:#ffcc00; background:#111;"></div>
+          <span style="color:#ffcc00;">Leaf (utility)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="border-color:#00ff88; background:#111;"></div>
+          <span style="color:#00ff88;">Evaluated</span>
+        </div>
+      </div>
+      <div class="tree-canvas-wrap">
+        <canvas id="gameTree" width="750" height="400"></canvas>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">Algorithm: </span><span class="highlight">Minimax</span>
+        &nbsp;|&nbsp;
+        <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready — Press Play</span>
+        &nbsp;|&nbsp;
+        <span class="label">Current: </span><span class="value" id="computingDisplay">—</span>
+      </div>
+
+      <div class="step-counter">
+        Step <span class="count" id="stepNum">0</span> / <span id="totalSteps">0</span>
+      </div>
+
+      <div class="result-section" id="resultSection">
+        <h2>✓ Minimax Complete</h2>
+        <p style="color:#ccc; margin-bottom:8px;">Optimal move for MAX:</p>
+        <p class="result-line" id="finalResult" style="font-size:1.3em;"></p>
+        <p style="color:#aaa; margin-top:8px;" id="resultDetail"></p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea"></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameTree');
+    const ctx = canvas.getContext('2d');
+
+    // Game tree definition
+    // Level 0: root (MAX), Level 1: children (MIN), Level 2: leaves (utilities)
+    const tree = {
+      id: 'A', label: 'A', player: 'max',
+      children: [
+        {
+          id: 'B', label: 'B', player: 'min',
+          children: [
+            { id: 'D', label: 'D', player: 'leaf', utility: 3 },
+            { id: 'E', label: 'E', player: 'leaf', utility: 12 },
+            { id: 'F', label: 'F', player: 'leaf', utility: 8 }
+          ]
+        },
+        {
+          id: 'C', label: 'C', player: 'min',
+          children: [
+            { id: 'G', label: 'G', player: 'leaf', utility: 2 },
+            { id: 'H', label: 'H', player: 'leaf', utility: 15 },
+            { id: 'I', label: 'I', player: 'leaf', utility: 4 }
+          ]
+        }
+      ]
+    };
+
+    // Node positions for canvas drawing
+    const nodePositions = {};
+    const R = 22;
+
+    function layoutTree() {
+      const W = canvas.width;
+      const H = canvas.height;
+      const topY = 60;
+      const midY = 200;
+      const botY = 340;
+      // Root
+      nodePositions['A'] = { x: W / 2, y: topY };
+      // Level 1
+      nodePositions['B'] = { x: W * 0.3, y: midY };
+      nodePositions['C'] = { x: W * 0.7, y: midY };
+      // Level 2
+      nodePositions['D'] = { x: W * 0.12, y: botY };
+      nodePositions['E'] = { x: W * 0.28, y: botY };
+      nodePositions['F'] = { x: W * 0.44, y: botY };
+      nodePositions['G'] = { x: W * 0.56, y: botY };
+      nodePositions['H'] = { x: W * 0.72, y: botY };
+      nodePositions['I'] = { x: W * 0.88, y: botY };
+    }
+
+    layoutTree();
+
+    const edges = [
+      ['A', 'B'], ['A', 'C'],
+      ['B', 'D'], ['B', 'E'], ['B', 'F'],
+      ['C', 'G'], ['C', 'H'], ['C', 'I']
+    ];
+
+    // Node state tracking
+    const nodeState = {};
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach(id => {
+      nodeState[id] = { value: null, computed: false, highlight: false, computing: false };
+    });
+
+    function getNodeColor(id) {
+      const n = tree_lookup(id);
+      if (nodeState[id].computing) return '#ffff00';
+      if (nodeState[id].highlight) return '#00ff88';
+      if (nodeState[id].computed) return '#00ff88';
+      if (n.player === 'max') return '#00ccff';
+      if (n.player === 'min') return '#ff66ff';
+      return '#ffcc00';
+    }
+
+    function tree_lookup(id) {
+      if (tree.id === id) return tree;
+      for (const c1 of tree.children) {
+        if (c1.id === id) return c1;
+        for (const c2 of c1.children) {
+          if (c2.id === id) return c2;
+        }
+      }
+      return null;
+    }
+
+    function drawTree() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw edges
+      for (const [from, to] of edges) {
+        const f = nodePositions[from];
+        const t = nodePositions[to];
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y + R);
+        ctx.lineTo(t.x, t.y - R);
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // Draw nodes
+      for (const id of ['D','E','F','G','H','I','B','C','A']) {
+        const pos = nodePositions[id];
+        const n = tree_lookup(id);
+        const color = getNodeColor(id);
+        const val = nodeState[id].value;
+        const isLeaf = n.player === 'leaf';
+
+        // Glow for active nodes
+        if (nodeState[id].computing || nodeState[id].highlight) {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, R + 6, 0, Math.PI * 2);
+          ctx.fillStyle = color + '22';
+          ctx.fill();
+        }
+
+        // Node circle
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, R, 0, Math.PI * 2);
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = color;
+        ctx.font = 'bold 12px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.label, pos.x, pos.y - (val !== null ? 4 : 0));
+
+        // Value (if computed)
+        if (val !== null) {
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 13px Courier New';
+          ctx.fillText(val, pos.x, pos.y + 9);
+        }
+      }
+
+      // Player labels
+      ctx.font = '11px Courier New';
+      ctx.fillStyle = '#00ccff';
+      ctx.textAlign = 'right';
+      ctx.fillText('MAX', nodePositions['A'].x - 35, nodePositions['A'].y);
+      ctx.fillStyle = '#ff66ff';
+      ctx.textAlign = 'left';
+      ctx.fillText('MIN', nodePositions['B'].x - 35, nodePositions['B'].y);
+      ctx.fillText('MIN', nodePositions['C'].x - 35, nodePositions['C'].y);
+    }
+
+    // Build animation steps
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    function findParent(id) {
+      for (const c of tree.children) {
+        if (c.id === id) return tree;
+        for (const gc of c.children) {
+          if (gc.id === id) return c;
+        }
+      }
+      return null;
+    }
+
+    function buildSteps() {
+      steps = [];
+
+      // Post-order traversal: evaluate bottom-up
+      // Leaves first
+      const leaves = ['D', 'E', 'F', 'G', 'H', 'I'];
+      for (const lid of leaves) {
+        const n = tree_lookup(lid);
+        steps.push({
+          type: 'visit_leaf',
+          nodeId: lid,
+          value: n.utility,
+          explanation: buildLeafExplanation(lid, n.utility)
+        });
+        steps.push({
+          type: 'set_leaf',
+          nodeId: lid,
+          value: n.utility,
+          explanation: buildSetLeafExplanation(lid, n.utility)
+        });
+      }
+
+      // Min nodes (B and C)
+      const minNodes = ['B', 'C'];
+      for (const mid of minNodes) {
+        const n = tree_lookup(mid);
+        const childVals = n.children.map(c => tree_lookup(c.id).utility);
+        // Build the evaluation steps
+        steps.push({
+          type: 'visit_min',
+          nodeId: mid,
+          childIds: n.children.map(c => c.id),
+          explanation: buildVisitMinExplanation(mid, n.children)
+        });
+        // For each child, show comparison
+        for (let i = 0; i < n.children.length; i++) {
+          const child = n.children[i];
+          const childVal = tree_lookup(child.id).utility;
+          const bestSoFar = Math.min(...childVals.slice(0, i + 1));
+          steps.push({
+            type: 'compare_min',
+            nodeId: mid,
+            childId: child.id,
+            childVal: childVal,
+            bestSoFar: bestSoFar,
+            childIndex: i,
+            totalChildren: n.children.length,
+            explanation: buildCompareMinExplanation(mid, child.id, childVal, bestSoFar, i, n.children)
+          });
+        }
+        steps.push({
+          type: 'set_min',
+          nodeId: mid,
+          value: Math.min(...childVals),
+          explanation: buildSetMinExplanation(mid, Math.min(...childVals), childVals)
+        });
+      }
+
+      // Max node (root A)
+      const root = tree;
+      const rootChildVals = root.children.map(c => tree_lookup(c.id).utility);
+      steps.push({
+        type: 'visit_max',
+        nodeId: 'A',
+        childIds: root.children.map(c => c.id),
+        explanation: buildVisitMaxExplanation(root.children)
+      });
+      for (let i = 0; i < root.children.length; i++) {
+        const child = root.children[i];
+        const childVal = tree_lookup(child.id).utility;
+        const bestSoFar = Math.max(...rootChildVals.slice(0, i + 1));
+        steps.push({
+          type: 'compare_max',
+          nodeId: 'A',
+          childId: child.id,
+          childVal: childVal,
+          bestSoFar: bestSoFar,
+          childIndex: i,
+          totalChildren: root.children.length,
+          explanation: buildCompareMaxExplanation(child.id, childVal, bestSoFar, i, root.children)
+        });
+      }
+      steps.push({
+        type: 'set_max',
+        nodeId: 'A',
+        value: Math.max(...rootChildVals),
+        explanation: buildSetMaxExplanation(Math.max(...rootChildVals), rootChildVals)
+      });
+
+      // Final result
+      steps.push({
+        type: 'done',
+        nodeId: 'A',
+        value: Math.max(...rootChildVals),
+        bestChild: root.children[rootChildVals.indexOf(Math.max(...rootChildVals))].id,
+        explanation: buildDoneExplanation(Math.max(...rootChildVals))
+      });
+    }
+
+    // --- Explanation builders ---
+
+    function buildLeafExplanation(id, val) {
+      return `<div class="explain-section active">
+        <h3>Visiting Leaf Node ${id}</h3>
+        <p>Node <span class="dim">${id}</span> is a terminal state (leaf). Its <b>utility value</b> is given directly by the game.</p>
+        <span class="formula-line">UTILITY(${id}) = ${val}</span>
+        <p class="note">Leaf nodes represent end-of-game positions with known payoffs.</p>
+      </div>`;
+    }
+
+    function buildSetLeafExplanation(id, val) {
+      return `<div class="explain-section active">
+        <h3>Setting Value for ${id}</h3>
+        <p>Node <span class="dim">${id}</span> is assigned utility value <span class="result-line" style="display:inline;">${val}</span>.</p>
+        <p class="note">No computation needed — leaves are base cases.</p>
+      </div>`;
+    }
+
+    function buildVisitMinExplanation(id, children) {
+      const childStr = children.map(c => `${c.id}=${tree_lookup(c.id).utility}`).join(', ');
+      return `<div class="explain-section active">
+        <h3>Evaluating MIN Node ${id}</h3>
+        <p>Node <span class="dim">${id}</span> belongs to the <b>MIN</b> player. MIN will choose the child with the <b>smallest</b> utility.</p>
+        <p>Child utilities: ${childStr}</p>
+        <span class="formula-line">v = min(${childStr})</span>
+        <p class="note">MIN tries to minimize the opponent's payoff.</p>
+      </div>`;
+    }
+
+    function buildCompareMinExplanation(parentId, childId, childVal, bestSoFar, idx, children) {
+      const childStr = children.map(c => `${c.id}=${tree_lookup(c.id).utility}`).join(', ');
+      const compared = children.slice(0, idx + 1).map(c => `${c.id}=${tree_lookup(c.id).utility}`).join(', ');
+      return `<div class="explain-section active">
+        <h3>MIN ${parentId} considers ${childId}</h3>
+        <p>Compare child <span class="dim">${childId}</span> (utility = ${childVal}) with best so far.</p>
+        <span class="formula-line">min(${compared}) = ${bestSoFar}</span>
+        <p>Current best for MIN ${parentId}: <span class="split-info">${bestSoFar}</span></p>
+        <p class="note">${idx < children.length - 1 ? 'Still checking remaining children...' : 'All children checked.'}</p>
+      </div>`;
+    }
+
+    function buildSetMinExplanation(id, val, childVals) {
+      return `<div class="explain-section active">
+        <h3>MIN ${id} = ${val}</h3>
+        <p>Node <span class="dim">${id}</span> selects the minimum value from its children.</p>
+        <span class="formula-line">MIN(${childVals.join(', ')}) = ${val}</span>
+        <p>Stored <span class="result-line" style="display:inline;">${id} → ${val}</span></p>
+      </div>`;
+    }
+
+    function buildVisitMaxExplanation(children) {
+      const childStr = children.map(c => `${c.id}=${tree_lookup(c.id).utility}`).join(', ');
+      return `<div class="explain-section active">
+        <h3>Evaluating MAX Root</h3>
+        <p>Node <span class="dim">A</span> belongs to the <b>MAX</b> player. MAX will choose the child with the <b>largest</b> utility.</p>
+        <p>Child utilities: ${childStr}</p>
+        <span class="formula-line">v = max(${childStr})</span>
+        <p class="note">MAX tries to maximize its own payoff.</p>
+      </div>`;
+    }
+
+    function buildCompareMaxExplanation(childId, childVal, bestSoFar, idx, children) {
+      const compared = children.slice(0, idx + 1).map(c => `${c.id}=${tree_lookup(c.id).utility}`).join(', ');
+      return `<div class="explain-section active">
+        <h3>MAX A considers ${childId}</h3>
+        <p>Compare child <span class="dim">${childId}</span> (utility = ${childVal}) with best so far.</p>
+        <span class="formula-line">max(${compared}) = ${bestSoFar}</span>
+        <p>Current best for MAX: <span class="split-info">${bestSoFar}</span></p>
+        <p class="note">${idx < children.length - 1 ? 'Still checking remaining children...' : 'All children checked.'}</p>
+      </div>`;
+    }
+
+    function buildSetMaxExplanation(val, childVals) {
+      return `<div class="explain-section active">
+        <h3>MAX Root = ${val}</h3>
+        <p>Node <span class="dim">A</span> selects the maximum value from its children.</p>
+        <span class="formula-line">MAX(${childVals.join(', ')}) = ${val}</span>
+        <p>Stored <span class="result-line" style="display:inline;">A → ${val}</span></p>
+      </div>`;
+    }
+
+    function buildDoneExplanation(val) {
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+        <h3>✅ Algorithm Complete!</h3>
+        <p>The minimax value of the root is <span class="result-line" style="display:inline;">${val}</span>.</p>
+        <h3 style="margin-top:10px;">Optimal Strategy</h3>
+        <p>MAX should choose the move leading to the subtree with value <span class="result-line" style="display:inline;">${val}</span>.</p>
+        <p class="note">This guarantees MAX at least utility ${val} against an optimal opponent.</p>
+        <h3 style="margin-top:10px;">Complexity</h3>
+        <p><span class="dim">Time:</span> O(b^d) — b = branching factor, d = depth</p>
+        <p><span class="dim">Space:</span> O(b·d) — recursion stack depth</p>
+        <p class="note">Minimax explores the entire game tree exhaustively.</p>
+      </div>`;
+    }
+
+    function initTables() {
+      // No tables needed — tree visualization only
+    }
+
+    function clearHighlights() {
+      ['A','B','C','D','E','F','G','H','I'].forEach(id => {
+        nodeState[id].highlight = false;
+        nodeState[id].computing = false;
+      });
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+
+      if (step.type === 'visit_leaf') {
+        nodeState[step.nodeId].computing = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'Visiting leaf';
+        document.getElementById('computingDisplay').textContent = `${step.nodeId} (utility=${step.value})`;
+      } else if (step.type === 'set_leaf') {
+        nodeState[step.nodeId].value = step.value;
+        nodeState[step.nodeId].computed = true;
+        nodeState[step.nodeId].highlight = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'Leaf evaluated';
+        document.getElementById('computingDisplay').textContent = `${step.nodeId} = ${step.value}`;
+      } else if (step.type === 'visit_min') {
+        step.childIds.forEach(cid => { nodeState[cid].computing = true; });
+        nodeState[step.nodeId].computing = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'Evaluating MIN node';
+        document.getElementById('computingDisplay').textContent = `MIN-${step.nodeId}`;
+      } else if (step.type === 'compare_min') {
+        nodeState[step.nodeId].computing = true;
+        nodeState[step.childId].highlight = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = `MIN ${step.nodeId}: comparing`;
+        document.getElementById('computingDisplay').textContent = `min so far = ${step.bestSoFar}`;
+      } else if (step.type === 'set_min') {
+        nodeState[step.nodeId].value = step.value;
+        nodeState[step.nodeId].computed = true;
+        nodeState[step.nodeId].highlight = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'MIN node set';
+        document.getElementById('computingDisplay').textContent = `${step.nodeId} = ${step.value}`;
+      } else if (step.type === 'visit_max') {
+        step.childIds.forEach(cid => { nodeState[cid].computing = true; });
+        nodeState['A'].computing = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'Evaluating MAX root';
+        document.getElementById('computingDisplay').textContent = 'MAX-A';
+      } else if (step.type === 'compare_max') {
+        nodeState['A'].computing = true;
+        nodeState[step.childId].highlight = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'MAX A: comparing';
+        document.getElementById('computingDisplay').textContent = `max so far = ${step.bestSoFar}`;
+      } else if (step.type === 'set_max') {
+        nodeState['A'].value = step.value;
+        nodeState['A'].computed = true;
+        nodeState['A'].highlight = true;
+        drawTree();
+        document.getElementById('phaseDisplay').textContent = 'MAX root set';
+        document.getElementById('computingDisplay').textContent = `A = ${step.value}`;
+      } else if (step.type === 'done') {
+        nodeState['A'].value = step.value;
+        nodeState['A'].computed = true;
+        nodeState['A'].highlight = true;
+        // Highlight best child
+        const bestChildVal = Math.max(...tree.children.map(c => tree_lookup(c.id).utility));
+        const bestChildId = tree.children[tree.children.map(c => tree_lookup(c.id).utility).indexOf(bestChildVal)].id;
+        nodeState[bestChildId].highlight = true;
+        drawTree();
+      }
+
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${step.type.replace(/_/g, ' ')}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function finishAnimation() {
+      animating = false;
+      const val = nodeState['A'].value;
+      const bestChildVal = Math.max(...tree.children.map(c => tree_lookup(c.id).utility));
+      const bestIdx = tree.children.map(c => tree_lookup(c.id).utility).indexOf(bestChildVal);
+      const bestChild = tree.children[bestIdx];
+
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('computingDisplay').textContent = `A = ${val}`;
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('finalResult').textContent = `Move to ${bestChild.id} → value = ${val}`;
+      document.getElementById('resultDetail').textContent =
+        `MAX chooses ${bestChild.id} (utility ${val}) over ${tree.children.filter((_,i) => i !== bestIdx).map(c => c.id + ' (' + tree_lookup(c.id).utility + ')').join(', ')}`;
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildDoneExplanation(val);
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      ['A','B','C','D','E','F','G','H','I'].forEach(id => {
+        nodeState[id] = { value: null, computed: false, highlight: false, computing: false };
+      });
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('computingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+      clearHighlights();
+      drawTree();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function buildInitialExplanation() {
+      return `<div class="explain-section active">
+        <h3>Problem Setup</h3>
+        <p>The <b>Minimax</b> algorithm finds the optimal move for player <span class="dim">MAX</span> in a two-player zero-sum game, assuming the opponent (<span class="dim">MIN</span>) plays optimally.</p>
+        <p>The game tree has <span class="dim">depth 2</span>, branching factor <span class="dim">2→3</span>, and <span class="dim">6 leaf utilities</span>.</p>
+        <h3 style="margin-top:10px;">Key Formulas</h3>
+        <span class="formula-line">MAX-VALUE(s): v = max_{a,s' in succ(s)} MIN-VALUE(s')</span>
+        <span class="formula-line">MIN-VALUE(s): v = min_{a,s' in succ(s)} MAX-VALUE(s')</span>
+        <p class="note">Base case: if TERMINAL-TEST(s), return UTILITY(s)</p>
+        <p class="note">Press Play or Step to begin.</p>
+      </div>`;
+    }
+
+    // Speed slider listener
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    // Initialize
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+    document.getElementById('explainArea').innerHTML = buildInitialExplanation();
+    drawTree();
+  </script>
+</body>
+</html>
