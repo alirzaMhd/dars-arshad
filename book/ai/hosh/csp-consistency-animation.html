@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSP Consistency Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .csp-visual {
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .csp-graph {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .graph-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      width: 100%;
+    }
+    .graph-spacer {
+      width: 120px;
+    }
+    .graph-constraint {
+      padding: 5px 14px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      background: #111;
+      color: #888;
+      font-size: 0.78em;
+      transition: all 0.4s;
+      text-align: center;
+    }
+    .graph-constraint.active {
+      border-color: #ff6600;
+      color: #ffcc00;
+      background: #1a0a00;
+      box-shadow: 0 0 12px #ff660044;
+    }
+    .graph-constraint.done {
+      border-color: #00ff88;
+      color: #00ff88;
+      background: #0a1a12;
+    }
+    .graph-constraint.path-check {
+      border-color: #ff66ff;
+      color: #ff66ff;
+      background: #1a0030;
+      box-shadow: 0 0 12px #ff66ff55;
+    }
+    .var-card {
+      background: #111;
+      border: 2px solid #444;
+      border-radius: 10px;
+      padding: 12px 16px;
+      min-width: 100px;
+      text-align: center;
+      transition: all 0.4s;
+      position: relative;
+    }
+    .var-card.highlight-xi {
+      border-color: #ff6600;
+      box-shadow: 0 0 20px #ff660044;
+    }
+    .var-card.highlight-xj {
+      border-color: #00ccff;
+      box-shadow: 0 0 20px #00ccff44;
+    }
+    .var-card.highlight-both {
+      border-color: #ffcc00;
+      box-shadow: 0 0 20px #ffcc0044;
+    }
+    .var-card.done {
+      border-color: #00ff88;
+      box-shadow: 0 0 15px #00ff8855;
+    }
+    .var-card.highlight-triple {
+      border-color: #ff66ff;
+      box-shadow: 0 0 20px #ff66ff55;
+    }
+    .var-name {
+      color: #00ccff;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .var-domain-display {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .domain-val {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: bold;
+      color: #e0e0e0;
+      background: #0d0d1a;
+      transition: all 0.3s;
+    }
+    .domain-val.active {
+      color: #00ff88;
+      border-color: #00ff8855;
+      background: #0a1a12;
+    }
+    .domain-val.removed {
+      color: #555;
+      border-color: #333;
+      background: #0a0a12;
+      text-decoration: line-through;
+    }
+    .domain-val.checking {
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      background: #1a1a00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+      transform: scale(1.15);
+    }
+    .domain-val.unsupported {
+      color: #ff4444 !important;
+      border-color: #ff4444 !important;
+      background: #1a0000 !important;
+      box-shadow: 0 0 10px #ff444433;
+      transform: scale(1.1);
+    }
+    .domain-val.supported {
+      color: #00ff88 !important;
+      border-color: #00ff88 !important;
+      background: #002a1a !important;
+      box-shadow: 0 0 10px #00ff8844;
+      transform: scale(1.1);
+    }
+    .phase-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+    }
+    .phase-pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.75em;
+      border: 1px solid #444;
+      background: #111;
+      color: #888;
+      transition: all 0.4s;
+    }
+    .phase-pill.done {
+      border-color: #00ff88;
+      color: #00ff88;
+      background: #0a1a12;
+    }
+    .phase-pill.current {
+      border-color: #ff6600;
+      color: #ff6600;
+      background: #1a0a00;
+    }
+    .phase-pill.pending {
+      border-color: #444;
+      color: #555;
+    }
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      padding: 8px;
+      font-size: 0.72em;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-item .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid #555;
+    }
+    .legend-item .swatch.xi-swatch { background: #ff6600; border-color: #ff6600; }
+    .legend-item .swatch.xj-swatch { background: #00ccff; border-color: #00ccff; }
+    .legend-item .swatch.rem-swatch { background: #ff4444; border-color: #ff4444; }
+    .legend-item .swatch.ok-swatch { background: #00ff88; border-color: #00ff88; }
+    .legend-item .swatch.chk-swatch { background: #ffff00; border-color: #ffff00; }
+    .legend-item .swatch.n3-swatch { background: #ff66ff; border-color: #ff66ff; }
+    .consistency-summary {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    .c-level {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #111;
+      text-align: center;
+      min-width: 130px;
+      transition: all 0.4s;
+    }
+    .c-level .c-num {
+      font-size: 0.7em;
+      color: #888;
+    }
+    .c-level .c-status {
+      font-size: 0.85em;
+      font-weight: bold;
+      margin-top: 3px;
+      color: #555;
+    }
+    .c-level.done {
+      border-color: #00ff88;
+      background: #0a1a12;
+    }
+    .c-level.done .c-status {
+      color: #00ff88;
+    }
+    .c-level.current {
+      border-color: #ff6600;
+      background: #1a0a00;
+    }
+    .c-level.current .c-status {
+      color: #ff6600;
+    }
+    .c-level.failed {
+      border-color: #ff4444;
+      background: #1a0000;
+    }
+    .c-level.failed .c-status {
+      color: #ff4444;
+    }
+    .support-info {
+      margin: 8px 0;
+      padding: 8px 12px;
+      background: #0a0a18;
+      border-radius: 6px;
+      border: 1px solid #333;
+      font-size: 0.82em;
+    }
+    .support-info .supp-label {
+      color: #00ccff;
+    }
+    .support-info .supp-val {
+      color: #e0e0e0;
+    }
+    .support-info .supp-arrow {
+      color: #555;
+    }
+    .support-info .supp-ok {
+      color: #00ff88;
+    }
+    .support-info .supp-fail {
+      color: #ff4444;
+    }
+    .triple-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 8px 0;
+      font-size: 0.9em;
+    }
+    .triple-diagram .triple-var {
+      padding: 4px 12px;
+      border: 2px solid #555;
+      border-radius: 6px;
+      background: #111;
+      transition: all 0.3s;
+    }
+    .triple-diagram .triple-var.xi { border-color: #ff6600; color: #ff6600; }
+    .triple-diagram .triple-var.xj { border-color: #00ccff; color: #00ccff; }
+    .triple-diagram .triple-var.xk { border-color: #ff66ff; color: #ff66ff; }
+    .triple-diagram .triple-edge {
+      color: #888;
+      font-size: 0.7em;
+    }
+    .pair-list {
+      margin: 6px 0;
+      padding: 0;
+      list-style: none;
+    }
+    .pair-list li {
+      padding: 3px 8px;
+      margin: 2px 0;
+      border-radius: 4px;
+      background: #0a0a18;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+    }
+    .pair-list li.ok { border-left-color: #00ff88; color: #ccc; }
+    .pair-list li.fail { border-left-color: #ff4444; color: #ff6666; }
+  </style>
+</head>
+<body>
+  <h1>CSP Consistency Hierarchy</h1>
+  <p class="subtitle">Constraint Satisfaction — Node, Arc, Path &amp; K-Consistency</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="phase-indicator" id="phaseIndicator">
+        <span class="phase-pill current" id="phase1Pill">❶ 1-Consistency (Node)</span>
+        <span class="phase-pill pending" id="phase2Pill">❷ 2-Consistency (Arc)</span>
+        <span class="phase-pill pending" id="phase3Pill">❸ 3-Consistency (Path)</span>
+        <span class="phase-pill pending" id="phase4Pill">❹ Strong K-Consistency</span>
+      </div>
+
+      <div class="csp-visual">
+        <div class="csp-graph" id="cspGraph">
+          <div class="graph-row">
+            <div class="graph-spacer"></div>
+            <div class="var-card" id="varCardA">
+              <div class="var-name">A</div>
+              <div class="var-domain-display" id="domainDisplayA">
+                <span class="domain-val active" data-val="1">1</span>
+                <span class="domain-val active" data-val="2">2</span>
+                <span class="domain-val active" data-val="3">3</span>
+              </div>
+            </div>
+            <div class="graph-spacer"></div>
+          </div>
+          <div class="graph-row">
+            <div class="graph-constraint" id="constraintAB">A ≠ B</div>
+            <div class="graph-spacer"></div>
+            <div class="graph-constraint" id="constraintCA">C = A</div>
+          </div>
+          <div class="graph-row">
+            <div class="var-card" id="varCardB">
+              <div class="var-name">B</div>
+              <div class="var-domain-display" id="domainDisplayB">
+                <span class="domain-val active" data-val="1">1</span>
+                <span class="domain-val active" data-val="2">2</span>
+                <span class="domain-val active" data-val="3">3</span>
+              </div>
+            </div>
+            <div class="graph-constraint" id="constraintBC">B ≠ C</div>
+            <div class="var-card" id="varCardC">
+              <div class="var-name">C</div>
+              <div class="var-domain-display" id="domainDisplayC">
+                <span class="domain-val active" data-val="1">1</span>
+                <span class="domain-val active" data-val="2">2</span>
+                <span class="domain-val active" data-val="3">3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="consistency-summary" id="consistencySummary">
+          <div class="c-level current" id="cLevel1"><div class="c-num">1-Consistency</div><div class="c-status">Checking...</div></div>
+          <div class="c-level" id="cLevel2"><div class="c-num">2-Consistency</div><div class="c-status">Pending</div></div>
+          <div class="c-level" id="cLevel3"><div class="c-num">3-Consistency</div><div class="c-status">Pending</div></div>
+          <div class="c-level" id="cLevelStrong"><div class="c-num">Strongly K-Consistent</div><div class="c-status">Pending</div></div>
+        </div>
+
+        <div class="support-info" id="supportInfo">
+          <span class="supp-label">Phase:</span>
+          <span class="supp-val" id="currentPhaseDisplay">Node Consistency</span>
+          <span style="margin:0 10px;color:#555;">|</span>
+          <span class="supp-label">Checking:</span>
+          <span class="supp-val" id="checkingDisplay">—</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">CSP: </span><span class="value">A,B,C ∈ {1,2,3}</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Constraints: </span><span class="value">A≠B, B≠C, C=A</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Unary: </span><span class="value">A is odd</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="step-counter">Step <span class="count"><span id="stepNum">0</span> / <span id="totalSteps">0</span></span></div>
+
+      <div class="legend">
+        <span class="legend-item"><span class="swatch xi-swatch"></span> Current var</span>
+        <span class="legend-item"><span class="swatch xj-swatch"></span> Target var</span>
+        <span class="legend-item"><span class="swatch rem-swatch"></span> Removed</span>
+        <span class="legend-item"><span class="swatch ok-swatch"></span> Supported</span>
+        <span class="legend-item"><span class="swatch chk-swatch"></span> Checking</span>
+        <span class="legend-item"><span class="swatch n3-swatch"></span> Path triple</span>
+      </div>
+
+      <div class="result-section" id="resultSection" style="display:none;">
+        <h2>✅ All Consistency Levels Verified</h2>
+        <p id="resultDisplay"></p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>We examine a <b>Constraint Satisfaction Problem (CSP)</b> and test increasing levels of consistency.</p>
+          <p><span class="dim">Variables:</span> A, B, C each with domain <span class="dim">{1, 2, 3}</span></p>
+          <p><span class="dim">Constraints:</span> A ≠ B, B ≠ C, C = A</p>
+          <p><span class="dim">Unary:</span> A is odd (A ∈ {1, 3})</p>
+          <h3 style="margin-top:10px;">Consistency Hierarchy</h3>
+          <span class="formula-line">K-Consistent: Any consistent (K-1)-tuple of variables can be extended to any K-th variable</span>
+          <p class="note">Strongly K-Consistent = 1-Consistent ⋀ 2-Consistent ⋀ ... ⋀ K-Consistent</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    const varNames = ['A', 'B', 'C'];
+    const initDomains = { A: [1, 2, 3], B: [1, 2, 3], C: [1, 2, 3] };
+    let domains = {};
+
+    function cloneDomains(d) {
+      return { A: [...d.A], B: [...d.B], C: [...d.C] };
+    }
+
+    function resetState() {
+      domains = cloneDomains(initDomains);
+    }
+    resetState();
+
+    function constraintSatisfied(xi, xj, vi, vj) {
+      if (xi === 'A' && xj === 'B') return vi !== vj;
+      if (xi === 'B' && xj === 'A') return vi !== vj;
+      if (xi === 'B' && xj === 'C') return vi !== vj;
+      if (xi === 'C' && xj === 'B') return vi !== vj;
+      if (xi === 'C' && xj === 'A') return vi === vj;
+      if (xi === 'A' && xj === 'C') return vi === vj;
+      return true;
+    }
+
+    function edgeIdFor(xi, xj) {
+      let s = xi + xj;
+      if (s === 'BA') return 'AB';
+      if (s === 'CB') return 'BC';
+      if (s === 'AC') return 'CA';
+      return s;
+    }
+
+    function getSupportIn(xiVal, xjName, xiName, d) {
+      let results = [];
+      for (let xjVal of d[xjName]) {
+        if (constraintSatisfied(xiName, xjName, xiVal, xjVal)) {
+          results.push(xjVal);
+        }
+      }
+      return results;
+    }
+
+    function hasSupport(xiVal, xjName, xiName, d) {
+      return getSupportIn(xiVal, xjName, xiName, d).length > 0;
+    }
+
+    function buildProblemSetupHTML() {
+      return `<div class="explain-section active">
+  <h3>Problem Setup</h3>
+  <p>We examine a <b>Constraint Satisfaction Problem (CSP)</b> with <span class="dim">3 variables</span> and test increasing levels of consistency.
+  Each level builds on the previous one, adding stronger guarantees.</p>
+  <p><span class="dim">Variables:</span> A, B, C each with domain <span class="dim">{1, 2, 3}</span></p>
+  <p><span class="dim">Constraints:</span> A ≠ B, B ≠ C, C = A</p>
+  <p><span class="dim">Unary:</span> A is odd</p>
+  <h3 style="margin-top:10px;">Consistency Definitions</h3>
+  <span class="formula-line">1-Consistent (Node): ∀Xᵢ, ∀x ∈ Dᵢ: x satisfies unary constraints on Xᵢ</span>
+  <span class="formula-line" style="margin-top:4px;">2-Consistent (Arc): ∀(Xᵢ,Xⱼ): ∀x ∈ Dᵢ, ∃y ∈ Dⱼ with Cᵢⱼ satisfied</span>
+  <span class="formula-line" style="margin-top:4px;">3-Consistent (Path): ∀(Xᵢ,Xⱼ,Xₖ): ∀consistent (x,y), ∃z with all binary C's satisfied</span>
+  <p class="note">Press Play or Step to begin.</p>
+</div>`;
+    }
+
+    function buildFinishedExplanation() {
+      let finalDomains = cloneDomains(domains);
+      let dStr = v => `{${finalDomains[v].join(', ')}}`;
+      return `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ All Consistency Levels Verified!</h3>
+  <p>This CSP is <span class="result-line">Strongly 3-Consistent</span>.</p>
+  <p>After enforcing all levels:</p>
+  <p style="margin-left:8px;">• A ∈ ${dStr('A')}</p>
+  <p style="margin-left:8px;">• B ∈ ${dStr('B')}</p>
+  <p style="margin-left:8px;">• C ∈ ${dStr('C')}</p>
+  <h3 style="margin-top:10px;">Key Theorem</h3>
+  <span class="formula-line">If a CSP with n variables is strongly n-consistent, it can be solved without backtracking.</span>
+  <p class="note">Simply assign values in any order — there will always be a compatible value for the next variable.</p>
+  <p class="note">⚠ But achieving n-consistency is exponential in the worst case.</p>
+  <h3 style="margin-top:10px;">Complexity</h3>
+  <p><span class="dim">Time:</span> O(n² · dᵏ) for establishing k-consistency</p>
+  <p><span class="dim">Space:</span> O(n · d) for domain storage</p>
+</div>`;
+    }
+
+    function buildNodeExpl(v, val, removed) {
+      if (removed) {
+        return `<div class="explain-section active">
+  <h3>Node Consistency — Checking <span class="dim">${v}</span></h3>
+  <p>Unary constraint: <span class="dim">${v} is odd</span></p>
+  <p style="margin-left:8px;">• Value <span class="dim">${v}=${val}</span> is <span class="split-info">even</span> — violates the unary constraint.</p>
+  <span class="formula-line">∀x ∈ D(${v}): x must be odd → remove ${val}</span>
+  <p>Remove <span class="split-info">${val}</span> from D(${v}) to make the variable <b>node-consistent</b>.</p>
+  <p class="note">After this step, D(A) = {<span class="dim">${domains.A.join(', ')}</span>}</p>
+</div>`;
+      } else {
+        return `<div class="explain-section active">
+  <h3>Node Consistency — <span class="dim">${v}</span></h3>
+  <p>No unary constraint on ${v}.</p>
+  <p style="margin-left:8px;">• All values in {<span class="dim">${domains[v].join(', ')}</span>} trivially satisfy the (empty) unary constraint.</p>
+  <span class="formula-line">1-Consistent: D(${v}) unchanged — already node-consistent</span>
+  <p class="note">We only need to check variables with explicit unary constraints.</p>
+</div>`;
+      }
+    }
+
+    function buildArcExpl(xi, xj, xiVal, supported, supportList, curD) {
+      let sym = xi === 'A' && xj === 'B' || xi === 'B' && xj === 'A' ? '≠' :
+                xi === 'B' && xj === 'C' || xi === 'C' && xj === 'B' ? '≠' : '=';
+      if (supported) {
+        return `<div class="explain-section active">
+  <h3>Arc Consistency — Checking <span class="dim">${xi}→${xj}</span></h3>
+  <p>Value <span class="dim">${xi}=${xiVal}</span> has support in D(${xj}): {<span class="dim">${supportList.join(', ')}</span>}</p>
+  <span class="formula-line">${xiVal} ${sym} {${supportList.join(', ')}} — ✓ has support</span>
+  <p class="result-line">✓ Value kept in domain.</p>
+  <p class="note">Arc consistency ensures that for <b>every</b> value in D(${xi}), there is <b>some</b> compatible value in D(${xj}).</p>
+</div>`;
+      } else {
+        return `<div class="explain-section active">
+  <h3>Arc Consistency — Checking <span class="dim">${xi}→${xj}</span></h3>
+  <p>Value <span class="dim">${xi}=${xiVal}</span> has <span class="split-info">NO support</span> in D(${xj}) = {${curD[xj].join(', ')}}.</p>
+  <span class="formula-line">${xiVal} ${sym} {${curD[xj].join(', ')}} = ∅ — ✗ unsupported</span>
+  <p>Remove <span class="split-info">${xiVal}</span> from D(${xi}).</p>
+  <p class="note">This can cascade — other arcs into ${xi} may need re-checking.</p>
+</div>`;
+      }
+    }
+
+    function buildPathExpl(triple, consistentPairs, allExtendable) {
+      let [x, y, z] = triple;
+      let edges = `${x}≠${y}, ${y}≠${z}, ${z}=${x}`;
+      let items = '';
+      for (let [xv, yv] of consistentPairs) {
+        items += `<li class="${allExtendable ? 'ok' : 'fail'}">(${x}=${xv}, ${y}=${yv}) → `;
+        if (allExtendable) {
+          items += `can extend to <span class="dim">${z}</span> ✓</li>`;
+        } else {
+          items += `<span class="split-info">cannot extend</span> to ${z} ✗</li>`;
+        }
+      }
+      return `<div class="explain-section active">
+  <h3>Path Consistency — Triple <span class="dim">(${x}, ${y}, ${z})</span></h3>
+  <p>Constraints among {${x},${y},${z}}: <span class="dim">${edges}</span></p>
+  <p>For each consistent pair (${x},${y}), check if there's a value for ${z} satisfying <span class="dim">${y}≠${z}</span> and <span class="dim">${z}=${x}</span>.</p>
+  <ul class="pair-list">${items}</ul>
+  ${allExtendable
+    ? `<span class="formula-line">∀consistent (${x},${y}), ∃${z} — ✓ Path Consistent</span>`
+    : `<span class="formula-line">∃consistent (${x},${y}) with no extension — ✗ NOT Path Consistent</span>`
+  }
+  <p class="note">Path consistency (3-consistency) extends arc consistency to triples of variables.</p>
+</div>`;
+    }
+
+    function getPhaseName(type) {
+      if (type.startsWith('node')) return 'Node Consistency (1-Consistency)';
+      if (type.startsWith('arc')) return 'Arc Consistency (2-Consistency)';
+      if (type.startsWith('path')) return 'Path Consistency (3-Consistency)';
+      if (type === 'strong_theorem') return 'Strong K-Consistency Theorem';
+      if (type === 'phase_done') return 'Phase Complete';
+      return '—';
+    }
+
+    function buildSteps() {
+      steps = [];
+      let savedDomains = cloneDomains(domains);
+      domains = cloneDomains(initDomains);
+      currentStep = 0;
+
+      let curDomains = cloneDomains(initDomains);
+
+      // Phase 1: Node Consistency
+      for (let v of varNames) {
+        if (v === 'A') {
+          for (let val of [1, 2, 3]) {
+            if (val % 2 === 0) {
+              let before = cloneDomains(curDomains);
+              curDomains[v] = curDomains[v].filter(x => x !== val);
+              steps.push({
+                type: 'node_remove',
+                var: v, val: val, removed: true,
+                domains: cloneDomains(curDomains),
+                explanation: buildNodeExpl(v, val, true)
+              });
+            }
+          }
+          // A=1 and A=3 are kept — add a step saying they pass
+          steps.push({
+            type: 'node_keep',
+            var: v, val: null, removed: false,
+            domains: cloneDomains(curDomains),
+            explanation: buildNodeExpl(v, null, false)
+          });
+        } else {
+          steps.push({
+            type: 'node_keep',
+            var: v, val: null, removed: false,
+            domains: cloneDomains(curDomains),
+            explanation: buildNodeExpl(v, null, false)
+          });
+        }
+      }
+
+      steps.push({
+        type: 'phase_done', phase: 1,
+        domains: cloneDomains(curDomains),
+        explanation: `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ Phase 1 Complete — Node Consistency</h3>
+  <p>The CSP is now <span class="result-line">1-Consistent</span>.</p>
+  <p>All variables satisfy their unary constraints.</p>
+  <span class="formula-line">1-Consistent: D(A)={${curDomains.A.join(', ')}}, D(B)={${curDomains.B.join(', ')}}, D(C)={${curDomains.C.join(', ')}}</span>
+  <p class="note">Each variable's domain has been filtered to only contain values respecting its unary constraints.</p>
+</div>`
+      });
+
+      // Phase 2: Arc Consistency
+      let arcs = [['A','B'],['B','A'],['B','C'],['C','B'],['C','A'],['A','C']];
+      for (let [xi, xj] of arcs) {
+        let valsToCheck = [...curDomains[xi]];
+        for (let val of valsToCheck) {
+          let supVals = getSupportIn(val, xj, xi, curDomains);
+          let supported = supVals.length > 0;
+          steps.push({
+            type: 'arc_check', xi, xj, val, supported,
+            supportList: supVals,
+            domains: cloneDomains(curDomains),
+            explanation: buildArcExpl(xi, xj, val, supported, supVals, curDomains)
+          });
+          if (!supported) {
+            curDomains[xi] = curDomains[xi].filter(v => v !== val);
+            steps.push({
+              type: 'arc_remove', xi, xj, val,
+              domains: cloneDomains(curDomains),
+              explanation: `<div class="explain-section active">
+  <h3>✗ Removing <span class="dim">${xi}=${val}</span></h3>
+  <p>No support found — removing <span class="dim">${val}</span> from D(${xi}).</p>
+  <p>New D(${xi}) = {<span class="dim">${curDomains[xi].join(', ')}}</span></p>
+  <p class="note">Domain shrunk by arc consistency enforcement.</p>
+</div>`
+            });
+          }
+        }
+      }
+
+      steps.push({
+        type: 'phase_done', phase: 2,
+        domains: cloneDomains(curDomains),
+        explanation: `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ Phase 2 Complete — Arc Consistency</h3>
+  <p>The CSP is now <span class="result-line">2-Consistent (Arc Consistent)</span>.</p>
+  <p>Every directed arc has full support.</p>
+  <span class="formula-line">∀(Xᵢ,Xⱼ): ∀x ∈ Dᵢ, ∃y ∈ Dⱼ satisfying constraint Cᵢⱼ</span>
+  <p class="note">D(A)={${curDomains.A.join(', ')}}, D(B)={${curDomains.B.join(', ')}}, D(C)={${curDomains.C.join(', ')}}</p>
+</div>`
+      });
+
+      // Phase 3: Path Consistency (single triple: A, B, C)
+      let [x, y, z] = ['A', 'B', 'C'];
+      let consistentPairs = [];
+      for (let xv of curDomains[x]) {
+        for (let yv of curDomains[y]) {
+          if (constraintSatisfied(x, y, xv, yv)) {
+            consistentPairs.push([xv, yv]);
+          }
+        }
+      }
+
+      let allExtendable = true;
+      let failingPair = null;
+      for (let [xv, yv] of consistentPairs) {
+        let found = false;
+        for (let zv of curDomains[z]) {
+          let yzOk = constraintSatisfied(y, z, yv, zv);
+          let zxOk = constraintSatisfied(z, x, zv, xv);
+          if (yzOk && zxOk) { found = true; break; }
+        }
+        if (!found) { allExtendable = false; failingPair = [xv, yv]; break; }
+      }
+
+      steps.push({
+        type: 'path_check',
+        triple: [x, y, z],
+        consistentPairs,
+        allExtendable,
+        failingPair,
+        domains: cloneDomains(curDomains),
+        explanation: buildPathExpl([x, y, z], consistentPairs, allExtendable)
+      });
+
+      steps.push({
+        type: 'phase_done', phase: 3,
+        domains: cloneDomains(curDomains),
+        explanation: `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ Phase 3 Complete — Path Consistency</h3>
+  <p>The CSP is now <span class="result-line">3-Consistent (Path Consistent)</span>.</p>
+  <p>Every consistent pair (A,B) can be extended to C.</p>
+  <span class="formula-line">∀consistent (x,y), ∃z with all binary constraints satisfied among {x,y,z}</span>
+  <p class="note">The CSP is also strongly 3-consistent (levels 1, 2, and 3 all hold).</p>
+</div>`
+      });
+
+      steps.push({
+        type: 'strong_theorem',
+        domains: cloneDomains(curDomains),
+        explanation: `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>🏆 Strongly K-Consistent</h3>
+  <p>This CSP is <span class="result-line">Strongly 3-Consistent</span>:</p>
+  <p style="margin-left:8px;">✓ <span class="dim">1-Consistent</span> (Node): D(A) ⊆ {odd values}</p>
+  <p style="margin-left:8px;">✓ <span class="dim">2-Consistent</span> (Arc): Every value has support in adjacent domains</p>
+  <p style="margin-left:8px;">✓ <span class="dim">3-Consistent</span> (Path): Every consistent (A,B) extends to C</p>
+  <h3 style="margin-top:10px;">Key Theorem</h3>
+  <span class="formula-line">Strongly K-Consistent = 1-Consistent ⋀ 2-Consistent ⋀ ... ⋀ K-Consistent</span>
+  <p>If a CSP with <span class="dim">n</span> variables is <span class="dim">strongly n-consistent</span>, it can be solved <span class="result-line">without backtracking</span>.</p>
+  <p class="note">Just assign values in any order — there will always be a compatible value for the next variable.</p>
+  <p class="note">⚠ Achieving n-consistency is exponential: O(n² · dⁿ) in general.</p>
+</div>`
+      });
+
+      domains = cloneDomains(savedDomains);
+    }
+
+    function updatePhaseIndicators(phase) {
+      let pills = ['phase1Pill', 'phase2Pill', 'phase3Pill', 'phase4Pill'];
+      let labels = ['1-Consistency (Node)', '2-Consistency (Arc)', '3-Consistency (Path)', 'Strong K-Consistency'];
+      let prefix = ['❶ ', '❷ ', '❸ ', '❹ '];
+      for (let i = 0; i < 4; i++) {
+        let el = document.getElementById(pills[i]);
+        el.className = 'phase-pill';
+        if (i + 1 < phase) { el.classList.add('done'); el.textContent = '✅ ' + labels[i]; }
+        else if (i + 1 === phase) { el.classList.add('current'); el.textContent = prefix[i] + labels[i]; }
+        else { el.classList.add('pending'); el.textContent = '⏳ ' + labels[i]; }
+      }
+
+      let clevels = ['cLevel1', 'cLevel2', 'cLevel3', 'cLevelStrong'];
+      let cstatus = ['1-Consistency', '2-Consistency', '3-Consistency', 'Strongly K-Consistent'];
+      for (let i = 0; i < 4; i++) {
+        let el = document.getElementById(clevels[i]);
+        el.className = 'c-level';
+        if (i + 1 < phase) {
+          el.classList.add('done');
+          el.querySelector('.c-status').textContent = '✅ ' + cstatus[i];
+        } else if (i + 1 === phase) {
+          el.classList.add('current');
+          el.querySelector('.c-status').textContent = 'Checking...';
+        } else {
+          el.querySelector('.c-status').textContent = '⏳ ' + cstatus[i];
+        }
+      }
+    }
+
+    function clearHighlights() {
+      for (let v of varNames) {
+        document.getElementById('varCard' + v).className = 'var-card';
+        let domEl = document.getElementById('domainDisplay' + v);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          el.className = 'domain-val';
+          if (domains[v].includes(parseInt(el.dataset.val))) {
+            el.classList.add('active');
+          } else {
+            el.classList.add('removed');
+          }
+        });
+      }
+      ['constraintAB', 'constraintBC', 'constraintCA'].forEach(id => {
+        let e = document.getElementById(id);
+        if (e) e.className = 'graph-constraint';
+      });
+    }
+
+    function applyDomainState(curDomains) {
+      for (let v of varNames) {
+        let domEl = document.getElementById('domainDisplay' + v);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          let val = parseInt(el.dataset.val);
+          el.className = 'domain-val';
+          if (curDomains[v].includes(val)) {
+            el.classList.add('active');
+          } else {
+            el.classList.add('removed');
+          }
+        });
+      }
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+      let curDomains = step.domains || cloneDomains(domains);
+      applyDomainState(curDomains);
+
+      if (step.type === 'node_remove') {
+        let domEl = document.getElementById('domainDisplay' + step.var);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          if (parseInt(el.dataset.val) === step.val) {
+            el.className = 'domain-val unsupported';
+          }
+        });
+        document.getElementById('varCard' + step.var).classList.add('highlight-xi');
+        document.getElementById('currentPhaseDisplay').textContent = 'Node Consistency';
+        document.getElementById('checkingDisplay').textContent = `${step.var}≠${step.val} (unary)`;
+      } else if (step.type === 'node_keep') {
+        document.getElementById('varCard' + step.var).classList.add('highlight-xi');
+        document.getElementById('currentPhaseDisplay').textContent = 'Node Consistency';
+        document.getElementById('checkingDisplay').textContent = `${step.var}: no unary constraint / passes`;
+      } else if (step.type === 'arc_check') {
+        document.getElementById('varCard' + step.xi).classList.add('highlight-xi');
+        document.getElementById('varCard' + step.xj).classList.add('highlight-xj');
+        let cName = 'constraint' + edgeIdFor(step.xi, step.xj);
+        let c = document.getElementById(cName);
+        if (c) c.classList.add('active');
+        document.getElementById('currentPhaseDisplay').textContent = 'Arc Consistency';
+        document.getElementById('checkingDisplay').textContent = `${step.xi}=${step.val} → ${step.xj}`;
+        let domEl = document.getElementById('domainDisplay' + step.xi);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          if (parseInt(el.dataset.val) === step.val) {
+            el.className = 'domain-val ' + (step.supported ? 'supported' : 'checking');
+          }
+        });
+      } else if (step.type === 'arc_remove') {
+        document.getElementById('varCard' + step.xi).classList.add('highlight-xi');
+        document.getElementById('varCard' + step.xj).classList.add('highlight-xj');
+        let cName = 'constraint' + edgeIdFor(step.xi, step.xj);
+        let c = document.getElementById(cName);
+        if (c) c.classList.add('active');
+        document.getElementById('currentPhaseDisplay').textContent = 'Arc Consistency';
+        document.getElementById('checkingDisplay').textContent = `Removing ${step.xi}=${step.val}`;
+        let domEl = document.getElementById('domainDisplay' + step.xi);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          if (parseInt(el.dataset.val) === step.val) {
+            el.className = 'domain-val unsupported';
+          }
+        });
+      } else if (step.type === 'path_check') {
+        let [x, y, z] = step.triple;
+        document.getElementById('varCard' + x).classList.add('highlight-xi');
+        document.getElementById('varCard' + y).classList.add('highlight-xj');
+        document.getElementById('varCard' + z).classList.add('highlight-triple');
+        ['constraintAB', 'constraintBC', 'constraintCA'].forEach(id => {
+          let e = document.getElementById(id);
+          if (e) e.classList.add('path-check');
+        });
+        document.getElementById('currentPhaseDisplay').textContent = 'Path Consistency';
+        document.getElementById('checkingDisplay').textContent = `(${x}, ${y}, ${z}) — ${step.allExtendable ? '✓ Consistent' : '✗ Failed'}`;
+      } else if (step.type === 'phase_done') {
+        let phase = step.phase;
+        updatePhaseIndicators(phase + 1);
+        for (let v of varNames) {
+          document.getElementById('varCard' + v).classList.add('done');
+        }
+        document.getElementById('currentPhaseDisplay').textContent = 'Phase Complete';
+        document.getElementById('checkingDisplay').textContent = `✅ ${phase}-Consistency established`;
+        if (phase === 1) document.getElementById('phaseDisplay').textContent = '✅ Node Consistent';
+        else if (phase === 2) document.getElementById('phaseDisplay').textContent = '✅ Arc Consistent';
+        else if (phase === 3) document.getElementById('phaseDisplay').textContent = '✅ Path Consistent';
+      } else if (step.type === 'strong_theorem') {
+        document.getElementById('currentPhaseDisplay').textContent = 'Strongly K-Consistent';
+        document.getElementById('checkingDisplay').textContent = '✅ Theorem presented';
+        document.getElementById('phaseDisplay').textContent = '✅ Strongly 3-Consistent';
+        for (let v of varNames) {
+          document.getElementById('varCard' + v).classList.add('done');
+        }
+      }
+
+      let phaseName = getPhaseName(step.type);
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${currentStep + 1} / ${steps.length} — ${phaseName}`;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      resetState();
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('currentPhaseDisplay').textContent = 'Node Consistency';
+      document.getElementById('checkingDisplay').textContent = '—';
+      document.getElementById('stepNum').textContent = '0';
+      updatePhaseIndicators(1);
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+      clearHighlights();
+      applyDomainState(domains);
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+    }
+
+    function finishAnimation() {
+      animating = false;
+      document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+      document.getElementById('resultSection').style.display = 'block';
+      let finalDomains = cloneDomains(domains);
+      document.getElementById('resultDisplay').innerHTML =
+        `A ∈ <span class="dim">{${finalDomains.A.join(', ')}}</span>, ` +
+        `B ∈ <span class="dim">{${finalDomains.B.join(', ')}}</span>, ` +
+        `C ∈ <span class="dim">{${finalDomains.C.join(', ')}}</span> — ` +
+        `<span class="result-line">Strongly 3-Consistent</span>`;
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildFinishedExplanation();
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+    applyDomainState(domains);
+  </script>
+</body>
+</html>
