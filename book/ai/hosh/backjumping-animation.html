@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backjumping Algorithm Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6em;
+      color: #00ff88;
+      margin: 20px 0 5px;
+      text-shadow: 0 0 20px #00ff8855;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-bottom: 20px;
+    }
+    .layout {
+      display: flex;
+      gap: 0;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px 30px;
+    }
+    .main-panel {
+      flex: 1;
+      min-width: 0;
+      padding-right: 15px;
+    }
+    .sidebar {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 10px;
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: #111; }
+    .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    @media (max-width: 1100px) {
+      .layout { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: none;
+        position: static;
+        margin-top: 20px;
+      }
+    }
+    .sidebar h2 {
+      color: #ff6600;
+      font-size: 1.05em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar .step-phase {
+      color: #00ccff;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    .explain-section {
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #111128;
+      border-radius: 8px;
+      border-left: 3px solid #444;
+      font-size: 0.85em;
+      line-height: 1.7;
+    }
+    .explain-section.active {
+      border-left-color: #ff6600;
+      background: #1a1020;
+    }
+    .explain-section h3 {
+      color: #ffcc00;
+      font-size: 0.95em;
+      margin-bottom: 6px;
+    }
+    .explain-section p {
+      color: #ccc;
+      margin: 4px 0;
+    }
+    .explain-section .formula-line {
+      color: #00ccff;
+      background: #0a0a18;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 6px 0;
+      font-size: 0.95em;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .explain-section .result-line {
+      color: #00ff88;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .explain-section .note {
+      color: #aaa;
+      font-style: italic;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+    .explain-section .dim { color: #ff9944; }
+    .explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+    .info-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.85em;
+      line-height: 1.8;
+    }
+    .info-panel .label { color: #888; }
+    .info-panel .value { color: #ffcc00; font-weight: bold; }
+    .info-panel .highlight { color: #00ff88; }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 18px 0;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: 2px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px #00ff8833;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn.primary {
+      background: #002a1a;
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 0.85em;
+    }
+    .speed-control input {
+      width: 80px;
+      accent-color: #00ff88;
+    }
+    .step-counter {
+      text-align: center;
+      color: #888;
+      font-size: 0.85em;
+      margin: 8px 0;
+    }
+    .step-counter .count { color: #ff6600; font-weight: bold; }
+    .result-section {
+      background: #0a1a12;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+    }
+    .result-section h2 {
+      color: #00ff88;
+      font-size: 1.2em;
+      margin-bottom: 12px;
+    }
+    .csp-visual {
+      background: #0d0d20;
+      border: 1px solid #2a2a44;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .csp-graph {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .graph-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      width: 100%;
+    }
+    .graph-spacer { width: 120px; }
+    .graph-constraint {
+      padding: 5px 14px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      background: #111;
+      color: #888;
+      font-size: 0.78em;
+      transition: all 0.4s;
+      text-align: center;
+    }
+    .graph-constraint.active {
+      border-color: #ff6600;
+      color: #ffcc00;
+      background: #1a0a00;
+      box-shadow: 0 0 12px #ff660044;
+    }
+    .graph-constraint.fail {
+      border-color: #ff4444;
+      color: #ff4444;
+      background: #1a0000;
+      box-shadow: 0 0 12px #ff444444;
+    }
+    .graph-constraint.pass {
+      border-color: #00ff88;
+      color: #00ff88;
+      background: #0a1a12;
+      box-shadow: 0 0 12px #00ff8844;
+    }
+    .var-card {
+      background: #111;
+      border: 2px solid #444;
+      border-radius: 10px;
+      padding: 12px 16px;
+      min-width: 100px;
+      text-align: center;
+      transition: all 0.4s;
+      position: relative;
+    }
+    .var-card.active-var {
+      border-color: #ff6600;
+      box-shadow: 0 0 20px #ff660044;
+    }
+    .var-card.assigned {
+      border-color: #00ccff;
+      box-shadow: 0 0 15px #00ccff44;
+    }
+    .var-card.conflict {
+      border-color: #ff4444;
+      box-shadow: 0 0 20px #ff444444;
+    }
+    .var-card.backjump-target {
+      border-color: #ff66ff;
+      box-shadow: 0 0 20px #ff66ff55;
+    }
+    .var-card.done {
+      border-color: #00ff88;
+      box-shadow: 0 0 15px #00ff8855;
+    }
+    .var-name {
+      color: #00ccff;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .var-assign {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #ffcc00;
+      margin: 4px 0;
+      min-height: 1.5em;
+    }
+    .var-assign .unassigned {
+      color: #555;
+      font-weight: normal;
+      font-size: 0.7em;
+    }
+    .var-domain-display {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .domain-val {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      font-size: 0.85em;
+      font-weight: bold;
+      color: #e0e0e0;
+      background: #0d0d1a;
+      transition: all 0.3s;
+    }
+    .domain-val.available {
+      color: #e0e0e0;
+      border-color: #555;
+      background: #0d0d1a;
+    }
+    .domain-val.trying {
+      color: #ffff00 !important;
+      border-color: #ffff00 !important;
+      background: #1a1a00 !important;
+      box-shadow: 0 0 10px #ffff0033;
+      transform: scale(1.15);
+    }
+    .domain-val.assigned-val {
+      color: #00ff88 !important;
+      border-color: #00ff88 !important;
+      background: #0a1a12 !important;
+      box-shadow: 0 0 10px #00ff8844;
+    }
+    .domain-val.failed-val {
+      color: #ff4444 !important;
+      border-color: #ff4444 !important;
+      background: #1a0000 !important;
+      text-decoration: line-through;
+    }
+    .domain-val.eliminated {
+      color: #555;
+      border-color: #333;
+      background: #0a0a12;
+      text-decoration: line-through;
+    }
+    .conflict-set-display {
+      margin: 10px 0;
+      padding: 10px 15px;
+      background: #0a0a18;
+      border: 1px solid #333;
+      border-radius: 8px;
+      font-size: 0.85em;
+      text-align: center;
+    }
+    .conflict-set-display .cs-label {
+      color: #888;
+    }
+    .conflict-set-display .cs-value {
+      color: #ff66ff;
+      font-weight: bold;
+    }
+    .conflict-set-display .cs-empty {
+      color: #555;
+      font-style: italic;
+    }
+    .search-tree-section {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .search-tree-section .tree-title {
+      font-size: 1em;
+      color: #00ccff;
+      margin-bottom: 10px;
+    }
+    .tree-canvas {
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #08081a;
+      max-width: 100%;
+    }
+    .backjump-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #1a0030;
+      border: 2px solid #ff66ff;
+      border-radius: 20px;
+      color: #ff66ff;
+      font-weight: bold;
+      font-size: 0.85em;
+      margin: 4px 0;
+      animation: badgePulse 1s ease infinite alternate;
+    }
+    @keyframes badgePulse {
+      0% { box-shadow: 0 0 5px #ff66ff44; }
+      100% { box-shadow: 0 0 20px #ff66ff88; }
+    }
+    .assignment-trail {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      padding: 10px;
+      background: #0a0a18;
+      border: 1px solid #333;
+      border-radius: 8px;
+      min-height: 42px;
+    }
+    .trail-item {
+      padding: 4px 10px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      font-size: 0.8em;
+      color: #aaa;
+      background: #111;
+      transition: all 0.3s;
+    }
+    .trail-item.current {
+      border-color: #ff6600;
+      color: #ff6600;
+      background: #1a0a00;
+    }
+    .trail-item.failed {
+      border-color: #ff4444;
+      color: #ff6666;
+      background: #1a0000;
+      text-decoration: line-through;
+    }
+    .trail-item.backjumped {
+      border-color: #ff66ff;
+      color: #ff66ff;
+      background: #1a0030;
+    }
+    .trail-item.skipped {
+      border-color: #555;
+      color: #555;
+      background: #0a0a12;
+      font-style: italic;
+    }
+    .consistency-detail {
+      margin: 6px 0;
+      padding: 8px 12px;
+      background: #0a0a18;
+      border-radius: 6px;
+      border: 1px solid #333;
+      font-size: 0.82em;
+    }
+    .consistency-detail .cd-label { color: #00ccff; }
+    .consistency-detail .cd-pass { color: #00ff88; }
+    .consistency-detail .cd-fail { color: #ff4444; }
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+      padding: 8px;
+      font-size: 0.72em;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-item .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid #555;
+    }
+    .legend-item .swatch.curr-swatch { background: #ff6600; border-color: #ff6600; }
+    .legend-item .swatch.assn-swatch { background: #00ccff; border-color: #00ccff; }
+    .legend-item .swatch.fail-swatch { background: #ff4444; border-color: #ff4444; }
+    .legend-item .swatch.bj-swatch { background: #ff66ff; border-color: #ff66ff; }
+    .legend-item .swatch.cnf-swatch { background: #ffff00; border-color: #ffff00; }
+    .pseudocode-box {
+      background: #0a0a18;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.78em;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: #aaa;
+    }
+    .pseudocode-box .pc-highlight {
+      color: #ffcc00;
+      font-weight: bold;
+    }
+    .pseudocode-box .pc-keyword {
+      color: #00ccff;
+    }
+    .pseudocode-box .pc-comment {
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Conflict-Directed Backjumping</h1>
+  <p class="subtitle">Constraint Satisfaction — Intelligent Backtracking with Conflict Sets</p>
+
+  <div class="layout">
+    <div class="main-panel">
+      <div class="csp-visual">
+        <div class="csp-graph" id="cspGraph">
+          <div class="graph-row">
+            <div class="graph-spacer"></div>
+            <div class="var-card" id="varCardA">
+              <div class="var-name">A</div>
+              <div class="var-assign" id="assignA"><span class="unassigned">?</span></div>
+              <div class="var-domain-display" id="domainDisplayA">
+                <span class="domain-val available" data-val="a">a</span>
+                <span class="domain-val available" data-val="b">b</span>
+              </div>
+            </div>
+            <div class="graph-spacer"></div>
+          </div>
+          <div class="graph-row">
+            <div class="graph-constraint" id="constraintAB">A ≠ B</div>
+            <div class="graph-spacer"></div>
+            <div class="graph-constraint" id="constraintAC">A ≠ C</div>
+          </div>
+          <div class="graph-row">
+            <div class="var-card" id="varCardB">
+              <div class="var-name">B</div>
+              <div class="var-assign" id="assignB"><span class="unassigned">?</span></div>
+              <div class="var-domain-display" id="domainDisplayB">
+                <span class="domain-val available" data-val="a">a</span>
+                <span class="domain-val available" data-val="b">b</span>
+              </div>
+            </div>
+            <div class="graph-constraint" id="constraintBC">B ≠ C</div>
+            <div class="var-card" id="varCardC">
+              <div class="var-name">C</div>
+              <div class="var-assign" id="assignC"><span class="unassigned">?</span></div>
+              <div class="var-domain-display" id="domainDisplayC">
+                <span class="domain-val available" data-val="a">a</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="assignment-trail" id="trailContainer">
+          <span style="color:#555;font-size:0.8em;">Assignment trail shows search order</span>
+        </div>
+
+        <div class="conflict-set-display" id="conflictSetDisplay">
+          <span class="cs-label">Current Conflict Set: </span>
+          <span class="cs-value cs-empty" id="conflictSetText">∅ (empty)</span>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <span class="label">CSP: </span><span class="value">A,B ∈ {a,b}, C ∈ {a}</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Constraints: </span><span class="value">A≠B, A≠C, B≠C</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Phase: </span><span class="value" id="phaseDisplay">Ready</span>
+        <br>
+        <span class="label">Variable: </span><span class="value" id="currentVarDisplay">—</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Value: </span><span class="value" id="currentValDisplay">—</span>
+        <span style="margin:0 10px;color:#555;">|</span>
+        <span class="label">Assignment: </span><span class="value" id="assignDisplay">{ }</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+        <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+        <button class="btn" onclick="stepForward()">⏭ Step</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <input type="range" id="speedSlider" min="1" max="10" value="5">
+          <span id="speedLabel">5x</span>
+        </div>
+      </div>
+
+      <div class="step-counter">Step <span class="count"><span id="stepNum">0</span> / <span id="totalSteps">0</span></span></div>
+
+      <div class="legend">
+        <span class="legend-item"><span class="swatch curr-swatch"></span> Current</span>
+        <span class="legend-item"><span class="swatch assn-swatch"></span> Assigned</span>
+        <span class="legend-item"><span class="swatch fail-swatch"></span> Failed</span>
+        <span class="legend-item"><span class="swatch bj-swatch"></span> Backjump</span>
+        <span class="legend-item"><span class="swatch cnf-swatch"></span> Conflict</span>
+      </div>
+
+      <div class="search-tree-section">
+        <div class="tree-title">Search Tree</div>
+        <canvas id="treeCanvas" class="tree-canvas" width="600" height="220"></canvas>
+      </div>
+
+      <div class="result-section" id="resultSection" style="display:none;">
+        <h2>⚡ Algorithm Complete</h2>
+        <p id="resultDisplay"></p>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <h2>📖 Step-by-Step Explanation</h2>
+      <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+      <div id="explainArea">
+        <div class="explain-section active">
+          <h3>Problem Setup</h3>
+          <p>We solve a <b>Constraint Satisfaction Problem (CSP)</b> using <b>Conflict-Directed Backjumping</b> — an intelligent backtracking algorithm that tracks <span class="dim">conflict sets</span>.</p>
+          <p><span class="dim">Variables:</span> A, B, C (ordered A → B → C)</p>
+          <p><span class="dim">Domains:</span> D(A)={a,b}, D(B)={a,b}, D(C)={a}</p>
+          <p><span class="dim">Constraints:</span> A ≠ B, B ≠ C, A ≠ C</p>
+          <h3 style="margin-top:10px;">The Backjumping Idea</h3>
+          <span class="formula-line">When a dead-end occurs at variable X, backjump to the most recent variable in X's conflict set</span>
+          <p class="note">This skips irrelevant variables — unlike naive backtracking which always goes back one step.</p>
+          <p class="note">Press Play or Step to begin.</p>
+        </div>
+        <div class="pseudocode-box" id="pseudocodeBox"><span class="pc-keyword">function</span> <span style="color:#ffcc00;">RECURSIVE-BACKJUMPING</span>(assignment, csp):
+    <span class="pc-keyword">if</span> assignment is complete <span class="pc-keyword">then return</span> (assignment, {})
+    var ← <span style="color:#ff9944;">SELECT-UNASSIGNED-VARIABLE</span>(csp)
+    <span class="pc-keyword">for each</span> value <span class="pc-keyword">in</span> <span style="color:#ff9944;">ORDER-DOMAIN-VALUES</span>(var):
+        <span class="pc-keyword">if</span> value is consistent <span class="pc-keyword">with</span> assignment:
+            add {var = value} to assignment
+            (result, conflict) ← <span style="color:#ffcc00;">RECURSIVE-BACKJUMPING</span>(assignment, csp)
+            <span class="pc-keyword">if</span> result ≠ failure <span class="pc-keyword">then return</span> (result, conflict)
+            remove {var = value} from assignment
+    <span class="pc-keyword">return</span> (failure, <span style="color:#ff66ff;">ConflictSet</span>(var))</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animTimer = null;
+
+    const varOrder = ['A', 'B', 'C'];
+    const varDomains = { A: ['a', 'b'], B: ['a', 'b'], C: ['a'] };
+
+    function constraint(xi, xj, vi, vj) {
+      if (xi === 'A' && xj === 'B') return vi !== vj;
+      if (xi === 'B' && xj === 'A') return vi !== vj;
+      if (xi === 'A' && xj === 'C') return vi !== vj;
+      if (xi === 'C' && xj === 'A') return vi !== vj;
+      if (xi === 'B' && xj === 'C') return vi !== vj;
+      if (xi === 'C' && xj === 'B') return vi !== vj;
+      return true;
+    }
+
+    function assignStr(assign) {
+      let keys = Object.keys(assign);
+      if (keys.length === 0) return '{ }';
+      let parts = keys.map(k => k + '=' + assign[k]);
+      return '{' + parts.join(', ') + '}';
+    }
+
+    function csStr(cs) {
+      if (!cs || cs.length === 0) return '∅';
+      return '{' + cs.join(', ') + '}';
+    }
+
+    function buildProblemSetupHTML() {
+      return `<div class="explain-section active">
+  <h3>Problem Setup</h3>
+  <p>We solve a <b>Constraint Satisfaction Problem (CSP)</b> using <b>Conflict-Directed Backjumping</b> — an intelligent backtracking algorithm that tracks <span class="dim">conflict sets</span> to skip irrelevant backtrack steps.</p>
+  <p><span class="dim">Variables:</span> A, B, C (ordered A → B → C)</p>
+  <p><span class="dim">Domains:</span> D(A)={a,b}, D(B)={a,b}, D(C)={a}</p>
+  <p><span class="dim">Constraints:</span> A ≠ B, B ≠ C, A ≠ C</p>
+  <h3 style="margin-top:10px;">Why This is Unsatisfiable</h3>
+  <span class="formula-line">3 variables with 2 colors on a triangle → χ(K₃) = 3, so 2 colors cannot 3-color a triangle</span>
+  <p class="note">With only 2 domain values and 3 variables all pairwise constrained, no complete assignment exists.</p>
+  <p class="note">Press Play or Step to begin.</p>
+</div>`;
+    }
+
+    function buildFinishedExplanation(found, finalAssign) {
+      if (found) {
+        return `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ Solution Found!</h3>
+  <p>A complete, consistent assignment has been found:</p>
+  <p class="result-line">${assignStr(finalAssign)}</p>
+  <h3 style="margin-top:10px;">How Backjumping Helped</h3>
+  <p>By tracking conflict sets, the algorithm avoided exploring irrelevant branches, reducing the search space.</p>
+  <h3 style="margin-top:10px;">Complexity</h3>
+  <p><span class="dim">Time:</span> O(dⁿ) worst-case, but conflict sets prune many branches</p>
+  <p><span class="dim">Space:</span> O(n · d) for domains + O(n) for conflict sets</p>
+</div>`;
+      } else {
+        return `<div class="explain-section active" style="border-left-color:#00ff88;">
+  <h3>✅ No Solution Exists</h3>
+  <p>After exhaustive search with conflict-directed backjumping, the algorithm proved <span class="result-line">no consistent assignment</span> exists.</p>
+  <h3 style="margin-top:10px;">Why Backjumping Was Demonstrated</h3>
+  <p>At step <span class="dim">11</span>, when <b>C</b> returned conflict set <span class="split-info">{A, C}</span>:</p>
+  <p style="margin-left:8px;">• B was <span class="split-info">not</span> in the conflict set.</p>
+  <p style="margin-left:8px;">• Rather than trying B=a (which would also fail), the algorithm <span class="result-line">backjumped</span> directly to A.</p>
+  <span class="formula-line">Backjumping skips over irrelevant variables, saving 1+ exploration steps.</span>
+  <h3 style="margin-top:10px;">Complexity</h3>
+  <p><span class="dim">Time:</span> O(dⁿ) worst-case, but conflict sets prune branches</p>
+  <p><span class="dim">Space:</span> O(n · d) for domains + O(n · n) for conflict sets</p>
+</div>`;
+      }
+    }
+
+    function constraintId(xi, xj) {
+      if (xi === 'A' && xj === 'B' || xi === 'B' && xj === 'A') return 'constraintAB';
+      if (xi === 'B' && xj === 'C' || xi === 'C' && xj === 'B') return 'constraintBC';
+      if (xi === 'A' && xj === 'C' || xi === 'C' && xj === 'A') return 'constraintAC';
+      return null;
+    }
+
+    // Tree node/edge computation per step
+    const TREE_NODES = [
+      // step 0: root only
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'}],
+      // step 1: select A — root, A (probing)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'current'}],
+      // step 2: A=a consistent — root, A=a (assign)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'}],
+      // step 3: select B — root, A=a (assign), B (probing)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a?',depth:2,idx:0,state:'current'}],
+      // step 4: B=a fail
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'}],
+      // step 5: B=b consistent
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'current'}],
+      // step 6: B=b assigned
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'assign'}],
+      // step 7: select C
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'assign'},{id:'C=a?',label:'C=a?',depth:3,idx:0,state:'current'}],
+      // step 8: C=a fail (A≠C)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'assign'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'}],
+      // step 9: C exhausted, conflict
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'assign'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'}],
+      // step 10: return conflict from C
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'assign'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'assign'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'}],
+      // step 11: BACKJUMP — B not in {A,C}, propagate. Show backjump arrow from C over B to A
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a',depth:1,idx:0,state:'backjump_target'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'}],
+      // step 12: back at A, try A=b
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'current'}],
+      // step 13: A=b assigned
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'}],
+      // step 14: select B under A=b
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a?',depth:2,idx:2,state:'current'}],
+      // step 15: B=a consistent
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a',depth:2,idx:2,state:'assign'}],
+      // step 16: select C under A=b, B=a
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a',depth:2,idx:2,state:'assign'},{id:'C=a2?',label:'C=a?',depth:3,idx:1,state:'current'}],
+      // step 17: C=a fail (B≠C)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a',depth:2,idx:2,state:'assign'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'}],
+      // step 18: C exhausted, conflict {B}
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a',depth:2,idx:2,state:'assign'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'}],
+      // step 19: return {B,C} from C
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a',depth:2,idx:2,state:'assign'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'}],
+      // step 20: B in conflict, try B=b — fail
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a ✗',depth:2,idx:2,state:'failed'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'},{id:'B=b2?',label:'B=b?',depth:2,idx:3,state:'current'}],
+      // step 21: B=b fails (A≠B)
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a ✗',depth:2,idx:2,state:'failed'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'},{id:'B=b2?',label:'B=b ✗',depth:2,idx:3,state:'failed'}],
+      // step 22: B exhausted, return {A,B,C}
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b',depth:1,idx:1,state:'assign'},{id:'B=a2?',label:'B=a ✗',depth:2,idx:2,state:'failed'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'},{id:'B=b2?',label:'B=b ✗',depth:2,idx:3,state:'failed'}],
+      // step 23: A exhausted, fail
+      [{id:'root',label:'root',depth:0,idx:0,state:'normal'},{id:'A=a',label:'A=a ✗',depth:1,idx:0,state:'failed'},{id:'B=a?',label:'B=a ✗',depth:2,idx:0,state:'failed'},{id:'B=b',label:'B=b',depth:2,idx:1,state:'skipped'},{id:'C=a',label:'C=a ✗',depth:3,idx:0,state:'failed'},{id:'A=b',label:'A=b ✗',depth:1,idx:1,state:'failed'},{id:'B=a2?',label:'B=a ✗',depth:2,idx:2,state:'failed'},{id:'C=a2?',label:'C=a ✗',depth:3,idx:1,state:'failed'},{id:'B=b2?',label:'B=b ✗',depth:2,idx:3,state:'failed'}]
+    ];
+
+    function isParent(parentId, childId) {
+      let map = {
+        'A=a': 'root', 'A=b': 'root',
+        'B=a?': 'A=a', 'B=b': 'A=a',
+        'C=a': 'B=b',
+        'B=a2?': 'A=b', 'B=b2?': 'A=b',
+        'C=a2?': 'B=a2?'
+      };
+      return map[childId] === parentId;
+    }
+
+    function computeTreeState(stepIdx) {
+      let nodes = TREE_NODES[Math.min(stepIdx, TREE_NODES.length - 1)];
+      let cx = 300;
+      let cy = 25;
+      let depthGap = 42;
+      let nodeRadius = 16;
+
+      let grouped = {};
+      for (let n of nodes) {
+        if (!grouped[n.depth]) grouped[n.depth] = [];
+        grouped[n.depth].push(n);
+      }
+
+      let positions = {};
+      let maxDepth = Math.max(...Object.keys(grouped).map(Number));
+
+      for (let d = 0; d <= maxDepth; d++) {
+        let row = grouped[d] || [];
+        let totalWidth = Math.max(1, row.length - 1) * 70;
+        let startX = cx - totalWidth / 2;
+        for (let i = 0; i < row.length; i++) {
+          let n = row[i];
+          let x = startX + i * 70;
+          let y = cy + d * depthGap;
+          positions[n.id] = { x, y, state: n.state, label: n.label };
+        }
+      }
+
+      let edges = [];
+      for (let n of nodes) {
+        if (n.id === 'root') continue;
+        let parentId = null;
+        for (let other of nodes) {
+          if (other.id !== n.id && isParent(other.id, n.id)) {
+            parentId = other.id;
+            break;
+          }
+        }
+        if (parentId && positions[parentId] && positions[n.id]) {
+          edges.push({ from: parentId, to: n.id });
+        }
+      }
+
+      // Backjump arrow for step 11
+      let backjumpArrow = null;
+      if (stepIdx === 11 || stepIdx === 12) {
+        let fromPos = positions['C=a'];
+        let toPos = positions['A=a'];
+        if (fromPos && toPos) {
+          backjumpArrow = { fromX: fromPos.x, fromY: fromPos.y, toX: toPos.x, toY: toPos.y - 5 };
+        }
+      }
+
+      return { positions, edges, backjumpArrow, nodeRadius: nodeRadius, depthGap, startY: cy };
+    }
+
+    function buildSteps() {
+      steps = [];
+
+      // STEP 0: init
+      steps.push({
+        type: 'init',
+        assignment: {},
+        conflictSet: [],
+        currentVar: '—',
+        currentValue: '—',
+        phase: 'Initial State',
+        constraintChecks: [],
+        explanation: buildProblemSetupHTML()
+      });
+
+      // STEP 1: select A
+      steps.push({
+        type: 'select_var',
+        assignment: {},
+        conflictSet: [],
+        currentVar: 'A',
+        currentValue: '—',
+        phase: 'Selecting Variable A',
+        constraintChecks: [],
+        explanation: buildExplanationSelectVar('A', 0)
+      });
+
+      // STEP 2: try A=a consistent
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'A',
+        currentValue: 'a',
+        phase: 'Assign A = a',
+        constraintChecks: [],
+        explanation: buildExplanationAssign('A', 'a', true)
+      });
+
+      // STEP 3: select B
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Selecting Variable B',
+        constraintChecks: [],
+        explanation: buildExplanationSelectVar('B', 1)
+      });
+
+      // STEP 4: try B=a, check A≠B → FAIL
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'B = a — A≠B FAIL',
+        constraintChecks: [{from: 'A', to: 'B', pass: false}],
+        explanation: buildExplanationCheck('B', 'a', 'A≠B', 'a≠a', false)
+      });
+
+      // STEP 5: try B=b, check A≠B → PASS
+      steps.push({
+        type: 'consistent',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B = b — A≠B PASS',
+        constraintChecks: [{from: 'A', to: 'B', pass: true}],
+        explanation: buildExplanationCheck('B', 'b', 'A≠B', 'a≠b', true)
+      });
+
+      // STEP 6: assign B=b
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'Assign B = b',
+        constraintChecks: [],
+        explanation: buildExplanationAssign('B', 'b', true)
+      });
+
+      // STEP 7: select C
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Selecting Variable C',
+        constraintChecks: [],
+        explanation: buildExplanationSelectVar('C', 2)
+      });
+
+      // STEP 8: try C=a, check A≠C → FAIL
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C = a — A≠C FAIL',
+        constraintChecks: [{from: 'A', to: 'C', pass: false}],
+        explanation: buildExplanationCheck('C', 'a', 'A≠C', 'a≠a', false)
+      });
+
+      // STEP 9: C exhausted — conflict set = {A}
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: ['A'],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C Exhausted — Conflict {A}',
+        constraintChecks: [],
+        explanation: buildExplanationNoValues('C', ['A'])
+      });
+
+      // STEP 10: return ({A, C}) from C
+      steps.push({
+        type: 'return_conflict',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Return ({A, C}) from C',
+        constraintChecks: [],
+        explanation: buildExplanationReturn('C', ['A', 'C'])
+      });
+
+      // STEP 11: BACKJUMP! B not in {A, C}
+      steps.push({
+        type: 'backjump',
+        assignment: {A: 'a'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: '★ BACKJUMP — B ∉ {A, C}',
+        constraintChecks: [],
+        explanation: buildExplanationBackjump('B', ['A', 'C'])
+      });
+
+      // STEP 12: back at A, try A=b
+      steps.push({
+        type: 'back_at_var',
+        assignment: {},
+        conflictSet: ['C'],
+        currentVar: 'A',
+        currentValue: 'b',
+        phase: 'Back at A — Try A=b',
+        constraintChecks: [],
+        explanation: buildExplanationBackAtVar('A', 'b', ['C'])
+      });
+
+      // STEP 13: assign A=b
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'b'},
+        conflictSet: ['C'],
+        currentVar: 'A',
+        currentValue: 'b',
+        phase: 'Assign A = b',
+        constraintChecks: [],
+        explanation: buildExplanationAssign('A', 'b', true)
+      });
+
+      // STEP 14: select B
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Selecting B',
+        constraintChecks: [],
+        explanation: buildExplanationSelectVar('B', 1)
+      });
+
+      // STEP 15: try B=a, check A≠B → PASS
+      steps.push({
+        type: 'consistent',
+        assignment: {A: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'B = a — A≠B PASS',
+        constraintChecks: [{from: 'A', to: 'B', pass: true}],
+        explanation: buildExplanationCheck('B', 'a', 'A≠B', 'b≠a', true)
+      });
+
+      // STEP 16: assign B=a
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'Assign B = a',
+        constraintChecks: [],
+        explanation: buildExplanationAssign('B', 'a', true)
+      });
+
+      // STEP 17: select C
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Selecting C',
+        constraintChecks: [],
+        explanation: buildExplanationSelectVar('C', 2)
+      });
+
+      // STEP 18: try C=a, check A≠C → PASS, B≠C → FAIL
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C = a — B≠C FAIL',
+        constraintChecks: [{from: 'A', to: 'C', pass: true}, {from: 'B', to: 'C', pass: false}],
+        explanation: buildExplanationDualCheck('C', 'a', [{c:'A≠C',v:'b≠a',p:true},{c:'B≠C',v:'a≠a',p:false}])
+      });
+
+      // STEP 19: C exhausted, conflict set = {B}
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: ['B'],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C Exhausted — Conflict {B}',
+        constraintChecks: [],
+        explanation: buildExplanationNoValues('C', ['B'])
+      });
+
+      // STEP 20: return ({B, C}) from C
+      steps.push({
+        type: 'return_conflict',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: ['B', 'C'],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Return ({B, C}) from C',
+        constraintChecks: [],
+        explanation: buildExplanationReturn('C', ['B', 'C'])
+      });
+
+      // STEP 21: back at B, B in conflict, try B=b
+      steps.push({
+        type: 'back_at_var',
+        assignment: {A: 'b'},
+        conflictSet: ['C'],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B ∈ {B, C} — Try B=b',
+        constraintChecks: [],
+        explanation: buildExplanationTryNext('B', 'b', ['B', 'C'])
+      });
+
+      // STEP 22: B=b fails A≠B
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'b'},
+        conflictSet: ['C'],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B = b — A≠B FAIL',
+        constraintChecks: [{from: 'A', to: 'B', pass: false}],
+        explanation: buildExplanationCheck('B', 'b', 'A≠B', 'b≠b', false)
+      });
+
+      // STEP 23: B exhausted, conflict set = {A, C}
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'b'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'B Exhausted — Conflict {A, C}',
+        constraintChecks: [],
+        explanation: buildExplanationNoValues('B', ['A', 'C'])
+      });
+
+      // STEP 24: return ({A, B, C})
+      steps.push({
+        type: 'return_conflict',
+        assignment: {},
+        conflictSet: ['A', 'B', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Return ({A, B, C})',
+        constraintChecks: [],
+        explanation: buildExplanationReturn('B', ['A', 'B', 'C'])
+      });
+
+      // STEP 25: A exhausted, failure
+      steps.push({
+        type: 'failure',
+        assignment: {},
+        conflictSet: ['A', 'B', 'C'],
+        currentVar: 'A',
+        currentValue: '—',
+        phase: '✗ No Solution — Unsatisfiable',
+        constraintChecks: [],
+        explanation: buildExplanationFinalFail()
+      });
+    }
+
+    function buildExplanationSelectVar(v, depth) {
+      let domainStr = '{' + varDomains[v].join(', ') + '}';
+      return `<div class="explain-section active">
+  <h3>Select Variable — <span class="dim">${v}</span></h3>
+  <p>SELECT-UNASSIGNED-VARIABLE picks the next variable in order: <span class="dim">${v}</span>.</p>
+  <p style="margin-left:8px;">• Domain: <span class="dim">${domainStr}</span></p>
+  <span class="formula-line">var ← SELECT-UNASSIGNED-VARIABLE(VARIABLES[csp], assignment, csp)</span>
+  <p class="note">The variable ordering is fixed: A → B → C.</p>
+</div>`;
+    }
+
+    function buildExplanationAssign(v, val, consistent) {
+      return `<div class="explain-section active">
+  <h3>Assign <span class="dim">${v} = ${val}</span></h3>
+  <p>Value <span class="dim">${val}</span> is consistent with the current assignment.</p>
+  <span class="formula-line">add {${v} = ${val}} to assignment</span>
+  <p>Assignment is now: <span class="split-info">{${assignStrPre()}}</span></p>
+  <p class="note">Recursively descend to assign the next variable.</p>
+</div>`;
+
+      function assignStrPre() {
+        // This will be filled in at build time by using the assignment from step context
+        return '…';
+      }
+    }
+
+    function buildExplanationCheck(v, val, constraint, checkStr, passed) {
+      let pCls = passed ? 'cd-pass' : 'cd-fail';
+      let pSym = passed ? '✓' : '✗';
+      return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">${v} = ${val}</span></h3>
+  <p>Checking ${constraint}: <span class="dim">${checkStr}</span></p>
+  <span class="formula-line" style="color:${passed ? '#00ff88' : '#ff4444'}">${pSym} ${checkStr} — ${passed ? 'CONSISTENT (pass)' : 'INCONSISTENT (fail)'}</span>
+  ${passed ? '' : '<p>Add <span class="split-info">' + constraint[0] + '</span> to conflict set.</p>'}
+  <p class="note">${passed ? 'Value accepted, proceeding to the next variable.' : 'Value rejected, trying the next value in the domain.'}</p>
+</div>`;
+    }
+
+    function buildExplanationDualCheck(v, val, checks) {
+      let items = '';
+      let allPassed = true;
+      for (let c of checks) {
+        let sym = c.p ? '✓' : '✗';
+        if (!c.p) allPassed = false;
+        items += `<span class="formula-line" style="color:${c.p ? '#00ff88' : '#ff4444'}">${sym} ${c.c}: ${c.v}</span>`;
+      }
+      let conflictVars = checks.filter(c => !c.p).map(c => c.c[0]);
+      return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">${v} = ${val}</span></h3>
+  <p>Checking all constraints on ${v}:</p>
+  ${items}
+  ${allPassed ? '<p class="result-line">✓ All constraints satisfied.</p>' : '<p><span class="split-info">✗ Constraint(s) violated.</span> Add <span class="dim">{' + conflictVars.join(', ') + '}</span> to conflict set.</p>'}
+  <p class="note">${allPassed ? 'Value consistent — assign and recurse.' : 'Value rejected.'}</p>
+</div>`;
+    }
+
+    function buildExplanationNoValues(v, conflict) {
+      return `<div class="explain-section active">
+  <h3>No Values Left for <span class="dim">${v}</span></h3>
+  <p>All domain values for <span class="dim">${v}</span> have been tried and rejected.</p>
+  <p style="margin-left:8px;">• Conflict set: <span class="split-info">{${conflict.join(', ')}}</span></p>
+  <span class="formula-line">return (failure, ConfictSet(${v})) → return (failure, {${conflict.join(', ')}} ∪ {${v}})</span>
+  <p class="note">The conflict set tells us which earlier variables are responsible for this dead-end.</p>
+</div>`;
+    }
+
+    function buildExplanationReturn(v, cs) {
+      return `<div class="explain-section active">
+  <h3>Return (failure, <span class="dim">{${cs.join(', ')}}</span>)</h3>
+  <p>Variable <span class="dim">${v}</span> has no more values. Return failure with conflict set <span class="split-info">{${cs.join(', ')}}</span> to the parent caller.</p>
+  <span class="formula-line">The parent will check: "Am I in the conflict set?"</span>
+  <p class="note">If the parent is NOT in the conflict set, it backjumps (skips its remaining values). If it IS in the set, it tries the next value.</p>
+</div>`;
+    }
+
+    function buildExplanationBackjump(v, cs) {
+      return `<div class="explain-section active" style="border-left-color:#ff66ff;">
+  <h3>★ Backjump! <span class="dim">${v} ∉ {${cs.join(', ')}}</span></h3>
+  <p>Variable <span class="dim">${v}</span> receives conflict set <span class="split-info">{${cs.join(', ')}}</span> from its child.</p>
+  <p style="margin-left:8px;">• <span class="result-line">${v} ∉ {${cs.join(', ')}}</span> — This variable is <b>not responsible</b> for the conflict!</p>
+  <span class="formula-line" style="color:#ff66ff;">BACKJUMP: propagate {${cs.join(', ')}} upward without trying remaining values for ${v}</span>
+  <p>In regular backtracking, ${v} would try <span class="dim">a</span> next and fail again. Backjumping <span class="result-line">skips this waste</span> entirely.</p>
+  <p class="note">This is the key optimization — only variables IN the conflict set need to try alternatives.</p>
+</div>`;
+    }
+
+    function buildExplanationBackAtVar(v, val, mergedCS) {
+      return `<div class="explain-section active">
+  <h3>Back at <span class="dim">${v}</span> — Try ${v} = ${val}</h3>
+  <p>Variable <span class="dim">${v}</span> IS in the returned conflict set. Its own conflict set after merging: <span class="split-info">{${mergedCS.join(', ')}}</span></p>
+  <p style="margin-left:8px;">• Try next value: <span class="dim">${val}</span></p>
+  <span class="formula-line">${v} ∈ conflict_set → remove ${v}, merge remaining, try next domain value</span>
+  <p class="note">The merged conflict set will be used if <span class="dim">${v}</span> also exhausts its values.</p>
+</div>`;
+    }
+
+    function buildExplanationTryNext(v, val, cs) {
+      return `<div class="explain-section active">
+  <h3>Try Next Value — <span class="dim">${v} = ${val}</span></h3>
+  <p>Variable <span class="dim">${v}</span> is in the returned conflict set <span class="split-info">{${cs.join(', ')}}</span>.</p>
+  <p style="margin-left:8px;">• Remove ${v} from the set → remaining: <span class="dim">{${cs.filter(x => x !== v).join(', ')}}</span></p>
+  <p style="margin-left:8px;">• Try next domain value: <span class="dim">${val}</span></p>
+  <span class="formula-line">Check consistency of ${v} = ${val} with current assignment</span>
+  <p class="note">Unlike backjumping (which skips the variable entirely), here ${v} must try alternatives because it contributed to the conflict.</p>
+</div>`;
+    }
+
+    function buildExplanationFinalFail() {
+      return `<div class="explain-section active" style="border-left-color:#ff4444;">
+  <h3>✗ Unsatisfiable</h3>
+  <p>The CSP has <span class="result-line">no solution</span>.</p>
+  <p>All possible assignments have been exhaustively explored.</p>
+  <span class="formula-line">The triangle K₃ cannot be 2-colored — χ(K₃) = 3</span>
+  <p style="margin-left:8px;">• 3 variables, all pairwise constrained (A≠B, A≠C, B≠C)</p>
+  <p style="margin-left:8px;">• Only 2 values per variable</p>
+  <p style="margin-left:8px;">• 3 colors needed to properly color a triangle</p>
+  <h3 style="margin-top:10px;">Backjumping Demonstrated</h3>
+  <p>At <span class="dim">Step 11</span>, the algorithm backjumped over <span class="split-info">B</span> because B was not in the conflict set <span class="split-info">{A, C}</span>.</p>
+  <p>This saved exploring B=a (which would have failed for the same reason).</p>
+  <p class="result-line">Conflict-directed backjumping prunes irrelevant branches from the search tree.</p>
+</div>`;
+    }
+
+    function clearHighlights() {
+      for (let v of varOrder) {
+        document.getElementById('varCard' + v).className = 'var-card';
+        let domEl = document.getElementById('domainDisplay' + v);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          el.className = 'domain-val';
+          let val = el.dataset.val;
+          let available = varDomains[v].includes(val);
+          el.classList.add(available ? 'available' : 'eliminated');
+        });
+        document.getElementById('assign' + v).innerHTML = '<span class="unassigned">?</span>';
+      }
+      ['constraintAB', 'constraintBC', 'constraintAC'].forEach(id => {
+        let e = document.getElementById(id);
+        if (e) e.className = 'graph-constraint';
+      });
+    }
+
+    function applyStep(step) {
+      clearHighlights();
+
+      // Update variable cards
+      let assign = step.assignment || {};
+      let conflictSet = step.conflictSet || [];
+
+      // Show assignment on variable cards
+      for (let v of varOrder) {
+        if (assign[v] !== undefined) {
+          document.getElementById('assign' + v).textContent = assign[v];
+          document.getElementById('varCard' + v).classList.add('assigned');
+          // Highlight assigned value in domain
+          let domEl = document.getElementById('domainDisplay' + v);
+          let vals = domEl.querySelectorAll('.domain-val');
+          vals.forEach(el => {
+            if (el.dataset.val === assign[v]) {
+              el.className = 'domain-val assigned-val';
+            }
+          });
+        }
+      }
+
+      // Highlight current variable
+      let curVar = step.currentVar;
+      if (curVar && curVar !== '—' && varOrder.includes(curVar)) {
+        let card = document.getElementById('varCard' + curVar);
+        if (step.type === 'backjump') {
+          card.classList.add('backjump-target');
+          // Highlight the backjump target (the variable it jumps to) — A
+          let targetVar = 'A';
+          document.getElementById('varCard' + targetVar).classList.add('backjump-target');
+        } else if (step.type === 'back_at_var' || step.type === 'try_next') {
+          card.classList.add('backjump-target');
+        } else if (step.type === 'inconsistent' || step.type === 'no_values') {
+          card.classList.add('conflict');
+        } else if (step.type !== 'assign') {
+          card.classList.add('active-var');
+        }
+      }
+
+      // Highlight current value in domain
+      if (curVar && step.currentValue && step.currentValue !== '—' && varOrder.includes(curVar)) {
+        let domEl = document.getElementById('domainDisplay' + curVar);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          if (el.dataset.val === step.currentValue) {
+            if (step.type === 'inconsistent' || step.type === 'no_values') {
+              el.className = 'domain-val failed-val';
+            } else if (step.type === 'assign') {
+              el.className = 'domain-val assigned-val';
+            } else {
+              el.className = 'domain-val trying';
+            }
+          }
+        });
+      }
+
+      // Update constraint highlights
+      if (step.constraintChecks) {
+        for (let c of step.constraintChecks) {
+          let id = constraintId(c.from, c.to);
+          if (id) {
+            let el = document.getElementById(id);
+            if (el) el.className = 'graph-constraint ' + (c.pass ? 'pass' : 'fail');
+          }
+        }
+      }
+
+      // Update conflict set display
+      let csEl = document.getElementById('conflictSetText');
+      if (conflictSet.length === 0) {
+        csEl.innerHTML = '<span class="cs-empty">∅ (empty)</span>';
+      } else {
+        csEl.innerHTML = '<span class="cs-value">{' + conflictSet.join(', ') + '}</span>';
+      }
+
+      // Update info panel
+      document.getElementById('phaseDisplay').textContent = step.phase;
+      document.getElementById('currentVarDisplay').textContent = curVar || '—';
+      document.getElementById('currentValDisplay').textContent = step.currentValue || '—';
+      document.getElementById('assignDisplay').textContent = assignStr(assign);
+
+      // Update trail
+      updateTrail(step);
+
+      // Draw search tree
+      drawTree(currentStep);
+
+      // Update sidebar
+      let phaseStr = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      if (step.type === 'backjump') phaseStr += ' ⚡';
+      document.getElementById('sidebarPhase').textContent = phaseStr;
+      document.getElementById('explainArea').innerHTML = step.explanation;
+      document.getElementById('sidebar').scrollTop = 0;
+
+      // Result section
+      if (step.type === 'failure') {
+        document.getElementById('resultSection').style.display = 'block';
+        document.getElementById('resultDisplay').innerHTML =
+          `<span class="result-line">✗ No solution exists</span> — ` +
+          `The CSP is unsatisfiable (χ(K₃) = 3, only 2 colors available).`;
+      }
+    }
+
+    let trailHistory = [];
+
+    function updateTrail(step) {
+      if (step.type === 'init') {
+        trailHistory = [];
+        document.getElementById('trailContainer').innerHTML =
+          '<span style="color:#555;font-size:0.8em;">Assignment trail shows search order</span>';
+        return;
+      }
+
+      let assign = step.assignment || {};
+      let keys = Object.keys(assign);
+      let trailHtml = '';
+      for (let k of varOrder) {
+        let v = assign[k] !== undefined ? k + '=' + assign[k] : k + '=?';
+        let cls = 'trail-item';
+        if (assign[k] !== undefined) {
+          cls += ' current';
+        }
+        trailHtml += `<span class="${cls}">${v}</span>`;
+      }
+
+      // Add backjump marker
+      if (step.type === 'backjump') {
+        trailHtml += `<span class="trail-item backjumped">⚡ BACKJUMP</span>`;
+      }
+
+      // Add failed marker for C
+      if (step.type === 'no_values') {
+        trailHtml += `<span class="trail-item failed">✗ ${step.currentVar} dead-end</span>`;
+      }
+
+      if (trailHtml) {
+        document.getElementById('trailContainer').innerHTML = trailHtml;
+      }
+    }
+
+    function drawTree(stepIdx) {
+      let canvas = document.getElementById('treeCanvas');
+      let ctx = canvas.getContext('2d');
+      let W = canvas.width;
+      let H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      let treeState = computeTreeState(stepIdx);
+      let pos = treeState.positions;
+      let edges = treeState.edges;
+
+      let colorMap = {
+        'normal': '#555',
+        'current': '#ff6600',
+        'assign': '#00ccff',
+        'failed': '#ff4444',
+        'backjump_target': '#ff66ff',
+        'skipped': '#444'
+      };
+
+      // Draw edges
+      for (let e of edges) {
+        let from = pos[e.from];
+        let to = pos[e.to];
+        if (!from || !to) continue;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y + treeState.nodeRadius);
+        ctx.lineTo(to.x, to.y - treeState.nodeRadius);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Override color for special states
+        let toState = to.state;
+        if (toState === 'current') { ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 2; ctx.stroke(); }
+        else if (toState === 'failed') { ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 2; ctx.stroke(); }
+        else if (toState === 'backjump_target') { ctx.strokeStyle = '#ff66ff'; ctx.lineWidth = 2; ctx.stroke(); }
+      }
+
+      // Draw backjump arrow
+      if (treeState.backjumpArrow) {
+        let a = treeState.backjumpArrow;
+        ctx.beginPath();
+        ctx.moveTo(a.fromX, a.fromY - treeState.nodeRadius);
+        ctx.lineTo(a.toX, a.toY + treeState.nodeRadius + 5);
+        ctx.strokeStyle = '#ff66ff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Arrow head
+        let angle = Math.atan2(a.toY - a.fromY, a.toX - a.fromX);
+        let headLen = 10;
+        ctx.beginPath();
+        ctx.moveTo(a.toX, a.toY + treeState.nodeRadius + 5);
+        ctx.lineTo(a.toX - headLen * Math.cos(angle - 0.4), a.toY + treeState.nodeRadius + 5 - headLen * Math.sin(angle - 0.4));
+        ctx.moveTo(a.toX, a.toY + treeState.nodeRadius + 5);
+        ctx.lineTo(a.toX - headLen * Math.cos(angle + 0.4), a.toY + treeState.nodeRadius + 5 - headLen * Math.sin(angle + 0.4));
+        ctx.strokeStyle = '#ff66ff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // "BACKJUMP" label
+        ctx.fillStyle = '#ff66ff';
+        ctx.font = 'bold 11px Courier New';
+        ctx.textAlign = 'center';
+        let midX = (a.fromX + a.toX) / 2;
+        let midY = (a.fromY + a.toY) / 2 - 12;
+        ctx.fillText('⚡ BACKJUMP', midX, midY);
+      }
+
+      // Draw nodes
+      for (let id in pos) {
+        let n = pos[id];
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, treeState.nodeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.strokeStyle = colorMap[n.state] || '#555';
+        ctx.lineWidth = n.state === 'current' ? 2.5 : 1.5;
+        ctx.stroke();
+
+        // Glow for special states
+        if (n.state === 'current') {
+          ctx.shadowColor = '#ff660044';
+          ctx.shadowBlur = 12;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        } else if (n.state === 'failed') {
+          ctx.shadowColor = '#ff444444';
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        } else if (n.state === 'backjump_target') {
+          ctx.shadowColor = '#ff66ff55';
+          ctx.shadowBlur = 14;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        // Label
+        ctx.fillStyle = colorMap[n.state] || '#aaa';
+        ctx.font = 'bold 10px Courier New';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.label, n.x, n.y);
+
+        // "skipped" text for skipped nodes
+        if (n.state === 'skipped') {
+          ctx.fillStyle = '#555';
+          ctx.font = '9px Courier New';
+          ctx.fillText('(skipped)', n.x, n.y + treeState.nodeRadius + 12);
+        }
+      }
+    }
+
+    function processStep() {
+      if (currentStep >= steps.length) { finishAnimation(); return; }
+      document.getElementById('stepNum').textContent = currentStep + 1;
+      applyStep(steps[currentStep]);
+      currentStep++;
+    }
+
+    function startAnimation() {
+      if (currentStep >= steps.length) return;
+      animating = true;
+      animTimer = setInterval(() => {
+        if (!animating || currentStep >= steps.length) {
+          clearInterval(animTimer);
+          if (currentStep >= steps.length) finishAnimation();
+          return;
+        }
+        processStep();
+      }, getSpeed());
+    }
+
+    function getSpeed() {
+      return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      clearInterval(animTimer);
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      processStep();
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentStep = 0;
+      trailHistory = [];
+      document.getElementById('resultSection').style.display = 'none';
+      document.getElementById('phaseDisplay').textContent = 'Ready — Press Play';
+      document.getElementById('currentVarDisplay').textContent = '—';
+      document.getElementById('currentValDisplay').textContent = '—';
+      document.getElementById('assignDisplay').textContent = '{ }';
+      document.getElementById('stepNum').textContent = '0';
+      document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+      document.getElementById('explainArea').innerHTML = buildProblemSetupHTML();
+      document.getElementById('pseudocodeBox').innerHTML = `<span class="pc-keyword">function</span> <span style="color:#ffcc00;">RECURSIVE-BACKJUMPING</span>(assignment, csp):
+    <span class="pc-keyword">if</span> assignment is complete <span class="pc-keyword">then return</span> (assignment, {})
+    var ← <span style="color:#ff9944;">SELECT-UNASSIGNED-VARIABLE</span>(csp)
+    <span class="pc-keyword">for each</span> value <span class="pc-keyword">in</span> <span style="color:#ff9944;">ORDER-DOMAIN-VALUES</span>(var):
+        <span class="pc-keyword">if</span> value is consistent <span class="pc-keyword">with</span> assignment:
+            add {var = value} to assignment
+            (result, conflict) ← <span style="color:#ffcc00;">RECURSIVE-BACKJUMPING</span>(assignment, csp)
+            <span class="pc-keyword">if</span> result ≠ failure <span class="pc-keyword">then return</span> (result, conflict)
+            remove {var = value} from assignment
+    <span class="pc-keyword">return</span> (failure, <span style="color:#ff66ff;">ConflictSet</span>(var))`;
+      clearHighlights();
+      buildSteps();
+      document.getElementById('totalSteps').textContent = steps.length;
+      updateTrail(steps[0]);
+      drawTree(0);
+    }
+
+    function finishAnimation() {
+      animating = false;
+      // Find if solution or failure
+      let isFailure = true;
+      let finalAssign = {};
+      for (let s of steps) {
+        if (s.type === 'assign') finalAssign = Object.assign({}, s.assignment);
+      }
+      document.getElementById('sidebarPhase').textContent =
+        `Step ${steps.length} / ${steps.length} — ✅ Complete`;
+      document.getElementById('explainArea').innerHTML = buildFinishedExplanation(!isFailure, finalAssign);
+      document.getElementById('sidebar').scrollTop = 0;
+    }
+
+    // Fix buildExplanationAssign to use actual assignment from step context
+    function buildExplanationAssign(v, val, consistent) {
+      return function() {
+        let curAssign = steps.length > 0 && currentStep < steps.length ? steps[currentStep - 1].assignment || {} : {};
+        let assignStrVal = Object.keys(curAssign).length > 0 ? Object.keys(curAssign).map(k => k + '=' + curAssign[k]).join(', ') : '…';
+        let fullStr = curAssign[v] !== undefined ? assignStrVal : (assignStrVal ? assignStrVal + ', ' + v + '=' + val : v + '=' + val);
+        return `<div class="explain-section active">
+  <h3>Assign <span class="dim">${v} = ${val}</span></h3>
+  <p>Value <span class="dim">${val}</span> is consistent with the current assignment.</p>
+  <span class="formula-line">add {${v} = ${val}} to assignment</span>
+  <p>Assignment: <span class="split-info">{${fullStr}}</span></p>
+  <p class="note">Recursively descend to assign the next variable.</p>
+</div>`;
+      };
+    }
+
+    // Override: assign explanations need to be functions called at step time
+    let origBuildSteps = buildSteps;
+    buildSteps = function() {
+      steps = [];
+
+      steps.push({
+        type: 'init',
+        assignment: {},
+        conflictSet: [],
+        currentVar: '—',
+        currentValue: '—',
+        phase: 'Initial State',
+        constraintChecks: [],
+        getExplanation: function() { return buildProblemSetupHTML(); }
+      });
+
+      steps.push({
+        type: 'select_var',
+        assignment: {},
+        conflictSet: [],
+        currentVar: 'A',
+        currentValue: '—',
+        phase: 'Selecting Variable A',
+        constraintChecks: [],
+        getExplanation: function() { return buildExplanationSelectVar('A', 0); }
+      });
+
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'A',
+        currentValue: 'a',
+        phase: 'Assign A = a',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Assign <span class="dim">A = a</span></h3>
+  <p>Value <span class="dim">a</span> is consistent (no prior assignments to conflict with).</p>
+  <span class="formula-line">add {A = a} to assignment</span>
+  <p>Assignment: <span class="split-info">{A=a}</span></p>
+  <p class="note">Recursively descend to assign the next variable.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Selecting Variable B',
+        constraintChecks: [],
+        getExplanation: function() { return buildExplanationSelectVar('B', 1); }
+      });
+
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'B = a — A≠B FAIL',
+        constraintChecks: [{from: 'A', to: 'B', pass: false}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">B = a</span></h3>
+  <p>Checking A≠B: <span class="dim">a ≠ a</span></p>
+  <span class="formula-line" style="color:#ff4444;">✗ a ≠ a — INCONSISTENT (fail)</span>
+  <p>Add <span class="split-info">A</span> to conflict set.</p>
+  <p class="note">Value rejected, trying next value B=b.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'consistent',
+        assignment: {A: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B = b — A≠B PASS',
+        constraintChecks: [{from: 'A', to: 'B', pass: true}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">B = b</span></h3>
+  <p>Checking A≠B: <span class="dim">a ≠ b</span></p>
+  <span class="formula-line" style="color:#00ff88;">✓ a ≠ b — CONSISTENT (pass)</span>
+  <p class="result-line">Value accepted, proceeding.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'Assign B = b',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Assign <span class="dim">B = b</span></h3>
+  <p>Value <span class="dim">b</span> is consistent with {A=a}.</p>
+  <span class="formula-line">add {B = b} to assignment</span>
+  <p>Assignment: <span class="split-info">{A=a, B=b}</span></p>
+  <p class="note">Recursively descend to assign C.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Selecting Variable C',
+        constraintChecks: [],
+        getExplanation: function() { return buildExplanationSelectVar('C', 2); }
+      });
+
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C = a — A≠C FAIL',
+        constraintChecks: [{from: 'A', to: 'C', pass: false}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">C = a</span></h3>
+  <p>Checking A≠C: <span class="dim">a ≠ a</span></p>
+  <span class="formula-line" style="color:#ff4444;">✗ a ≠ a — INCONSISTENT (fail)</span>
+  <p>Add <span class="split-info">A</span> to conflict set.</p>
+  <p class="note">C has domain {a} only — no more values to try.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: ['A'],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C Exhausted — Conflict {A}',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>No Values Left for <span class="dim">C</span></h3>
+  <p>All domain values for C have been tried and rejected.</p>
+  <p style="margin-left:8px;">• Conflict set: <span class="split-info">{A}</span></p>
+  <span class="formula-line">return (failure, ConflictSet(C)) → return (failure, {A} ∪ {C})</span>
+  <p class="note">The conflict set tells A and B which variables caused this dead-end.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'return_conflict',
+        assignment: {A: 'a', B: 'b'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Return ({A, C}) from C',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Return (failure, <span class="dim">{A, C}</span>)</h3>
+  <p>C has no more values. Return with conflict set <span class="split-info">{A, C}</span> to B.</p>
+  <span class="formula-line">B will check: "Am I in {A, C}?"</span>
+  <p class="note">This determines whether B backjumps or tries its next value.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'backjump',
+        assignment: {A: 'a'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: '★ BACKJUMP — B ∉ {A, C}',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active" style="border-left-color:#ff66ff;">
+  <h3>★ Backjump! <span class="dim">B ∉ {A, C}</span></h3>
+  <p>B receives conflict set <span class="split-info">{A, C}</span> from child C.</p>
+  <p style="margin-left:8px;">• <span class="result-line">B ∉ {A, C}</span> — B is <b>not responsible</b> for this conflict!</p>
+  <span class="formula-line" style="color:#ff66ff;">BACKJUMP: propagate {A, C} upward — skip B's remaining value B=a</span>
+  <p>In regular backtracking, B would try <span class="dim">B=a</span> next (and fail after descending to C again).</p>
+  <p class="result-line">Backjumping skips this entire wasted subtree!</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'back_at_var',
+        assignment: {},
+        conflictSet: ['C'],
+        currentVar: 'A',
+        currentValue: 'b',
+        phase: 'Back at A — Try A=b',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Back at <span class="dim">A</span> — Try A = b</h3>
+  <p>A IS in the returned conflict set <span class="split-info">{A, C}</span>.</p>
+  <p style="margin-left:8px;">• Remove A → remaining: <span class="dim">{C}</span> (merged into A's conflict set)</p>
+  <p style="margin-left:8px;">• Try next value: <span class="dim">A = b</span></p>
+  <span class="formula-line">A ∈ {A, C} → try A=b instead of propagating</span>
+  <p class="note">A must try alternatives because A directly caused the conflict at C.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'b'},
+        conflictSet: [],
+        currentVar: 'A',
+        currentValue: 'b',
+        phase: 'Assign A = b',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Assign <span class="dim">A = b</span></h3>
+  <p>Value <span class="dim">b</span> is consistent.</p>
+  <span class="formula-line">add {A = b} to assignment</span>
+  <p>Assignment: <span class="split-info">{A=b}</span></p>
+  <p class="note">Recursively descend to assign B and C.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Selecting B',
+        constraintChecks: [],
+        getExplanation: function() { return buildExplanationSelectVar('B', 1); }
+      });
+
+      steps.push({
+        type: 'consistent',
+        assignment: {A: 'b'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'B = a — A≠B PASS',
+        constraintChecks: [{from: 'A', to: 'B', pass: true}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">B = a</span></h3>
+  <p>Checking A≠B: <span class="dim">b ≠ a</span></p>
+  <span class="formula-line" style="color:#00ff88;">✓ b ≠ a — CONSISTENT (pass)</span>
+  <p class="result-line">Value accepted, assigning B = a.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'assign',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'B',
+        currentValue: 'a',
+        phase: 'Assign B = a',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Assign <span class="dim">B = a</span></h3>
+  <p>Value <span class="dim">a</span> is consistent with {A=b}.</p>
+  <span class="formula-line">add {B = a} to assignment</span>
+  <p>Assignment: <span class="split-info">{A=b, B=a}</span></p>
+  <p class="note">Recursively descend to assign C.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'select_var',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Selecting C',
+        constraintChecks: [],
+        getExplanation: function() { return buildExplanationSelectVar('C', 2); }
+      });
+
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: [],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C = a — B≠C FAIL',
+        constraintChecks: [{from: 'A', to: 'C', pass: true}, {from: 'B', to: 'C', pass: false}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">C = a</span></h3>
+  <p>Checking all constraints on C:</p>
+  <span class="formula-line" style="color:#00ff88;">✓ A≠C: b ≠ a</span>
+  <span class="formula-line" style="color:#ff4444;">✗ B≠C: a ≠ a — INCONSISTENT</span>
+  <p>Add <span class="split-info">B</span> to conflict set.</p>
+  <p class="note">C has domain {a} only — no more values to try.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: ['B'],
+        currentVar: 'C',
+        currentValue: 'a',
+        phase: 'C Exhausted — Conflict {B}',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>No Values Left for <span class="dim">C</span></h3>
+  <p>All domain values for C have been tried and rejected.</p>
+  <p style="margin-left:8px;">• Conflict set: <span class="split-info">{B}</span></p>
+  <span class="formula-line">return (failure, ConflictSet(C)) → return (failure, {B} ∪ {C})</span>
+  <p class="note">Now B receives conflict set {B, C}.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'return_conflict',
+        assignment: {A: 'b', B: 'a'},
+        conflictSet: ['B', 'C'],
+        currentVar: 'C',
+        currentValue: '—',
+        phase: 'Return ({B, C}) from C',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Return (failure, <span class="dim">{B, C}</span>)</h3>
+  <p>C returns failure with conflict set <span class="split-info">{B, C}</span> to B.</p>
+  <span class="formula-line">B checks: "Am I in {B, C}?"</span>
+  <p class="note">B IS in this set — so B must try its remaining value(s).</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'back_at_var',
+        assignment: {A: 'b'},
+        conflictSet: ['C'],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B ∈ {B, C} — Try B=b',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Try Next Value — <span class="dim">B = b</span></h3>
+  <p>B IS in the returned conflict set <span class="split-info">{B, C}</span>.</p>
+  <p style="margin-left:8px;">• Remove B → remaining: <span class="dim">{C}</span></p>
+  <p style="margin-left:8px;">• Try next domain value: <span class="dim">B = b</span></p>
+  <span class="formula-line">B ∈ {B, C} → try B=b (instead of backjumping)</span>
+  <p class="note">Unlike the backjump case, B must try alternatives because it contributed to the conflict.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'inconsistent',
+        assignment: {A: 'b'},
+        conflictSet: ['C'],
+        currentVar: 'B',
+        currentValue: 'b',
+        phase: 'B = b — A≠B FAIL',
+        constraintChecks: [{from: 'A', to: 'B', pass: false}],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Consistency Check — <span class="dim">B = b</span></h3>
+  <p>Checking A≠B: <span class="dim">b ≠ b</span></p>
+  <span class="formula-line" style="color:#ff4444;">✗ b ≠ b — INCONSISTENT (fail)</span>
+  <p>Add <span class="split-info">A</span> to conflict set.</p>
+  <p class="note">B has no more values in domain. B itself is now exhausted.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'no_values',
+        assignment: {A: 'b'},
+        conflictSet: ['A', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'B Exhausted — Conflict {A, C}',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>No Values Left for <span class="dim">B</span></h3>
+  <p>B has no more values. Merged conflict set: <span class="split-info">{A, C}</span></p>
+  <span class="formula-line">return (failure, {A, C} ∪ {B}) = failure, {A, B, C}</span>
+  <p class="note">B tried both values and failed. Return the combined conflict set upward.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'return_conflict',
+        assignment: {},
+        conflictSet: ['A', 'B', 'C'],
+        currentVar: 'B',
+        currentValue: '—',
+        phase: 'Return ({A, B, C})',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active">
+  <h3>Return (failure, <span class="dim">{A, B, C}</span>)</h3>
+  <p>B returns failure with conflict set <span class="split-info">{A, B, C}</span> to A.</p>
+  <p class="note">A IS in this set — but A has no more values either.</p>
+</div>`;
+        }
+      });
+
+      steps.push({
+        type: 'failure',
+        assignment: {},
+        conflictSet: ['A', 'B', 'C'],
+        currentVar: 'A',
+        currentValue: '—',
+        phase: '✗ No Solution — Unsatisfiable',
+        constraintChecks: [],
+        getExplanation: function() {
+          return `<div class="explain-section active" style="border-left-color:#ff4444;">
+  <h3>✗ Unsatisfiable</h3>
+  <p>The CSP has <span class="result-line">no solution</span>.</p>
+  <p>All possible assignments have been exhaustively explored.</p>
+  <span class="formula-line">The triangle K₃ cannot be 2-colored — χ(K₃) = 3</span>
+  <p style="margin-left:8px;">• 3 variables, all pairwise constrained (A≠B, A≠C, B≠C)</p>
+  <p style="margin-left:8px;">• Only 2 values per variable</p>
+  <p style="margin-left:8px;">• 3 distinct colors needed to properly color a triangle</p>
+  <h3 style="margin-top:10px;">Backjumping Demonstrated</h3>
+  <p>At <span class="dim">Step 11</span>, the algorithm backjumped over <span class="split-info">B</span> because B was not in the conflict set <span class="split-info">{A, C}</span>.</p>
+  <p>This saved exploring B=a (which would have failed for the same reasons).</p>
+  <p class="result-line">Conflict-directed backjumping prunes irrelevant branches from the search tree.</p>
+</div>`;
+        }
+      });
+    };
+
+    // Override applyStep to use getExplanation
+    let origApplyStep = applyStep;
+    applyStep = function(step) {
+      clearHighlights();
+
+      let assign = step.assignment || {};
+      let conflictSet = step.conflictSet || [];
+
+      for (let v of varOrder) {
+        if (assign[v] !== undefined) {
+          document.getElementById('assign' + v).textContent = assign[v];
+          document.getElementById('varCard' + v).classList.add('assigned');
+          let domEl = document.getElementById('domainDisplay' + v);
+          let vals = domEl.querySelectorAll('.domain-val');
+          vals.forEach(el => {
+            if (el.dataset.val === assign[v]) {
+              el.className = 'domain-val assigned-val';
+            }
+          });
+        }
+      }
+
+      let curVar = step.currentVar;
+      if (curVar && curVar !== '—' && varOrder.includes(curVar)) {
+        let card = document.getElementById('varCard' + curVar);
+        if (step.type === 'backjump') {
+          card.classList.add('backjump-target');
+          let targetVar = 'A';
+          document.getElementById('varCard' + targetVar).classList.add('backjump-target');
+        } else if (step.type === 'back_at_var') {
+          card.classList.add('backjump-target');
+        } else if (step.type === 'inconsistent' || step.type === 'no_values' || step.type === 'failure') {
+          card.classList.add('conflict');
+        } else if (step.type !== 'assign') {
+          card.classList.add('active-var');
+        }
+      }
+
+      if (curVar && step.currentValue && step.currentValue !== '—' && varOrder.includes(curVar)) {
+        let domEl = document.getElementById('domainDisplay' + curVar);
+        let vals = domEl.querySelectorAll('.domain-val');
+        vals.forEach(el => {
+          if (el.dataset.val === step.currentValue) {
+            if (step.type === 'inconsistent' || step.type === 'no_values' || step.type === 'failure') {
+              el.className = 'domain-val failed-val';
+            } else if (step.type === 'assign') {
+              el.className = 'domain-val assigned-val';
+            } else if (step.type === 'consistent') {
+              el.className = 'domain-val trying';
+            } else {
+              el.className = 'domain-val trying';
+            }
+          }
+        });
+      }
+
+      if (step.constraintChecks) {
+        for (let c of step.constraintChecks) {
+          let id = constraintId(c.from, c.to);
+          if (id) {
+            let el = document.getElementById(id);
+            if (el) el.className = 'graph-constraint ' + (c.pass ? 'pass' : 'fail');
+          }
+        }
+      }
+
+      let csEl = document.getElementById('conflictSetText');
+      if (conflictSet.length === 0) {
+        csEl.innerHTML = '<span class="cs-empty">∅ (empty)</span>';
+      } else {
+        csEl.innerHTML = '<span class="cs-value">{' + conflictSet.join(', ') + '}</span>';
+      }
+
+      document.getElementById('phaseDisplay').textContent = step.phase;
+      document.getElementById('currentVarDisplay').textContent = curVar || '—';
+      document.getElementById('currentValDisplay').textContent = step.currentValue || '—';
+      document.getElementById('assignDisplay').textContent = assignStr(assign);
+
+      updateTrail(step);
+
+      drawTree(currentStep);
+
+      let phaseStr = `Step ${currentStep + 1} / ${steps.length} — ${step.phase}`;
+      if (step.type === 'backjump') phaseStr += ' ⚡';
+      document.getElementById('sidebarPhase').textContent = phaseStr;
+
+      if (step.getExplanation) {
+        document.getElementById('explainArea').innerHTML = step.getExplanation();
+      } else {
+        document.getElementById('explainArea').innerHTML = step.explanation || '';
+      }
+      document.getElementById('sidebar').scrollTop = 0;
+
+      if (step.type === 'failure') {
+        document.getElementById('resultSection').style.display = 'block';
+        document.getElementById('resultDisplay').innerHTML =
+          `<span class="result-line">✗ No solution exists</span> — ` +
+          `The CSP is unsatisfiable (χ(K₃) = 3, only 2 colors available). Conflict-directed backjumping exhaustively searched the space, using ` +
+          `conflict sets to prune irrelevant branches.`;
+      }
+    };
+
+    document.getElementById('speedSlider').addEventListener('input', function() {
+      document.getElementById('speedLabel').textContent = this.value + 'x';
+      if (animating) {
+        clearInterval(animTimer);
+        animTimer = setInterval(() => {
+          if (!animating || currentStep >= steps.length) {
+            clearInterval(animTimer);
+            if (currentStep >= steps.length) finishAnimation();
+            return;
+          }
+          processStep();
+        }, getSpeed());
+      }
+    });
+
+    buildSteps();
+    document.getElementById('totalSteps').textContent = steps.length;
+    updateTrail(steps[0]);
+    drawTree(0);
+  </script>
+</body>
+</html>
