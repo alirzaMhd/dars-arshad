@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tree-Structured CSP Animation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+.subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+.layout { display: flex; gap: 0; max-width: 1600px; margin: 0 auto; padding: 0 15px 30px; }
+.main-panel { flex: 1; min-width: 0; padding-right: 15px; }
+.sidebar { width: 420px; min-width: 420px; max-height: calc(100vh - 100px); overflow-y: auto; position: sticky; top: 10px; background: #0d0d20; border: 1px solid #2a2a44; border-radius: 12px; padding: 20px; }
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: #111; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+@media (max-width: 1100px) { .layout { flex-direction: column; } .sidebar { width: 100%; min-width: unset; max-height: none; position: static; margin-top: 20px; } }
+.sidebar h2 { color: #ff6600; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+.sidebar .step-phase { color: #00ccff; font-size: 0.85em; margin-bottom: 10px; }
+.explain-section { margin-bottom: 18px; padding: 12px; background: #111128; border-radius: 8px; border-left: 3px solid #444; font-size: 0.85em; line-height: 1.7; }
+.explain-section.active { border-left-color: #ff6600; background: #1a1020; }
+.explain-section h3 { color: #ffcc00; font-size: 0.95em; margin-bottom: 6px; }
+.explain-section p { color: #ccc; margin: 4px 0; }
+.explain-section .formula-line { color: #00ccff; background: #0a0a18; padding: 6px 10px; border-radius: 4px; margin: 6px 0; font-size: 0.95em; display: block; overflow-x: auto; white-space: nowrap; }
+.explain-section .result-line { color: #00ff88; font-weight: bold; margin: 6px 0; }
+.explain-section .note { color: #aaa; font-style: italic; font-size: 0.9em; margin-top: 4px; }
+.explain-section .dim { color: #ff9944; }
+.explain-section .split-info { color: #ffcc00; margin-top: 4px; }
+canvas { display: block; margin: 10px auto; background: #0a0a1a; border: 1px solid #333; border-radius: 10px; }
+.info-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; margin: 15px 0; font-size: 0.85em; line-height: 1.8; }
+.info-panel .label { color: #888; }
+.info-panel .value { color: #ffcc00; font-weight: bold; }
+.info-panel .highlight { color: #00ff88; }
+.controls { display: flex; justify-content: center; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.btn { padding: 8px 18px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.85em; transition: all 0.3s; }
+.btn:hover { border-color: #00ff88; color: #00ff88; box-shadow: 0 0 15px #00ff8833; }
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: #002a1a; border-color: #00ff88; color: #00ff88; }
+.speed-control { display: flex; align-items: center; gap: 6px; color: #888; font-size: 0.85em; }
+.speed-control input { width: 80px; accent-color: #00ff88; }
+.step-counter { text-align: center; color: #888; font-size: 0.85em; margin: 8px 0; }
+.step-counter .count { color: #ff6600; font-weight: bold; }
+.result-section { background: #0a1a12; border: 2px solid #00ff88; border-radius: 12px; padding: 20px; margin: 25px 0; display: none; }
+.result-section h2 { color: #00ff88; font-size: 1.2em; margin-bottom: 12px; }
+
+.domain-grid { display: flex; justify-content: center; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+.var-box { background: #111; border: 2px solid #444; border-radius: 10px; padding: 10px 14px; min-width: 90px; text-align: center; transition: all 0.4s; }
+.var-box .vname { color: #00ccff; font-size: 1em; font-weight: bold; margin-bottom: 6px; }
+.var-box .vdoms { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.var-box .dval { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid #555; border-radius: 5px; font-size: 0.82em; font-weight: bold; color: #e0e0e0; background: #0d0d1a; transition: all 0.3s; }
+.var-box .dval.removed { color: #555; border-color: #333; background: #0a0a12; text-decoration: line-through; }
+.var-box .dval.checking { color: #ffff00 !important; border-color: #ffff00 !important; background: #1a1a00 !important; box-shadow: 0 0 10px #ffff0033; transform: scale(1.15); }
+.var-box .dval.supported { color: #00ff88 !important; border-color: #00ff88 !important; background: #002a1a !important; box-shadow: 0 0 10px #00ff8844; transform: scale(1.1); }
+.var-box .dval.unsupported { color: #ff4444 !important; border-color: #ff4444 !important; background: #1a0000 !important; box-shadow: 0 0 10px #ff444433; transform: scale(1.1); }
+.var-box .dval.assigned { color: #00ff88 !important; border-color: #00ff88 !important; background: #0a1a12 !important; box-shadow: 0 0 12px #00ff8855; }
+.var-box.xi-active { border-color: #ff6600; box-shadow: 0 0 15px #ff660044; }
+.var-box.xj-active { border-color: #00ccff; box-shadow: 0 0 15px #00ccff44; }
+.var-box.assigned-box { border-color: #00ff88; box-shadow: 0 0 12px #00ff8855; }
+.var-box.pruned-box { border-color: #ff9944; box-shadow: 0 0 12px #ff994444; }
+
+.legend { display: flex; justify-content: center; gap: 14px; margin: 8px 0 4px; font-size: 0.72em; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; color: #aaa; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid #555; }
+.ls-parent { background: #ff6600; }
+.ls-child { background: #00ccff; }
+.ls-pruned { background: #ff4444; }
+.ls-assigned { background: #00ff88; }
+.ls-check { background: #ffff00; }
+
+.phase-bar { display: flex; justify-content: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.phase-pill { padding: 4px 12px; border-radius: 16px; font-size: 0.72em; border: 1px solid #444; background: #111; color: #555; transition: all 0.4s; }
+.phase-pill.current { border-color: #ff6600; color: #ff6600; background: #1a0a00; }
+.phase-pill.done { border-color: #00ff88; color: #00ff88; background: #0a1a12; }
+
+.assign-display { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.assign-item { padding: 6px 14px; border: 2px solid #444; border-radius: 8px; background: #111; font-size: 0.85em; transition: all 0.4s; }
+.assign-item .a-var { color: #00ccff; }
+.assign-item .a-val { color: #555; }
+.assign-item.done { border-color: #00ff88; background: #0a1a12; }
+.assign-item.done .a-val { color: #00ff88; font-weight: bold; }
+.assign-item.current-assign { border-color: #ff6600; background: #1a0a00; box-shadow: 0 0 12px #ff660044; }
+.assign-item.current-assign .a-val { color: #ff6600; font-weight: bold; }
+.assign-arrow { color: #555; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>Tree-Structured CSP</h1>
+<p class="subtitle">Constraint Satisfaction — Tree-Structured CSP Solver</p>
+
+<div class="layout">
+<div class="main-panel">
+
+  <canvas id="treeCanvas" width="700" height="300"></canvas>
+
+  <div class="domain-grid" id="domainGrid"></div>
+
+  <div class="phase-bar" id="phaseBar"></div>
+
+  <div class="assign-display" id="assignDisplay"></div>
+
+  <div class="controls">
+    <button class="btn primary" onclick="startAnimation()">▶ Play</button>
+    <button class="btn" onclick="pauseAnimation()">⏸ Pause</button>
+    <button class="btn" onclick="stepForward()">⏭ Step</button>
+    <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+    <div class="speed-control">
+      <label>Speed:</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5">
+      <span id="speedLabel">5x</span>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <span class="label">Phase:</span> <span class="value" id="phaseDisplay">Ready</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <span class="label">Current Arc/Node:</span> <span class="value" id="computingDisplay">—</span>
+  </div>
+
+  <div class="step-counter">
+    Step <span class="count" id="stepNum">0</span> / <span class="count" id="totalSteps">0</span>
+  </div>
+
+  <div class="result-section" id="resultSection">
+    <h2>✅ Solution Found</h2>
+    <div id="resultDisplay"></div>
+  </div>
+
+</div>
+
+<div class="sidebar" id="sidebar">
+  <h2>📖 Step-by-Step Explanation</h2>
+  <div class="step-phase" id="sidebarPhase">Algorithm idle — press Play or Step to begin.</div>
+  <div id="explainArea"></div>
+</div>
+</div>
+
+<script>
+// ========== CSP DEFINITION ==========
+const vars = ['A', 'B', 'C', 'D', 'E'];
+
+// Tree structure: parent relationships (tree edges)
+const parent = { A: null, B: 'A', C: 'B', D: 'C', E: 'B' };
+const children = { A: ['B'], B: ['C', 'E'], C: ['D'], D: [], E: [] };
+
+// Topological order (parents before children)
+const order = ['A', 'B', 'C', 'D', 'E'];
+
+// Initial domains
+const initDomains = {
+  A: [1, 2, 3],
+  B: [1, 2],
+  C: [2, 3],
+  D: [1, 2, 3],
+  E: [1, 2]
+};
+
+// Constraints (as functions)
+// A ≠ B, B = C, C ≠ D, B ≠ E
+function constraint(xi, xj, vi, vj) {
+  const pair = xi + xj;
+  if (pair === 'AB') return vi !== vj;
+  if (pair === 'BC') return vi === vj;
+  if (pair === 'CD') return vi !== vj;
+  if (pair === 'BE') return vi !== vj;
+  return true;
+}
+
+function constraintStr(pair) {
+  if (pair === 'AB') return 'A ≠ B';
+  if (pair === 'BC') return 'B = C';
+  if (pair === 'CD') return 'C ≠ D';
+  if (pair === 'BE') return 'B ≠ E';
+  return '';
+}
+
+// Tree node positions for canvas
+const nodePos = {
+  A: { x: 350, y: 35 },
+  B: { x: 350, y: 100 },
+  C: { x: 250, y: 170 },
+  D: { x: 250, y: 240 },
+  E: { x: 450, y: 170 }
+};
+
+// ========== STATE ==========
+let steps = [];
+let currentStep = 0;
+let animating = false;
+let animTimer = null;
+
+// Current domains (modified during algorithm)
+let domains = {};
+// Current assignments
+let assignments = {};
+
+// ========== PRECOMPUTE ==========
+function precomputeAll() {
+  let dom = {};
+  for (let v of vars) dom[v] = [...initDomains[v]];
+  let assign = {};
+
+  // Backward propagation
+  for (let j = order.length - 1; j >= 1; j--) {
+    let xj = order[j];
+    let xi = parent[xj];
+    let pr = constraintStr(xi + xj);
+    // For each value in xi's domain, check support in xj's domain
+    let newDom = [];
+    for (let vi of dom[xi]) {
+      let hasSupport = dom[xj].some(vj => constraint(xi, xj, vi, vj));
+      if (hasSupport) newDom.push(vi);
+    }
+    dom[xi] = newDom;
+  }
+
+  // Forward assignment
+  for (let j = 0; j < order.length; j++) {
+    let xj = order[j];
+    let p = parent[xj];
+    if (p === null) {
+      assign[xj] = dom[xj][0];
+    } else {
+      for (let vj of dom[xj]) {
+        if (constraint(p, xj, assign[p], vj)) {
+          assign[xj] = vj;
+          break;
+        }
+      }
+    }
+  }
+  return assign;
+}
+
+// ========== BUILD STEPS ==========
+function deepCopy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function buildSteps() {
+  steps = [];
+  let dom = {};
+  for (let v of vars) dom[v] = [...initDomains[v]];
+  let assign = {};
+
+  function snap() { return { dom: deepCopy(dom), assign: deepCopy(assign) }; }
+
+  // Step 0: Problem setup
+  steps.push({ type: 'init', ...snap() });
+
+  // Backward propagation: for j = n down to 2
+  for (let j = order.length - 1; j >= 1; j--) {
+    let xj = order[j];
+    let xi = parent[xj];
+    let pair = xi + xj;
+    let cstr = constraintStr(pair);
+
+    steps.push({ type: 'arc_start', xi, xj, pair, cstr, ...snap() });
+
+    let valsToCheck = [...dom[xi]];
+    for (let vi of valsToCheck) {
+      let supportVals = dom[xj].filter(vj => constraint(xi, xj, vi, vj));
+      let hasSupport = supportVals.length > 0;
+      steps.push({
+        type: 'check_val', xi, xj, pair, cstr,
+        vi, supportVals, hasSupport,
+        childDomain: [...dom[xj]], ...snap()
+      });
+      if (!hasSupport) {
+        dom[xi] = dom[xi].filter(v => v !== vi);
+        steps.push({
+          type: 'remove_val', xi, xj, pair, cstr,
+          vi, newDomain: [...dom[xi]], ...snap()
+        });
+      }
+    }
+
+    steps.push({
+      type: 'arc_done', xi, xj, pair, cstr,
+      newDomain: [...dom[xi]], ...snap()
+    });
+  }
+
+  steps.push({ type: 'backward_done', ...snap() });
+  steps.push({ type: 'forward_start', ...snap() });
+
+  for (let j = 0; j < order.length; j++) {
+    let xj = order[j];
+    let p = parent[xj];
+    let chosenVal = null;
+    if (p === null) {
+      chosenVal = dom[xj][0];
+    } else {
+      for (let vj of dom[xj]) {
+        if (constraint(p, xj, assign[p], vj)) {
+          chosenVal = vj;
+          break;
+        }
+      }
+    }
+    if (chosenVal !== null) {
+      assign[xj] = chosenVal;
+    }
+    steps.push({
+      type: 'assign', var: xj, val: chosenVal,
+      parent: p, domain: [...dom[xj]], ...snap()
+    });
+  }
+
+  steps.push({ type: 'complete', ...snap() });
+}
+
+// ========== CANVAS DRAWING ==========
+function drawTree(highlightNode, highlightEdge, assignedNodes, xiNode, xjNode, removedVals) {
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw edges
+  for (let v of vars) {
+    let p = parent[v];
+    if (p === null) continue;
+    let from = nodePos[p];
+    let to = nodePos[v];
+    let isHighlighted = highlightEdge && ((highlightEdge[0] === p && highlightEdge[1] === v) || (highlightEdge[0] === v && highlightEdge[1] === p));
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = isHighlighted ? '#ff6600' : '#444';
+    ctx.lineWidth = isHighlighted ? 3 : 1.5;
+    ctx.stroke();
+
+    // Draw constraint label
+    let mx = (from.x + to.x) / 2;
+    let my = (from.y + to.y) / 2;
+    let cstr = constraintStr(p + v);
+    ctx.fillStyle = isHighlighted ? '#ffcc00' : '#555';
+    ctx.font = '11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(cstr, mx, my - 4);
+  }
+
+  // Draw nodes
+  for (let v of vars) {
+    let pos = nodePos[v];
+    let isXi = v === xiNode;
+    let isXj = v === xjNode;
+    let isAssigned = assignedNodes && assignedNodes.includes(v);
+    let isHighlight = v === highlightNode;
+
+    let color, glow;
+    if (isAssigned) {
+      color = '#00ff88';
+      glow = '#00ff8855';
+    } else if (isXi) {
+      color = '#ff6600';
+      glow = '#ff660055';
+    } else if (isXj) {
+      color = '#00ccff';
+      glow = '#00ccff55';
+    } else if (isHighlight) {
+      color = '#ffcc00';
+      glow = '#ffcc0055';
+    } else {
+      color = '#888';
+      glow = 'transparent';
+    }
+
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = '#111';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isAssigned || isXi || isXj ? 3 : 2;
+    ctx.stroke();
+    if (glow !== 'transparent') {
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Variable name
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v, pos.x, pos.y);
+
+    // Domain below
+    let dom = domains[v] || initDomains[v];
+    let domStr = '{' + dom.join(',') + '}';
+    ctx.fillStyle = '#888';
+    ctx.font = '10px Courier New';
+    ctx.textBaseline = 'top';
+    ctx.fillText(domStr, pos.x, pos.y + 24);
+  }
+}
+
+// ========== DOMAIN GRID ==========
+function initDomainGrid() {
+  let html = '';
+  for (let v of vars) {
+    let dom = domains[v] || initDomains[v];
+    html += '<div class="var-box" id="box-' + v + '">';
+    html += '<div class="vname">' + v + '</div>';
+    html += '<div class="vdoms">';
+    for (let d of initDomains[v]) {
+      let cls = dom.includes(d) ? 'dval' : 'dval removed';
+      html += '<span class="' + cls + '" id="dval-' + v + '-' + d + '">' + d + '</span>';
+    }
+    html += '</div></div>';
+  }
+  document.getElementById('domainGrid').innerHTML = html;
+}
+
+function updateDomainDisplay() {
+  for (let v of vars) {
+    let dom = domains[v] || initDomains[v];
+    for (let d of initDomains[v]) {
+      let el = document.getElementById('dval-' + v + '-' + d);
+      if (!el) continue;
+      el.className = 'dval';
+      if (!dom.includes(d)) el.classList.add('removed');
+      if (assignments[v] !== undefined && assignments[v] === d) el.classList.add('assigned');
+    }
+  }
+}
+
+// ========== PHASE BAR ==========
+function initPhaseBar() {
+  let html = '';
+  let phases = ['Backward Propagation', 'Forward Assignment'];
+  for (let p of phases) {
+    html += '<span class="phase-pill" id="pill-' + p.replace(/\s+/g, '') + '">' + p + '</span>';
+  }
+  document.getElementById('phaseBar').innerHTML = html;
+}
+
+// ========== ASSIGN DISPLAY ==========
+function initAssignDisplay() {
+  let html = '';
+  for (let v of vars) {
+    html += '<span class="assign-item" id="assign-' + v + '">';
+    html += '<span class="a-var">' + v + '</span> = <span class="a-val">?</span>';
+    html += '</span>';
+    if (v !== vars[vars.length - 1]) {
+      html += '<span class="assign-arrow">→</span>';
+    }
+  }
+  document.getElementById('assignDisplay').innerHTML = html;
+}
+
+function updateAssignDisplay() {
+  for (let v of vars) {
+    let el = document.getElementById('assign-' + v);
+    if (!el) continue;
+    let valEl = el.querySelector('.a-val');
+    if (assignments[v] !== undefined) {
+      valEl.textContent = assignments[v];
+    } else {
+      valEl.textContent = '?';
+    }
+  }
+}
+
+// ========== APPLY STEP ==========
+function applyStep(step) {
+  // Restore domain and assignment state from step snapshot
+  if (step.dom) {
+    domains = deepCopy(step.dom);
+  }
+  if (step.assign) {
+    assignments = deepCopy(step.assign);
+  }
+
+  clearHighlights();
+
+  // Reset all var-box classes
+  for (let v of vars) {
+    let box = document.getElementById('box-' + v);
+    box.className = 'var-box';
+  }
+
+  // Update domain display
+  updateDomainDisplay();
+
+  // Canvas state
+  let highlightNode = null;
+  let highlightEdge = null;
+  let assignedNodes = [];
+  let xiNode = null;
+  let xjNode = null;
+
+  let phase = 'Ready';
+  let computing = '—';
+
+  if (step.type === 'init') {
+    phase = 'Problem Setup';
+    computing = 'Initial domains';
+    document.getElementById('sidebarPhase').textContent = 'Step 1 / ' + steps.length + ' — Problem Setup';
+    document.getElementById('explainArea').innerHTML = buildInitExplanation();
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('phaseDisplay').textContent = 'Ready';
+    document.getElementById('computingDisplay').textContent = 'Initial domains shown';
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill';
+    document.getElementById('pill-ForwardAssignment').className = 'phase-pill';
+    drawTree(null, null, [], null, null);
+    return;
+  }
+
+  if (step.type === 'arc_start') {
+    phase = 'Backward Propagation';
+    computing = 'Arc (' + step.xi + ', ' + step.xj + '): ' + step.cstr;
+    xiNode = step.xi;
+    xjNode = step.xj;
+    highlightEdge = [step.xi, step.xj];
+
+    document.getElementById('box-' + step.xi).classList.add('xi-active');
+    document.getElementById('box-' + step.xj).classList.add('xj-active');
+
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Checking Arc (' + step.xi + ', ' + step.xj + ')';
+    document.getElementById('explainArea').innerHTML = buildArcStartExplanation(step);
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill current';
+  } else if (step.type === 'check_val') {
+    phase = 'Backward Propagation';
+    computing = 'Checking ' + step.xi + '=' + step.vi + ' on arc (' + step.xi + ', ' + step.xj + ')';
+    xiNode = step.xi;
+    xjNode = step.xj;
+    highlightEdge = [step.xi, step.xj];
+
+    document.getElementById('box-' + step.xi).classList.add('xi-active');
+    document.getElementById('box-' + step.xj).classList.add('xj-active');
+
+    let valEl = document.getElementById('dval-' + step.xi + '-' + step.vi);
+    if (valEl) {
+      if (step.hasSupport) {
+        valEl.classList.add('supported');
+      } else {
+        valEl.classList.add('unsupported');
+      }
+    }
+
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Checking ' + step.xi + ' = ' + step.vi;
+    document.getElementById('explainArea').innerHTML = buildCheckValExplanation(step);
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill current';
+  } else if (step.type === 'remove_val') {
+    phase = 'Backward Propagation';
+    computing = 'Removed ' + step.xi + '=' + step.vi + ' (no support)';
+    xiNode = step.xi;
+    xjNode = step.xj;
+    highlightEdge = [step.xi, step.xj];
+
+    document.getElementById('box-' + step.xi).classList.add('xi-active');
+    document.getElementById('box-' + step.xj).classList.add('xj-active');
+
+    let valEl = document.getElementById('dval-' + step.xi + '-' + step.vi);
+    if (valEl) {
+      valEl.className = 'dval removed';
+    }
+
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — ✗ Removing ' + step.xi + ' = ' + step.vi;
+    document.getElementById('explainArea').innerHTML = buildRemoveExplanation(step);
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill current';
+  } else if (step.type === 'arc_done') {
+    phase = 'Backward Propagation';
+    computing = 'Arc (' + step.xi + ', ' + step.xj + ') consistent';
+    xiNode = step.xi;
+    xjNode = step.xj;
+    highlightEdge = [step.xi, step.xj];
+
+    document.getElementById('box-' + step.xi).classList.add('xi-active');
+    document.getElementById('box-' + step.xj).classList.add('xj-active');
+
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Arc (' + step.xi + ', ' + step.xj + ') Done';
+    document.getElementById('explainArea').innerHTML = buildArcDoneExplanation(step);
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill current';
+  } else if (step.type === 'backward_done') {
+    phase = 'Backward Propagation Complete';
+    computing = 'Domains pruned';
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — ✅ Backward Propagation Complete';
+    document.getElementById('explainArea').innerHTML = buildBackwardDoneExplanation();
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill done';
+    document.getElementById('pill-ForwardAssignment').className = 'phase-pill';
+  } else if (step.type === 'forward_start') {
+    phase = 'Forward Assignment';
+    computing = 'Starting forward assignment';
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Forward Assignment Begins';
+    document.getElementById('explainArea').innerHTML = buildForwardStartExplanation();
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill done';
+    document.getElementById('pill-ForwardAssignment').className = 'phase-pill current';
+  } else if (step.type === 'assign') {
+    phase = 'Forward Assignment';
+    computing = 'Assign ' + step.var + ' = ' + step.val;
+    assignedNodes.push(step.var);
+    // Also mark previously assigned nodes
+    for (let v of vars) {
+      if (assignments[v] !== undefined && v !== step.var) assignedNodes.push(v);
+    }
+
+    document.getElementById('box-' + step.var).classList.add('assigned-box');
+    document.getElementById('assign-' + step.var).classList.add('done');
+
+    let valEl = document.getElementById('dval-' + step.var + '-' + step.val);
+    if (valEl) {
+      valEl.className = 'dval assigned';
+    }
+
+    document.getElementById('sidebarPhase').textContent = 'Step ' + (currentStep + 1) + ' / ' + steps.length + ' — Assign ' + step.var + ' = ' + step.val;
+    document.getElementById('explainArea').innerHTML = buildAssignExplanation(step);
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill done';
+    document.getElementById('pill-ForwardAssignment').className = 'phase-pill current';
+    updateAssignDisplay();
+  } else if (step.type === 'complete') {
+    phase = '✓ Complete!';
+    computing = 'Final solution found';
+    for (let v of vars) {
+      if (assignments[v] !== undefined) assignedNodes.push(v);
+    }
+    document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Algorithm Complete';
+    document.getElementById('explainArea').innerHTML = buildCompleteExplanation();
+    document.getElementById('sidebar').scrollTop = 0;
+    document.getElementById('pill-BackwardPropagation').className = 'phase-pill done';
+    document.getElementById('pill-ForwardAssignment').className = 'phase-pill done';
+    finishAnimation();
+    return;
+  }
+
+  document.getElementById('phaseDisplay').textContent = phase;
+  document.getElementById('computingDisplay').textContent = computing;
+  drawTree(highlightNode, highlightEdge, assignedNodes, xiNode, xjNode);
+}
+
+// ========== EXPLANATION BUILDERS ==========
+function buildInitExplanation() {
+  let html = '<div class="explain-section active">';
+  html += '<h3>Problem Setup</h3>';
+  html += '<p>We have a <b>CSP</b> with a tree-structured constraint graph. The algorithm solves it in <b>O(n·d²)</b> time without backtracking.</p>';
+  html += '<p><span class="dim">Variables:</span> A, B, C, D, E</p>';
+  html += '<p><span class="dim">Tree Structure:</span> A→B→C→D and B→E</p>';
+  html += '<p><span class="dim">Constraints:</span> A≠B, B=C, C≠D, B≠E</p>';
+  html += '<h3 style="margin-top:10px;">Initial Domains</h3>';
+  html += '<p>A ∈ {1,2,3}, B ∈ {1,2}, C ∈ {2,3}, D ∈ {1,2,3}, E ∈ {1,2}</p>';
+  html += '<h3 style="margin-top:10px;">Algorithm Outline</h3>';
+  html += '<p><b>Phase 1:</b> Backward propagation — enforce arc consistency from leaves to root</p>';
+  html += '<p><b>Phase 2:</b> Forward assignment — assign values from root to leaves</p>';
+  html += '<p class="note">Press Play or Step to begin.</p></div>';
+  return html;
+}
+
+function buildArcStartExplanation(step) {
+  return '<div class="explain-section active">' +
+    '<h3>🔍 Checking Arc (' + step.xi + ', ' + step.xj + ')</h3>' +
+    '<p>Making arc <span class="dim">(' + step.xi + ', ' + step.xj + ')</span> consistent with constraint <span class="split-info">' + step.cstr + '</span>.</p>' +
+    '<p>For each value in <span class="dim">' + step.xi + '</span>\'s domain, we check if there exists a value in <span class="dim">' + step.xj + '</span>\'s domain satisfying the constraint.</p>' +
+    '<p>Current domain of <span class="dim">' + step.xi + '</span>: {' + domains[step.xi].join(', ') + '}</p>' +
+    '<p>Current domain of <span class="dim">' + step.xj + '</span>: {' + domains[step.xj].join(', ') + '}</p>' +
+    '<p class="note">Checking each value in ' + step.xi + '\'s domain...</p></div>';
+}
+
+function buildCheckValExplanation(step) {
+  let supportStr = step.hasSupport
+    ? '✓ Found support: ' + step.xj + ' ∈ {' + step.supportVals.join(', ') + '}'
+    : '✗ No support in ' + step.xj + ' domain {' + step.childDomain.join(', ') + '}';
+  return '<div class="explain-section active">' +
+    '<h3>' + (step.hasSupport ? '✓' : '✗') + ' Checking ' + step.xi + ' = ' + step.vi + '</h3>' +
+    '<p>Does <span class="dim">' + step.xi + ' = ' + step.vi + '</span> have a support in <span class="dim">' + step.xj + '</span> under <span class="split-info">' + step.cstr + '</span>?</p>' +
+    '<span class="formula-line">' + step.cstr + ' → checking all ' + step.xj + ' ∈ {' + step.childDomain.join(', ') + '}</span>' +
+    '<p>' + supportStr + '</p>' +
+    (step.hasSupport
+      ? '<p class="note">' + step.xi + ' = ' + step.vi + ' is kept (supported by ' + step.xj + ' = ' + step.supportVals.join(' or ') + ').</p>'
+      : '<p class="note">' + step.xi + ' = ' + step.vi + ' will be removed from domain.</p>') +
+    '</div>';
+}
+
+function buildRemoveExplanation(step) {
+  return '<div class="explain-section active">' +
+    '<h3>🗑 Removing ' + step.xi + ' = ' + step.vi + '</h3>' +
+    '<p>No value in <span class="dim">' + step.xj + '</span>\'s domain {' + (domains[step.xj] || initDomains[step.xj]).join(', ') + '} satisfies <span class="split-info">' + step.cstr + '</span> with <span class="dim">' + step.xi + ' = ' + step.vi + '</span>.</p>' +
+    '<p>Therefore, <span class="dim">' + step.vi + '</span> is <b>removed</b> from <span class="dim">' + step.xi + '</span>\'s domain.</p>' +
+    '<p>New domain of <span class="dim">' + step.xi + '</span>: {' + step.newDomain.join(', ') + '}</p>' +
+    '<p class="note">This pruning propagates constraints upwards, reducing the search space.</p></div>';
+}
+
+function buildArcDoneExplanation(step) {
+  return '<div class="explain-section active">' +
+    '<h3>✅ Arc (' + step.xi + ', ' + step.xj + ') Consistent</h3>' +
+    '<p>Arc <span class="dim">(' + step.xi + ', ' + step.xj + ')</span> is now arc-consistent under <span class="split-info">' + step.cstr + '</span>.</p>' +
+    '<p>Domain of <span class="dim">' + step.xi + '</span>: {' + step.newDomain.join(', ') + '}</p>' +
+    '<p>Domain of <span class="dim">' + step.xj + '</span>: {' + (domains[step.xj] || initDomains[step.xj]).join(', ') + '}</p>' +
+    '<p class="note">Every value in ' + step.xi + '\'s domain now has a consistent partner in ' + step.xj + '.</p></div>';
+}
+
+function buildBackwardDoneExplanation() {
+  let html = '<div class="explain-section active">' +
+    '<h3>✅ Backward Propagation Complete</h3>' +
+    '<p>All arcs are consistent. The pruned domains are now <b>globally consistent</b> for the tree structure.</p>' +
+    '<p><span class="dim">Pruned Domains:</span></p>';
+  for (let v of vars) {
+    html += '<p>• ' + v + ' ∈ {' + domains[v].join(', ') + '}' +
+      (domains[v].length < initDomains[v].length ? ' <span class="note">(pruned from {' + initDomains[v].join(',') + '})</span>' : '') +
+      '</p>';
+  }
+  html += '<p class="note">Any consistent assignment of root will extend to a full solution without backtracking.</p></div>';
+  return html;
+}
+
+function buildForwardStartExplanation() {
+  let html = '<div class="explain-section active">' +
+    '<h3>▶ Forward Assignment Phase</h3>' +
+    '<p>Starting from the root, assign values in topological order. Since the domains are arc-consistent, each assignment has a consistent extension to its children.</p>' +
+    '<p><span class="dim">Order:</span> ' + order.join(' → ') + '</p>' +
+    '<p><span class="dim">Pruned domains:</span></p>';
+  for (let v of vars) {
+    html += '<p>• ' + v + ' ∈ {' + domains[v].join(', ') + '}</p>';
+  }
+  html += '<p class="note">Assign root ' + order[0] + ', then assign each child consistent with its parent.</p></div>';
+  return html;
+}
+
+function buildAssignExplanation(step) {
+  let reason = '';
+  if (step.parent === null) {
+    reason = 'Root variable — pick first value from domain {' + step.domain.join(', ') + '}.';
+  } else {
+    reason = 'Parent ' + step.parent + ' = ' + assignments[step.parent] + ', constraint ' +
+      constraintStr(step.parent + step.var) + ' → pick consistent value from {' + step.domain.join(', ') + '}.';
+  }
+  return '<div class="explain-section active">' +
+    '<h3>📌 Assign ' + step.var + ' = ' + step.val + '</h3>' +
+    '<p>' + reason + '</p>' +
+    (step.parent !== null
+      ? '<span class="formula-line">Constraint(' + step.parent + ', ' + step.var + ', ' + assignments[step.parent] + ', ' + step.val + ') = ✓</span>'
+      : '') +
+    '<p class="note">Value <span class="split-info">' + step.var + ' = ' + step.val + '</span> assigned and consistent with all constraints to parent.</p></div>';
+}
+
+function buildCompleteExplanation() {
+  let finalAssign = precomputeAll();
+  let html = '<div class="explain-section active" style="border-left-color:#00ff88;">' +
+    '<h3>✅ Algorithm Complete!</h3>' +
+    '<p>Tree-Structured CSP solved <b>without backtracking</b>.</p>' +
+    '<h3 style="margin-top:10px;">Final Assignment</h3>';
+  for (let v of vars) {
+    html += '<p><span class="result-line">' + v + ' = ' + finalAssign[v] + '</span></p>';
+  }
+  html += '<h3 style="margin-top:10px;">Why This Works</h3>' +
+    '<p>A tree-structured CSP can be solved in <span class="dim">O(n·d²)</span> time by:</p>' +
+    '<p>1. <b>Backward propagation</b> — enforcing arc consistency from leaves to root ensures every value in a parent\'s domain has support in all children.</p>' +
+    '<p>2. <b>Forward assignment</b> — assigning root-to-leaf in topological order never requires backtracking because the pruned domains guarantee consistency.</p>' +
+    '<h3 style="margin-top:10px;">Complexity</h3>' +
+    '<p><span class="dim">Time:</span> O(n·d²) — n variables, d = max domain size</p>' +
+    '<p><span class="dim">Space:</span> O(n·d) — store domains for each variable</p></div>';
+  return html;
+}
+
+// ========== CORE FUNCTIONS ==========
+function clearHighlights() {
+  // Reset all dval elements
+  for (let v of vars) {
+    for (let d of initDomains[v]) {
+      let el = document.getElementById('dval-' + v + '-' + d);
+      if (el) {
+        el.className = 'dval';
+        let dom = domains[v] || initDomains[v];
+        if (!dom.includes(d)) el.classList.add('removed');
+        if (assignments[v] !== undefined && assignments[v] === d) el.classList.add('assigned');
+      }
+    }
+  }
+}
+
+function processStep() {
+  if (currentStep >= steps.length) { finishAnimation(); return; }
+  document.getElementById('stepNum').textContent = currentStep + 1;
+  applyStep(steps[currentStep]);
+  currentStep++;
+}
+
+function startAnimation() {
+  if (currentStep >= steps.length) return;
+  animating = true;
+  animTimer = setInterval(() => {
+    if (!animating || currentStep >= steps.length) {
+      clearInterval(animTimer);
+      if (currentStep >= steps.length) finishAnimation();
+      return;
+    }
+    processStep();
+  }, getSpeed());
+}
+
+function getSpeed() {
+  return 1200 - parseInt(document.getElementById('speedSlider').value) * 100;
+}
+
+function pauseAnimation() {
+  animating = false;
+  clearInterval(animTimer);
+}
+
+function stepForward() {
+  pauseAnimation();
+  processStep();
+}
+
+function resetAnimation() {
+  pauseAnimation();
+  currentStep = 0;
+  assignments = {};
+  domains = {};
+  for (let v of vars) domains[v] = [...initDomains[v]];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('phaseDisplay').textContent = 'Ready';
+  document.getElementById('computingDisplay').textContent = '—';
+  document.getElementById('stepNum').textContent = '0';
+  document.getElementById('sidebarPhase').textContent = 'Algorithm idle — press Play or Step to begin.';
+  document.getElementById('explainArea').innerHTML = buildInitExplanation();
+  document.getElementById('sidebar').scrollTop = 0;
+  document.getElementById('pill-BackwardPropagation').className = 'phase-pill';
+  document.getElementById('pill-ForwardAssignment').className = 'phase-pill';
+  for (let v of vars) {
+    document.getElementById('assign-' + v).className = 'assign-item';
+    document.getElementById('assign-' + v).querySelector('.a-val').textContent = '?';
+  }
+  clearHighlights();
+  buildSteps();
+  initDomainGrid();
+  initAssignDisplay();
+  updateAssignDisplay();
+  drawTree(null, null, [], null, null);
+  document.getElementById('totalSteps').textContent = steps.length;
+}
+
+function finishAnimation() {
+  animating = false;
+  let finalAssign = precomputeAll();
+  document.getElementById('phaseDisplay').textContent = '✓ Complete!';
+  document.getElementById('computingDisplay').textContent = 'Solution found';
+  document.getElementById('resultSection').style.display = 'block';
+  let r = '';
+  for (let v of vars) {
+    r += '<p style="font-size:1.1em;color:#00ff88;margin:6px 0;"><b>' + v + '</b> = <b>' + finalAssign[v] + '</b></p>';
+  }
+  document.getElementById('resultDisplay').innerHTML = r;
+  document.getElementById('sidebarPhase').textContent = 'Step ' + steps.length + ' / ' + steps.length + ' — ✅ Complete';
+  document.getElementById('sidebar').scrollTop = 0;
+}
+
+// ========== SPEED SLIDER ==========
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'x';
+  if (animating) {
+    clearInterval(animTimer);
+    animTimer = setInterval(() => {
+      if (!animating || currentStep >= steps.length) {
+        clearInterval(animTimer);
+        if (currentStep >= steps.length) finishAnimation();
+        return;
+      }
+      processStep();
+    }, getSpeed());
+  }
+});
+
+// ========== INIT ==========
+buildSteps();
+initDomainGrid();
+initPhaseBar();
+initAssignDisplay();
+updateAssignDisplay();
+// Draw initial
+for (let v of vars) domains[v] = [...initDomains[v]];
+drawTree(null, null, [], null, null);
+document.getElementById('explainArea').innerHTML = buildInitExplanation();
+document.getElementById('totalSteps').textContent = steps.length;
+</script>
+</body>
+</html>
