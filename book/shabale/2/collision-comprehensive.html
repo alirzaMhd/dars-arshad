@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collision in Networks - Physical Layer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .result { color: #00ff88; font-weight: bold; }
+    .key-value { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+    .key-value:last-child { border-bottom: none; }
+    .key { color: #aaa; }
+    .value { color: #00ff88; font-weight: bold; }
+    .step { background: #0d0d1a; padding: 8px 12px; margin: 5px 0; border-radius: 4px; border-left: 3px solid #ffcc00; }
+    .step-num { color: #ffcc00; font-weight: bold; margin-right: 8px; }
+    .pseudocode { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #ff9944; font-size: 0.85em; line-height: 1.6; }
+    .pseudocode .kw { color: #ff6600; }
+    .pseudocode .fn { color: #00ccff; }
+    .pseudocode .cm { color: #666; }
+    .pseudocode .var { color: #ffcc00; }
+  </style>
+</head>
+<body>
+  <h1>COLLISION IN NETWORKS</h1>
+  <p class="subtitle">Physical Layer — Complete Guide for Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Definition</button>
+      <button class="tab" onclick="showSection('tab2')">CSMA/CD</button>
+      <button class="tab" onclick="showSection('tab3')">CSMA/CA</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+      <button class="tab" onclick="showSection('tab5')">Quick Reference</button>
+    </div>
+
+    <!-- Tab 1: Definition -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is a Collision?</h2>
+        <p>A collision occurs when <span class="highlight">two or more signals overlap on the same shared medium</span> at the same time, causing mutual interference. The resulting corrupted signal cannot be correctly interpreted by any receiver.</p>
+
+        <div class="formula">
+          <div class="label">Definition:</div>
+          <div class="expr">Collision = simultaneous transmission on shared channel → corrupted data</div>
+          <div class="desc">When two devices transmit at the same time, their electrical signals combine. The receiver sees garbled data that matches neither original signal.</div>
+        </div>
+
+        <div class="warning">⚠ Collisions are NOT errors in the signal itself — they are a consequence of the medium-access method. Networks that use shared media (half-duplex) are inherently prone to collisions.</div>
+      </div>
+
+      <div class="section">
+        <h2>Why Do Collisions Happen?</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Shared Medium</h3>
+            <p>Multiple devices connected to the same wire or frequency band compete for access.</p>
+          </div>
+          <div class="card">
+            <h3>Propagation Delay</h3>
+            <p>Signals take time to travel. A device may not detect another's transmission until it's too late.</p>
+          </div>
+          <div class="card">
+            <h3>No Central Coordination</h3>
+            <p>In distributed networks, no single controller decides who transmits when.</p>
+          </div>
+          <div class="card">
+            <h3>Half-Duplex Operation</h3>
+            <p>Devices can transmit or receive but not both simultaneously on the same channel.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Collision Domain vs Broadcast Domain</h2>
+        <p>Understanding these two domains is critical for network design:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3 style="color: #00ccff;">Collision Domain</h3>
+            <p>A group of devices where <span class="highlight">collisions can occur</span> between any two devices.</p>
+            <p class="dim">Each port on a switch = separate collision domain</p>
+            <p class="dim">All ports on a hub = ONE collision domain</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #ff9944;">Broadcast Domain</h3>
+            <p>A group of devices where a <span class="highlight">broadcast frame reaches all devices</span>.</p>
+            <p class="dim">Each VLAN = separate broadcast domain</p>
+            <p class="dim">Switches forward broadcasts to all ports</p>
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Device</th><th>Collision Domain</th><th>Broadcast Domain</th></tr>
+          <tr><td><span class="highlight">Hub</span></td><td>1 (all ports share)</td><td>1 (same as collision)</td></tr>
+          <tr><td><span class="highlight">Switch</span></td><td>Per port (isolated)</td><td>1 (all ports, unless VLANs)</td></tr>
+          <tr><td><span class="highlight">Router</span></td><td>Per port (isolated)</td><td>Per port (separate)</td></tr>
+        </table>
+
+        <div class="warning">⚠ A switch with 24 ports creates 24 separate collision domains but 1 broadcast domain (unless VLANs are configured). This is why switches dramatically reduce collisions compared to hubs.</div>
+      </div>
+
+      <div class="section">
+        <h2>Key Concepts</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Slot Time</h3>
+            <p>The minimum time a device must wait after transmitting before it can assume its frame was not involved in a collision. For Ethernet: <span class="highlight">51.2 μs</span> at 10 Mbps.</p>
+          </div>
+          <div class="card">
+            <h3>Critical Distance</h3>
+            <p>Maximum cable length where collision detection works. If the round-trip delay exceeds the slot time, collisions go undetected.</p>
+          </div>
+          <div class="card">
+            <h3>Runt Frame</h3>
+            <p>A frame smaller than the minimum 64 bytes, typically caused by a collision detected mid-transmission. Always discarded.</p>
+          </div>
+          <div class="card">
+            <h3>Jam Signal</h3>
+            <p>A 32-bit signal sent by a station after detecting a collision to ensure all other stations also detect it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: CSMA/CD -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>CSMA/CD — Carrier Sense Multiple Access with Collision Detection</h2>
+        <p>CSMA/CD is the <span class="highlight">medium access control method used in classic Ethernet</span> (IEEE 802.3). It allows stations to detect and recover from collisions on shared media.</p>
+
+        <div class="formula">
+          <div class="label">Protocol Name Breakdown:</div>
+          <div class="expr">CS = Carrier Sense | MA = Multiple Access | CD = Collision Detection</div>
+          <div class="desc">CS: Listen before transmitting. MA: Multiple devices share the medium. CD: Detect collisions during transmission.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>CSMA/CD Algorithm</h2>
+        <div class="pseudocode">
+<span class="kw">ALGORITHM</span> CSMA/CD<br>
+<span class="cm">// Station wants to transmit a frame</span><br>
+<span class="fn">1.</span> <span class="kw">LISTEN</span> to the medium (<span class="var">Carrier Sense</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">IF</span> medium is <span class="var">idle</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">BEGIN TRANSMISSION</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">ELSE</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">WAIT</span> until medium is idle<br>
+<br>
+<span class="fn">2.</span> <span class="kw">TRANSMIT</span> while monitoring the medium<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">IF</span> collision detected (<span class="var">voltage spike</span>):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">STOP</span> transmission immediately<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">SEND</span> 32-bit <span class="var">jam signal</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">GOTO</span> step 3<br>
+<br>
+<span class="fn">3.</span> <span class="kw">RANDOM BACKOFF</span> (<span class="var">Binary Exponential Backoff</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Pick random wait time from <span class="var">[0, 2^k - 1] × slot time</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">k</span> = min(attempt number, 10)<br>
+<br>
+<span class="fn">4.</span> <span class="kw">REPEAT</span> from step 1<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">IF</span> 16 attempts fail: <span class="kw">ABORT</span> transmission<br>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Binary Exponential Backoff (BEB)</h2>
+        <p>BEB is the algorithm that determines how long a station waits after a collision before retrying:</p>
+
+        <div class="formula">
+          <div class="label">Backoff Time Formula:</div>
+          <div class="expr">T_backoff = random(0, 2^k - 1) × slot_time</div>
+          <div class="desc">Where k = min(n, 10), n = number of collision attempts. slot_time = 51.2 μs for 10 Mbps Ethernet.</div>
+        </div>
+
+        <table>
+          <tr><th>Attempt (n)</th><th>k = min(n,10)</th><th>Range [0, 2^k - 1]</th><th>Possible Wait Times (μs)</th></tr>
+          <tr><td>1st collision</td><td>1</td><td>[0, 1]</td><td>0 or 51.2</td></tr>
+          <tr><td>2nd collision</td><td>2</td><td>[0, 3]</td><td>0, 51.2, 102.4, 153.6</td></tr>
+          <tr><td>3rd collision</td><td>3</td><td>[0, 7]</td><td>0 to 358.4 (8 values)</td></tr>
+          <tr><td>4th collision</td><td>4</td><td>[0, 15]</td><td>0 to 768 (16 values)</td></tr>
+          <tr><td>10th collision</td><td>10</td><td>[0, 1023]</td><td>0 to 52,377.6</td></tr>
+          <tr><td>11th+ collision</td><td>10 (capped)</td><td>[0, 1023]</td><td>0 to 52,377.6</td></tr>
+        </table>
+
+        <div class="warning">⚠ After 16 collisions, the station gives up and reports failure to the upper layer. The cap at k=10 prevents excessively long waits but still allows spreading over a large range.</div>
+      </div>
+
+      <div class="section">
+        <h2>CSMA/CD Step-by-Step Timeline</h2>
+        <div class="example">
+          <div class="title">Collision Detection Timeline</div>
+          <p><span class="step-num">T₀:</span> Station A senses medium → idle → begins transmitting</p>
+          <p><span class="step-num">T₁:</span> Station B senses medium → still sees idle (propagation delay) → begins transmitting</p>
+          <p><span class="step-num">T₂:</span> Signals collide! Both detect voltage anomaly on the wire</p>
+          <p><span class="step-num">T₃:</span> Both stations stop transmitting, send jam signal</p>
+          <p><span class="step-num">T₄:</span> Both stations run binary exponential backoff</p>
+          <p><span class="step-num">T₅:</span> One station wins, retransmits successfully</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Slot Time Calculation</h2>
+        <div class="formula">
+          <div class="label">Slot Time (Ethernet 10 Mbps):</div>
+          <div class="expr">Slot Time = 2 × T_propagation + T_jam</div>
+          <div class="desc">Must be large enough to detect a collision from the farthest station. For 10 Mbps Ethernet: 51.2 μs = 512 bit times.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Cable Length:</div>
+          <div class="expr">Max Length = (Slot Time × Speed of Signal) / 2</div>
+          <div class="desc">For 10 Mbps Ethernet with cable velocity ~0.7c: Max ≈ 2500m (accounting for repeater delays).</div>
+        </div>
+
+        <div class="warning">⚠ This is why Ethernet has a maximum cable length. If the cable is too long, a station could finish transmitting before the collision signal reaches it — causing undetected collisions.</div>
+      </div>
+
+      <div class="section">
+        <h2>Efficiency of CSMA/CD</h2>
+        <div class="formula">
+          <div class="label">Channel Utilization:</div>
+          <div class="expr">Efficiency = 1 / (1 + 5a)</div>
+          <div class="desc">Where a = T_propagation / T_transmission. As propagation delay increases relative to transmission time, efficiency drops.</div>
+        </div>
+        <p>For short cables and large frames, CSMA/CD is very efficient. For long cables with small frames, efficiency degrades significantly.</p>
+      </div>
+    </div>
+
+    <!-- Tab 3: CSMA/CA -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>CSMA/CA — Carrier Sense Multiple Access with Collision Avoidance</h2>
+        <p>CSMA/CA is used in <span class="highlight">Wi-Fi (IEEE 802.11)</span> because wireless stations cannot reliably detect collisions. Instead of detecting, CSMA/CA tries to <span class="highlight">avoid</span> collisions altogether.</p>
+
+        <div class="formula">
+          <div class="label">Why CA instead of CD for Wi-Fi?</div>
+          <div class="expr">Wireless radios cannot transmit and receive simultaneously on the same frequency</div>
+          <div class="desc">Also, the "hidden terminal problem" means a station may not hear another's transmission. Detection is unreliable, so avoidance is used instead.</div>
+        </div>
+
+        <div class="warning">⚠ CSMA/CA does NOT eliminate collisions — it reduces their probability. Collisions can still happen in Wi-Fi, especially with hidden terminals.</div>
+      </div>
+
+      <div class="section">
+        <h2>CSMA/CA Algorithm</h2>
+        <div class="pseudocode">
+<span class="kw">ALGORITHM</span> CSMA/CA<br>
+<span class="cm">// Station wants to transmit a frame</span><br>
+<span class="fn">1.</span> <span class="kw">LISTEN</span> to the medium (<span class="var">Carrier Sense</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">IF</span> medium is <span class="var">idle</span> for <span class="var">DIFS</span> time:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">GOTO</span> step 3<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">ELSE</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">GOTO</span> step 2<br>
+<br>
+<span class="fn">2.</span> <span class="kw">DEFER</span> and wait<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">CW</span> (Contention Window) starts at <span class="var">CW_min</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;Wait random time in <span class="var">[0, CW]</span> × slot time<br>
+&nbsp;&nbsp;&nbsp;&nbsp;After medium idle for <span class="var">DIFS</span>: countdown begins<br>
+<br>
+<span class="fn">3.</span> <span class="kw">SEND RTS</span> (optional, for large frames)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Receiver responds with <span class="var">CTS</span> after <span class="var">SIFS</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;All stations hearing RTS/CTS <span class="kw">SET NAV</span> (defer)<br>
+<br>
+<span class="fn">4.</span> <span class="kw">TRANSMIT</span> frame<br>
+<br>
+<span class="fn">5.</span> <span class="kw">WAIT</span> for <span class="var">ACK</span> from receiver<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">IF</span> ACK received: <span class="kw">SUCCESS</span>, reset CW to CW_min<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">ELSE</span>: <span class="var">CW</span> = min(<span class="var">CW × 2</span>, <span class="var">CW_max</span>), retry<br>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>CSMA/CA Timing Intervals</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>DIFS</h3>
+            <p><span class="highlight">DCF Inter-Frame Spacing</span></p>
+            <p>Time the medium must be idle before a station can attempt transmission. Highest-priority traffic uses shorter IFS.</p>
+          </div>
+          <div class="card">
+            <h3>SIFS</h3>
+            <p><span class="highlight">Short Inter-Frame Spacing</span></p>
+            <p>Shortest interval, used for ACKs and CTS. Gives priority to control frames over data frames.</p>
+          </div>
+          <div class="card">
+            <h3>EIFS</h3>
+            <p><span class="highlight">Extended Inter-Frame Spacing</span></p>
+            <p>Used after error/damaged frame detection. Longer wait reduces chance of collision with retransmissions.</p>
+          </div>
+          <div class="card">
+            <h3>NAV</h3>
+            <p><span class="highlight">Network Allocation Vector</span></p>
+            <p>A timer set by RTS/CTS. All stations hearing RTS/CTS set their NAV and defer transmission until NAV expires.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">IFS Priority Order:</div>
+          <div class="expr">SIFS < DIFS < EIFS</div>
+          <div class="desc">Shorter IFS = higher priority. ACKs use SIFS, regular data uses DIFS. This ensures ACKs always get through first.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Hidden Terminal Problem</h2>
+        <p>The hidden terminal problem is a <span class="highlight">major challenge in wireless networks</span> that CSMA/CA attempts to address with RTS/CTS:</p>
+
+        <div class="example">
+          <div class="title">Hidden Terminal Scenario</div>
+          <p>Stations A and C are both in range of B, but <span class="highlight">A and C cannot hear each other</span>.</p>
+          <p>1. A transmits to B — C cannot hear A's signal</p>
+          <p>2. C senses medium → appears idle → transmits to B</p>
+          <p>3. <span class="result">COLLISION at B!</span> — Both signals overlap at B</p>
+          <p>4. Neither A nor C knows about the collision</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">RTS/CTS Solution:</div>
+          <div class="expr">A → RTS → B → CTS → All (including C)</div>
+          <div class="desc">When A sends RTS and B responds with CTS, station C hears the CTS and knows to remain silent for the duration. This reserves the channel.</div>
+        </div>
+
+        <div class="warning">⚠ RTS/CTS adds overhead. For small frames, it's more efficient to send without RTS/CTS. Threshold: use RTS/CTS when frame size > RTS threshold (typically 256-512 bytes).</div>
+      </div>
+
+      <div class="section">
+        <h2>Exposed Terminal Problem</h2>
+        <p>The <span class="highlight">opposite of hidden terminal</span>: a station unnecessarily defers because it hears a transmission that wouldn't actually interfere with its own communication.</p>
+
+        <div class="example">
+          <div class="title">Exposed Terminal Scenario</div>
+          <p>Station B is transmitting to A. Station C wants to transmit to D (in the opposite direction).</p>
+          <p>C hears B's transmission → defers. But C→D transmission wouldn't interfere with B→A!</p>
+          <p>Result: <span class="dim">unnecessary reduction in throughput</span></p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Contention Window</h2>
+        <div class="formula">
+          <div class="label">Exponential Backoff (Wi-Fi):</div>
+          <div class="expr">Wait = random(0, 2^n - 1) × slot_time</div>
+          <div class="desc">Where n starts at 0 and increases with each failed attempt. CW doubles each time: CW_min → 2×CW_min → 4×CW_min ... up to CW_max.</div>
+        </div>
+
+        <table>
+          <tr><th>Standard</th><th>CW_min</th><th>CW_max</th><th>Slot Time</th></tr>
+          <tr><td><span class="highlight">802.11b</span></td><td>31</td><td>1023</td><td>20 μs</td></tr>
+          <tr><td><span class="highlight">802.11a/g</span></td><td>15</td><td>1023</td><td>9 μs</td></tr>
+          <tr><td><span class="highlight">802.11n</span></td><td>15</td><td>1023</td><td>9 μs</td></tr>
+          <tr><td><span class="highlight">802.11ac</span></td><td>15</td><td>1023</td><td>9 μs</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: CSMA/CD — Binary Exponential Backoff Calculation</div>
+          <p><strong>Problem:</strong> A 10 Mbps Ethernet station experiences its 4th collision. What are the possible backoff times?</p>
+          <p><strong>Solution:</strong></p>
+          <div class="step">
+            <span class="step-num">Step 1:</span> Determine k = min(n, 10) = min(4, 10) = 4
+          </div>
+          <div class="step">
+            <span class="step-num">Step 2:</span> Backoff range = [0, 2^4 - 1] = [0, 15] → 16 possible values
+          </div>
+          <div class="step">
+            <span class="step-num">Step 3:</span> Multiply by slot time: T = random(0,15) × 51.2 μs
+          </div>
+          <div class="formula">
+            <div class="label">Possible backoff times:</div>
+            <div class="expr">0, 51.2, 102.4, 153.6, ..., 768 μs</div>
+            <div class="desc">16 evenly-spaced values from 0 to 768 μs. Average wait ≈ 384 μs.</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: CSMA/CD — Maximum Collisions Before Abort</div>
+          <p><strong>Problem:</strong> After how many consecutive collisions does CSMA/CD give up? What happens?</p>
+          <p><strong>Solution:</strong></p>
+          <div class="step">
+            <span class="step-num">Step 1:</span> CSMA/CD allows a maximum of 16 collisions
+          </div>
+          <div class="step">
+            <span class="step-num">Step 2:</span> After 16 failures, the station ABORTS the frame
+          </div>
+          <div class="step">
+            <span class="step-num">Step 3:</span> Error is reported to the upper layer (LLC/network layer)
+          </div>
+          <div class="step">
+            <span class="step-num">Step 4:</span> The frame is DISCARDED — it is NOT retransmitted at the MAC layer
+          </div>
+          <div class="formula">
+            <div class="label">Max wait at 16th collision:</div>
+            <div class="expr">T_max = 1023 × 51.2 μs = 52.38 ms</div>
+            <div class="desc">With k capped at 10, the max backoff range stays [0, 1023]. The probability of collision decreases with each retry as more time slots are available.</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: CSMA/CA — RTS/CTS Handshake Timing</div>
+          <p><strong>Problem:</strong> A Wi-Fi station sends a 1500-byte frame using RTS/CTS. Calculate the overhead if SIFS = 10 μs, DIFS = 50 μs, and slot time = 20 μs. Assume 11 Mbps data rate and 1 Mbps control rate.</p>
+          <p><strong>Solution:</strong></p>
+          <div class="step">
+            <span class="step-num">Step 1:</span> RTS frame = 20 bytes at 1 Mbps = 20 × 8 / 1,000,000 = 160 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 2:</span> SIFS wait = 10 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 3:</span> CTS frame = 14 bytes at 1 Mbps = 14 × 8 / 1,000,000 = 112 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 4:</span> SIFS wait = 10 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 5:</span> DATA frame = 1500 bytes at 11 Mbps = 1500 × 8 / 11,000,000 ≈ 1091 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 6:</span> SIFS wait = 10 μs
+          </div>
+          <div class="step">
+            <span class="step-num">Step 7:</span> ACK frame = 14 bytes at 1 Mbps = 112 μs
+          </div>
+          <div class="formula">
+            <div class="label">Total overhead:</div>
+            <div class="expr">RTS + SIFS + CTS + SIFS + SIFS + ACK = 160 + 10 + 112 + 10 + 10 + 112 = 414 μs</div>
+            <div class="desc">Plus DIFS = 50 μs before RTS. Total overhead ≈ 464 μs. Data transmission = 1091 μs. Efficiency ≈ 70%.</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Collision Domain Identification</div>
+          <p><strong>Problem:</strong> A network has: 1 hub with 8 ports, connected to 1 switch port. The switch has 24 ports. How many collision domains exist?</p>
+          <p><strong>Solution:</strong></p>
+          <div class="step">
+            <span class="step-num">Step 1:</span> The hub creates 1 collision domain for all 8 of its connected devices
+          </div>
+          <div class="step">
+            <span class="step-num">Step 2:</span> The switch isolates each port into its own collision domain
+          </div>
+          <div class="step">
+            <span class="step-num">Step 3:</span> One switch port connects to the hub → that port + hub = 1 collision domain
+          </div>
+          <div class="step">
+            <span class="step-num">Step 4:</span> The remaining 23 switch ports each form their own collision domain
+          </div>
+          <div class="formula">
+            <div class="label">Total collision domains:</div>
+            <div class="expr">1 (hub group) + 23 (remaining switch ports) = 24 collision domains</div>
+            <div class="desc">Without the hub, it would be 24 separate collision domains (one per switch port).</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: CSMA/CA — Contention Window Evolution</div>
+          <p><strong>Problem:</strong> Trace the contention window values for a station that experiences 5 consecutive collisions on 802.11a (CW_min=15, CW_max=1023).</p>
+          <p><strong>Solution:</strong></p>
+          <table>
+            <tr><th>Attempt</th><th>CW Value</th><th>Range [0, CW]</th><th>Max Wait (× 9μs slot)</th></tr>
+            <tr><td>1st</td><td><span class="highlight">15</span> (CW_min)</td><td>[0, 15]</td><td>135 μs</td></tr>
+            <tr><td>2nd</td><td><span class="highlight">31</span></td><td>[0, 31]</td><td>279 μs</td></tr>
+            <tr><td>3rd</td><td><span class="highlight">63</span></td><td>[0, 63]</td><td>567 μs</td></tr>
+            <tr><td>4th</td><td><span class="highlight">127</span></td><td>[0, 127]</td><td>1143 μs</td></tr>
+            <tr><td>5th</td><td><span class="highlight">255</span></td><td>[0, 255]</td><td>2295 μs</td></tr>
+          </table>
+          <div class="formula">
+            <div class="label">CW doubles each failure:</div>
+            <div class="expr">CW_n = min(CW_min × 2^(n-1), CW_max)</div>
+            <div class="desc">This spreads competing stations over more time slots, reducing collision probability. After success, CW resets to CW_min = 15.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Quick Reference -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>CSMA/CD vs CSMA/CA Comparison</h2>
+        <table>
+          <tr><th>Feature</th><th>CSMA/CD</th><th>CSMA/CA</th></tr>
+          <tr><td><span class="highlight">Used In</span></td><td>Ethernet (IEEE 802.3)</td><td>Wi-Fi (IEEE 802.11)</td></tr>
+          <tr><td><span class="highlight">Strategy</span></td><td>Detect collisions</td><td>Avoid collisions</td></tr>
+          <tr><td><span class="highlight">Medium</span></td><td>Wired (coax, UTP)</td><td>Wireless (radio)</td></tr>
+          <tr><td><span class="highlight">Collision Detection</span></td><td>Yes (voltage monitoring)</td><td>No (unreliable in wireless)</td></tr>
+          <tr><td><span class="highlight">Collision Handling</span></td><td>Jam signal + backoff</td><td>ACK timeout + backoff</td></tr>
+          <tr><td><span class="highlight">Handshake</span></td><td>None (detect during TX)</td><td>RTS/CTS (optional)</td></tr>
+          <tr><td><span class="highlight">ACK Required</span></td><td>No (layer 2 is best-effort)</td><td>Yes (every frame needs ACK)</td></tr>
+          <tr><td><span class="highlight">Backoff Algorithm</span></td><td>Binary Exponential</td><td>Exponential (CW doubles)</td></tr>
+          <tr><td><span class="highlight">Max Retries</span></td><td>16</td><td>7 (short), 4 (long)</td></tr>
+          <tr><td><span class="highlight">Channel Reservations</span></td><td>No</td><td>Yes (NAV via RTS/CTS)</td></tr>
+          <tr><td><span class="highlight">Hidden Terminal</span></td><td>N/A (wired)</td><td>Problem + RTS/CTS solution</td></tr>
+          <tr><td><span class="highlight">IFS Priority</span></td><td>No</td><td>Yes (SIFS, DIFS, EIFS)</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Key Formulas Summary</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>CSMA/CD Backoff</h3>
+            <p><span class="highlight">T = random(0, 2^k - 1) × 51.2μs</span></p>
+          </div>
+          <div class="card">
+            <h3>CSMA/CA Backoff</h3>
+            <p><span class="highlight">T = random(0, CW) × slot_time</span></p>
+          </div>
+          <div class="card">
+            <h3>CW Update</h3>
+            <p><span class="highlight">CW = min(CW×2, CW_max)</span></p>
+          </div>
+          <div class="card">
+            <h3>Slot Time (Ethernet)</h3>
+            <p><span class="highlight">51.2μs = 512 bit times</span></p>
+          </div>
+          <div class="card">
+            <h3>Efficiency</h3>
+            <p><span class="highlight">η = 1/(1+5a)</span></p>
+          </div>
+          <div class="card">
+            <h3>IFS Order</h3>
+            <p><span class="highlight">SIFS < DIFS < EIFS</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Constants to Memorize</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Ethernet Slot Time</h3>
+            <p><span class="highlight">51.2 μs</span> (10 Mbps)</p>
+          </div>
+          <div class="card">
+            <h3>Ethernet Min Frame</h3>
+            <p><span class="highlight">64 bytes</span> (512 bits)</p>
+          </div>
+          <div class="card">
+            <h3>802.11 CW_min</h3>
+            <p><span class="highlight">15</span> (a/g/n/ac)</p>
+          </div>
+          <div class="card">
+            <h3>802.11 CW_max</h3>
+            <p><span class="highlight">1023</span></p>
+          </div>
+          <div class="card">
+            <h3>RTS Frame Size</h3>
+            <p><span class="highlight">20 bytes</span></p>
+          </div>
+          <div class="card">
+            <h3>CTS Frame Size</h3>
+            <p><span class="highlight">14 bytes</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Common Mistakes to Avoid</h2>
+        <div class="grid">
+          <div class="card">
+            <h3 style="color: #ff6600;">Mistake 1</h3>
+            <p>Using CSMA/CD for Wi-Fi</p>
+            <p class="dim">Wi-Fi uses CSMA/CA, not CD</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #ff6600;">Mistake 2</h3>
+            <p>Confusing CW_min with CW_max</p>
+            <p class="dim">Start at CW_min, double until CW_max</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #ff6600;">Mistake 3</h3>
+            <p>Forgetting k is capped at 10</p>
+            <p class="dim">k = min(n, 10) in CSMA/CD</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #ff6600;">Mistake 4</h3>
+            <p>Assuming CSMA/CA prevents all collisions</p>
+            <p class="dim">It only reduces probability</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Network Device Quick Reference</h2>
+        <table>
+          <tr><th>Device</th><th>Collision Domain</th><th>Broadcast Domain</th><th>MAC Address Table?</th><th>CSMA Type?</th></tr>
+          <tr><td><span class="highlight">Hub</span></td><td>1 (all ports)</td><td>1</td><td>No</td><td>CSMA/CD</td></tr>
+          <tr><td><span class="highlight">Switch</span></td><td>Per port</td><td>1 (unless VLANs)</td><td>Yes</td><td>CSMA/CD</td></tr>
+          <tr><td><span class="highlight">Router</span></td><td>Per port</td><td>Per port</td><td>No (routing table)</td><td>N/A (Layer 3)</td></tr>
+          <tr><td><span class="highlight">AP</span></td><td>Per client</td><td>1</td><td>Yes (client list)</td><td>CSMA/CA</td></tr>
+          <tr><td><span class="highlight">Bridge</span></td><td>Per segment</td><td>1</td><td>Yes</td><td>CSMA/CD</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Exam Cheat Sheet</h2>
+        <table>
+          <tr><th>Item</th><th>Value / Formula</th></tr>
+          <tr><td>Ethernet slot time</td><td>51.2 μs = 512 bit times</td></tr>
+          <tr><td>Ethernet min frame</td><td>64 bytes (512 bits)</td></tr>
+          <tr><td>CSMA/CD max retries</td><td>16 (then abort)</td></tr>
+          <tr><td>CSMA/CD k cap</td><td>k = min(n, 10)</td></tr>
+          <tr><td>CSMA/CD backoff range</td><td>[0, 2^k - 1] × slot_time</td></tr>
+          <tr><td>CSMA/CA CW_min (802.11a/g)</td><td>15</td></tr>
+          <tr><td>CSMA/CA CW_max</td><td>1023</td></tr>
+          <tr><td>RTS frame size</td><td>20 bytes</td></tr>
+          <tr><td>CTS frame size</td><td>14 bytes</td></tr>
+          <tr><td>ACK frame size</td><td>14 bytes</td></tr>
+          <tr><td>IFS order</td><td>SIFS < DIFS < EIFS</td></tr>
+          <tr><td>Channel efficiency</td><td>1 / (1 + 5a)</td></tr>
+          <tr><td>Hub collision domains</td><td>1 (all ports)</td></tr>
+          <tr><td>Switch collision domains</td><td>1 per port</td></tr>
+          <tr><td>Hidden terminal</td><td>Solved by RTS/CTS</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

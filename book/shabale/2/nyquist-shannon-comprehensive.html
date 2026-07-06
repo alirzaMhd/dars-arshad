@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyquist and Shannon Theorems - Physical Layer</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #bc8cff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle { color: var(--text-secondary); font-size: 1.1rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .tab-btn:hover { background: var(--bg-secondary); color: var(--text-primary); }
+        .tab-btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .card-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+        }
+        .card-icon.nyquist { background: linear-gradient(135deg, #58a6ff, #388bfd); }
+        .card-icon.shannon { background: linear-gradient(135deg, #3fb950, #2ea043); }
+        h2 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        h3 { font-size: 1.25rem; margin: 1rem 0 0.5rem; color: var(--accent-blue); }
+        .formula-box {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .formula-box.green { border-color: var(--accent-green); }
+        .formula {
+            font-size: 1.5rem;
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            color: var(--accent-blue);
+        }
+        .formula.green { color: var(--accent-green); }
+        .formula-desc { margin-top: 0.75rem; font-size: 0.95rem; color: var(--text-secondary); }
+        .variables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .variable-item {
+            background: var(--bg-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-blue);
+        }
+        .variable-item.green { border-left-color: var(--accent-green); }
+        .variable-item strong { color: var(--accent-blue); font-family: 'Times New Roman', Times, serif; font-style: italic; }
+        .variable-item.green strong { color: var(--accent-green); }
+        .warning-box {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+        .warning-box.info { background: rgba(88, 166, 255, 0.1); border-color: var(--accent-blue); }
+        .warning-box.success { background: rgba(63, 185, 80, 0.1); border-color: var(--accent-green); }
+        .warning-icon { font-size: 1.25rem; flex-shrink: 0; }
+        .warning-content strong { display: block; margin-bottom: 0.25rem; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .comparison-table th, .comparison-table td { padding: 1rem; text-align: left; border: 1px solid var(--border-color); }
+        .comparison-table th { background: var(--bg-tertiary); font-weight: 600; }
+        .comparison-table th.nyquist { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+        .comparison-table th.shannon { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+        .comparison-table tr:nth-child(even) { background: var(--bg-tertiary); }
+        .example-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .example-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .example-number {
+            width: 32px; height: 32px; background: var(--accent-purple);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.9rem;
+        }
+        .step { background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; margin: 0.75rem 0; }
+        .step-label { font-weight: 600; color: var(--accent-blue); margin-bottom: 0.5rem; }
+        .step-label.green { color: var(--accent-green); }
+        .result-box {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.2), rgba(63, 185, 80, 0.2));
+            border: 2px solid var(--accent-purple);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        .result-box strong { color: var(--accent-purple); }
+        .quick-ref { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .ref-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .ref-card h3 { margin-top: 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-blue); }
+        .ref-card ul { list-style: none; margin-top: 1rem; }
+        .ref-card li { padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .ref-card li:last-child { border-bottom: none; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+        .badge.nyquist { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+        .badge.shannon { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+        .badge.both { background: rgba(188, 140, 255, 0.2); color: var(--accent-purple); }
+        .interactive-calc { background: var(--bg-tertiary); border-radius: 12px; padding: 1.5rem; margin: 1rem 0; }
+        .calc-row { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1rem; }
+        .calc-group { flex: 1; min-width: 150px; }
+        .calc-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
+        .calc-group input, .calc-group select {
+            width: 100%; padding: 0.75rem; background: var(--bg-primary);
+            border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 1rem;
+        }
+        .calc-btn {
+            padding: 0.75rem 1.5rem; background: var(--accent-blue);
+            border: none; border-radius: 6px; color: white; font-size: 1rem; cursor: pointer;
+        }
+        .calc-btn.green { background: var(--accent-green); }
+        .calc-btn:hover { opacity: 0.9; }
+        .calc-result { background: var(--bg-primary); border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+        .calc-result p { margin: 0.5rem 0; }
+        footer {
+            text-align: center; margin-top: 3rem; padding: 1.5rem;
+            background: var(--bg-secondary); border-radius: 12px;
+            border: 1px solid var(--border-color); color: var(--text-secondary);
+        }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            h1 { font-size: 1.75rem; }
+            .tab-btn { padding: 0.5rem 1rem; font-size: 0.9rem; }
+            .formula { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nyquist &amp; Shannon Theorems</h1>
+            <p class="subtitle">Physical Layer - Maximum Data Rate Theorems</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('nyquist')">Nyquist Theorem</button>
+            <button class="tab-btn" onclick="showTab('shannon')">Shannon's Theorem</button>
+            <button class="tab-btn" onclick="showTab('comparison')">Comparison</button>
+            <button class="tab-btn" onclick="showTab('examples')">Examples</button>
+            <button class="tab-btn" onclick="showTab('quickref')">Quick Reference</button>
+        </div>
+        <!-- NYQUIST TAB -->
+        <div id="nyquist" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon nyquist">&#128202;</div>
+                    <div>
+                        <h2>Nyquist Theorem (Noiseless Channel)</h2>
+                        <p style="color: var(--text-secondary);">Maximum data rate for a noiseless channel</p>
+                    </div>
+                </div>
+
+                <div class="formula-box">
+                    <div class="formula">R = 2 &times; W &times; log&#8322;(M)</div>
+                    <div class="formula-desc">Nyquist Bit Rate Formula</div>
+                </div>
+
+                <div class="variables-grid">
+                    <div class="variable-item">
+                        <strong>R</strong> = Maximum data rate (bits per second)
+                    </div>
+                    <div class="variable-item">
+                        <strong>W</strong> = Bandwidth of the channel (Hz)
+                    </div>
+                    <div class="variable-item">
+                        <strong>M</strong> = Number of signal levels
+                    </div>
+                    <div class="variable-item">
+                        <strong>log&#8322;(M)</strong> = Bits per signal element
+                    </div>
+                </div>
+
+                <h3>Key Concepts</h3>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>Assumes noiseless channel</strong> - no signal degradation</li>
+                    <li><strong>Sampling theorem:</strong> Minimum sampling rate = 2 &times; W (Nyquist Rate)</li>
+                    <li><strong>Each signal element</strong> carries log&#8322;(M) bits of information</li>
+                    <li>Higher M = more bits per signal = higher data rate</li>
+                </ul>
+
+                <h3>Simplified Forms</h3>
+                <div class="step">
+                    <p>When <strong>M = 2</strong> (binary signaling):</p>
+                    <div class="formula-box" style="margin-top: 0.5rem;">
+                        <div class="formula">R = 2 &times; W</div>
+                        <div class="formula-desc">Binary signaling: 1 bit per signal element</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <p>When <strong>M = 4</strong> (4-level signaling):</p>
+                    <div class="formula-box" style="margin-top: 0.5rem;">
+                        <div class="formula">R = 4 &times; W</div>
+                        <div class="formula-desc">2 bits per signal element</div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <span class="warning-icon">&#9888;&#65039;</span>
+                    <div class="warning-content">
+                        <strong>Common Mistake #1</strong>
+                        Confusing Nyquist Rate (sampling rate) with Nyquist Bit Rate (data rate). Nyquist Rate = 2W samples/sec, while Nyquist Bit Rate = 2W log&#8322;(M) bits/sec.
+                    </div>
+                </div>
+
+                <div class="warning-box info">
+                    <span class="warning-icon">&#128161;</span>
+                    <div class="warning-content">
+                        <strong>When to Use Nyquist</strong>
+                        Use this theorem for ideal, noiseless channels where the signal quality is perfect. Common in theoretical calculations and digital communication basics.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Interactive Calculator</h3>
+                <div class="interactive-calc">
+                    <div class="calc-row">
+                        <div class="calc-group">
+                            <label>Bandwidth (W) in Hz</label>
+                            <input type="number" id="nyq-bandwidth" placeholder="e.g., 3000" value="3000">
+                        </div>
+                        <div class="calc-group">
+                            <label>Signal Levels (M)</label>
+                            <input type="number" id="nyq-levels" placeholder="e.g., 4" value="4">
+                        </div>
+                        <button class="calc-btn" onclick="calcNyquist()">Calculate</button>
+                    </div>
+                    <div id="nyq-result" class="calc-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        <!-- SHANNON TAB -->
+        <div id="shannon" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon shannon">&#128225;</div>
+                    <div>
+                        <h2>Shannon's Theorem (Noisy Channel)</h2>
+                        <p style="color: var(--text-secondary);">Maximum data rate for a noisy channel</p>
+                    </div>
+                </div>
+
+                <div class="formula-box green">
+                    <div class="formula green">C = W &times; log&#8322;(1 + S/N)</div>
+                    <div class="formula-desc">Shannon-Hartley Theorem</div>
+                </div>
+
+                <div class="variables-grid">
+                    <div class="variable-item green">
+                        <strong>C</strong> = Channel capacity (bits per second)
+                    </div>
+                    <div class="variable-item green">
+                        <strong>W</strong> = Bandwidth of the channel (Hz)
+                    </div>
+                    <div class="variable-item green">
+                        <strong>S/N</strong> = Signal-to-Noise Ratio (linear, not dB)
+                    </div>
+                    <div class="variable-item green">
+                        <strong>log&#8322;(1 + S/N)</strong> = Spectral efficiency (bits/symbol)
+                    </div>
+                </div>
+
+                <h3>Key Concepts</h3>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li><strong>Accounts for noise</strong> - realistic channel conditions</li>
+                    <li><strong>S/N can be given in dB</strong> - must convert to linear first</li>
+                    <li><strong>Channel capacity</strong> is the absolute theoretical maximum</li>
+                    <li>Cannot be exceeded regardless of modulation scheme</li>
+                </ul>
+
+                <h3>Converting S/N from dB to Linear</h3>
+                <div class="step">
+                    <div class="formula-box green" style="margin-top: 0;">
+                        <div class="formula green">(S/N)<sub>linear</sub> = 10<sup>(S/N)<sub>dB</sub> / 10</sup></div>
+                    </div>
+                    <p style="margin-top: 0.5rem;">Example: S/N = 30 dB &rarr; S/N<sub>linear</sub> = 10<sup>30/10</sup> = 10<sup>3</sup> = 1000</p>
+                </div>
+
+                <div class="warning-box">
+                    <span class="warning-icon">&#9888;&#65039;</span>
+                    <div class="warning-content">
+                        <strong>Common Mistake #2</strong>
+                        Using S/N in dB directly in the formula. Always convert to linear scale first! S/N<sub>dB</sub> = 10 &times; log&#8321;&#8320;(S/N<sub>linear</sub>)
+                    </div>
+                </div>
+
+                <div class="warning-box success">
+                    <span class="warning-icon">&#10004;&#65039;</span>
+                    <div class="warning-content">
+                        <strong>When to Use Shannon</strong>
+                        Use this theorem for real-world noisy channels. It provides the absolute maximum capacity that cannot be exceeded, regardless of how clever the coding scheme is.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Interactive Calculator</h3>
+                <div class="interactive-calc">
+                    <div class="calc-row">
+                        <div class="calc-group">
+                            <label>Bandwidth (W) in Hz</label>
+                            <input type="number" id="shan-bandwidth" placeholder="e.g., 3000" value="3000">
+                        </div>
+                        <div class="calc-group">
+                            <label>S/N Ratio</label>
+                            <input type="number" id="shan-sn" placeholder="e.g., 1000" value="1000" step="any">
+                        </div>
+                        <div class="calc-group">
+                            <label>S/N Unit</label>
+                            <select id="shan-unit">
+                                <option value="linear">Linear</option>
+                                <option value="db">Decibels (dB)</option>
+                            </select>
+                        </div>
+                        <button class="calc-btn green" onclick="calcShannon()">Calculate</button>
+                    </div>
+                    <div id="shan-result" class="calc-result" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        <!-- COMPARISON TAB -->
+        <div id="comparison" class="tab-content">
+            <div class="card">
+                <h2>Comparison Table</h2>
+                <div style="overflow-x: auto;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Aspect</th>
+                                <th class="nyquist">Nyquist Theorem</th>
+                                <th class="shannon">Shannon's Theorem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Formula</strong></td>
+                                <td>R = 2W log&#8322;(M)</td>
+                                <td>C = W log&#8322;(1 + S/N)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Channel Type</strong></td>
+                                <td>Noiseless (ideal)</td>
+                                <td>Noisy (realistic)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Key Parameters</strong></td>
+                                <td>Bandwidth (W), Signal Levels (M)</td>
+                                <td>Bandwidth (W), Signal-to-Noise Ratio (S/N)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Determines</strong></td>
+                                <td>Max rate based on sampling</td>
+                                <td>Absolute maximum capacity</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Effect of M</strong></td>
+                                <td>Rate increases with M</td>
+                                <td>Not directly in formula</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Effect of Noise</strong></td>
+                                <td>Ignores noise completely</td>
+                                <td>Incorporates noise via S/N</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Practical Limit</strong></td>
+                                <td>Can be exceeded with better coding</td>
+                                <td>Cannot be exceeded</td>
+                            </tr>
+                            <tr>
+                                <td><strong>When to Use</strong></td>
+                                <td>Theoretical analysis, noiseless scenarios</td>
+                                <td>Real-world systems, noisy channels</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Named After</strong></td>
+                                <td>Harry Nyquist (1928)</td>
+                                <td>Claude Shannon (1948)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>When to Use Which Theorem?</h2>
+                
+                <div class="step">
+                    <div class="step-label">Use Nyquist When:</div>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>Channel is ideal and noiseless</li>
+                        <li>You know the number of signal levels (M)</li>
+                        <li>Doing theoretical calculations</li>
+                        <li>Analyzing sampling rates</li>
+                    </ul>
+                </div>
+
+                <div class="step">
+                    <div class="step-label green">Use Shannon When:</div>
+                    <ul style="margin-left: 1.5rem;">
+                        <li>Channel has noise (real-world scenario)</li>
+                        <li>You know the signal-to-noise ratio (S/N)</li>
+                        <li>Finding absolute maximum capacity</li>
+                        <li>Designing communication systems</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box info">
+                    <span class="warning-icon">&#128204;</span>
+                    <div class="warning-content">
+                        <strong>Golden Rule: Actual Throughput</strong>
+                        The actual maximum throughput is always the MINIMUM of Nyquist and Shannon capacities. You cannot exceed either limit.
+                        <br><br>
+                        <strong>Actual Throughput = min(Nyquist Rate, Shannon Capacity)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- EXAMPLES TAB -->
+        <div id="examples" class="tab-content">
+            <div class="card">
+                <h2>Worked Examples</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">5 comprehensive examples comparing both theorems</p>
+
+                <!-- Example 1 -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">1</div>
+                        <h3>Voice Channel (Phone Line)</h3>
+                    </div>
+                    <p><strong>Given:</strong> Bandwidth W = 3.1 kHz, M = 256 levels, S/N = 40 dB</p>
+                    
+                    <div class="step">
+                        <div class="step-label">Nyquist Calculation:</div>
+                        <p>R = 2 &times; 3100 &times; log&#8322;(256) = 2 &times; 3100 &times; 8 = <strong>49,600 bps &asymp; 49.6 kbps</strong></p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-label green">Shannon Calculation:</div>
+                        <p>S/N = 40 dB &rarr; 10<sup>40/10</sup> = 10,000</p>
+                        <p>C = 3100 &times; log&#8322;(1 + 10,000) = 3100 &times; log&#8322;(10,001) &asymp; 3100 &times; 13.29 = <strong>41,199 bps &asymp; 41.2 kbps</strong></p>
+                    </div>
+                    
+                    <div class="result-box">
+                        <strong>Actual Throughput = min(49.6 kbps, 41.2 kbps) = 41.2 kbps</strong>
+                        <br>Shannon limits the actual rate despite higher Nyquist capacity
+                    </div>
+                </div>
+
+                <!-- Example 2 -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">2</div>
+                        <h3>Wi-Fi Channel (802.11g)</h3>
+                    </div>
+                    <p><strong>Given:</strong> Bandwidth W = 20 MHz, M = 64 (64-QAM), S/N = 25 dB</p>
+                    
+                    <div class="step">
+                        <div class="step-label">Nyquist Calculation:</div>
+                        <p>R = 2 &times; 20 &times; 10<sup>6</sup> &times; log&#8322;(64) = 2 &times; 20 &times; 10<sup>6</sup> &times; 6 = <strong>240 Mbps</strong></p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-label green">Shannon Calculation:</div>
+                        <p>S/N = 25 dB &rarr; 10<sup>25/10</sup> = 10<sup>2.5</sup> &asymp; 316.23</p>
+                        <p>C = 20 &times; 10<sup>6</sup> &times; log&#8322;(1 + 316.23) = 20 &times; 10<sup>6</sup> &times; 8.31 = <strong>166.2 Mbps</strong></p>
+                    </div>
+                    
+                    <div class="result-box">
+                        <strong>Actual Throughput = min(240 Mbps, 166.2 Mbps) = 166.2 Mbps</strong>
+                        <br>Shannon capacity is the bottleneck here
+                    </div>
+                </div>
+
+                <!-- Example 3 -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">3</div>
+                        <h3>DSL Line</h3>
+                    </div>
+                    <p><strong>Given:</strong> Bandwidth W = 1.1 MHz, M = 16 (16-QAM), S/N = 30 dB</p>
+                    
+                    <div class="step">
+                        <div class="step-label">Nyquist Calculation:</div>
+                        <p>R = 2 &times; 1.1 &times; 10<sup>6</sup> &times; log&#8322;(16) = 2 &times; 1.1 &times; 10<sup>6</sup> &times; 4 = <strong>8.8 Mbps</strong></p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-label green">Shannon Calculation:</div>
+                        <p>S/N = 30 dB &rarr; 10<sup>30/10</sup> = 1000</p>
+                        <p>C = 1.1 &times; 10<sup>6</sup> &times; log&#8322;(1 + 1000) = 1.1 &times; 10<sup>6</sup> &times; 9.97 = <strong>10.97 Mbps</strong></p>
+                    </div>
+                    
+                    <div class="result-box">
+                        <strong>Actual Throughput = min(8.8 Mbps, 10.97 Mbps) = 8.8 Mbps</strong>
+                        <br>Nyquist is the bottleneck &mdash; need higher M to approach Shannon limit
+                    </div>
+                </div>
+
+                <!-- Example 4 -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">4</div>
+                        <h3>Fiber Optic Link</h3>
+                    </div>
+                    <p><strong>Given:</strong> Bandwidth W = 5 THz, M = 2 (binary), S/N = 60 dB</p>
+                    
+                    <div class="step">
+                        <div class="step-label">Nyquist Calculation:</div>
+                        <p>R = 2 &times; 5 &times; 10<sup>12</sup> &times; log&#8322;(2) = 2 &times; 5 &times; 10<sup>12</sup> &times; 1 = <strong>10 Tbps</strong></p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-label green">Shannon Calculation:</div>
+                        <p>S/N = 60 dB &rarr; 10<sup>60/10</sup> = 10<sup>6</sup> = 1,000,000</p>
+                        <p>C = 5 &times; 10<sup>12</sup> &times; log&#8322;(1 + 1,000,000) = 5 &times; 10<sup>12</sup> &times; 19.93 = <strong>99.65 Tbps</strong></p>
+                    </div>
+                    
+                    <div class="result-box">
+                        <strong>Actual Throughput = min(10 Tbps, 99.65 Tbps) = 10 Tbps</strong>
+                        <br>Nyquist limits here &mdash; fiber has excellent S/N but binary modulation limits rate
+                    </div>
+                </div>
+
+                <!-- Example 5 -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">5</div>
+                        <h3>5G Cellular (mmWave)</h3>
+                    </div>
+                    <p><strong>Given:</strong> Bandwidth W = 400 MHz, M = 256 (256-QAM), S/N = 20 dB</p>
+                    
+                    <div class="step">
+                        <div class="step-label">Nyquist Calculation:</div>
+                        <p>R = 2 &times; 400 &times; 10<sup>6</sup> &times; log&#8322;(256) = 2 &times; 400 &times; 10<sup>6</sup> &times; 8 = <strong>6.4 Gbps</strong></p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-label green">Shannon Calculation:</div>
+                        <p>S/N = 20 dB &rarr; 10<sup>20/10</sup> = 100</p>
+                        <p>C = 400 &times; 10<sup>6</sup> &times; log&#8322;(1 + 100) = 400 &times; 10<sup>6</sup> &times; 6.66 = <strong>2.66 Gbps</strong></p>
+                    </div>
+                    
+                    <div class="result-box">
+                        <strong>Actual Throughput = min(6.4 Gbps, 2.66 Gbps) = 2.66 Gbps</strong>
+                        <br>Shannon limits due to lower S/N at mmWave frequencies
+                    </div>
+                </div>
+
+                <div class="warning-box info">
+                    <span class="warning-icon">&#128204;</span>
+                    <div class="warning-content">
+                        <strong>Key Pattern from Examples</strong>
+                        When Nyquist &gt; Shannon: noise is the bottleneck (increase S/N). When Shannon &gt; Nyquist: modulation is the bottleneck (increase M). Always the minimum determines actual throughput.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- QUICK REFERENCE TAB -->
+        <div id="quickref" class="tab-content">
+            <div class="card">
+                <h2>Quick Reference Card</h2>
+                
+                <div class="quick-ref">
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-blue);">Nyquist Formula</h3>
+                        <div class="formula-box" style="margin: 0;">
+                            <div class="formula" style="font-size: 1.25rem;">R = 2W log&#8322;(M)</div>
+                        </div>
+                        <ul>
+                            <li><strong>W</strong> = Bandwidth (Hz)</li>
+                            <li><strong>M</strong> = Signal levels</li>
+                            <li><strong>R</strong> = Data rate (bps)</li>
+                            <li><span class="badge nyquist">NOISELESS</span> Ideal channels only</li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-green);">Shannon Formula</h3>
+                        <div class="formula-box green" style="margin: 0;">
+                            <div class="formula green" style="font-size: 1.25rem;">C = W log&#8322;(1 + S/N)</div>
+                        </div>
+                        <ul>
+                            <li><strong>W</strong> = Bandwidth (Hz)</li>
+                            <li><strong>S/N</strong> = Linear (not dB!)</li>
+                            <li><strong>C</strong> = Capacity (bps)</li>
+                            <li><span class="badge shannon">REALISTIC</span> Real channels</li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-purple);">Key Relationships</h3>
+                        <ul>
+                            <li><strong>Actual Rate</strong> = min(Nyquist, Shannon)</li>
+                            <li><strong>S/N<sub>linear</sub></strong> = 10<sup>S/N<sub>dB</sub>/10</sup></li>
+                            <li><strong>S/N<sub>dB</sub></strong> = 10 &times; log&#8321;&#8320;(S/N<sub>linear</sub>)</li>
+                            <li><strong>Bits/symbol</strong> = log&#8322;(M)</li>
+                            <li><span class="badge both">BOTH</span> Use together</li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-orange);">Common dB Values</h3>
+                        <ul>
+                            <li>0 dB &rarr; S/N = 1</li>
+                            <li>10 dB &rarr; S/N = 10</li>
+                            <li>20 dB &rarr; S/N = 100</li>
+                            <li>30 dB &rarr; S/N = 1,000</li>
+                            <li>40 dB &rarr; S/N = 10,000</li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-red);">M to Bits Conversion</h3>
+                        <ul>
+                            <li>M = 2 &rarr; 1 bit/symbol</li>
+                            <li>M = 4 &rarr; 2 bits/symbol</li>
+                            <li>M = 8 &rarr; 3 bits/symbol</li>
+                            <li>M = 16 &rarr; 4 bits/symbol</li>
+                            <li>M = 64 &rarr; 6 bits/symbol</li>
+                            <li>M = 256 &rarr; 8 bits/symbol</li>
+                        </ul>
+                    </div>
+
+                    <div class="ref-card">
+                        <h3 style="color: var(--accent-blue);">Decision Flowchart</h3>
+                        <ul>
+                            <li>1. Identify: Noiseless or Noisy?</li>
+                            <li>2. Noiseless &rarr; Use Nyquist</li>
+                            <li>3. Noisy &rarr; Use Shannon</li>
+                            <li>4. Have both? Calculate both</li>
+                            <li>5. Answer = min(Nyquist, Shannon)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Cheat Sheet Summary</h3>
+                <div style="overflow-x: auto;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Scenario</th>
+                                <th>Given Info</th>
+                                <th>Use</th>
+                                <th>Formula</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Noiseless channel</td>
+                                <td>W, M</td>
+                                <td><span class="badge nyquist">NYQUIST</span></td>
+                                <td>R = 2W log&#8322;(M)</td>
+                            </tr>
+                            <tr>
+                                <td>Noisy channel</td>
+                                <td>W, S/N (dB)</td>
+                                <td><span class="badge shannon">SHANNON</span></td>
+                                <td>C = W log&#8322;(1 + S/N<sub>lin</sub>)</td>
+                            </tr>
+                            <tr>
+                                <td>Both W, M, and S/N given</td>
+                                <td>W, M, S/N</td>
+                                <td><span class="badge both">BOTH</span></td>
+                                <td>min(2W log&#8322;(M), W log&#8322;(1 + S/N))</td>
+                            </tr>
+                            <tr>
+                                <td>Find M given Shannon limit</td>
+                                <td>W, S/N, target R</td>
+                                <td><span class="badge both">BOTH</span></td>
+                                <td>M = 2<sup>R/(2W)</sup></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Physical Layer &mdash; Nyquist &amp; Shannon Theorems | Data Rate Theorems</p>
+        </footer>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function log2(x) { return Math.log(x) / Math.log(2); }
+
+        function formatNumber(n) {
+            if (n >= 1e12) return (n / 1e12).toFixed(2) + ' Tbps';
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + ' Gbps';
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + ' Mbps';
+            if (n >= 1e3) return (n / 1e3).toFixed(2) + ' kbps';
+            return n.toFixed(2) + ' bps';
+        }
+
+        function calcNyquist() {
+            var W = parseFloat(document.getElementById('nyq-bandwidth').value);
+            var M = parseFloat(document.getElementById('nyq-levels').value);
+            if (isNaN(W) || isNaN(M) || W <= 0 || M <= 1) {
+                alert('Please enter valid values (W > 0, M > 1)');
+                return;
+            }
+            var R = 2 * W * log2(M);
+            var bitsPerSymbol = log2(M);
+            var html = '<p><strong>Nyquist Bit Rate:</strong></p>';
+            html += '<p style="font-size: 1.1rem;">R = 2 &times; ' + W + ' &times; log&#8322;(' + M + ')</p>';
+            html += '<p style="font-size: 1.1rem;">R = 2 &times; ' + W + ' &times; ' + bitsPerSymbol.toFixed(2) + '</p>';
+            html += '<p style="font-size: 1.25rem; color: var(--accent-blue);"><strong>R = ' + formatNumber(R) + '</strong></p>';
+            document.getElementById('nyq-result').innerHTML = html;
+            document.getElementById('nyq-result').style.display = 'block';
+        }
+
+        function calcShannon() {
+            var W = parseFloat(document.getElementById('shan-bandwidth').value);
+            var SN = parseFloat(document.getElementById('shan-sn').value);
+            var unit = document.getElementById('shan-unit').value;
+            if (isNaN(W) || isNaN(SN) || W <= 0 || SN <= 0) {
+                alert('Please enter valid values (W > 0, S/N > 0)');
+                return;
+            }
+            var SNlin = (unit === 'db') ? Math.pow(10, SN / 10) : SN;
+            var C = W * log2(1 + SNlin);
+            var html = '<p><strong>Shannon Channel Capacity:</strong></p>';
+            if (unit === 'db') {
+                html += '<p>S/N = ' + SN + ' dB &rarr; ' + SNlin.toFixed(2) + ' (linear)</p>';
+            }
+            html += '<p style="font-size: 1.1rem;">C = ' + W + ' &times; log&#8322;(1 + ' + SNlin.toFixed(2) + ')</p>';
+            html += '<p style="font-size: 1.1rem;">C = ' + W + ' &times; ' + log2(1 + SNlin).toFixed(4) + '</p>';
+            html += '<p style="font-size: 1.25rem; color: var(--accent-green);"><strong>C = ' + formatNumber(C) + '</strong></p>';
+            document.getElementById('shan-result').innerHTML = html;
+            document.getElementById('shan-result').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
