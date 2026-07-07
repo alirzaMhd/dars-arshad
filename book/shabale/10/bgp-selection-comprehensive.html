@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>انتخاب مسیر BGP و مسیریابی سیب‌زمینی داغ — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>انتخاب مسیر BGP و مسیریابی سیب‌زمینی داغ</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — فرآیند تصمیم‌گیری BGP و ساخت جدول ارسال</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مسیریابی سیب‌زمینی داغ</button>
+      <button class="tab" onclick="showSection('tab2')">الگوریتم انتخاب مسیر</button>
+      <button class="tab" onclick="showSection('tab3')">مثال‌های حل شده</button>
+      <button class="tab" onclick="showSection('tab4')">خلاصه</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مسیریابی سیب‌زمینی داغ</h2>
+        <p><strong>مسیریابی سیب‌زمینی داغ</strong> یک سیاست انتخاب مسیر BGP است که در آن مسیریاب ترجیح می‌دهد <span class="highlight">هزینه درون-AS به NEXT-HOP را حداقل کند</span>. ایده ساده است: ترافیک را هرچه سریع‌تر از AS خود خارج کنید — مثل یک سیب‌زمینی داغ که می‌خواهید رها کنید.</p>
+        <p>مسیریابی سیب‌زمینی داغ یک <strong>الگوریتم خودخواهانه</strong> است — سعی می‌کند هزینه را در AS خود کاهش دهد در حالی که سایر اجزای هزینه‌های سرتاسری خارج از AS را نادیده می‌گیرد. با مسیریابی سیب‌زمینی داغ، دو مسیریاب در یک AS ممکن است <strong>دو مسیر AS متفاوت</strong> را به یک پیشوند انتخاب کنند.</p>
+
+        <div class="formula">
+          <div class="label">قانون سیب‌زمینی داغ</div>
+          <div class="expr">مسیری را انتخاب کن که NEXT-HOP آن کمترین هزینه IGP را از مسیریاب جاری دارد.</div>
+          <div class="desc">در میان مسیرهای با LOCAL_PREF و AS-PATH یکسان، نزدیک‌ترین را انتخاب کن.</div>
+        </div>
+
+        <h3>چرا "خودخواهانه"؟</h3>
+        <p>مسیریابی سیب‌زمینی داغ <strong>خودخواهانه</strong> در نظر گرفته می‌شود زیرا هر AS به طور مستقل هزینه‌های داخلی خود را بدون در نظر گرفتن کارایی کلی شبکه حداقل می‌کند. AS ترافیک را در سریع‌ترین زمان ممکن به AS بعدی منتقل می‌کند و بار را به بیرون منتقل می‌کند.</p>
+
+        <h3>ساخت جدول ارسال (شکل 5.11)</h3>
+        <p>افزودن یک پیشوند خارج-از-AS به جدول ارسال مسیریاب شامل هر دو پروتکل BGP (بین-AS) و IGP (درون-AS) است:</p>
+        <div class="code">
+1. یادگیری از BGP که زیرشبکه x از طریق چندین دروازه قابل دسترس است.<br>
+2. استفاده از IGP برای تعیین هزینه مسیر کم‌هزینه به هر دروازه.<br>
+3. سیب‌زمینی داغ: دروازه‌ای با کمترین هزینه را انتخاب کن.<br>
+4. تعیین رابط I از جدول ارسال که به دروازه کم‌هزینه منتهی می‌شود.<br>
+5. درج (x, I) در جدول ارسال.
+        </div>
+
+        <div class="example">
+          <div class="title">سیب‌زمینی داغ: مثال کتاب (شکل 5.10)</div>
+          <p>مسیریاب 1b در AS1 درباره پیشوند x یاد می‌گیرد. دو مسیر BGP به x وجود دارد. مسیر از طریق AS2 (دروازه 1c) هزینه IGP = 2 دارد. مسیر مستقیم از طریق AS3 (دروازه 1d) هزینه IGP = 3 دارد. تحت مسیریابی سیب‌زمینی داغ، مسیریاب 1b مسیر از طریق <span class="result">AS2 (دروازه 1c)</span> را انتخاب می‌کند زیرا هزینه 2 < 3.</p>
+          <p><strong>مهم:</strong> با الگوریتم کامل انتخاب مسیر BGP (قانون 2 — کوتاه‌ترین AS-PATH — قبل از قانون 3 می‌آید)، مسیر مستقیم AS3 (AS-PATH = [3]) برنده می‌شود زیرا <strong>AS-PATH کوتاه‌تری</strong> دارد.</p>
+        </div>
+
+        <div class="warning">مسیریابی سیب‌زمینی داغ به عنوان <strong>قانون سوم</strong> در الگوریتم انتخاب مسیر BGP اعمال می‌شود، بعد از LOCAL_PREF و طول AS-PATH. فقط وقتی تعیین‌کننده است که دو قانون اول مساوی باشند.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>انتخاب مسیر BGP: الگوریتم 4-قانون</h2>
+        <p>وقتی یک مسیریاب BGP چندین مسیر به یک پیشوند دارد، بهترین مسیر را با استفاده از قوانین زیر به <strong>ترتیب</strong> انتخاب می‌کند:</p>
+
+        <div class="formula">
+          <div class="label">انتخاب بهترین مسیر BGP (4 قانون)</div>
+          <div class="expr">
+1. بالاترین LOCAL_PREF<br>
+2. کوتاه‌ترین AS-PATH<br>
+3. نزدیک‌ترین NEXT-HOP (سیب‌زمینی داغ)<br>
+4. کمترین BGP Router ID
+          </div>
+        </div>
+
+        <h3>قانون 1: بالاترین LOCAL_PREF</h3>
+        <p><strong>LOCAL_PREF</strong> یک <span class="highlight">ویژگی سیاستی</span> است که توسط مدیران AS برای تأثیر بر ترافیک خروجی تنظیم می‌شود. مقادیر بالاتر ترجیح داده می‌شوند. پیش‌فرض 100 است.</p>
+
+        <h3>قانون 2: کوتاه‌ترین AS-PATH</h3>
+        <p>در میان مسیرهای با LOCAL_PREF برابر، مسیریاب <strong>کوتاه‌ترین AS-PATH</strong> را ترجیح می‌دهد.</p>
+
+        <h3>قانون 3: نزدیک‌ترین NEXT-HOP (سیب‌زمینی داغ)</h3>
+        <p>همان قانون سیب‌زمینی داغ — مسیری با <strong>کمترین هزینه IGP به NEXT-HOP</strong> را انتخاب کن.</p>
+
+        <h3>قانون 4: کمترین BGP Router ID</h3>
+        <p>اگر همه قوانین قبلی مساوی باشند، مسیر از مسیریاب BGP با <strong>کمترین Router ID</strong> ترجیح داده می‌شود.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>مثال‌های حل شده: تصمیمات انتخاب مسیر</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: انتخاب بین دو مسیر</div>
+          <p>مسیریاب 1b درباره پیشوند 10.5.0.0/16 یاد می‌گیرد. مسیر A: LOCAL_PREF=100, AS-PATH=[2,4], هزینه IGP=5. مسیر B: LOCAL_PREF=100, AS-PATH=[3,4], هزینه IGP=3. قوانین 1 و 2 مساوی → قانون 3 (سیب‌زمینی داغ): <span class="result">مسیر B برنده می‌شود</span>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: LOCAL_PREF بر AS-PATH غلبه می‌کند</div>
+          <p>مسیر A: LOCAL_PREF=200, AS-PATH=3. مسیر B: LOCAL_PREF=100, AS-PATH=1. <span class="result">مسیر A بلافاصله برنده می‌شود</span> زیرا LOCAL_PREF اول ارزیابی می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: AS-PATH Prepending</div>
+          <p>ISP-A: LOCAL_PREF=100, AS-PATH=[100] (طول 1). ISP-B: LOCAL_PREF=100, AS-PATH=[200,200,200] (طول 3). <span class="result">ISP-A برنده می‌شود</span> چون AS-PATH کوتاه‌تر دارد.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>خلاصه انتخاب مسیر BGP</h2>
+        <div class="formula">
+          <div class="label">الگوریتم 4-قانون (حفظ کنید)</div>
+          <div class="expr">
+1. بالاترین LOCAL_PREF — ترجیح سیاستی<br>
+2. کوتاه‌ترین AS-PATH — کمترین پرش AS<br>
+3. کمترین هزینه IGP به NEXT-HOP — سیب‌زمینی داغ<br>
+4. کمترین Router ID — تعیین‌کننده نهایی
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

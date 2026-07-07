@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مسیریابی بردار فاصله (بلمن-فورد) — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .dv-table td { font-size: 0.82em; padding: 6px 4px; }
+    .dv-table .from-label { color: #ffcc00; font-weight: bold; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>مسیریابی بردار فاصله — الگوریتم بلمن-فورد</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای کامل برای آمادگی امتحان</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور کلی و معادله BF</button>
+      <button class="tab" onclick="showSection('tab2')">الگوریتم DV</button>
+      <button class="tab" onclick="showSection('tab3')">تغییرات پیوند و حلقه‌ها</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌های حل شده</button>
+    </div>
+
+    <!-- Tab 1: Overview & BF Equation -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور کلی مسیریابی بردار فاصله</h2>
+        <p>الگوریتم مسیریابی بردار فاصله <strong>توزیع‌شده، تکراری و ناهمگام</strong> است. برخلاف LS که نیاز به دانش سراسری دارد، در DV هر گره فقط هزینه‌های همسایگان مستقیماً متصل خود را می‌داند و اطلاعات را فقط با آن همسایگان مبادله می‌کند.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های کلیدی</h3>
+            <p>• <span class="highlight">توزیع‌شده</span> — بدون مرجع مرکزی</p>
+            <p>• <span class="highlight">تکراری</span> — تا همگرایی تکرار می‌شود</p>
+            <p>• <span class="highlight">ناهمگام</span> — گره‌ها مستقل عمل می‌کنند</p>
+            <p>• <span class="dim">خودپایان</span> — وقتی تغییری نباشد متوقف می‌شود</p>
+          </div>
+          <div class="card">
+            <h3>اطلاعات ذخیره شده</h3>
+            <p>• بردار فاصله خود D<sub>x</sub></p>
+            <p>• بردارهای فاصله همسایگان D<sub>v</sub></p>
+            <p>• هزینه به هر همسایه c(x,v)</p>
+            <p>• ورودی‌های جدول ارسال</p>
+          </div>
+          <div class="card">
+            <h3>کاربرد واقعی</h3>
+            <p>• <span class="highlight">RIP</span></p>
+            <p>• <span class="highlight">BGP</span></p>
+            <p>• مسیریابی اصلی ARPAnet</p>
+            <p>• Novell IPX, ISO IDRP</p>
+          </div>
+        </div>
+
+        <h3>معادله بلمن-فورد</h3>
+        <p>رابطه بنیادی حاکم بر مسیریابی DV، <strong>معادله بلمن-فورد</strong> است. فرض کنید d<sub>x</sub>(y) هزینه مسیر کم‌هزینه از گره x به گره y باشد. آنگاه:</p>
+
+        <div class="formula">
+          <div class="label">معادله بلمن-فورد (معادله 5.1):</div>
+          <div class="expr">d<sub>x</sub>(y) = min<sub>v</sub> { c(x, v) + d<sub>v</sub>(y) }</div>
+          <div class="desc">کمترین هزینه از x به y = حداقل روی همه همسایگان v از (هزینه به همسایه v + کمترین هزینه از v به y)</div>
+        </div>
+
+        <div class="example">
+          <div class="title">تأیید بلمن-فورد</div>
+          <p>شبکه شکل 5.3 با گره‌های u, v, w, x, y, z را در نظر بگیرید.</p>
+          <p>برای مبدأ u و مقصد z: d<sub>v</sub>(z)=5, d<sub>x</sub>(z)=3, d<sub>w</sub>(z)=3.</p>
+          <p>هزینه‌های یال: c(u,v)=2, c(u,x)=1, c(u,w)=5.</p>
+          <div class="formula">
+            <div class="expr">d<sub>u</sub>(z) = min{2+5, 1+3, 5+3} = min{7, 4, 8} = 4</div>
+            <div class="desc">این با نتیجه دیکسترا مطابقت دارد! مقدار کمینه از طریق همسایه x به دست آمده است.</div>
+          </div>
+          <p class="result">بنابراین، گام-بعدی برای u جهت رسیدن به z، گره x است.</p>
+        </div>
+
+        <h3>تعریف بردار فاصله</h3>
+        <p>هر گره x نگهداری می‌کند:</p>
+        <div class="formula">
+          <div class="label">بردار فاصله:</div>
+          <div class="expr">D<sub>x</sub> = [ D<sub>x</sub>(y) : y ∈ N ]</div>
+          <div class="desc">برداری از تخمین‌های هزینه از گره x به همه مقاصد y در شبکه</div>
+        </div>
+
+        <p>قانون بروزرسانی وقتی یک گره بردار فاصله جدیدی از یک همسایه دریافت می‌کند:</p>
+        <div class="formula">
+          <div class="label">قانون بروزرسانی DV:</div>
+          <div class="expr">D<sub>x</sub>(y) = min<sub>v</sub> { c(x, v) + D<sub>v</sub>(y) } &nbsp; for each node y ∈ N</div>
+          <div class="desc">پس از بروزرسانی، اگر D<sub>x</sub> تغییر کرد، یک کپی به همه همسایگان بفرست</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تضمین همگرایی:</div>
+          <div class="expr">تا زمانی که همه گره‌ها به تبادل ناهمگام بردارهای فاصله خود ادامه دهند، D<sub>x</sub>(y) → d<sub>x</sub>(y)</div>
+          <div class="desc">هر تخمین هزینه D<sub>x</sub>(y) به d<sub>x</sub>(y)، هزینه واقعی کمینه، همگرا می‌شود [Bertsekas 1991]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: DV Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>الگوریتم بردار فاصله — شبه‌کد</h2>
+
+        <div class="code">الگوریتم DV (در هر گره x):
+
+1  مقداردهی اولیه:
+2    برای همه مقاصد y در N:
+3      D<sub>x</sub>(y) = c(x,y)    /* اگر y همسایه نیست: c(x,y)=∞ */
+4    برای هر همسایه w:
+5      D<sub>w</sub>(y) = ? برای همه y در N   /* نامعلوم */
+6    برای هر همسایه w:
+7      ارسال بردار فاصله D<sub>x</sub> = [D<sub>x</sub>(y): y ∈ N] به w
+8
+9  حلقه (بی‌نهایت):
+10    منتظر بمان (تا تغییر هزینه پیوند به همسایه w یا
+11          دریافت بردار فاصله از همسایه w)
+12
+13    برای هر y در N:
+14      D<sub>x</sub>(y) = min<sub>v</sub> { c(x,v) + D<sub>v</sub>(y) }
+15
+16    اگر D<sub>x</sub>(y) برای هر مقصد y تغییر کرد:
+17      ارسال بردار فاصله D<sub>x</sub> = [D<sub>x</sub>(y): y ∈ N]
+18        به همه همسایگان
+19  پایان حلقه</div>
+
+        <div class="warning">
+          <strong>مهم:</strong> الگوریتم <strong>خودپایان</strong> است — هیچ سیگنال صریحی برای توقف وجود ندارد. به سادگی به یک حالت سکون می‌رسد که در آن هیچ گرهی بروزرسانی ارسال نمی‌کند زیرا هیچ فاصله‌ای تغییر نکرده است. در حالت "انتظار" (خطوط 10-11) باقی می‌ماند تا یک تغییر هزینه پیوند یا رویداد توپولوژی رخ دهد.
+        </div>
+
+        <h3>بروزرسانی جدول ارسال</h3>
+        <p>هنگام بروزرسانی D<sub>x</sub>(y)، گره x همچنین مسیریاب گام-بعدی v*(y) — همسایه v که کمینه را در خط 14 به دست می‌آورد — تعیین می‌کند. این گام-بعدی در جدول ارسال برای مقصد y ذخیره می‌شود.</p>
+
+        <h2>مثال شبکه 3-گره</h2>
+        <p>یک شبکه ساده 3-گره را در نظر بگیرید: x—2—y—1—z و x—7—z.</p>
+        <div class="formula">
+          <div class="expr">c(x,y)=2, c(y,z)=1, c(x,z)=7</div>
+        </div>
+
+        <h3>فاز مقداردهی اولیه</h3>
+        <p>جدول مسیریابی اولیه هر گره شامل بردار فاصله خود (D<sub>x</sub>, D<sub>y</sub>, D<sub>z</sub>) و آخرین بردارهای دریافت شده از همسایگان (مقداردهی شده به ∞) است.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>جدول اولیه گره x</h3>
+            <table class="dv-table">
+              <tr><th>از</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td><span class="from-label">x</span></td><td>Dx</td><td>0</td><td>2</td><td>7</td></tr>
+              <tr><td>y</td><td>Dy</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td>z</td><td>Dz</td><td>∞</td><td>∞</td><td>∞</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3>جدول اولیه گره y</h3>
+            <table class="dv-table">
+              <tr><th>از</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td>x</td><td>Dx</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td><span class="from-label">y</span></td><td>Dy</td><td>2</td><td>0</td><td>1</td></tr>
+              <tr><td>z</td><td>Dz</td><td>∞</td><td>∞</td><td>∞</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3>جدول اولیه گره z</h3>
+            <table class="dv-table">
+              <tr><th>از</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td>x</td><td>Dx</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td>y</td><td>Dy</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td><span class="from-label">z</span></td><td>Dz</td><td>7</td><td>1</td><td>0</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">گام 1 — تبادل و بروزرسانی</div>
+          <p>هر گره بردار فاصله خود را به همسایگان می‌فرستد. پس از دریافت بروزرسانی‌ها:</p>
+          <p><strong>گره x محاسبه می‌کند:</strong></p>
+          <p>Dx(x) = 0</p>
+          <p>Dx(y) = min{ c(x,y)+Dy(y), c(x,z)+Dz(y) } = min{2+0, 7+1} = 2</p>
+          <p>Dx(z) = min{ c(x,y)+Dy(z), c(x,z)+Dz(z) } = min{2+1, 7+0} = 3</p>
+          <p class="result">Dx گره x تغییر کرد: [0, 2, 3]. همسایه y کمینه‌ها را به دست می‌آورد: v*(y) = y و v*(z) = y. x بروزرسانی را به y و z می‌فرستد.</p>
+
+          <p><strong>گره y محاسبه می‌کند:</strong></p>
+          <p>Dy(x) = min{ c(y,x)+Dx(x), c(y,z)+Dz(x) } = min{2+0, 1+7} = 2</p>
+          <p>Dy(z) = min{ c(y,x)+Dx(z), c(y,z)+Dz(z) } = min{2+7, 1+0} = 1</p>
+          <p class="result">Dy گره y بدون تغییر: [2, 0, 1]. بروزرسانی ارسال نشد.</p>
+
+          <p><strong>گره z محاسبه می‌کند:</strong></p>
+          <p>Dz(x) = min{ c(z,y)+Dy(x), c(z,x)+Dx(x) } = min{1+2, 7+0} = 3</p>
+          <p>Dz(y) = min{ c(z,y)+Dy(y), c(z,x)+Dx(y) } = min{1+0, 7+2} = 1</p>
+          <p class="result">Dz گره z تغییر کرد: [3, 1, 0]. بروزرسانی را به x و y می‌فرستد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">گام 2 — همگرایی نهایی</div>
+          <p>پس از دریافت بروزرسانی z، x دوباره محاسبه می‌کند (بدون تغییر). پس از دریافت بروزرسانی x، z دوباره محاسبه می‌کند (بدون تغییر). الگوریتم به حالت سکون می‌رسد.</p>
+
+          <p><strong>بردارهای فاصله نهایی:</strong></p>
+          <div class="grid">
+            <div class="card">
+              <h3>Dx</h3>
+              <p>[0, 2, 3]</p>
+              <p>گام بعدی برای y: y</p>
+              <p>گام بعدی برای z: y</p>
+            </div>
+            <div class="card">
+              <h3>Dy</h3>
+              <p>[2, 0, 1]</p>
+              <p>گام بعدی برای x: x</p>
+              <p>گام بعدی برای z: z</p>
+            </div>
+            <div class="card">
+              <h3>Dz</h3>
+              <p>[3, 1, 0]</p>
+              <p>گام بعدی برای x: y</p>
+              <p>گام بعدی برای y: y</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Link Changes & Loops -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>تغییرات هزینه پیوند: کاهش (سریع!)</h2>
+        <p>شبکه x—y—z را در نظر بگیرید که در آن c(y,x) از 4 به 1 تغییر می‌کند (کاهش).</p>
+
+        <div class="example">
+          <div class="title">سناریو: c(y,x): 4 → 1</div>
+          <p><strong>در t₀:</strong> y کاهش هزینه را تشخیص می‌دهد. Dy(x) = min{1+0, 1+5} = 1. Dy تغییر کرد، بنابراین y بروزرسانی را به z می‌فرستد.</p>
+          <p><strong>در t₁:</strong> z بروزرسانی را دریافت می‌کند. Dz(x) = min{50+0, 1+1} = 2. Dz تغییر کرد، بنابراین z بروزرسانی را به y می‌فرستد.</p>
+          <p><strong>در t₂:</strong> y بروزرسانی را دریافت می‌کند. Dy(x) = min{1+0, 1+2} = 1. بدون تغییر، الگوریتم ساکن می‌شود.</p>
+          <p class="result">اخبار خوب سریع منتشر می‌شود! فقط 2 تکرار نیاز است.</p>
+        </div>
+
+        <h2>تغییرات هزینه پیوند: افزایش (کند!)</h2>
+        <p>حال فرض کنید c(y,x) از 4 به 60 تغییر می‌کند (افزایش). این مشکل <strong>شمارش تا بی‌نهایت</strong> را آشکار می‌کند.</p>
+
+        <div class="example">
+          <div class="title">سناریو: c(y,x): 4 → 60</div>
+          <p><strong>قبل از تغییر:</strong> Dy(x)=4, Dy(z)=1, Dz(y)=1, Dz(x)=5.</p>
+          <p><strong>در t₀:</strong> y افزایش را تشخیص می‌دهد. y محاسبه می‌کند: Dy(x) = min{60+0, 1+5} = 6.</p>
+          <div class="warning">
+            <strong>مشکل!</strong> y فکر می‌کند z می‌تواند x را با هزینه 5 برساند، اما مسیر z به x از طریق y است! این یک <strong>حلقه مسیریابی</strong> ایجاد می‌کند: y→z→y→z→... بسته‌های مقصد x برای همیشه جلو و عقب می‌پرند.
+          </div>
+          <p>y ارسال می‌کند Dz=[60,0,1,...], Dy(x)=6 به z.</p>
+          <p><strong>در t₁:</strong> z بروزرسانی y را دریافت می‌کند. Dz(x) = min{50+0, 1+6} = 7. z به y ارسال می‌کند.</p>
+          <p><strong>در t₂:</strong> y دریافت می‌کند. Dy(x) = min{60+0, 1+7} = 8. y به z ارسال می‌کند.</p>
+          <p>... این برای <strong>44 تکرار</strong> ادامه می‌یابد تا Dy(x) از 50 (هزینه مستقیم z→x) بیشتر شود.</p>
+          <p class="result">اخبار بد کند منتشر می‌شود! مشکل شمارش تا بی‌نهایت باعث همگرایی آهسته می‌شود.</p>
+          <p><strong>آزمایش فکری:</strong> اگر c(y,x) از 4 به 10,000 تغییر کند و c(z,x) برابر 9,999 باشد چه؟ همان حلقه شمارش تا بی‌نهایت برای <strong>هزاران تکرار</strong> ادامه می‌یابد — هزینه از 10,000 به بالا تا 9,999 افزایش می‌یابد تا z نهایتاً از پیوند مستقیم خود استفاده کند. این حالت شدید نشان می‌دهد چرا شمارش تا بی‌نهایت در عمل این‌قدر مشکل‌ساز است.</p>
+        </div>
+
+        <h2>معکوس مسموم (Poisoned Reverse)</h2>
+        <p>تکنیکی برای جلوگیری از حلقه‌های مسیریابی بین دو گره همسایه:</p>
+
+        <div class="formula">
+          <div class="label">قانون معکوس مسموم:</div>
+          <div class="expr">اگر z به x از طریق y مسیریابی می‌کند، آنگاه z D<sub>z</sub>(x) = ∞ را به y اعلام می‌کند</div>
+          <div class="desc">z یک <strong>"دروغ سفید کوچک"</strong> به y می‌گوید — اینکه مسیری به x ندارد — تا از مسیریابی y از طریق z جلوگیری کند. z تا زمانی که به x از طریق y مسیریابی می‌کند به گفتن این دروغ ادامه می‌دهد [Kurose 2021].</div>
+        </div>
+
+        <div class="example">
+          <div class="title">معکوس مسموم در عمل</div>
+          <p>قبل از تغییر هزینه، z به x از طریق y مسیریابی می‌کند (Dz(x)=5 از طریق y). با معکوس مسموم، z به y می‌گوید: Dz(x)=∞.</p>
+          <p>وقتی c(y,x) به 60 تغییر می‌کند:</p>
+          <p>• y محاسبه می‌کند: Dy(x) = min{60+0, 1+∞} = 60 (نمی‌تواند از z استفاده کند چون Dz(x)=∞)</p>
+          <p>• y Dy(x)=60 را به z می‌فرستد.</p>
+          <p>• z محاسبه می‌کند: Dz(x) = min{50+0, 1+60} = 50 (پیوند مستقیم اکنون ارزان‌تر است)</p>
+          <p>• z به مسیر مستقیم تغییر می‌کند، Dz(x)=50 را به y می‌فرستد.</p>
+          <p>• y محاسبه می‌کند: Dy(x) = min{60+0, 1+50} = 51.</p>
+          <p class="result">فقط چند تکرار نیاز است! بدون حلقه مسیریابی.</p>
+        </div>
+
+        <div class="warning">
+          <strong>محدودیت:</strong> معکوس مسموم مشکل شمارش تا بی‌نهایت را برای حلقه‌های شامل سه گره یا بیشتر حل نمی‌کند. فقط از حلقه‌های بین دو گره مستقیماً همسایه جلوگیری می‌کند. حلقه‌های پیچیده‌تر (مثلاً حلقه‌های مثلثی از طریق 3 گره) تشخیص داده نمی‌شوند.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده و مسائل تمرینی</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: همگرایی DV در شبکه 4-گره</div>
+          <p>شبکه: A—1—B—1—C—1—D، با A—4—D.</p>
+          <p><strong>بردارهای اولیه:</strong> D<sub>A</sub>=[0,1,∞,4], D<sub>B</sub>=[1,0,1,∞], D<sub>C</sub>=[∞,1,0,1], D<sub>D</sub>=[4,∞,1,0]</p>
+          <p><strong>پس از تبادل اول:</strong></p>
+          <p>D<sub>A</sub>(C) = min{A→B+ D<sub>B</sub>(C), A→D+ D<sub>D</sub>(C)} = min{1+1, 4+1} = 2 → از طریق B</p>
+          <p>D<sub>A</sub>(D) = min{1+∞, 4+0} = 4 → از طریق D (مستقیم)</p>
+          <p>D<sub>B</sub>(D) = min{1+4, 1+1} = 2 → از طریق C</p>
+          <p>D<sub>C</sub>(A) = min{1+1, 1+4} = 2 → از طریق B</p>
+          <p>D<sub>D</sub>(B) = min{4+1, 1+1} = 2 → از طریق C</p>
+          <p>D<sub>D</sub>(A) = min{4+0, 1+2} = 3 → از طریق C</p>
+
+          <p><strong>پس از تبادل دوم (نهایی):</strong></p>
+          <p>D<sub>A</sub>(D) = min{1+2, 4+0} = 3 → از طریق B-C-D (بهتر!)</p>
+          <p class="result">بردارهای نهایی: D<sub>A</sub>=[0,1,2,3], D<sub>B</sub>=[1,0,1,2], D<sub>C</sub>=[2,1,0,1], D<sub>D</sub>=[3,2,1,0]</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: انتشار کاهش هزینه پیوند</div>
+          <p>شبکه: P—5—Q—3—R—2—S. در ابتدا همه از پیوندهای مستقیم استفاده می‌کنند.</p>
+          <p>فرض کنید c(Q,R) از 3 به 1 کاهش می‌یابد.</p>
+          <p><strong>گام 1:</strong> Q تغییر را تشخیص می‌دهد. D<sub>Q</sub>(S) = min{3+2, 1+2} = 3 → بدون تغییر (ابتدا D<sub>Q</sub>(S)=∞ بود).</p>
+          <p>اولیه: D<sub>P</sub>=[0,5,∞,∞], D<sub>Q</sub>=[5,0,3,∞], D<sub>R</sub>=[∞,3,0,2], D<sub>S</sub>=[∞,∞,2,0]</p>
+          <p>پس از تبادل اول: D<sub>Q</sub>(S) = min{3+2, ∞} = 5 از طریق R. D<sub>R</sub>(P) = min{3+5, ∞} = 8 از طریق Q.</p>
+          <p>پس از تبادل دوم: D<sub>P</sub>(S) = min{5+5, ∞} = 10 از طریق Q. D<sub>R</sub>(S) = 2 (مستقیم).</p>
+          <p>اکنون c(Q,R) = 1: Q دوباره محاسبه می‌کند: D<sub>Q</sub>(S) = min(1+هزینه R به S, 5+0) = min(1+2, 5) = 3. D<sub>Q</sub> تغییر کرد، به P و R ارسال می‌کند.</p>
+          <p>P دریافت می‌کند: D<sub>P</sub>(S) = min(5+3, ∞) = 8 از طریق Q.</p>
+          <p class="result">کاهش هزینه سریع منتشر می‌شود (2 تکرار).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: سناریوی شمارش تا بی‌نهایت (مثلث 3-گره)</div>
+          <p>شبکه: A—1—B—1—C—10—A. اولیه: D<sub>A</sub>(C)=2 از طریق B.</p>
+          <p>فرض کنید c(A,B) از 1 به 20 افزایش می‌یابد.</p>
+          <p><strong>بدون معکوس مسموم:</strong></p>
+          <p>t₀: D<sub>A</sub>(B) می‌شود 20. D<sub>A</sub>(C) = min{20+1, 10+0} = 10 (مستقیم). A ارسال می‌کند.</p>
+          <p>B دریافت می‌کند: D<sub>B</sub>(C) = min{1+10, 1+∞} = 11. B به A ارسال می‌کند.</p>
+          <p>A دریافت می‌کند: D<sub>A</sub>(C) = min{20+11, 10+0} = 10. بدون تغییر.</p>
+          <p class="result">مستقیماً به D<sub>A</sub>(C)=10 همگرا می‌شود (از طریق مستقیم A→C). در این مورد حلقه‌ای نیست چون A یک مسیر جایگزین مستقیم دارد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: معکوس مسموم با حلقه مثلثی</div>
+          <p>شبکه: X—1—Y—1—Z—1—X. همه هزینه‌های پیوند = 1.</p>
+          <p>اولیه: D<sub>X</sub>=[0,1,2], D<sub>Y</sub>=[1,0,1], D<sub>Z</sub>=[2,1,0] (X→Z از طریق Y).</p>
+          <p>با معکوس مسموم: Z D<sub>Z</sub>(X)=∞ را به Y اعلام می‌کند (زیرا Z به X از طریق Y می‌رسد).</p>
+          <p>اکنون c(Y,X) از 1 به 20 تغییر می‌کند.</p>
+          <p>Y محاسبه می‌کند: D<sub>Y</sub>(X) = min{20+0, 1+∞} = 20. به Z ارسال می‌کند.</p>
+          <p>Z محاسبه می‌کند: D<sub>Z</sub>(X) = min{1+20, 1+0} = 1 (مستقیم). Z تغییر مسیر می‌دهد. اکنون Z دیگر از طریق Y مسیریابی نمی‌کند، بنابراین Z D<sub>Z</sub>(X)=1 را به Y می‌فرستد (اکنون truthful).</p>
+          <p>Y دریافت می‌کند: D<sub>Y</sub>(X) = min{20+0, 1+1} = 2 (از طریق Z). Y همگرا می‌شود.</p>
+          <p class="result">معکوس مسموم از حلقه جلوگیری کرد! فقط 3 تکرار.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: ساخت جدول ارسال با DV</div>
+          <p>برای شبکه: A—3—B—2—C—4—D—1—A، جدول ارسال را برای گره A پیدا کنید.</p>
+          <p><strong>راه‌حل با همگرایی DV:</strong></p>
+          <table>
+            <tr><th>مقصد</th><th>هزینه از A</th><th>گام-بعدی</th><th>مسیر</th></tr>
+            <tr><td>A</td><td>0</td><td>—</td><td>—</td></tr>
+            <tr><td>B</td><td>3</td><td>B</td><td>A→B</td></tr>
+            <tr><td>C</td><td>5</td><td>B</td><td>A→B→C</td></tr>
+            <tr><td>D</td><td>1</td><td>D</td><td>A→D</td></tr>
+          </table>
+          <p>توجه: A→C هزینه 5 از طریق B (3+2) دارد نه از طریق D (1+4=5 — هزینه برابر، می‌توان از هر کدام استفاده کرد).</p>
+          <p>A→D هزینه 1 مستقیم دارد.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>الگوریتم بلمن-فورد</h3>
+            <p><span class="highlight">نوع:</span> بردار فاصله (غیرمتمرکز)</p>
+            <p><span class="dim">ویژگی‌ها:</span> توزیع‌شده، تکراری، ناهمگام</p>
+            <p><span class="dim">همگرایی:</span> متغیر، می‌تواند کند باشد</p>
+          </div>
+          <div class="card">
+            <h3>معادله کلیدی</h3>
+            <p>d<sub>x</sub>(y) = min<sub>v</sub>{c(x,v) + d<sub>v</sub>(y)}</p>
+            <p class="note">هر گره فقط با همسایگان صحبت می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>مشکلات</h3>
+            <p>• شمارش تا بی‌نهایت</p>
+            <p>• حلقه‌های مسیریابی</p>
+            <p>• همگرایی کند برای اخبار بد</p>
+          </div>
+          <div class="card">
+            <h3>پروتکل‌های استفاده‌کننده از DV</h3>
+            <p>• <span class="highlight">RIP</span> (معیار تعداد پرش)</p>
+            <p>• <span class="highlight">BGP</span> (نوع بردار مسیر)</p>
+            <p>• ARPAnet اصلی</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP-Anycast — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-bottom: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>IP-Anycast — یک IP، چندین سرور</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — مسیریابی Anycast مبتنی بر BGP و کاربردها</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مفهوم و انگیزه</button>
+      <button class="tab" onclick="showSection('tab2')">پیاده‌سازی BGP</button>
+      <button class="tab" onclick="showSection('tab3')">موارد استفاده</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>IP-Anycast: مفهوم</h2>
+        <p><strong>IP-Anycast</strong> تکنیکی شبکه‌ای است که در آن <span class="highlight">یک آدرس IP به چندین سرور جغرافیایی توزیع شده اختصاص داده می‌شود</span>. مسیریاب‌های اینترنت از BGP برای هدایت هر مشتری به "نزدیک‌ترین" سرور استفاده می‌کنند. این امکان تکرار محتوای یکسان روی سرورهای کشورهای مختلف را فراهم می‌کند در حالی که هر کاربر از <strong>نزدیک‌ترین سرور</strong> به محتوا دسترسی پیدا می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">تعریف IP-Anycast</div>
+          <div class="expr">یک آدرس IP ← چندین سرور فیزیکی در مکان‌های مختلف<br>مشتری → مسیریاب‌ها → "نزدیک‌ترین" سرور (تعیین شده توسط BGP)</div>
+        </div>
+
+        <h3>Unicast در مقابل Anycast در مقابل Multicast در مقابل Broadcast</h3>
+        <table>
+          <tr><th>نوع</th><th>یک IP → ? سرور</th><th>تحویل</th><th>مثال</th></tr>
+          <tr><td><strong>Unicast</strong></td><td>1 → 1</td><td>یک سرور مشخص</td><td>وبگردی معمولی</td></tr>
+          <tr><td><strong>Anycast</strong></td><td>1 → N (نزدیک‌ترین)</td><td>بهترین سرور</td><td>DNS, CDN</td></tr>
+          <tr><td><strong>Multicast</strong></td><td>1 → N (اعضا)</td><td>همه اعضای گروه</td><td>ویدئو کنفرانس</td></tr>
+          <tr><td><strong>Broadcast</strong></td><td>1 → همه زیرشبکه</td><td>همه روی پیوند</td><td>درخواست ARP</td></tr>
+        </table>
+
+        <h3>چرا IP-Anycast؟</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>تأخیر کم</h3>
+            <p>مشتریان به طور خودکار به <span class="highlight">نزدیک‌ترین سرور</span> هدایت می‌شوند.</p>
+          </div>
+          <div class="card">
+            <h3>توزیع بار</h3>
+            <p>مشتریان مختلف به سرورهای مختلف می‌رسند و بار را <span class="highlight">توزیع</span> می‌کنند.</p>
+          </div>
+          <div class="card">
+            <h3>مقاومت در برابر DDoS</h3>
+            <p>ترافیک حمله در سرورهای متعدد توزیع می‌شود.</p>
+          </div>
+          <div class="card">
+            <h3>دسترسی بالا</h3>
+            <p>اگر سروری خراب شود، BGP مسیر آن را برمی‌دارد و ترافیک <span class="highlight">به طور خودکار</span> به سرور بعدی هدایت می‌شود.</p>
+          </div>
+        </div>
+
+        <div class="warning">IP-Anycast یک ویژگی لایه انتقال نیست — یک <strong>ویژگی لایه IP/BGP</strong> است. مشتری نمی‌داند با سرورهای مختلف صحبت می‌کند. یک اتصال TCP نمی‌تواند پس از تغییر مسیر به سرور دیگر زنده بماند.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>چگونه BGP IP-Anycast را پیاده‌سازی می‌کند</h2>
+        <p>IP-Anycast از فرآیند انتخاب مسیر BGP برای هدایت مشتریان به نزدیک‌ترین سرور استفاده می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مکانیزم Anycast از طریق BGP</div>
+          <div class="expr">
+گام 1: سرور A (نیویورک) پیشوند 192.0.2.0/24 را از طریق BGP اعلام می‌کند<br>
+گام 2: سرور B (توکیو) پیشوند 192.0.2.0/24 را از طریق BGP اعلام می‌کند<br>
+گام 3: مسیریاب‌های اینترنت هر دو آگهی را دریافت می‌کنند<br>
+گام 4: هر مسیریاب بهترین مسیر را با الگوریتم 4-قانون انتخاب می‌کند<br>
+گام 5: مشتری در لندن به سروری که BGP به عنوان نزدیک‌ترین انتخاب کرده متصل می‌شود
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">انتخاب مسیر Anycast</div>
+          <p>مسیریابی در لندن دو آگهی BGP برای 192.0.2.0/24 دریافت می‌کند. مسیر نیویورک: AS-PATH=2, هزینه IGP=30. مسیر توکیو: AS-PATH=3, هزینه IGP=120. <span class="result">نیویورک برنده می‌شود</span> چون AS-PATH کوتاه‌تر دارد.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>موارد استفاده IP-Anycast</h2>
+
+        <h3>1. سیستم سرور ریشه DNS</h3>
+        <p>سیستم سرور ریشه DNS <strong>مثال کلاسیک</strong> IP-Anycast است. فقط 13 آدرس IP سرور ریشه وجود دارد. متناظر با هر آدرس IP، <strong>چندین سرور ریشه DNS</strong> وجود دارد که برخی آدرس‌ها <strong>بیش از 100 سرور ریشه DNS</strong> در سراسر جهان دارند.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>مزایای Anycast DNS</h3>
+            <p>• <span class="highlight">تأخیر کم</span>: هر مشتری به سرور ریشه نزدیک می‌رسد.</p>
+            <p>• <span class="highlight">مقاومت DDoS</span>: ترافیک حمله در صدها نمونه پخش می‌شود.</p>
+            <p>• <span class="highlight">دسترسی بالا</span>: چندین نمونه افزونه به ازای هر IP.</p>
+          </div>
+          <div class="card">
+            <h3>نمونه‌های سرور ریشه</h3>
+            <p>• A-root: ~200 نمونه (Verisign)</p>
+            <p>• K-root: ~50 نمونه (RIPE NCC)</p>
+            <p>• L-root: ~190 نمونه (ICANN)</p>
+          </div>
+        </div>
+
+        <h3>2. شبکه‌های تحویل محتوا (CDN)</h3>
+        <p>CDNها مانند Cloudflare و Akamai از IP-Anycast برای تحویل محتوا از هزاران سرور لبه استفاده می‌کنند. در عمل، CDNها معمولاً <strong>از IP-Anycast برای تحویل محتوای مبتنی بر TCP استفاده نمی‌کنند</strong> زیرا تغییر مسیر BGP می‌تواند باعث شود بسته‌های مختلف یک اتصال TCP به نمونه‌های سرور متفاوت برسند. IP-Anycast بیشتر توسط سیستم DNS (مبتنی بر UDP) استفاده می‌شود.</div>
+
+        <h3>3. سرویس‌های کاهش DDoS</h3>
+        <p>ارائه‌دهندگان حفاظت DDoS از anycast برای <strong>تصفیه ترافیک حمله</strong> استفاده می‌کنند. ترافیک حمله به مراکز تصفیه Anycast هدایت می‌شود که بسته‌های مخرب را فیلتر می‌کنند.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده: تصمیمات مسیریابی Anycast</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: DNS Anycast — مشتری در برزیل</div>
+          <p>حل‌کننده DNS در سائوپائولو نیاز به حل www.example.com دارد. نمونه F-root در میامی AS-PATH=2 دارد، در لندن AS-PATH=4. <span class="result">میامی برنده می‌شود</span>. زمان واقعی: ~20ms (میامی) به جای ~120ms (لندن).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: CDN Anycast — پخش ویدئو</div>
+          <p>مشتری در شیکاگو. AS-PATH همه = 2. هزینه IGP: اشبرن=20، دالاس=15، سن‌خوزه=50. <span class="result">دالاس برنده می‌شود</span> (قانون 3: سیب‌زمینی داغ).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: مشکلات TCP با Anycast</div>
+          <p>مشتری در برلین اتصال TCP به IP Anycast برقرار می‌کند. BGP مسیر را به لندن انتخاب می‌کند. پیوند خراب می‌شود → BGP فرانکفورت را انتخاب می‌کند. فرانکفورت <strong>هیچ اطلاعاتی</strong> از وضعیت TCP ندارد → RST ارسال می‌کند → <span class="result">اتصال قطع می‌شود</span>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

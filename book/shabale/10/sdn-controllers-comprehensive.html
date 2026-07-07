@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کنترلرهای OpenDaylight و ONOS — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>کنترلرهای SDN — OpenDaylight و ONOS</h1>
+  <p class="subtitle">لایه شبکه — معماری‌های مدرن کنترلر SDN برای امتحان</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">OpenDaylight</button>
+      <button class="tab" onclick="showSection('tab2')">ONOS</button>
+      <button class="tab" onclick="showSection('tab3')">مقایسه</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>کنترلر OpenDaylight (ODL)</h2>
+        <p>OpenDaylight (ODL) یک کنترلر SDN متن‌باز است که با مشارکت بنیاد لینوکس توسعه یافته است. این کنترلر حمایت صنعتی قابل توجهی پیدا کرده و یکی از پراستقرارترین کنترلرهای SDN است.</p>
+
+        <h3>شکل 5.17: معماری OpenDaylight</h3>
+        <div class="formula">
+          <div class="label">معماری لایه‌ای ODL (شکل 5.17):</div>
+          <div class="expr">ارکستریشن و برنامه‌های شبکه (لایه بالایی)</div>
+          <div class="expr">  ↗ REST/RESTCONF/NETCONF APIs ↖</div>
+          <div class="expr">لایه انتزاع سرویس (SAL) — مرکز عصب</div>
+          <div class="expr">  ↗ [پیام‌رسانی] [ذخیره داده پیکربندی و عملیاتی] ↖</div>
+          <div class="expr">پروتکل‌های جنوبی: OpenFlow | NETCONF | SNMP | OVSDB</div>
+          <div class="desc">SAL یک رابط انتزاعی یکنواخت برای همه پروتکل‌های جنوبی فراهم می‌کند</div>
+        </div>
+
+        <h3>لایه انتزاع سرویس (SAL)</h3>
+        <p>SAL مرکز عصب کنترلر است. این لایه فراهم می‌کند:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>قابلیت‌های SAL</h3>
+            <p>• <span class="highlight">فراخوانی سرویس</span> — مؤلفه‌ها سرویس‌های یکدیگر را فراخوانی می‌کنند</p>
+            <p>• <span class="highlight">دسترسی به داده</span> — خواندن/نوشتن داده پیکربندی و عملیاتی</p>
+            <p>• <span class="highlight">اشتراک رویداد</span> — اشتراک در رویدادهای تولیدشده توسط مؤلفه‌ها</p>
+            <p>• <span class="highlight">انتزاع پروتکل</span> — رابط یکنواخت برای پروتکل‌های جنوبی</p>
+          </div>
+          <div class="card">
+            <h3>پروتکل‌های جنوبی پشتیبانی‌شده</h3>
+            <p>• <span class="dim">OpenFlow</span> — مدیریت جدول جریان</p>
+            <p>• <span class="dim">NETCONF</span> — پروتکل پیکربندی شبکه</p>
+            <p>• <span class="dim">SNMP</span> — پروتکل ساده مدیریت شبکه</p>
+            <p>• <span class="dim">OVSDB</span> — پروتکل پایگاه داده Open vSwitch</p>
+          </div>
+        </div>
+
+        <h3>توابع پایه شبکه (هسته ODL)</h3>
+        <p>توابع پایه شبکه ODL مربوط به قابلیت‌های مدیریت حالت در سطح شبکه هستند. اینها عبارتند از:</p>
+        <table>
+          <tr><th>ماژول</th><th>عملکرد</th></tr>
+          <tr><td>پردازش توپولوژی</td><td>نگهداری گراف شبکه از سوییچ‌ها و پیوندها</td></tr>
+          <tr><td>مدیر سوییچ</td><td>مدیریت اتصالات و قابلیت‌های سوییچ</td></tr>
+          <tr><td>مدیر آمار</td><td>جمع‌آوری و ذخیره آمار جریان/پورت</td></tr>
+          <tr><td>AAA</td><td>احراز هویت، مجوز، حسابداری</td></tr>
+          <tr><td>کشف دستگاه</td><td>کشف میزبان‌ها و دستگاه‌های روی شبکه</td></tr>
+          <tr><td>مدیر قوانین ارسال</td><td>مدیریت نصب ورودی‌های جریان</td></tr>
+          <tr><td>ردیاب میزبان</td><td>ردیابی موقعیت و جابجایی میزبان‌ها</td></tr>
+        </table>
+
+        <h3>AD-SAL در مقابل MD-SAL</h3>
+        <p>ODL دو رویکرد برای تعامل برنامه‌ها با سرویس‌های کنترلر فراهم می‌کند:</p>
+        <table>
+          <tr><th>جنبه</th><th>AD-SAL (API-Driven)</th><th>MD-SAL (Model-Driven)</th></tr>
+          <tr><td>رویکرد</td><td>برنامه‌ها مستقیماً از REST API استفاده می‌کنند</td><td>مدل‌های YANG ساختار داده را تعریف می‌کنند</td></tr>
+          <tr><td>معرفی شده</td><td>نسخه‌های اولیه ODL</td><td>نسخه‌های بعدی ODL</td></tr>
+          <tr><td>پروتکل</td><td>REST روی HTTP</td><td>NETCONF (مدل‌های تعریف‌شده با YANG)</td></tr>
+          <tr><td>انعطاف‌پذیری</td><td>کمتر انعطاف‌پذیر، تغییرات API نیاز به بروزرسانی دارند</td><td>انعطاف‌پذیرتر، مدل‌ها قابل توسعه هستند</td></tr>
+          <tr><td>موارد استفاده</td><td>برنامه‌های ساده، یکپارچه‌سازی سریع</td><td>مدیریت پیکربندی پیچیده</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>مدل‌سازی داده YANG:</strong> YANG (RFC 6020) یک زبان مدل‌سازی داده است که برای تعریف ساختار داده پیکربندی و حالت عملیاتی استفاده می‌شود. در MD-SAL، دستگاه‌ها با دستکاری این مدل‌های تعریف‌شده با YANG با استفاده از NETCONF پیکربندی و مدیریت می‌شوند. این قابل توسعه‌تر از APIهای سخت‌کد شده است.
+        </div>
+
+        <h3>سرویس‌های پیشرفته</h3>
+        <p>در بالای توابع پایه شبکه، ODL سرویس‌های پیشرفته فراهم می‌کند:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>نمونه سرویس‌های پیشرفته</h3>
+            <p>• <span class="highlight">مهندسی ترافیک</span> — بهینه‌سازی انتخاب مسیر</p>
+            <p>• <span class="highlight">فایروال</span> — اجرای سیاست امنیتی</p>
+            <p>• <span class="highlight">متوازن‌سازی بار</span> — توزیع ترافیک بین سرورها</p>
+          </div>
+          <div class="card">
+            <h3>دسترسی شمالی</h3>
+            <p>برنامه‌ها به سرویس‌های پیشرفته از طریق:</p>
+            <p>• REST/RESTCONF <span class="dim">(AD-SAL)</span></p>
+            <p>• NETCONF <span class="dim">(MD-SAL)</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>کنترلر ONOS</h2>
+        <p>ONOS (سیستم عامل شبکه باز) یک کنترلر SDN متن‌باز است که با مشارکت بنیاد لینوکس توسعه یافته است. مانند ODL، دارای معماری لایه‌ای است اما با انتخاب‌های طراحی متمایز.</p>
+
+        <h3>شکل 5.18: معماری ONOS</h3>
+        <div class="formula">
+          <div class="label">معماری سه لایه ONOS (شکل 5.18):</div>
+          <div class="expr">برنامه‌های کنترل شبکه (چارچوب Intent، REST API)</div>
+          <div class="expr">  ↕ انتزاعات و پروتکل‌های شمالی</div>
+          <div class="expr">هسته توزیع‌شده ONOS (متمرکز منطقاً)</div>
+          <div class="expr">  ↕ انتزاعات و پروتکل‌های جنوبی</div>
+          <div class="expr">دستگاه‌ها، پیوندها، میزبان‌ها، قوانین جریان، آمار</div>
+          <div class="desc">ONOS به عنوان یک سرویس توزیع‌شده روی سرورهای متصل اجرا می‌شود؛ هر سرور نرم‌افزار یکسانی اجرا می‌کند</div>
+        </div>
+
+        <h3>لایه 1: انتزاعات و پروتکل‌های شمالی</h3>
+        <p>لایه شمالی انتزاعاتی برای برنامه‌های کنترل شبکه فراهم می‌کند. ویژگی‌های کلیدی:</p>
+        <ul>
+          <li><strong>چارچوب Intent:</strong> برنامه‌ها سرویس‌های سطح بالا را بدون جزئیات پیاده‌سازی درخواست می‌کنند (مثلاً "میزبان A را به میزبان B متصل کن" بدون مشخص کردن VLANها، مسیرها، یا پروتکل‌ها)</li>
+          <li><strong>دسترسی همزمان:</strong> از طریق پرس‌وجو (REST API)</li>
+          <li><strong>دسترسی ناهمزمان:</strong> از طریق فراخوان‌های listener مطلع از تغییرات حالت شبکه</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">مثال چارچوب Intent ONOS:</div>
+          <div class="expr">Intent: "ارتباط بین میزبان A و میزبان B را مجاز کن"</div>
+          <div class="expr">Intent: "ارتباط میزبان A با میزبان C را مسدود کن"</div>
+          <div class="desc">چارچوب intent این سیاست‌های سطح بالا را به ورودی‌های جریان خاص ترجمه می‌کند</div>
+        </div>
+
+        <h3>لایه 2: هسته توزیع‌شده</h3>
+        <p>هسته توزیع‌شده قلب ONOS است. این هسته حالت شبکه را نگهداری می‌کند و انتزاع یک سرویس متمرکز منطقاً را فراهم می‌کند. هسته توزیع‌شده مکانیزم‌هایی برای <strong>تکرار سرویس</strong> و <strong>هماهنگی بین نمونه‌ها</strong> فراهم می‌کند و به برنامه‌های بالا و دستگاه‌های شبکه پایین، انتزاع یک کنترلر واحد، سازگار و متمرکز منطقاً را می‌دهد.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>حالت نگهداری‌شده در هسته</h3>
+            <p>• <span class="highlight">میزبان‌ها</span> — موقعیت و هویت</p>
+            <p>• <span class="highlight">مسیرها</span> — مسیرهای سرتاسری موجود</p>
+            <p>• <span class="highlight">توپولوژی</span> — ساختار گراف شبکه</p>
+            <p>• <span class="highlight">دستگاه‌ها</span> — موجودی سوییچ/مسیریاب</p>
+            <p>• <span class="highlight">پیوندها</span> — وضعیت اتصال</p>
+            <p>• <span class="highlight">قوانین جریان</span> — ورودی‌های ارسال نصب‌شده</p>
+            <p>• <span class="highlight">آمار</span> — اندازه‌گیری‌های ترافیک</p>
+          </div>
+          <div class="card">
+            <h3>معماری توزیع‌شده</h3>
+            <p>• روی یک <span class="dim">خوشه سرور</span> اجرا می‌شود</p>
+            <p>• هر سرور نرم‌افزار ONOS یکسانی اجرا می‌کند</p>
+            <p>• ظرفیت با <span class="dim">سرورهای بیشتر</span> مقیاس می‌شود</p>
+            <p>• تکرار سرویس برای <span class="dim">تحمل خطا</span></p>
+            <p>• هماهنگی بین نمونه‌ها از طریق پروتکل‌های توزیع‌شده</p>
+          </div>
+        </div>
+
+        <h3>لایه 3: انتزاعات و پروتکل‌های جنوبی</h3>
+        <p>لایه جنوبی ONOS ناهمگنی دستگاه‌های شبکه زیرین را می‌پوشاند.</p>
+
+        <div class="formula">
+          <div class="label">مزایای انتزاع جنوبی:</div>
+          <div class="expr">"مستقل از دستگاه و پروتکل" — هسته به انواع دستگاه خاص وابسته نیست</div>
+          <div class="expr">پلاگین‌های پروتکل: OpenFlow, NETCONF, OVSDB</div>
+          <div class="desc">رابط جنوبی ONOS منطقاً بالاتر از کنترلر متعارف (شکل 5.15) به دلیل این لایه انتزاع است</div>
+        </div>
+
+        <p>انتزاعات جنوبی فراهم می‌کنند:</p>
+        <ul>
+          <li><strong>انتزاع دستگاه:</strong> رابط یکنواخت برای همه انواع سوییچ</li>
+          <li><strong>انتزاع پیوند:</strong> نمایش پیوند سازگار صرف‌نظر از پروتکل</li>
+          <li><strong>انتزاع میزبان:</strong> ردیابی میزبان استاندارد</li>
+          <li><strong>انتزاع قانون جریان:</strong> برنامه‌ریزی جریان مستقل از پروتکل</li>
+          <li><strong>انتزاع بسته:</strong> رابط پردازش بسته یکنواخت</li>
+        </ul>
+
+        <div class="warning">
+          <strong>تفاوت معماری کلیدی:</strong> ONOS لایه انتزاع خود را <strong>بالای</strong> پلاگین‌های پروتکل قرار می‌دهد (بین پلاگین‌ها و هسته توزیع‌شده). SAL در ODL <strong>در همان سطح</strong> پلاگین‌های پروتکل است. این یعنی هسته ONOS نسبت به پروتکل خنثی‌تر از ODL است.
+        </div>
+
+        <h3>تکامل از NOX به کنترلرهای مدرن</h3>
+        <table>
+          <tr><th>کنترلر</th><th>سال</th><th>نوآوری کلیدی</th></tr>
+          <tr><td>NOX</td><td>2008</td><td>اولین کنترلر SDN؛ معماری مبتنی بر مؤلفه</td></tr>
+          <tr><td>POX</td><td>2011</td><td>نسخه Python NOX؛ نمونه‌سازی آسان‌تر</td></tr>
+          <tr><td>Floodlight</td><td>2012</td><td>مبتنی بر Java؛ سیستم بارگذاری ماژول؛ REST API</td></tr>
+          <tr><td>ONIX</td><td>2012</td><td>صفحه کنترل توزیع‌شده؛ NIB برای مدیریت حالت</td></tr>
+          <tr><td>OpenDaylight</td><td>2013</td><td>معماری SAL؛ YANG/NETCONF؛ تکامل MD-SAL</td></tr>
+          <tr><td>ONOS</td><td>2014</td><td>چارچوب Intent؛ هسته توزیع‌شده؛ درجه حامل</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Google B4: کنترلر SDN در عمل</h2>
+        <p>شبکه B4 گوگل برجسته‌ترین استقرار SDN در دنیای واقعی است. معماری کنترلر آن ترکیبی از چندین فناوری است:</p>
+        <div class="formula">
+          <div class="label">پشته کنترلر B4:</div>
+          <div class="expr">برنامه مهندسی ترافیک</div>
+          <div class="expr">  ← سرورهای کنترل شبکه (NCS) [Paxos برای تکرار]</div>
+          <div class="expr">    ← کنترلر OpenFlow (OFC) [مبتنی بر ONIX]</div>
+          <div class="expr">      ← پایگاه اطلاعات شبکه (NIB) [مدیریت حالت]</div>
+          <div class="expr">        ← عامل OpenFlow (OFA) روی هر سوییچ</div>
+          <div class="desc">BGP بین مراکز داده استفاده می‌شود؛ IS-IS درون مراکز داده؛ Paxos برای تحمل خطا</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>مقایسه دقیق ODL در مقابل ONOS</h2>
+
+        <table>
+          <tr><th>جنبه</th><th>OpenDaylight (ODL)</th><th>ONOS</th></tr>
+          <tr><td>تأسیس</td><td>2013</td><td>2014</td></tr>
+          <tr><td>سازمان</td><td>بنیاد لینوکس</td><td>بنیاد لینوکس</td></tr>
+          <tr><td>زبان</td><td>Java</td><td>Java</td></tr>
+          <tr><td>انتزاع کلیدی</td><td>SAL (لایه انتزاع سرویس)</td><td>چارچوب Intent</td></tr>
+          <tr><td>API شمالی</td><td>REST/RESTCONF/NETCONF</td><td>Intent API + REST API</td></tr>
+          <tr><td>مدل‌سازی داده</td><td>YANG (MD-SAL)</td><td>انتزاعات سفارشی</td></tr>
+          <tr><td>فلسفه طراحی</td><td>پروتکل-محور (SAL پروتکل‌ها را یکپارچه می‌کند)</td><td>انتزاع-محور (هسته مستقل از پروتکل است)</td></tr>
+          <tr><td>پروتکل‌های جنوبی</td><td>OpenFlow, NETCONF, SNMP, OVSDB</td><td>OpenFlow, NETCONF, OVSDB</td></tr>
+          <tr><td>هسته توزیع‌شده</td><td>از طریق خوشه‌بندی (Akka)</td><td>هسته توزیع‌شده بومی (Titan)</td></tr>
+          <tr><td>پشتیبانی Intent</td><td>از طریق برنامه‌ها (ساخته نشده)</td><td>چارچوب Intent ساخته شده</td></tr>
+          <tr><td>موارد استفاده هدف</td><td>مرکز داده، WAN، NFV</td><td>درجه حامل، WAN، دانشگاه</td></tr>
+          <tr><td>پذیرش صنعتی</td><td>گسترده (Cisco, Huawei, Ericsson)</td><td>در حال رشد (AT&T, Verizon, NTT)</td></tr>
+        </table>
+
+        <h3>مقایسه معماری: SAL در مقابل انتزاعات</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>ODL: SAL-محور</h3>
+            <p><span class="highlight">SAL</span> در مرکز معماری است.</p>
+            <p>فراهم می‌کند: پیام‌رسانی، ذخیره داده (پیکربندی + عملیاتی)، و مسیریابی سرویس.</p>
+            <p>پلاگین‌های پروتکل (OpenFlow, NETCONF, و غیره) در SAL ثبت می‌شوند.</p>
+            <p>برنامه‌ها سرویس‌ها را از طریق SAL از طریق REST یا مدل‌های YANG فراخوانی می‌کنند.</p>
+          </div>
+          <div class="card">
+            <h3>ONOS: انتزاع-محور</h3>
+            <p><span class="highlight">انتزاعات</span> در مرکز هستند.</p>
+            <p>شمالی: انتزاعات Intent، دستگاه، میزبان، پیوند.</p>
+            <p>هسته توزیع‌شده در سطح انتزاع کار می‌کند، نه سطح پروتکل.</p>
+            <p>جنوبی: فراهم‌کننده‌ها انتزاعات را برای پروتکل‌های خاص پیاده‌سازی می‌کنند.</p>
+          </div>
+        </div>
+
+        <h3>چه موقع از کدام استفاده کنیم</h3>
+        <table>
+          <tr><th>نیازمندی</th><th>کنترلر توصیه‌شده</th></tr>
+          <tr><td>سرمایه‌گذاری موجود در مدل‌های YANG</td><td>OpenDaylight (MD-SAL)</td></tr>
+          <tr><td>سیاست سطح بالا (مبتنی بر intent)</td><td>ONOS (چارچوب intent ساخته شده)</td></tr>
+          <tr><td>پروتکل جنوبی چندگانه</td><td>OpenDaylight (SAL)</td></tr>
+          <tr><td>قابلیت اطمینان درجه حامل</td><td>ONOS (هسته توزیع‌شده بومی)</td></tr>
+          <tr><td>REST API برای برنامه‌های ساده</td><td>هر کدام (هر دو REST API دارند)</td></tr>
+          <tr><td>تمرکز بر مرکز داده</td><td>OpenDaylight (OVSDB, VTN)</td></tr>
+        </table>
+
+        <h3>مقایسه اصطلاحات کلیدی</h3>
+        <table>
+          <tr><th>مفهوم</th><th>اصطلاح ODL</th><th>اصطلاح ONOS</th></tr>
+          <tr><td>مسیریابی سرویس</td><td>SAL (لایه انتزاع سرویس)</td><td>هسته توزیع‌شده</td></tr>
+          <tr><td>حالت شبکه</td><td>ذخیره داده پیکربندی و عملیاتی (YANG)</td><td>Titan (گراف DB) + ذخیره توزیع‌شده</td></tr>
+          <tr><td>سیاست سطح بالا</td><td>برنامه‌ها از طریق REST/YANG</td><td>چارچوب Intent</td></tr>
+          <tr><td>پلاگین پروتکل</td><td>پلاگین جنوبی (از طریق SAL)</td><td>فراهم‌کننده جنوبی</td></tr>
+          <tr><td>خوشه کنترلر</td><td>خوشه ODL (Akka)</td><td>خوشه ONOS (مبتنی بر RAFT)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: اتصال مبتنی بر Intent با ONOS</div>
+          <p><strong>سناریو:</strong> یک اپراتور شبکه می‌خواهد اتصال بین دو سرور برقرار کند: سرور A (MAC=00:00:00:00:00:01، متصل به سوییچ s1 پورت 1) و سرور B (MAC=00:00:00:00:00:02، متصل به سوییچ s4 پورت 2).</p>
+          <p><strong>استفاده از چارچوب Intent ONOS:</strong></p>
+          <div class="code">// ONOS Intent API — Java
+Intent intent = HostToHostIntent.builder()
+    .appId(appId)
+    .one(connectPoint("s1", 1))        // موقعیت سرور A
+    .two(connectPoint("s4", 2))        // موقعیت سرور B
+    .build();
+
+intentService.submit(intent);
+          </div>
+          <p><strong>آنچه درون کنترلر رخ می‌دهد:</strong></p>
+          <ol>
+            <li>چارچوب intent ONOS intent سطح بالا را دریافت می‌کند: "A را به B متصل کن".</li>
+            <li>کامپایلر intent آن را به موارد زیر ترجمه می‌کند: پیدا کردن مسیر از s1 به s4، تعیین اینکه کدام سوییچ‌ها به ورودی جریان نیاز دارند.</li>
+            <li>کامپایلر با <strong>هسته توزیع‌شده</strong> تعامل می‌کند تا توپولوژی، مسیرهای موجود و ظرفیت پیوندها را دریافت کند.</li>
+            <li>چندین کاندیدای مسیر ارزیابی می‌شوند؛ بهترین مسیر انتخاب می‌شود (مثلاً s1→s2→s3→s4).</li>
+            <li>چارچوب intent قوانین جریان را روی s1, s2, s3, و s4 با استفاده از <strong>فراهم‌کننده‌های جنوبی</strong> (OpenFlow) نصب می‌کند.</li>
+            <li>ورودی‌های جریان: s1: dst=00:00:00:00:00:02 ← خروجی به s2; s2: dst=00:00:00:00:00:02 ← خروجی به s3; و غیره.</li>
+          </ol>
+          <p><strong>مزیت SDN:</strong> اپراتور مشخص می‌کند <strong>چه</strong> چیزی می‌خواهد، نه <strong>چگونه</strong>. ONOS همه جزئیات سطح پایین محاسبه مسیر و نصب جریان را مدیریت می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: زنجیره سرویس MD-SAL OpenDaylight</div>
+          <p><strong>سناریو:</strong> یک شرکت می‌خواهد همه ترافیک HTTP قبل از رسیدن به سرور وب از فایروال عبور کند. ترافیک باید هدایت شود: کلاینت ← سوییچ A ← فایروال ← سوییچ B ← سرور وب.</p>
+          <p><strong>استفاده از OpenDaylight MD-SAL:</strong></p>
+          <ol>
+            <li>زنجیره سرویس را با استفاده از یک مدل داده YANG تعریف کنید:</li>
+          </ol>
+          <div class="code">// service-chain.yang
+module service-chain {
+  yang-version 1.1;
+  namespace "urn:example:service-chain";
+  prefix sc;
+
+  list service-chain {
+    key "name";
+    leaf name { type string; }
+    list classifier {
+      leaf dst-port { type uint16; }
+      leaf protocol { type uint8; }
+    }
+    list service-function {
+      ordered-by user;
+      leaf type { type enumeration { enum firewall; enum DPI; enum lb; } }
+      leaf device-ip { type inet:ipv4-address; }
+    }
+  }
+}
+          </div>
+          <ol start="2">
+            <li>MD-SAL این مدل را ذخیره می‌کند. یک برنامه هدایت ترافیک مدل را می‌خواند و آن را به ورودی‌های جریان ترجمه می‌کند.</li>
+            <li>از طریق NETCONF، برنامه دستگاه فایروال را با قوانین مناسب پیکربندی می‌کند.</li>
+            <li>از طریق OpenFlow، ورودی‌های جریان روی سوییچ A (تغییر مسیر HTTP به فایروال) و سوییچ B (پذیرش از فایروال) نصب می‌شوند.</li>
+          </ol>
+          <div class="code">ورودی جریان سوییچ A:
+  match: dst-port=80, proto=TCP
+  actions: خروجی به پورت فایروال
+
+ورودی جریان سوییچ B:
+  match: in_port=فایروال, dst-port=80, proto=TCP
+  actions: خروجی به پورت سرور وب
+          </div>
+          <p><strong>مزیت MD-SAL:</strong> مدل YANG یک <strong>منبع حقیقت واحد</strong> برای کل پیکربندی زنجیره سرویس فراهم می‌کند. تغییرات با بروزرسانی نمونه مدل از طریق NETCONF اعمال می‌شوند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: بازیابی خرابی هسته توزیع‌شده ONOS</div>
+          <p><strong>سناریو:</strong> یک خوشه ONOS دارای 5 سرور است. یک سرور (نمونه 3) خراب می‌شود. شبکه دارای 50 سوییچ متصل به خوشه است.</p>
+          <p><strong>آنچه رخ می‌دهد:</strong></p>
+          <table>
+            <tr><th>فاز</th><th>عمل</th></tr>
+            <tr><td>تشخیص</td><td>پروتکل عضویت خوشه تشخیص می‌دهد نمونه 3 غیرقابل دسترس است (انقضای heartbeat)</td></tr>
+            <tr><td>انتخاب مجدد</td><td>پروتکل اجماع RAFT یک رهبر جدید از بین 4 نمونه باقی‌مانده انتخاب می‌کند</td></tr>
+            <tr><td>تخصیص مجدد سوییچ</td><td>سوییچ‌هایی که به نمونه 3 متصل بودند، از دست رفتن اتصال را از طریق انقضای echo OpenFlow تشخیص می‌دهند</td></tr>
+            <tr><td>اتصال مجدد</td><td>سوییچ‌ها با استفاده از لیست IP کنترلر از پیش پیکربندی‌شده به نمونه‌های پشتیبان متصل می‌شوند</td></tr>
+            <tr><td>بازیابی حالت</td><td>هسته توزیع‌شده (گراف DB Titan) قبلاً حالت را بین نمونه‌ها تکرار کرده است؛ رهبر توپولوژی کامل دارد</td></tr>
+            <tr><td>نصب مجدد جریان</td><td>نمونه‌های کنترلر جدید جداول جریان را در سوییچ‌های اختصاص‌یافته تأیید می‌کنند؛ ورودی‌های گمشده را دوباره نصب می‌کنند</td></tr>
+          </table>
+          <p><strong>نتیجه:</strong> عملیات شبکه بدون از دست دادن بسته ادامه می‌یابد. ورودی‌های جریان موجود در سوییچ‌ها باقی می‌مانند و به ارسال ادامه می‌دهند. فقط درخواست‌های جریان جدید به طور مختصر در طول اتصال مجدد تأخیر دارند.</p>
+          <p><strong>اصل طراحی کلیدی:</strong> سوییچ‌ها "کش صفحه داده" هستند — آنها برای هر بسته به کنترلر وابسته نیستند. کنترلر فقط برای رویدادهای عدم تطبیق جدول مشورت می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: برنامه مهندسی ترافیک الهام‌گرفته از B4</div>
+          <p><strong>سناریو:</strong> یک کنترلر SDN سراسری پیوندهای WAN بین مراکز داده را مدیریت می‌کند. سه کلاس برنامه: ترافیک تعاملی کاربر (اولویت 1)، تحلیل نزدیک به زمان واقعی (اولویت 2)، و تکرار حجیم (اولویت 3). استفاده از پیوند باید به حداکثر برسد.</p>
+          <p><strong>راه‌حل (الهام‌گرفته از B4):</strong></p>
+          <div class="code">// شبه-کد برای برنامه TE
+function computeAllocation(demands, links, priorities):
+    // 1. پهنای باند را برای جریان‌های با اولویت بالا رزرو کن
+    for each interactive_flow:
+        path = shortest_path(flow.src, flow.dst)
+        allocate(path, flow.demand)
+
+    // 2. اولویت متوسط را روی ظرفیت باقی‌مانده تخصیص بده
+    for each analytics_flow:
+        path = path_with_available_bw(flow.src, flow.dst, flow.demand)
+        if path exists: allocate(path, flow.demand)
+        else: queue for later
+
+    // 3. ظرفیت باقی‌مانده را با ترافیک حجیم پر کن
+    for each replication_flow:
+        path = path_with_available_bw(flow.src, flow.dst)
+        allocate(path, min(flow.demand, available_bw))
+        // قابل توقف — می‌تواند برای اولویت بالاتر رها شود
+          </div>
+          <p><strong>نتایج به‌دست‌آمده توسط B4:</strong> 70% استفاده متوسط از پیوند (در مقابل 30-40% معمولی)، 2-3 برابر بهبود. کنترلر SDN دید سراسری دارد و می‌تواند همزمان در همه جریان‌ها بهینه‌سازی کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: یکپارچه‌سازی دستگاه چند فروشنده از طریق انتزاعات جنوبی</div>
+          <p><strong>سناریو:</strong> یک شبکه دارای سوییچ‌هایی از سه فروشنده است: Cisco (سیستم عامل اختصاصی)، Juniper (JunOS)، و یک سوییچ white-box که Open vSwitch اجرا می‌کند.</p>
+          <p><strong>بدون SDN:</strong> اپراتورهای شبکه باید سه نحو CLI مختلف و پروتکل‌های مدیریت را یاد بگیرند. خودکارسازی در همه دستگاه‌ها نیاز به اسکریپت‌های سفارشی برای هر فروشنده دارد.</p>
+          <p><strong>با انتزاعات جنوبی ONOS:</strong></p>
+          <div class="code">// انتزاع دستگاه — API یکنواخت صرف‌نظر از فروشنده
+DeviceId ciscoId = DeviceId.deviceId("netconf:10.0.0.1:830");
+DeviceId juniperId = DeviceId.deviceId("netconf:10.0.0.2:830");
+DeviceId ovsId = DeviceId.deviceId("openflow:10.0.0.3:6653");
+
+// نصب همان قانون جریان روی هر سه دستگاه
+FlowRule rule = DefaultFlowRule.builder()
+    .forDevice(ciscoId)    // فراهم‌کننده ONOS ترجمه Cisco←NETCONF را انجام می‌دهد
+    .withSelector(matchDst(IP4Prefix.valueOf("10.0.0.0/8")))
+    .withTreatment(DefaultTrafficTreatment.builder()
+        .setOutput(PortNumber.port(3))
+        .build())
+    .build();
+
+flowRuleService.applyFlowRules(rule);
+
+// همان فراخوانی برای Juniper
+flowRuleService.applyFlowRules(rule.forDevice(juniperId));
+// همان فراخوانی برای OVS
+flowRuleService.applyFlowRules(rule.forDevice(ovsId));
+          </div>
+          <p><strong>مزیت انتزاع:</strong> هسته توزیع‌شده ONOS نیازی ندارد بداند که آیا یک دستگاه OpenFlow، NETCONF، یا یک پروتکل اختصاصی صحبت می‌کند. فراهم‌کننده‌های جنوبی ترجمه را انجام می‌دهند.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>نکات کلیدی OpenDaylight</h3>
+            <p>• <span class="highlight">SAL</span> مرکز عصب است</p>
+            <p>• <span class="highlight">AD-SAL</span>: مبتنی بر REST API</p>
+            <p>• <span class="highlight">MD-SAL</span>: YANG + NETCONF</p>
+            <p>• پروتکل‌ها: OF, NETCONF, SNMP, OVSDB</p>
+            <p>• سرویس‌های پیشرفته: TE, FW, LB</p>
+          </div>
+          <div class="card">
+            <h3>نکات کلیدی ONOS</h3>
+            <p>• <span class="highlight">چارچوب Intent</span> (اعلانی)</p>
+            <p>• <span class="highlight">هسته توزیع‌شده</span> (RAFT)</p>
+            <p>• <span class="highlight">انتزاعات جنوبی</span></p>
+            <p>• هسته مستقل از دستگاه</p>
+            <p>• تمرکز بر درجه حامل</p>
+          </div>
+          <div class="card">
+            <h3>تکامل کنترلر</h3>
+            <p>2008: <span class="dim">NOX</span> (اولین)</p>
+            <p>2012: <span class="dim">Floodlight</span>, <span class="dim">ONIX</span></p>
+            <p>2013: <span class="dim">OpenDaylight</span></p>
+            <p>2014: <span class="dim">ONOS</span></p>
+            <p>همه متن‌باز (بنیاد لینوکس)</p>
+          </div>
+          <div class="card">
+            <h3>پشته B4</h3>
+            <p>• <span class="highlight">OFA</span> — عامل سوییچ</p>
+            <p>• <span class="highlight">OFC</span> — مبتنی بر ONIX</p>
+            <p>• <span class="highlight">NIB</span> — پایگاه داده حالت</p>
+            <p>• <span class="highlight">Paxos</span> — تحمل خطا</p>
+            <p>• <span class="highlight">BGP</span> + <span class="highlight">IS-IS</span> — مسیریابی</p>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>OFC مبتنی بر ONIX</h3>
+            <p>پیاده‌سازی OFC گوگل مبتنی بر کنترلر SDN <span class="highlight">ONIX</span> [Koponen 2010] است.</p>
+            <p>ONIX یک کنترلر SDN توزیع‌شده پیشگام بود که پایگاه اطلاعات شبکه (NIB) را برای مدیریت حالت معرفی کرد، که B4 مستقیماً آن را پذیرفت.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

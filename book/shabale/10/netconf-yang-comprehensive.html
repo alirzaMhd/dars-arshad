@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETCONF و YANG — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>NETCONF و YANG</h1>
+  <p class="subtitle">پروتکل پیکربندی شبکه و زبان مدل‌سازی داده</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور NETCONF</button>
+      <button class="tab" onclick="showSection('tab2')">عملیات و پیام‌ها</button>
+      <button class="tab" onclick="showSection('tab3')">مدل‌سازی داده YANG</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور NETCONF</h2>
+        <p>NETCONF (پروتکل پیکربندی شبکه) یک پروتکل استاندارد IETF برای نصب، دستکاری و حذف پیکربندی دستگاه‌های شبکه است. این پروتکل از پارادایم RPC با پیام‌های رمزگذاری شده با XML روی یک جلسه امن و اتصال گرا مانند TLS (امنیت لایه حمل) روی TCP استفاده می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">پشته NETCONF:</div>
+          <div class="expr">حمل: TCP/TLS/SSH &bull; رمزگذاری: XML &bull; پارادایم: RPC</div>
+          <div class="desc">IETF RFC 6241 — جایگزین SNMP برای مدیریت پیکربندی</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>لایه حمل</h3>
+            <p><span class="highlight">SSH</span> (RFC 6242) — رایج‌ترین</p>
+            <p><span class="highlight">TLS</span> (RFC 7589) — امنیت لایه حمل روی TCP</p>
+            <p><span class="dim">TCP</span> (خام, RFC 5539)</p>
+            <p>اتصال گرا و <span class="result">قابل اعتماد</span></p>
+          </div>
+          <div class="card">
+            <h3>ویژگی‌های کلیدی</h3>
+            <p><span class="highlight">تراکنشی</span> — commit/rollback</p>
+            <p><span class="highlight">پیکربندی کاندیدا</span> — ویرایش بدون تأثیر</p>
+            <p><span class="dim">فیلتر کردن</span> — زیردرخت، XPath</p>
+            <p><span class="dim">اعلان‌ها</span> — جریان رویداد</p>
+            <p><span class="highlight">تراکنش‌های اتمی چند-دستگاهی</span> [RFC 3535] — عملیاتی که به صورت اتمی در مجموعه‌ای از دستگاه‌ها کامل می‌شوند یا کاملاً معکوس می‌شوند</p>
+          </div>
+          <div class="card">
+            <h3>در مقابل SNMP</h3>
+            <p>TCP در مقابل <span class="dim">UDP</span></p>
+            <p>XML در مقابل <span class="dim">BER/DER</span></p>
+            <p>RPC در مقابل <span class="dim">Get/Set</span></p>
+            <p><span class="highlight">تراکنشی</span> در مقابل اتمی</p>
+          </div>
+        </div>
+
+        <h3>جریان جلسه NETCONF (شکل 5.22)</h3>
+        <div class="code">
+کلاینت (NMS)                          سرور (دستگاه)
+    |                                      |
+    |--- &lt;hello&gt; (قابلیت‌ها) --------------&gt; |
+    |&lt;--- &lt;hello&gt; (قابلیت‌ها) ---------------| <span class="result">برقراری جلسه</span>
+    |                                      |
+    |--- &lt;rpc&gt; (&lt;get-config/&gt;) ------------&gt; |
+    |&lt;--- &lt;rpc-reply&gt; (داده) ---------------| <span class="result">تبادل RPC</span>
+    |                                      |
+    |--- &lt;rpc&gt; (&lt;edit-config&gt;) -----------&gt; |
+    |&lt;--- &lt;rpc-reply&gt; (&lt;ok/&gt;) -------------| <span class="result">تغییر پیکربندی</span>
+    |                                      |
+    |&lt;--- &lt;notification&gt; (رویداد) ----------| <span class="result">اعلان ناهمزمان</span>
+    |                                      |
+    |--- &lt;rpc&gt; (&lt;close-session/&gt;) --------&gt; |
+    |&lt;--- &lt;rpc-reply&gt; (&lt;ok/&gt;) -------------| <span class="result">بستن جلسه</span>
+        </div>
+
+        <table>
+          <tr><th>فاز</th><th>جهت</th><th>پیام</th><th>هدف</th></tr>
+          <tr><td>1. Hello</td><td>هر دو</td><td>&lt;hello&gt;</td><td>تبادل قابلیت‌ها (ماژول‌های YANG، نسخه‌های NETCONF)</td></tr>
+          <tr><td>2. RPC</td><td>کلاینت ← سرور</td><td>&lt;rpc&gt;</td><td>فراخوانی عملیات با پارامترها</td></tr>
+          <tr><td>3. پاسخ</td><td>سرور ← کلاینت</td><td>&lt;rpc-reply&gt;</td><td>بازگرداندن داده یا &lt;ok/&gt; در صورت موفقیت، &lt;rpc-error&gt; در صورت شکست</td></tr>
+          <tr><td>4. اعلان</td><td>سرور ← کلاینت</td><td>&lt;notification&gt;</td><td>رویداد ناهمزمان (نیاز به create-subscription دارد)</td></tr>
+          <tr><td>5. بستن</td><td>کلاینت ← سرور</td><td>&lt;close-session&gt;</td><td>خاتمه جلسه NETCONF</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>نکته کلیدی:</strong> NETCONF از یک <span class="highlight">تبادل قابلیت</span> در فاز &lt;hello&gt; استفاده می‌کند. کلاینت و سرور هر کدام ماژول‌های YANG و قابلیت‌های پروتکلی را که پشتیبانی می‌کنند اعلام می‌کنند. عملیاتی که توسط هر دو طرف پشتیبانی نمی‌شوند قابل استفاده نیستند.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>حمل</h3>
+            <p><span class="highlight">SSH پورت 830</span> (پیش‌فرض)</p>
+            <p>TLS پورت 6513</p>
+            <p>XML روی <span class="dim">TCP</span></p>
+          </div>
+          <div class="card">
+            <h3>ذخیره‌های پیکربندی</h3>
+            <p><span class="highlight">&lt;candidate&gt;</span> — نسخه کاری</p>
+            <p><span class="highlight">&lt;running&gt;</span> — پیکربندی فعال</p>
+            <p><span class="dim">&lt;startup&gt;</span> — پیکربندی بوت</p>
+          </div>
+          <div class="card">
+            <h3>RFCهای کلیدی</h3>
+            <p>NETCONF: <span class="dim">RFC 6241</span></p>
+            <p>YANG: <span class="dim">RFC 7950</span></p>
+            <p>NETCONF روی SSH: <span class="dim">RFC 6242</span></p>
+            <p>RESTCONF: <span class="dim">RFC 8040</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>عملیات NETCONF (جدول 5.3)</h2>
+        <p>NETCONF مجموعه‌ای از عملیات پایه را تعریف می‌کند که پایه و اساس مدیریت دستگاه را تشکیل می‌دهند. این عملیات را می‌توان به تراکنش‌های پیچیده چند-دستگاهی تبدیل کرد که یا به صورت اتمی و با موفقیت کامل می‌شوند یا کاملاً معکوس می‌شوند — دستگاه‌ها را در حالت قبل از تراکنش باقی می‌گذارند. این رویکرد "شبکه به عنوان یک کل" یک نیاز مهم اپراتور از [RFC 3535] بود.</p>
+
+        <table>
+          <tr><th>عملیات</th><th>توضیح</th><th>ورودی</th><th>خروجی</th></tr>
+          <tr><td><span class="highlight">get-config</span></td><td>بازیابی همه یا بخشی از یک ذخیره داده پیکربندی</td><td>source, filter</td><td>داده پیکربندی XML</td></tr>
+          <tr><td><span class="highlight">get</span></td><td>بازیابی هر دو داده پیکربندی و وضعیت</td><td>filter</td><td>داده XML پیکربندی + وضعیت</td></tr>
+          <tr><td><span class="highlight">edit-config</span></td><td>تغییر یک ذخیره داده پیکربندی</td><td>target, config, operation</td><td>&lt;ok/&gt; یا &lt;rpc-error&gt;; در صورت خطا، پیکربندی می‌تواند به حالت قبلی بازگردد</td></tr>
+          <tr><td><span class="highlight">lock</span></td><td>قفل کردن یک ذخیره داده پیکربندی (جلوگیری از ویرایش‌های همزمان)</td><td>target</td><td>&lt;ok/&gt; یا خطای lock-denied</td></tr>
+          <tr><td><span class="highlight">unlock</span></td><td>آزاد کردن یک قفل قبلاً اخذ شده</td><td>target</td><td>&lt;ok/&gt;</td></tr>
+          <tr><td><span class="highlight">create-subscription</span></td><td>اشتراک در اعلان‌های رویداد</td><td>stream, filter</td><td>جریان اعلان شروع می‌شود</td></tr>
+          <tr><td><span class="highlight">notification</span></td><td>(طرف سرور) ارسال یک اعلان رویداد</td><td>داده رویداد</td><td>نامعتبر (ناهمزمان)</td></tr>
+          <tr><td><span class="highlight">close-session</span></td><td>بستن صحیح جلسه NETCONF</td><td>هیچ</td><td>&lt;ok/&gt;</td></tr>
+          <tr><td><span class="highlight">kill-session</span></td><td>خاتمه اجباری جلسه دیگر</td><td>session-id</td><td>&lt;ok/&gt;</td></tr>
+        </table>
+
+        <h3>مثال‌های پیام XML از کتاب درسی</h3>
+
+        <div class="example">
+          <div class="title">دستور &lt;get/&gt; — بازیابی وضعیت کامل دستگاه</div>
+          <div class="code">
+&lt;rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;get/&gt;
+&lt;/rpc&gt;
+          </div>
+          <p class="note">عملیات &lt;get/&gt; هر دو داده پیکربندی و وضعیت عملیاتی را از دستگاه برمی‌گرداند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">&lt;edit-config&gt; — تنظیم MTU روی یک رابط</div>
+          <div class="code">
+&lt;rpc message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;edit-config&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;target&gt;&lt;running/&gt;&lt;/target&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;config&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;top xmlns="http://example.com/ns/example"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/top&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/config&gt;
+  &nbsp;&nbsp;&lt;/edit-config&gt;
+&lt;/rpc&gt;
+          </div>
+          <p class="note">عملیات پیش‌فرض <span class="highlight">merge</span> است (اگر وجود نداشته باشد ایجاد می‌کند، اگر وجود داشته باشد بروزرسانی می‌کند). سایر عملیات: <span class="dim">replace, create, delete, remove</span>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">&lt;rpc-reply&gt; — پاسخ موفقیت</div>
+          <div class="code">
+&lt;rpc-reply message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;ok/&gt;
+&lt;/rpc-reply&gt;
+          </div>
+          <p class="note">یک عنصر &lt;ok/&gt; نشان می‌دهد عملیات با موفقیت کامل شده است. پاسخ‌های خطا شامل &lt;rpc-error&gt; با error-type، error-tag و error-message هستند.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">عملیات ویرایش:</div>
+          <div class="expr">merge &bull; replace &bull; create &bull; delete &bull; remove</div>
+          <div class="desc">از طریق ویژگی 'operation' روی عناصر پیکربندی مشخص می‌شود</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>معنای عملیات</h3>
+            <p><span class="highlight">merge</span> — ایجاد یا بروزرسانی</p>
+            <p><span class="highlight">replace</span> — جایگزینی موجود</p>
+            <p><span class="dim">create</span> — اگر وجود داشته باشد شکست می‌خورد</p>
+            <p><span class="dim">delete</span> — اگر موجود نباشد شکست می‌خورد</p>
+            <p><span class="dim">remove</span> — اگر وجود داشته باشد حذف می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>ذخیره‌های پیکربندی</h3>
+            <p><span class="highlight">&lt;candidate&gt;</span> — ویرایش بدون تأثیر روی پیکربندی در حال اجرا</p>
+            <p><span class="highlight">&lt;running&gt;</span> — پیکربندی فعال فعلی</p>
+            <p>&lt;commit&gt; — کپی candidate → running</p>
+            <p>&lt;discard-changes&gt; — بازگردانی candidate</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>زبان مدل‌سازی داده YANG</h2>
+        <p>YANG (نسل بعدی دیگر) زبان مدل‌سازی داده برای NETCONF است. ساختار، محدودیت‌ها و معنای داده پیکربندی و وضعیت را تعریف می‌کند. مشابه SMI برای SNMP، اما برای دنیای XML-based NETCONF ساخته شده است.</p>
+
+        <div class="formula">
+          <div class="label">هدف YANG:</div>
+          <div class="expr">تعریف مدل‌های داده برای پیکربندی NETCONF و وضعیت عملیاتی</div>
+          <div class="desc">ماژول‌های YANG ساختار، انواع و محدودیت‌های داده مبادله‌شده از طریق NETCONF را تعریف می‌کنند</div>
+        </div>
+
+        <h3>ساختار ماژول YANG</h3>
+        <div class="code">
+module example-interface {
+  &nbsp;&nbsp;yang-version 1.1;
+  &nbsp;&nbsp;namespace "http://example.com/ns/example-interface";
+  &nbsp;&nbsp;prefix exif;
+
+  &nbsp;&nbsp;import ietf-yang-types { prefix yang; }
+  &nbsp;&nbsp;import ietf-inet-types { prefix inet; }
+
+  &nbsp;&nbsp;container interfaces {
+  &nbsp;&nbsp;&nbsp;&nbsp;list interface {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key "name";
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf name {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type string;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf description {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type string;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf mtu {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type uint16 {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;range "68..9216";
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default 1500;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf enabled {
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type boolean;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default true;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;&nbsp;&nbsp;}
+  &nbsp;&nbsp;}
+}
+        </div>
+
+        <h3>انواع داخلی YANG</h3>
+        <table>
+          <tr><th>دسته</th><th>انواع</th><th>توضیح</th></tr>
+          <tr><td><span class="highlight">عددی</span></td><td>uint8, uint16, uint32, uint64<br>int8, int16, int32, int64</td><td>اعداد صحیح بدون علامت و با علامت</td></tr>
+          <tr><td><span class="highlight">رشته</span></td><td>string</td><td>رشته متنی</td></tr>
+          <tr><td><span class="highlight">بولی</span></td><td>boolean</td><td>true/false</td></tr>
+          <tr><td><span class="highlight">شمارشی</span></td><td>enumeration</td><td>مقادیر نام‌گذاری شده</td></tr>
+          <tr><td><span class="highlight">دودویی</span></td><td>binary</td><td>داده دلخواه</td></tr>
+          <tr><td><span class="highlight">اتحاد</span></td><td>union</td><td>یکی از چندین نوع</td></tr>
+          <tr><td><span class="highlight">تاریخ/زمان</span></td><td>yang:date-and-time</td><td>برچسب زمانی RFC 3339</td></tr>
+          <tr><td><span class="highlight">آدرس IP</span></td><td>inet:ipv4-address, inet:ipv6-address</td><td>انواع آدرس IP</td></tr>
+        </table>
+
+        <h3>محدودیت‌های YANG</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>محدوده</h3>
+            <div class="code">type uint16 { range "68..9216"; }</div>
+            <p>مقادیر معتبر: 68 تا 9216</p>
+          </div>
+          <div class="card">
+            <h3>طول</h3>
+            <div class="code">type string { length "1..255"; }</div>
+            <p>طول رشته: 1 تا 255 کاراکتر</p>
+          </div>
+          <div class="card">
+            <h3>الگو</h3>
+            <div class="code">type string { pattern "[0-9a-fA-F]*"; }</div>
+            <p>محدودیت regex روی رشته</p>
+          </div>
+          <div class="card">
+            <h3>اجباری</h3>
+            <div class="code">leaf name { mandatory true; }</div>
+            <p>باید در داده وجود داشته باشد</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>نکته کلیدی:</strong> YANG به مدل‌سازان داده اجازه می‌دهد <span class="highlight">محدودیت‌هایی</span> را که پیکربندی‌ها باید برآورده کنند (محدوده، طول، الگو، اجباری) بیان کنند. این یک کمک قدرتمند در تضمین این است که پیکربندی‌های NETCONF محدودیت‌های صحت و سازگاری مشخص شده را برآورده می‌کنند. YANG همچنین برای مشخص کردن اعلان‌های NETCONF استفاده می‌شود.
+        </div>
+
+        <h3>تبدیل YANG به XML</h3>
+        <div class="formula">
+          <div class="label">نگاشت:</div>
+          <div class="expr">container YANG ← عنصر XML &bull; leaf YANG ← عنصر برگ XML &bull; list YANG ← عنصر تکراری XML</div>
+        </div>
+
+        <div class="code">
+&lt;!-- ماژول YANG 'example-interface' سریال‌سازی شده به XML --&gt;
+&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;
+  &nbsp;&nbsp;&lt;interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;پیوند WAN به ISP&lt;/description&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;enabled&gt;true&lt;/enabled&gt;
+  &nbsp;&nbsp;&lt;/interface&gt;
+&lt;/interfaces&gt;
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: بازیابی پیکربندی با &lt;get-config&gt;</div>
+          <p><strong>سناریو:</strong> یک NMS می‌خواهد پیکربندی رابط فعلی را از یک دستگاه برای ساختن موجودی بازیابی کند.</p>
+
+          <div class="code">
+&lt;rpc message-id="201" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;get-config&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;source&gt;&lt;running/&gt;&lt;/source&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;filter type="subtree"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name/&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu/&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/filter&gt;
+  &nbsp;&nbsp;&lt;/get-config&gt;
+&lt;/rpc&gt;
+          </div>
+
+          <p><strong>پاسخ:</strong></p>
+          <div class="code">
+&lt;rpc-reply message-id="201" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;data&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/0&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;9000&lt;/mtu&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;
+  &nbsp;&nbsp;&lt;/data&gt;
+&lt;/rpc-reply&gt;
+          </div>
+
+          <p><strong>تحلیل:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>فیلتر <span class="highlight">زیردرختی</span> پاسخ را فقط به &lt;name&gt; و &lt;mtu&gt; هر رابط محدود می‌کند</li>
+            <li>رابط GigabitEthernet0/1 دارای MTU 9000 (<span class="dim">jumbo frames فعال</span>) — NMS این را برای موجودی علامت‌گذاری می‌کند</li>
+            <li>پاسخ در &lt;data&gt; پیچیده شده است تا پیکربندی را از وضعیت عملیاتی متمایز کند</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: پیکربندی رابط با &lt;edit-config&gt;</div>
+          <p><strong>سناریو:</strong> یک مدیر یک رابط VLAN جدید روی یک سوییچ پیکربندی می‌کند. پیکربندی باید به صورت اتمی اعمال شود.</p>
+
+          <div class="code">
+&lt;rpc message-id="202" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;edit-config&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;config&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface operation="create"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;Vlan100&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;VLAN مدیریت&lt;/description&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ipv4 xmlns="http://example.com/ns/example-ip"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;address&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ip&gt;192.168.100.1&lt;/ip&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prefix-length&gt;24&lt;/prefix-length&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/address&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ipv4&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/config&gt;
+  &nbsp;&nbsp;&lt;/edit-config&gt;
+&lt;/rpc&gt;
+
+# commit پیکربندی کاندیدا
+&lt;rpc message-id="203" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;commit/&gt;
+&lt;/rpc&gt;
+
+&lt;rpc-reply message-id="203" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;ok/&gt;
+&lt;/rpc-reply&gt;
+          </div>
+
+          <p><strong>تحلیل:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>ویرایش روی پیکربندی <span class="highlight">&lt;candidate&gt;</span> انجام می‌شود — هیچ تأثیری روی دستگاه در حال اجرا ندارد</li>
+            <li><span class="dim">operation="create"</span> تضمین می‌کند رابط از قبل وجود ندارد (در صورت تکراری شکست می‌خورد)</li>
+            <li><span class="result">&lt;commit/&gt;</span> همه تغییرات را به صورت اتمی اعمال می‌کند — اگر هر اعتبارسنجی شکست بخورد، کل تراکنش بازگردانی می‌شود</li>
+            <li>اگر پیکربندی خطا داشته باشد، دستگاه &lt;rpc-error&gt; برمی‌گرداند و پیکربندی کاندیدا بدون تغییر می‌ماند</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: کشف قابلیت دستگاه از طریق &lt;hello&gt;</div>
+          <p><strong>سناریو:</strong> یک NMS به یک دستگاه جدید متصل می‌شود و قابلیت‌های آن را از طریق تبادل &lt;hello&gt; NETCONF کشف می‌کند.</p>
+
+          <div class="code">
+# NMS قابلیت‌های خود را می‌فرستد
+&lt;hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;capabilities&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:base:1.1&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:writable-running:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:candidate:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:validate:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-interface?module=example-interface&amp;amp;revision=2024-01-01&lt;/capability&gt;
+  &nbsp;&nbsp;&lt;/capabilities&gt;
+&lt;/hello&gt;
+
+# دستگاه با قابلیت‌های خود پاسخ می‌دهد
+&lt;hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;capabilities&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:base:1.1&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:candidate:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:rollback-on-error:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:notification:1.0&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-interface?module=example-interface&amp;amp;revision=2024-01-01&lt;/capability&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-routing?module=example-routing&amp;amp;revision=2024-03-01&lt;/capability&gt;
+  &nbsp;&nbsp;&lt;/capabilities&gt;
+&lt;/hello&gt;
+          </div>
+
+          <p><strong>تحلیل:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>هر دو طرف از <span class="highlight">NETCONF 1.1</span> (base:1.1) پشتیبانی می‌کنند — RPCهای درهم و قاب‌بندی تکه‌ای را فعال می‌کند</li>
+            <li>دستگاه از <span class="dim">candidate</span> پشتیبانی می‌کند اما از <span class="dim">writable-running</span> پشتیبانی نمی‌کند — NMS باید از الگوی candidate/commit استفاده کند</li>
+            <li>دستگاه از <span class="result">rollback-on-error</span> پشتیبانی می‌کند — اگر تغییر پیکربندی شکست بخورد، دستگاه به طور خودکار بازگردانی می‌کند</li>
+            <li>دستگاه از <span class="result">notification</span> پشتیبانی می‌کند — NMS می‌تواند در جریان‌های رویداد مشترک شود</li>
+            <li>ماژول‌های YANG اعلام شده: <span class="dim">example-interface</span> + <span class="dim">example-routing</span> — NMS دقیقاً می‌داند کدام مدل‌های داده توسط دستگاه پشتیبانی می‌شوند</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: تراکنش Commit با اعتبارسنجی</div>
+          <p><strong>سناریو:</strong> یک مدیر چندین تغییر را روی پیکربندی کاندیدا اعمال می‌کند، آنها را اعتبارسنجی می‌کند، سپس commit می‌کند. یک تغییر در اعتبارسنجی شکست می‌خورد و باعث ابطال تراکنش می‌شود.</p>
+
+          <div class="code">
+# گام 1: قفل کردن ذخیره داده کاندیدا
+&lt;rpc message-id="301"&gt;&lt;lock&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;&lt;/lock&gt;&lt;/rpc&gt;
+&lt;rpc-reply message-id="301"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;
+
+# گام 2: اعمال تغییرات پیکربندی روی کاندیدا
+&lt;rpc message-id="302"&gt;&lt;edit-config&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;...&lt;/edit-config&gt;&lt;/rpc&gt;
+&lt;rpc-reply message-id="302"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;
+
+# گام 3: اعتبارسنجی پیکربندی کاندیدا
+&lt;rpc message-id="303"&gt;&lt;validate&gt;&lt;source&gt;&lt;candidate/&gt;&lt;/source&gt;&lt;/validate&gt;&lt;/rpc&gt;
+&lt;rpc-reply message-id="303"&gt;
+  &nbsp;&nbsp;&lt;rpc-error&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-type&gt;application&lt;/error-type&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-tag&gt;bad-element&lt;/error-tag&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-severity&gt;error&lt;/error-severity&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-message&gt;مقدار MTU 10000 از حداکثر 9216 بیشتر است&lt;/error-message&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-info&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bad-element&gt;mtu&lt;/bad-element&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/error-info&gt;
+  &nbsp;&nbsp;&lt;/rpc-error&gt;
+&lt;/rpc-reply&gt;
+
+# گام 4: کنار گذاشتن تغییرات ناموفق و باز کردن قفل
+&lt;rpc message-id="304"&gt;&lt;discard-changes/&gt;&lt;/rpc&gt;
+&lt;rpc-reply message-id="304"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;
+&lt;rpc message-id="305"&gt;&lt;unlock&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;&lt;/unlock&gt;&lt;/rpc&gt;
+&lt;rpc-reply message-id="305"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;
+          </div>
+
+          <p><span class="result">نکته کلیدی:</span> مدل تراکنشی NETCONF (candidate ← validate ← commit) از رسیدن پیکربندی‌های نادرست به دستگاه در حال اجرا جلوگیری می‌کند. این یک مزیت اساسی نسبت به SNMP است، جایی که یک عملیات Set می‌تواند فوراً به اتصال آسیب برساند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: اعلان رویداد — تغییر حالت پیوند</div>
+          <p><strong>سناریو:</strong> NMS در اعلان‌های تغییر وضعیت رابط مشترک می‌شود. وقتی یک پیوند قطع می‌شود، دستگاه یک اعلان می‌فرستد.</p>
+
+          <div class="code">
+# گام 1: اشتراک در اعلان‌ها
+&lt;rpc message-id="401" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;
+  &nbsp;&nbsp;&lt;create-subscription xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;stream&gt;interface-state&lt;/stream&gt;
+  &nbsp;&nbsp;&lt;/create-subscription&gt;
+&lt;/rpc&gt;
+
+# گام 2: دستگاه به صورت ناهمزمان اعلان می‌فرستد
+&lt;notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0"&gt;
+  &nbsp;&nbsp;&lt;eventTime&gt;2024-10-15T14:30:00Z&lt;/eventTime&gt;
+  &nbsp;&nbsp;&lt;interface-state-change xmlns="http://example.com/ns/example-interface"&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;admin-status&gt;up&lt;/admin-status&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;oper-status&gt;down&lt;/oper-status&gt;
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;reason&gt;link-failure&lt;/reason&gt;
+  &nbsp;&nbsp;&lt;/interface-state-change&gt;
+&lt;/notification&gt;
+          </div>
+
+          <p class="note">اعلان‌های NETCONF <span class="highlight">ناهمزمان</span> هستند — NMS آنها را در زمان واقعی پس از اشتراک دریافت می‌کند. برخلاف traps SNMP، اعلان‌ها روی همان جلسه TCP تحویل می‌شوند و تحویل قابل اعتماد و مرتب را فراهم می‌کنند.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>مقایسه: SNMP در مقابل NETCONF/YANG</h2>
+        <table>
+          <tr><th>ویژگی</th><th>SNMP</th><th>NETCONF/YANG</th></tr>
+          <tr><td>حمل</td><td><span class="dim">UDP (غیرقابل اعتماد)</span></td><td><span class="highlight">TCP/SSH/TLS (قابل اعتماد)</span></td></tr>
+          <tr><td>رمزگذاری</td><td><span class="dim">BER/DER (دودویی)</span></td><td><span class="highlight">XML (قابل خواندن توسط انسان)</span></td></tr>
+          <tr><td>پارادایم</td><td>Get/Set/Trap</td><td><span class="highlight">مبتنی بر RPC</span></td></tr>
+          <tr><td>مدل داده</td><td>SMI (ماژول‌های MIB)</td><td><span class="highlight">ماژول‌های YANG</span></td></tr>
+          <tr><td>پیکربندی</td><td><span class="dim">بدون پشتیبانی تراکنش</span></td><td><span class="highlight">Candidate/Commit/Rollback</span></td></tr>
+          <tr><td>امنیت</td><td>v3: خوب (v1/v2c: ضعیف)</td><td><span class="highlight">SSH/TLS به طور پیش‌فرض</span></td></tr>
+          <tr><td>گزارش خطا</td><td>وضعیت خطا + شاخص</td><td><span class="highlight">&lt;rpc-error&gt; جزئی</span></td></tr>
+          <tr><td>وضعیت در مقابل پیکربندی</td><td><span class="dim">مخلوط (جداسازی دشوار)</span></td><td><span class="highlight">&lt;get&gt; در مقابل &lt;get-config&gt;</span></td></tr>
+          <tr><td>مناسب برای</td><td>پایش، polling</td><td><span class="highlight">مدیریت پیکربندی</span></td></tr>
+          <tr><td>استاندارد</td><td>RFC 1157/3416/3418</td><td><span class="highlight">RFC 6241/7950</span></td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>روش مدرن:</strong> شبکه‌های تولید اغلب از <span class="highlight">هر دو</span> SNMP (برای پایش، داده عملکرد، traps) و NETCONF/YANG (برای مدیریت پیکربندی، انطباق، خودکارسازی) استفاده می‌کنند. آنها مکمل یکدیگر هستند، نه منحصر به فرد.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

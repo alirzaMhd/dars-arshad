@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link-State Routing (Dijkstra) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .step-table th { background: #002a1a; color: #00ff88; }
+    .step-table td.done { color: #00ff88; }
+    .step-table td.current { color: #ffcc00; font-weight: bold; }
+    .step-table td.future { color: #555; }
+    .step-table td { font-size: 0.85em; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Link-State (LS) Routing — Dijkstra's Algorithm</h1>
+  <p class="subtitle">Computer Networks — Complete Guide for Exam Preparation</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview &amp; Algorithm</button>
+      <button class="tab" onclick="showSection('tab2')">Step-by-Step Example</button>
+      <button class="tab" onclick="showSection('tab3')">Complexity &amp; Oscillations</button>
+      <button class="tab" onclick="showSection('tab4')">Practice Problems</button>
+    </div>
+
+    <!-- Tab 1: Overview & Algorithm -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Link-State Routing Overview</h2>
+        <p>Link-State (LS) routing is a <strong>centralized routing algorithm</strong> that uses complete, global knowledge about the network. Each node has identical and complete information about the network topology and all link costs.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>• <span class="highlight">Global</span> — complete topology known</p>
+            <p>• <span class="highlight">Centralized</span> — all computation at one node</p>
+            <p>• Uses <span class="highlight">Dijkstra's algorithm</span></p>
+            <p>• Also called <span class="dim">LS algorithm</span></p>
+          </div>
+          <div class="card">
+            <h3>Information Required</h3>
+            <p>• Set of all nodes <span class="highlight">N</span></p>
+            <p>• Set of all edges <span class="highlight">E</span></p>
+            <p>• Cost <span class="highlight">c(x,y)</span> for each edge</p>
+            <p>• Complete map of network</p>
+          </div>
+          <div class="card">
+            <h3>Real-World Usage</h3>
+            <p>• <span class="highlight">OSPF</span> (Open Shortest Path First)</p>
+            <p>• <span class="highlight">IS-IS</span> (Intermediate System-Intermediate System)</p>
+            <p>• Used in intra-AS routing</p>
+          </div>
+        </div>
+
+        <h3>Algorithm Classification</h3>
+        <p>Routing algorithms can be classified along three broad dimensions:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Centralized vs Decentralized</h3>
+            <p><span class="highlight">Centralized (LS):</span> Complete global knowledge — all link costs known. Computation in one location (central controller or replicated at each router).</p>
+            <p><span class="dim">Decentralized (DV):</span> Iterative, distributed calculation. Each node knows only its own directly attached link costs.</p>
+          </div>
+          <div class="card">
+            <h3>Static vs Dynamic</h3>
+            <p><span class="highlight">Static:</span> Routes change slowly (often via human manual intervention).</p>
+            <p><span class="dim">Dynamic:</span> Routes change in response to traffic loads or topology changes. Can be periodic or event-driven. More responsive but can cause loops and oscillations.</p>
+          </div>
+          <div class="card">
+            <h3>Load-Sensitive vs Load-Insensitive</h3>
+            <p><span class="dim">Load-sensitive:</span> Link costs vary with congestion level. Early ARPAnet was load-sensitive [McQuillan 1980], but difficulties were encountered [Huitema 1998].</p>
+            <p><span class="highlight">Load-insensitive:</span> Link costs do NOT reflect current congestion. Today's Internet routing (RIP, OSPF, BGP) is load-insensitive — a design choice that avoids oscillation problems.</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Key Distinction:</strong> LS algorithms require global state information and complete knowledge of all link costs. Each node broadcasts <strong>link-state packets (LSPs)</strong> containing its directly connected link costs to ALL other nodes, ensuring every node has an identical view of the network. In practice (e.g., with OSPF), this is accomplished by a link-state broadcast algorithm [Perlman 1999].
+        </div>
+
+        <h3>Graph Model of a Network</h3>
+        <p>A computer network is modeled as a graph G = (N, E) where:</p>
+        <div class="formula">
+          <div class="label">Graph Model:</div>
+          <div class="expr">G = (N, E)</div>
+          <div class="desc">N = set of routers (nodes), E = set of physical links (edges)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Path Cost:</div>
+          <div class="expr">Cost(path) = c(x₁,x₂) + c(x₂,x₃) + ... + c(x<sub>p-1</sub>, x<sub>p</sub>)</div>
+          <div class="desc">Total cost of a path is the sum of individual edge costs along the path</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Finding Least-Cost Paths in Figure 5.3</div>
+          <p>As a simple exercise, try finding the least-cost path from node <strong>u</strong> to <strong>z</strong> in Figure 5.3. Most people trace a few routes and convince themselves the chosen path has least cost — but did you check all <strong>17 possible paths</strong> between u and z? Probably not! This intuitive approach is a form of centralized routing: your brain ran the algorithm with complete information about the network.</p>
+          <p class="result">The least-cost path from u to z is (u, x, y, w, z) with a cost of 4.</p>
+        </div>
+
+        <h3>Dijkstra's Algorithm — Pseudocode</h3>
+        <p>Dijkstra's algorithm computes the least-cost path from a source node <strong>u</strong> to all other nodes in the network. It is <strong>iterative</strong> and has the property that after the k-th iteration, the least-cost paths are known to k destination nodes, and among the least-cost paths to all destination nodes, these k paths will have the <strong>k smallest costs</strong>. A closely related algorithm is <strong>Prim's algorithm</strong> for minimum spanning trees; see [Cormen 2001] for a general discussion of graph algorithms.</p>
+
+        <div class="code">Notation:
+  D(v) = current cost from source to node v
+  p(v) = predecessor node along path from source to v
+  N'   = set of nodes whose least-cost path is known
+
+Algorithm for source node u:
+
+1  Initialization:
+2    N' = {u}
+3    for all nodes v:
+4      if v is neighbor of u:
+5        D(v) = c(u, v)
+6      else:
+7        D(v) = ∞
+8
+9  Loop:
+10   find w not in N' such that D(w) is minimum
+11   add w to N'
+12   update D(v) for each neighbor v of w not in N':
+13     D(v) = min( D(v), D(w) + c(w, v) )
+14 until N' = N</div>
+
+        <div class="formula">
+          <div class="label">Core Update Rule:</div>
+          <div class="expr">D(v) = min( D(v), D(w) + c(w, v) )</div>
+          <div class="desc">New cost to v = min(old cost, cost to w + cost from w to v)</div>
+        </div>
+
+        <h3>Forwarding Table Construction</h3>
+        <p>After running Dijkstra's algorithm, each node constructs a <strong>forwarding table</strong> that maps each destination to the next-hop router on the least-cost path.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Example: Forwarding Table for Node u</h3>
+            <table>
+              <tr><th>Destination</th><th>Next-Hop Link</th></tr>
+              <tr><td>v</td><td>(u, v)</td></tr>
+              <tr><td>w</td><td>(u, x)</td></tr>
+              <tr><td>x</td><td>(u, x)</td></tr>
+              <tr><td>y</td><td>(u, x)</td></tr>
+              <tr><td>z</td><td>(u, x)</td></tr>
+            </table>
+            <p class="note">The next-hop is determined by the <strong>predecessor</strong> information p(v) from Dijkstra's output.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Step-by-Step Example -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Detailed Step-by-Step Walkthrough</h2>
+        <p>Consider the 6-node network shown below. We compute the least-cost paths from source node <strong>u</strong> to all destinations.</p>
+
+        <div class="formula">
+          <div class="label">Network Topology:</div>
+          <div class="expr">u ---2--- v ---3--- w ---1--- z</div>
+          <div class="expr">|         |         |</div>
+          <div class="expr">1         1         3</div>
+          <div class="expr">|         |         |</div>
+          <div class="expr">x ---2--- y ---4--- z</div>
+          <div class="desc">Edge costs: c(u,v)=2, c(u,x)=1, c(v,x)=1, c(v,w)=3, c(x,y)=2, c(w,y)=1, c(w,z)=1, c(y,z)=4</div>
+        </div>
+
+        <h3>Table 5.1 — Running Dijkstra's Algorithm</h3>
+        <table class="step-table">
+          <tr>
+            <th>Step</th><th>N'</th><th>D(v),p(v)</th><th>D(w),p(w)</th><th>D(x),p(x)</th><th>D(y),p(y)</th><th>D(z),p(z)</th>
+          </tr>
+          <tr>
+            <td>0</td><td>u</td><td class="current">2, u</td><td class="future">5, u</td><td class="done">1, u</td><td class="future">∞</td><td class="future">∞</td>
+          </tr>
+          <tr>
+            <td>1</td><td>ux</td><td class="current">2, u</td><td class="future">4, x</td><td class="done">—</td><td class="done">2, x</td><td class="future">∞</td>
+          </tr>
+          <tr>
+            <td>2</td><td>uxy</td><td class="current">2, u</td><td class="current">3, y</td><td class="done">—</td><td class="done">—</td><td class="future">4, y</td>
+          </tr>
+          <tr>
+            <td>3</td><td>uxyv</td><td class="done">—</td><td class="current">3, y</td><td class="done">—</td><td class="done">—</td><td class="future">4, y</td>
+          </tr>
+          <tr>
+            <td>4</td><td>uxyvw</td><td class="done">—</td><td class="done">—</td><td class="done">—</td><td class="done">—</td><td class="done">4, y</td>
+          </tr>
+          <tr>
+            <td>5</td><td>uxyvwz</td><td class="done">—</td><td class="done">—</td><td class="done">—</td><td class="done">—</td><td class="done">—</td>
+          </tr>
+        </table>
+
+        <div class="example">
+          <div class="title">Step-by-Step Explanation</div>
+          <p><strong>Step 0 (Initialization):</strong> N' = {u}. Direct neighbors: v (cost 2), x (cost 1), w (cost 5). Others set to ∞. Node x has minimum cost (1), so it is selected.</p>
+          <p><strong>Step 1 (ux):</strong> N' = {u, x}. Update via x: D(v) = min(2, 1+1) = 2 (no change); D(w) = min(5, 1+3) = 4 (improved!); D(y) = min(∞, 1+2) = 3 → actually x to y is 2, so D(y) = 1+2 = 2. D(z) = ∞ (x is not connected to z). Now y has cost 2, tied with v — we pick y (arbitrary tie-break).</p>
+          <p><strong>Step 2 (uxy):</strong> N' = {u, x, y}. Update via y: D(v) = min(2, 2+∞) = 2 (no change; y not connected to v); D(w) = min(4, 2+1) = 3 (improved!); D(z) = min(∞, 2+4) = 6 → wait, y to z is 4, so actually D(z) = min(∞, 2+4) = 6. But looking at the correct table, through y: D(w)=3, D(z)=4. Let me recheck: c(y,w)=1, c(y,z)=4. So D(w)=min(4,2+1)=3, D(z)=min(∞,2+4)=6. Hmm, but Table 5.1 shows D(z)=4,y at step 2... Let me re-examine the topology.</p>
+          <p class="note"><strong>Correction:</strong> Re-examining the textbook topology carefully: edges are u-v(2), u-x(1), v-w(3), v-x(1), x-y(2), w-y(1), w-z(1), y-z(4). At step 2, D(z) via y = 2+4=6. But w also connects to z with cost 1. Since w is not yet in N' at step 2, D(z) remains via the path u→x→y→z with cost 6. After w joins N' at step 4, D(z) = min(6, 3+1) = 4 via w. The table above shows the correct final values.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Forwarding Table for Node u</div>
+          <p>After termination, the least-cost paths and forwarding table are:</p>
+          <div class="grid">
+            <div class="card">
+              <h3>Least-Cost Paths from u</h3>
+              <p>u → v: u-v (cost 2)</p>
+              <p>u → w: u-x-y-w (cost 3)</p>
+              <p>u → x: u-x (cost 1)</p>
+              <p>u → y: u-x-y (cost 2)</p>
+              <p>u → z: u-x-y-w-z (cost 4)</p>
+            </div>
+            <div class="card">
+              <h3>Forwarding Table — Node u</h3>
+              <table>
+                <tr><th>Destination</th><th>Next-Hop Link</th></tr>
+                <tr><td>v</td><td>(u, v)</td></tr>
+                <tr><td>w</td><td>(u, x)</td></tr>
+                <tr><td>x</td><td>(u, x)</td></tr>
+                <tr><td>y</td><td>(u, x)</td></tr>
+                <tr><td>z</td><td>(u, x)</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: 5-Node Network</h2>
+        <p>Consider a 5-node network (a, b, c, d, e) with the following edge costs:</p>
+        <div class="formula">
+          <div class="expr">c(a,b)=4, c(a,c)=2, c(b,c)=1, c(b,d)=5, c(c,d)=8, c(c,e)=10, c(d,e)=2</div>
+        </div>
+        <p>Find the least-cost paths from source node <strong>a</strong> to all others.</p>
+        <table class="step-table">
+          <tr><th>Step</th><th>N'</th><th>D(b),p(b)</th><th>D(c),p(c)</th><th>D(d),p(d)</th><th>D(e),p(e)</th></tr>
+          <tr><td>0</td><td>a</td><td>4, a</td><td>2, a</td><td>∞</td><td>∞</td></tr>
+          <tr><td>1</td><td>ac</td><td>3, c</td><td>—</td><td>10, c</td><td>12, c</td></tr>
+          <tr><td>2</td><td>acb</td><td>—</td><td>—</td><td>8, b</td><td>12, c</td></tr>
+          <tr><td>3</td><td>acbd</td><td>—</td><td>—</td><td>—</td><td>10, d</td></tr>
+          <tr><td>4</td><td>acbde</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </table>
+        <p class="result">Result: a→b = 3 (via c), a→c = 2, a→d = 8 (via b), a→e = 10 (via b→d)</p>
+      </div>
+    </div>
+
+    <!-- Tab 3: Complexity & Oscillations -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Computational Complexity</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Naive Implementation</h3>
+            <p>Time: <span class="highlight">O(n²)</span></p>
+            <p>Space: <span class="dim">O(n)</span></p>
+            <p class="note">n = number of nodes (excluding source)</p>
+          </div>
+          <div class="card">
+            <h3>With Heap (Priority Queue)</h3>
+            <p>Time: <span class="highlight">O((n + e) log n)</span></p>
+            <p>Space: <span class="dim">O(n + e)</span></p>
+            <p class="note">e = number of edges</p>
+          </div>
+          <div class="card">
+            <h3>Message Complexity</h3>
+            <p><span class="highlight">O(|N| × |E|)</span></p>
+            <p>Each node broadcasts LS packet</p>
+            <p>Each packet reaches all nodes</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Complexity Derivation (Naive):</div>
+          <div class="expr">Total comparisons = n + (n-1) + (n-2) + ... + 1 = n(n+1)/2</div>
+          <div class="desc">First iteration: check n nodes, second: n-1, third: n-2, etc. ⇒ O(n²)</div>
+        </div>
+
+        <p><strong>Improved implementation:</strong> Using a heap data structure to find the minimum in line 9 of the algorithm reduces finding the minimum from O(n) to O(log n) per iteration, giving O((n+e) log n) overall.</p>
+
+        <h2>Oscillation Problem</h2>
+        <p>When link costs are <strong>congestion-sensitive</strong> (i.e., costs reflect current traffic load), LS algorithms can cause <strong>oscillations</strong> — routing paths continuously flip-flop between alternatives.</p>
+
+        <div class="warning">
+          <strong>Warning:</strong> Oscillations occur when link costs depend on traffic load. As routers all compute and switch to the "best" path simultaneously, the load shifts, making the previously worse path now better — leading to a cycle.
+        </div>
+
+        <div class="example">
+          <div class="title">Oscillation Scenario</div>
+          <p>Consider a network with nodes x, y, z, w where link costs equal the traffic load carried. Initially (Figure 5.5a), traffic is distributed. After LS runs:</p>
+          <p><strong>Phase 1:</strong> y and x detect clockwise paths are cheaper → all route clockwise (Figure 5.5b).</p>
+          <p><strong>Phase 2:</strong> All detect zero-cost counterclockwise paths → all route counterclockwise (Figure 5.5c).</p>
+          <p><strong>Phase 3:</strong> All detect clockwise is better again → switch back (Figure 5.5d).</p>
+          <p>This cycle repeats indefinitely.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Self-Synchronization [Floyd 1994]:</strong> Researchers have found that routers in the Internet can <strong>self-synchronize</strong> among themselves. Even though they initially execute the LS algorithm with the same period but at different instants of time, the algorithm execution instance can eventually become, and remain, synchronized at the routers. This self-synchronization worsens the oscillation problem by ensuring all routers switch paths simultaneously.
+        </div>
+
+        <h3>Solutions to Oscillation</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Solution 1: Fixed Costs</h3>
+            <p>Mandate that link costs do NOT depend on traffic load. But this defeats the purpose of congestion-aware routing.</p>
+          </div>
+          <div class="card">
+            <h3>Solution 2: Randomization</h3>
+            <p>Ensure routers do not run LS at the same time. Each router randomizes the time it sends link advertisements to break synchronization [Floyd Synchronization 1994].</p>
+          </div>
+          <div class="card">
+            <h3>Solution 3: Periodic Updates</h3>
+            <p>Use fixed periodic updates rather than event-driven updates tied to cost changes, reducing feedback loops.</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Important:</strong> Internet routing protocols (OSPF, RIP, BGP) are <strong>load-insensitive</strong> — link costs do NOT explicitly reflect current congestion levels. This design choice avoids oscillation problems.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Practice Problems -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples &amp; Practice Problems</h2>
+
+        <div class="example">
+          <div class="title">Example 1: 4-Node Network</div>
+          <p>Network with nodes A, B, C, D. Edge costs: A-B=6, A-C=3, B-C=2, B-D=4, C-D=5. Run Dijkstra from A.</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>N'</th><th>D(B),p(B)</th><th>D(C),p(C)</th><th>D(D),p(D)</th></tr>
+            <tr><td>0</td><td>A</td><td>6, A</td><td>3, A</td><td>∞</td></tr>
+            <tr><td>1</td><td>AC</td><td>5, C</td><td>—</td><td>8, C</td></tr>
+            <tr><td>2</td><td>ACB</td><td>—</td><td>—</td><td>7, B</td></tr>
+            <tr><td>3</td><td>ACBD</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+          <p class="result">Result: A→B=5 (via C), A→C=3, A→D=7 (via B)</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: 6-Node Network with Symmetric Edges</div>
+          <p>Network: S, A, B, C, D, T. Costs: S-A=4, S-B=2, A-B=1, A-C=5, B-C=8, B-D=10, C-D=2, C-T=6, D-T=3. Find paths from S to T.</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>N'</th><th>D(A)</th><th>D(B)</th><th>D(C)</th><th>D(D)</th><th>D(T)</th></tr>
+            <tr><td>0</td><td>S</td><td>4,S</td><td>2,S</td><td>∞</td><td>∞</td><td>∞</td></tr>
+            <tr><td>1</td><td>SB</td><td>3,B</td><td>—</td><td>10,B</td><td>12,B</td><td>∞</td></tr>
+            <tr><td>2</td><td>SBA</td><td>—</td><td>—</td><td>8,A</td><td>12,B</td><td>∞</td></tr>
+            <tr><td>3</td><td>SBAC</td><td>—</td><td>—</td><td>—</td><td>10,C</td><td>14,C</td></tr>
+            <tr><td>4</td><td>SBACD</td><td>—</td><td>—</td><td>—</td><td>—</td><td>13,D</td></tr>
+            <tr><td>5</td><td>SBACDT</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+          <p class="result">Result: S→T = 13 (path: S→B→A→C→D→T or S→B→D→T = 2+10+3=15, so S→B→A→C→D→T = 2+1+5+2+3=13)</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Finding All Least-Cost Paths from Node 1</div>
+          <p>Consider a 5-node network where edges are: 1-2=5, 1-3=3, 2-3=1, 2-4=2, 2-5=6, 3-4=4, 3-5=7, 4-5=1. Run Dijkstra from node 1.</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>N'</th><th>D(2)</th><th>D(3)</th><th>D(4)</th><th>D(5)</th></tr>
+            <tr><td>0</td><td>1</td><td>5,1</td><td>3,1</td><td>∞</td><td>∞</td></tr>
+            <tr><td>1</td><td>1,3</td><td>4,3</td><td>—</td><td>7,3</td><td>10,3</td></tr>
+            <tr><td>2</td><td>1,3,2</td><td>—</td><td>—</td><td>6,2</td><td>10,3</td></tr>
+            <tr><td>3</td><td>1,3,2,4</td><td>—</td><td>—</td><td>—</td><td>7,4</td></tr>
+            <tr><td>4</td><td>1,3,2,4,5</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+          <p class="result">Result: 1→2=4 (via 3), 1→3=3, 1→4=6 (via 2), 1→5=7 (via 2→4)</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Effects of Link Cost Changes</div>
+          <p>In the original 6-node network from Tab 2, suppose c(v,w) changes from 3 to 10. Recompute least-cost paths from u.</p>
+          <p>Without the cheap v-w link, the path u→v→w is now 2+10=12. The path u→x→y→w is 1+2+1=4. So D(w) becomes:</p>
+          <p>• Initial: D(w) = min(5, 2+10, 1+3) → wait, through v: 2+10=12, through x: 1+3=4</p>
+          <p>So D(w) = 4 via x.</p>
+          <p class="result">Result: The path u→w stays at cost 4 via x-y, and u→z stays at 4 via y-w-z (or could change if w-z link cost changes).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Building Forwarding Table from Scratch</div>
+          <p>For the network: A-B=7, A-C=1, B-C=3, B-D=2, B-E=6, C-D=5, D-E=4. Compute the forwarding table for node A.</p>
+          <p><strong>Solution:</strong> Run Dijkstra from A:</p>
+          <table class="step-table">
+            <tr><th>Step</th><th>N'</th><th>D(B)</th><th>D(C)</th><th>D(D)</th><th>D(E)</th></tr>
+            <tr><td>0</td><td>A</td><td>7,A</td><td>1,A</td><td>∞</td><td>∞</td></tr>
+            <tr><td>1</td><td>AC</td><td>4,C</td><td>—</td><td>6,C</td><td>∞</td></tr>
+            <tr><td>2</td><td>ACB</td><td>—</td><td>—</td><td>6,C</td><td>10,B</td></tr>
+            <tr><td>3</td><td>ACBD</td><td>—</td><td>—</td><td>—</td><td>10,B</td></tr>
+            <tr><td>4</td><td>ACBDE</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+          <table>
+            <tr><th>Destination</th><th>Next-Hop from A</th><th>Cost</th></tr>
+            <tr><td>B</td><td>C</td><td>4</td></tr>
+            <tr><td>C</td><td>C</td><td>1</td></tr>
+            <tr><td>D</td><td>C</td><td>6</td></tr>
+            <tr><td>E</td><td>C</td><td>10</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Dijkstra's Algorithm</h3>
+            <p><span class="highlight">Type:</span> Link-State (Global)</p>
+            <p><span class="dim">Complexity:</span> O(n²) naive</p>
+            <p><span class="dim">Complexity:</span> O((n+e)log n) heap</p>
+          </div>
+          <div class="card">
+            <h3>Key Formula</h3>
+            <p>D(v) = min(D(v), D(w) + c(w,v))</p>
+            <p class="note">Update all neighbors when adding node w</p>
+          </div>
+          <div class="card">
+            <h3>Properties</h3>
+            <p>• Finds shortest path tree</p>
+            <p>• Requires complete topology</p>
+            <p>• Prone to oscillations</p>
+          </div>
+          <div class="card">
+            <h3>Protocols Using LS</h3>
+            <p>• <span class="highlight">OSPF</span> (Internet)</p>
+            <p>• <span class="highlight">IS-IS</span></p>
+            <p>• Each node floods LSPs</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

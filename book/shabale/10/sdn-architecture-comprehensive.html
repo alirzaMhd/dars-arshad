@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>معماری SDN و کنترلر — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-bottom: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+    ol { margin-left: 20px; margin-bottom: 10px; }
+    ol li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>معماری SDN و کنترلر</h1>
+  <p class="subtitle">لایه شبکه — صفحه کنترل شبکه مبتنی بر نرم‌افزار برای امتحان</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور SDN</button>
+      <button class="tab" onclick="showSection('tab2')">لایه‌های کنترلر</button>
+      <button class="tab" onclick="showSection('tab3')">مثال تعامل</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+      <button class="tab" onclick="showSection('tab5')">گذشته و آینده</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>چهار ویژگی کلیدی معماری SDN</h2>
+        <p>SDN (شبکه تعریف‌شده با نرم‌افزار) یک تغییر اساسی در نحوه طراحی و بهره‌برداری شبکه‌ها است. چهار ویژگی زیر SDN را تعریف می‌کنند [Kreutz 2015]:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>1. ارسال مبتنی بر جریان</h3>
+            <p>ارسال بسته می‌تواند بر اساس <span class="highlight">هر ترکیبی</span> از فیلدهای هدر لایه حمل، شبکه، یا پیوند باشد.</p>
+            <p>OpenFlow 1.0 اجازه تطبیق روی <span class="dim">11 فیلد هدر</span> را می‌دهد.</p>
+          </div>
+          <div class="card">
+            <h3>2. جداسازی صفحات</h3>
+            <p>صفحه داده = سوییچ‌هایی با جداول جریان که "تطبیق + عمل" را اجرا می‌کنند.</p>
+            <p>صفحه کنترل = سرورها + نرم‌افزاری که جداول جریان را محاسبه و مدیریت می‌کنند.</p>
+          </div>
+          <div class="card">
+            <h3>3. توابع کنترل خارجی</h3>
+            <p>نرم‌افزار صفحه کنترل روی سرورهای <span class="highlight">دور از سوییچ‌ها</span> اجرا می‌شود.</p>
+            <p>دو جزء: کنترلر SDN + برنامه‌های کنترل شبکه.</p>
+          </div>
+          <div class="card">
+            <h3>4. شبکه قابل برنامه‌ریزی</h3>
+            <p>شبکه از طریق <span class="highlight">برنامه‌های نرم‌افزاری</span> قابل برنامه‌ریزی است.</p>
+            <p>برنامه‌ها "مغز" هستند — مسیریابی، کنترل دسترسی، توزیع بار.</p>
+          </div>
+        </div>
+
+        <h3>شکل 5.14: اجزای معماری SDN</h3>
+        <div class="formula">
+          <div class="label">معماری سه‌لایه SDN:</div>
+          <div class="expr">برنامه‌های کنترل شبکه (مسیریابی، کنترل دسترسی، توزیع بار)</div>
+          <div class="expr">      ↕ API شمالی</div>
+          <div class="expr">کنترلر SDN (سیستم عامل شبکه)</div>
+          <div class="expr">      ↕ API جنوبی</div>
+          <div class="expr">سوییچ‌های تحت کنترل SDN (صفحه داده)</div>
+        </div>
+
+        <h3>SDN به عنوان "جداسازی" شبکه‌ها</h3>
+        <p>SDN نشان‌دهنده جداسازی قابل توجه عملکرد شبکه است، مشابه تکامل از mainframe به PC:</p>
+        <table>
+          <tr><th>جنبه</th><th>مسیریاب سنتی</th><th>SDN</th></tr>
+          <tr><td>صفحه داده</td><td>یکپارچه در مسیریاب</td><td>سوییچ‌های عمومی</td></tr>
+          <tr><td>صفحه کنترل</td><td>جاسازی شده در مسیریاب</td><td>سرورهای جداگانه</td></tr>
+          <tr><td>منطق ارسال</td><td>ثابت (IP مقصد)</td><td>قابل برنامه‌ریزی</td></tr>
+          <tr><td>قفل فروشنده</td><td>تک فروشنده</td><td>چند فروشنده</td></tr>
+        </table>
+
+        <div class="warning">کنترلر "منطقاً متمرکز" SDN یک سرور فیزیکی واحد نیست. در عمل یک سیستم توزیع‌شده از چندین سرور برای تحمل خطا و مقیاس‌پذیری است.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>کنترلر SDN: سه لایه عملکردی</h2>
+        <p>شکل 5.15 معماری عمومی کنترلر SDN را نشان می‌دهد. عملکرد کنترلر به سه لایه سازماندهی می‌شود:</p>
+
+        <h3>لایه 1: لایه ارتباطات (جنوبی)</h3>
+        <p>پایین‌ترین لایه ارتباط بین کنترلر و دستگاه‌های تحت کنترل را مدیریت می‌کند. این از <strong>رابط جنوبی</strong> عبور می‌کند.</p>
+        <table>
+          <tr><th>پروتکل</th><th>هدف</th></tr>
+          <tr><td>OpenFlow</td><td>مدیریت جدول جریان</td></tr>
+          <tr><td>SNMP</td><td>پایش دستگاه</td></tr>
+          <tr><td>NETCONF</td><td>پیکربندی دستگاه</td></tr>
+        </table>
+
+        <h3>لایه 2: لایه مدیریت حالت سراسری شبکه</h3>
+        <p>لایه میانی حالت توزیع‌شده درباره شبکه را نگهداری می‌کند. این "پایگاه داده" کنترلر است.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>اطلاعات حالت نگهداری شده</h3>
+            <p>• <span class="highlight">وضعیت پیوند</span> — وضعیت همه پیوندها</p>
+            <p>• <span class="highlight">اطلاعات میزبان</span> — میزبان‌های متصل</p>
+            <p>• <span class="highlight">اطلاعات سوییچ</span> — قابلیت‌ها و وضعیت</p>
+          </div>
+          <div class="card">
+            <h3>چالش‌های پیاده‌سازی</h3>
+            <p>• <span class="dim">سازگاری</span> — نگهداری ترتیب زمانی منطقی</p>
+            <p>• <span class="dim">اجماع</span> — توافق بین نسخه‌های کنترلر</p>
+            <p>• <span class="dim">تحمل خطا</span> — بقا در برابر خرابی سرور</p>
+          </div>
+        </div>
+
+        <h3>لایه 3: لایه رابط شمالی</h3>
+        <p>لایه بالایی APIهایی برای برنامه‌های کنترل شبکه فراهم می‌کند تا با کنترلر تعامل کنند.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>تعامل صفحه داده و کنترل: تغییر حالت پیوند</h2>
+        <p>شکل 5.16 یک تعامل 6-گام کامل را نشان می‌دهد وقتی یک پیوند بین دو سوییچ SDN خراب می‌شود.</p>
+
+        <h3>تفاوت‌های کلیدی با کنترل سنتی هر-مسیریاب</h3>
+        <div class="formula">
+          <div class="label">SDN در مقابل کنترل سنتی:</div>
+          <div class="expr">1. دیکسترا به عنوان یک برنامه جداگانه خارج از سوییچ‌ها اجرا می‌شود</div>
+          <div class="expr">2. سوییچ‌ها بروزرسانی پیوند را به کنترلر می‌فرستند، نه به یکدیگر</div>
+        </div>
+
+        <h3>تعامل 6-گام (شکل 5.16)</h3>
+        <p><strong>سناریو:</strong> پیوند بین سوییچ s1 و s2 خراب می‌شود.</p>
+        <div class="grid">
+          <div class="card"><h3>گام 1</h3><p>s1 خرابی پیوند را تشخیص می‌دهد. پیام OpenFlow port-status به کنترلر می‌فرستد.</p></div>
+          <div class="card"><h3>گام 2</h3><p>کنترلر پیام OpenFlow را دریافت می‌کند. مدیر حالت پیوند را بروزرسانی می‌کند.</p></div>
+          <div class="card"><h3>گام 3</h3><p>برنامه مسیریاب (دیکسترا) اعلان تغییر را دریافت می‌کند.</p></div>
+          <div class="card"><h3>گام 4</h3><p>برنامه مسیریاب حالت پیوند بروز را می‌خواند. مسیرهای جدید محاسبه می‌کند.</p></div>
+          <div class="card"><h3>گام 5</h3><p>برنامه مسیریاب با مدیر جدول جریان تعامل می‌کند.</p></div>
+          <div class="card"><h3>گام 6</h3><p>مدیر جدول جریان از OpenFlow برای بروزرسانی s1 و s4 استفاده می‌کند.</p></div>
+        </div>
+
+        <div class="warning">در شبکه سنتی، <strong>هر مسیریاب</strong> دیکسترا را اجرا می‌کند. در SDN، <strong>فقط کنترلر</strong> دیکسترا را اجرا می‌کند. این سوییچ‌ها را به طور چشمگیری ساده می‌کند.</div>
+
+        <div class="section">
+          <h2>مطالعه موردی: Google B4</h2>
+          <p>شبکه B4 گوگل یک WAN خصوصی است که مراکز داده آن را در سراسر جهان متصل می‌کند. این یک استقرار برجسته SDN است که پیوندهای WAN را به <strong>نزدیک 70% استفاده</strong> رساند (2-3 برابر بهبود نسبت به WANهای معمولی).</p>
+          <div class="grid">
+            <div class="card">
+              <h3>اجزای کلیدی</h3>
+              <p>• <span class="highlight">OFA</span> — عامل OpenFlow روی هر سوییچ</p>
+              <p>• <span class="highlight">OFC</span> — کنترلر OpenFlow</p>
+              <p>• <span class="highlight">NIB</span> — پایگاه اطلاعات شبکه</p>
+              <p>• <span class="highlight">Paxos</span> — اجماع برای تحمل خطا</p>
+            </div>
+            <div class="card">
+              <h3>پروتکل‌های مسیریابی</h3>
+              <p>• <span class="dim">BGP</span> — بین مراکز داده</p>
+              <p>• <span class="dim">IS-IS</span> — درون مرکز داده</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: رویداد پیوستن میزبان جدید</div>
+          <p><strong>سناریو:</strong> میزبانی با MAC AA:BB:CC:DD:EE:FF به سوییچ s3 پورت 5 متصل می‌شود. کنترلر SDN باید درباره این میزبان بیاموزد و قوانین ارسال نصب کند.</p>
+          <p>سوییچ s3 Packet-In به کنترلر می‌فرستد ← ردیاب میزبان پایگاه داده را بروزرسانی می‌کند ← برنامه مسیریابی مسیرها را محاسبه می‌کند ← کنترلر Modify-State به s1, s2, s4 می‌فرستد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: مهندسی ترافیک با اولویت جریان</div>
+          <p>دو مسیر بین s1 و s4: مستقیم (10 گیگابیت، تأخیر بالا) و از طریق s2-s3 (1 گیگابیت، تأخیر کم). کنترلر ترافیک ویدئو را به مسیر پهن‌باند بالا و ترافیک تعاملی را به مسیر تأخیر کم هدایت می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: فایروال توزیع‌شده با SDN</div>
+          <p>مسدود کردن SSH از شبکه مهمان به سرورها. برنامه کنترل دسترسی یک ورودی جریان در سوییچ لبه نصب می‌کند: تطبیق روی TCP پورت 22 ← drop.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: بازیابی خرابی کنترلر</div>
+          <p>خوشه 5-سروری کنترلر SDN با خرابی یک سرور. سوییچ به نمونه دیگر متصل می‌شود. Paxos برای توافق روی حالت شبکه استفاده می‌شود. عملیات جریان ادامه می‌یابد زیرا جداول جریان در سوییچ‌ها کش شده‌اند.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>جدول مقایسه: SDN در مقابل سنتی</h2>
+        <table>
+          <tr><th>جنبه</th><th>SDN</th><th>سنتی</th></tr>
+          <tr><td>مکان صفحه کنترل</td><td>متمرکز (منطقاً) روی سرورها</td><td>توزیع‌شده در هر مسیریاب</td></tr>
+          <tr><td>الگوریتم ارسال</td><td>یک بار روی کنترلر</td><td>روی هر مسیریاب</td></tr>
+          <tr><td>تغییر سیاست</td><td>بروزرسانی نرم‌افزار کنترلر</td><td>بازپیکربندی همه مسیریاب‌ها</td></tr>
+          <tr><td>مبنای ارسال</td><td>هر فیلد هدر</td><td>فقط IP مقصد</td></tr>
+          <tr><td>پیچیدگی سوییچ</td><td>ساده (تطبیق + عمل)</td><td>پیچیده (اجرای پروتکل‌های مسیریابی)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>SDN: گذشته و آینده</h2>
+        <p>اگرچه علاقه شدید به SDN اخیر است، ریشه‌های فنی جداسازی صفحه داده/کنترل به طور قابل توجهی عقب‌تر می‌رود. در سال 2004، [Feamster 2004] برای جداسازی صفحات داده و کنترل شبکه استدلال کرد.</p>
+
+        <h3>پروژه Ethane [Casado 2007]</h3>
+        <p>Ethane مفهوم شبکه‌ای از سوییچ‌های اترنت ساده مبتنی بر جریان با جداول جریان تطبیق-به-علاوه-عمل، یک کنترلر متمرکز مدیریت مسیر و ارسال بسته‌های نامطابق از سوییچ‌ها به کنترلر را پیشگام کرد. شبکه‌ای از بیش از 300 سوییچ Ethane در سال 2007 عملیاتی شد.</p>
+
+        <h3>مجازی‌سازی توابع شبکه (NFV)</h3>
+        <p>تعمیم SDN که به عنوان <strong>مجازی‌سازی توابع شبکه (NFV)</strong> شناخته می‌شود، هدف جایگزینی جعبه‌های میانی پیچیده با سرورها، سوییچینگ و ذخیره‌سازی عمومی را دارد.</p>
+
+        <h3>تحقیق SDN بین-AS</h3>
+        <p>حوزه دوم تحقیق مهم به دنبال گسترش مفاهیم SDN از محیط درون-AS به محیط بین-AS است [Gupta 2014].</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

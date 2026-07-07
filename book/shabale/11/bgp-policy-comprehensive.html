@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BGP Routing Policy - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>BGP Routing Policy</h1>
+  <p class="subtitle">Network Layer — Inter-AS Routing &amp; Policy Control for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Policy Basics</button>
+      <button class="tab" onclick="showSection('tab2')">Customer/Provider</button>
+      <button class="tab" onclick="showSection('tab3')">Peering</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>BGP Route Selection and Policy</h2>
+        <p>BGP (Border Gateway Protocol) is the de facto inter-AS routing protocol for the Internet. Unlike intra-AS protocols (OSPF, RIP) that optimize for performance, BGP is fundamentally policy-driven. Policy can override all other routing considerations including shortest AS path or hot potato routing.</p>
+
+        <h3>BGP Route Selection Algorithm</h3>
+        <p>When a router has two or more routes to the same prefix, BGP uses the following ordered rules:</p>
+
+        <div class="formula">
+          <div class="label">BGP Route Selection Priority (highest to lowest):</div>
+          <div class="expr">1. Local Preference (highest wins)</div>
+          <div class="expr">2. Shortest AS-PATH</div>
+          <div class="expr">3. Closest NEXT-HOP (hot potato routing)</div>
+          <div class="expr">4. BGP Identifier (lowest wins, tiebreak)</div>
+          <div class="desc">Routes with the highest local preference are always chosen first, enforcing AS policy before any performance metrics</div>
+        </div>
+
+        <div class="warning">
+          <strong>Warning:</strong> BGP is NOT a shortest-path algorithm. Policy trumps path length. A route through 10 ASes with high local preference will be chosen over a 2-AS path with default preference.
+        </div>
+
+        <h3>BGP Attributes</h3>
+        <p>Every BGP route advertisement includes attributes that influence route selection:</p>
+        <table>
+          <tr><th>Attribute</th><th>Type</th><th>Purpose</th></tr>
+          <tr><td>Local Preference</td><td>Mandatory</td><td>Indicates preferred exit point for an AS; set by AS policy</td></tr>
+          <tr><td>AS-PATH</td><td>Mandatory</td><td>Sequence of ASes traversed; used for loop detection and path length</td></tr>
+          <tr><td>NEXT-HOP</td><td>Mandatory</td><td>IP address of next-hop router toward the prefix</td></tr>
+          <tr><td>MED (Multi-Exit Discriminator)</td><td>Optional</td><td>Suggested entry point into an AS when multiple links exist</td></tr>
+          <tr><td>Community</td><td>Optional</td><td>Tag for group policy actions (prepend, filter, prefer)</td></tr>
+        </table>
+
+        <h3>Local Preference in Detail</h3>
+        <p>The local preference attribute is attached to routes <strong>within</strong> an AS and is never passed to neighboring ASes. It allows an AS to specify which egress point is preferred for a given destination. Higher values (default 100) indicate greater preference.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Concepts</h3>
+            <p>• Local preference is <span class="highlight">intra-AS only</span></p>
+            <p>• Default value is <span class="highlight">100</span></p>
+            <p>• Range: 0 to 2^32 - 1</p>
+            <p>• Policy can be set per prefix, per neighbor, or per AS</p>
+          </div>
+          <div class="card">
+            <h3>BGP Message Types</h3>
+            <p>• <span class="highlight">OPEN</span>: Establish connection</p>
+            <p>• <span class="highlight">UPDATE</span>: Advertise/withdraw routes</p>
+            <p>• <span class="highlight">NOTIFICATION</span>: Error reporting</p>
+            <p>• <span class="highlight">KEEPALIVE</span>: Maintain session</p>
+          </div>
+        </div>
+
+        <h3>Quick Reference Card: BGP Route Selection</h3>
+        <div class="code">
+  1. Highest LOCAL_PREF (policy first!)
+  2. Shortest AS_PATH length
+  3. Lowest MED (if same AS)
+  4. eBGP learned &gt; iBGP learned
+  5. Closest IGP neighbor (hot potato)
+  6. Lowest BGP Router ID
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Customer/Provider Relationships</h2>
+        <p>In the Internet hierarchy, ISPs form customer-provider relationships. The commercial relationship dictates how routes are advertised and what traffic is carried.</p>
+
+        <h3>Figure 5.13: Six-AS Topology</h3>
+        <div class="formula">
+          <div class="label">Network Topology (Figure 5.13):</div>
+          <div class="expr">Backbone: A - B - C (peer backbone providers)</div>
+          <div class="expr">Access: W (customer of A), X (multi-homed, customers of B and C), Y (customer of C)</div>
+          <div class="desc">W, X, and Y are access (stub) ISPs. A, B, C are backbone provider networks.</div>
+        </div>
+
+        <h3>Customer/Provider Traffic Rules</h3>
+        <table>
+          <tr><th>Rule</th><th>Customer</th><th>Provider</th></tr>
+          <tr><td>Traffic source</td><td>Must originate in customer network</td><td>Any source</td></tr>
+          <tr><td>Traffic destination</td><td>Must terminate in customer network</td><td>Any destination</td></tr>
+          <tr><td>Transit traffic</td><td>Not allowed to carry</td><td>Carries customer traffic</td></tr>
+          <tr><td>Route advertisement</td><td>Advertises own prefixes to provider</td><td>Advertises full Internet routes to customer</td></tr>
+          <tr><td>Payment</td><td>Pays provider for transit</td><td>Receives payment</td></tr>
+        </table>
+
+        <h3>Selective Route Advertisement: Stub Networks</h3>
+        <p>An access ISP like X in Figure 5.13 is connected to two providers (B and C). To function as a stub network (only sourcing/sinking its own traffic), X must <strong>selectively advertise</strong> its routes. Specifically, X will function as an access ISP network if it advertises to its neighbors B and C that it has <strong>no paths to any other destinations except itself</strong>.</p>
+        <p>Even though X may know a path X→C→Y to reach network Y, X will <strong>not</strong> advertise this path to B. Since B is unaware that X can reach Y, B will never forward traffic destined to Y through X. This prevents X from becoming a transit network between B and C.</p>
+
+        <div class="warning">
+          <strong>Warning:</strong> If a multi-homed stub AS advertises routes learned from one provider to another, it becomes a transit AS and must carry other networks' traffic — likely violating its commercial agreement and incurring unexpected costs.
+        </div>
+
+        <h3>Multi-Homed Access ISP Behavior</h3>
+        <p>A multi-homed access ISP (like X) connects to two or more providers for redundancy. Key behaviors:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Benefits</h3>
+            <p>• <span class="highlight">Redundancy</span> if one link fails</p>
+            <p>• <span class="highlight">Load balancing</span> across links</p>
+            <p>• <span class="highlight">Better performance</span> via best exit selection</p>
+          </div>
+          <div class="card">
+            <h3>Requirements</h3>
+            <p>• Must <span class="dim">not</span> leak routes between providers</p>
+            <p>• Must use its own public prefix</p>
+            <p>• Typically sets local pref per provider</p>
+          </div>
+        </div>
+
+        <h3>Example: Provider Route Advertisement Decision</h3>
+        <p>Consider provider B in Figure 5.13. B learns path A→W from A. B installs AW and advertises it to customer X. Should B advertise BAW to C? </p>
+        <p><strong>No.</strong> If B advertises BAW to C, traffic from C to W would flow through B, making B carry transit traffic between A and C. B has no incentive to carry this traffic without payment. The rule of thumb: traffic on a backbone must have source or destination in a customer of that ISP; otherwise, the traffic would be getting a <strong>free ride</strong> on the ISP's network. Individual peering agreements governing such questions are typically negotiated between ISPs and are often confidential [Huston 1999a; Huston 2012]. For a detailed description of how routing policy reflects commercial relationships among ISPs, see [Gao 2001; Dimitropoulos 2007]. For a discussion of BGP routing policies from an ISP standpoint, see [Caesar 2005b].</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Peering Agreements and Transit Traffic</h2>
+        <p>Peering is a business arrangement where two ISPs agree to exchange traffic between their networks without charging each other. Understanding peering vs. transit is critical for BGP policy design.</p>
+
+        <h3>Peering vs. Transit</h3>
+        <table>
+          <tr><th>Aspect</th><th>Peering</th><th>Transit</th></tr>
+          <tr><td>Payment</td><td>Settlement-free (no money exchanged)</td><td>Customer pays provider</td></tr>
+          <tr><td>Route scope</td><td>Only routes from peer's customers</td><td>Full Internet routing table</td></tr>
+          <tr><td>Traffic type</td><td>Traffic between peers' customers only</td><td>All destinations reachable</td></tr>
+          <tr><td>Relationship</td><td>Mutually beneficial</td><td>Hierarchical</td></tr>
+          <tr><td>Agreement</td><td>Typically negotiated, often confidential</td><td>Standard contract</td></tr>
+        </table>
+
+        <h3>Peering Traffic Rules</h3>
+        <p>In a peering agreement, an ISP typically:</p>
+        <ul>
+          <li>Advertises to the peer only routes from its own customer networks (not routes learned from other peers or providers)</li>
+          <li>Does NOT carry transit traffic between the peer and other networks</li>
+          <li>Does NOT advertise the peer's routes to other peers or providers</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Peering Route Flow Rule:</div>
+          <div class="expr">Peer → Advertise to peer only: own prefixes + customer prefixes</div>
+          <div class="expr">Peer → Do NOT advertise: other peers' routes, providers' routes</div>
+          <div class="desc">This ensures that peering traffic stays between the two peers' customer cones</div>
+        </div>
+
+        <h3>Transit Traffic Prevention</h3>
+        <p>Transit traffic through a backbone ISP means packets traverse the ISP's network where neither source nor destination is a customer of that ISP. This is prevented by:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Prevention Mechanisms</h3>
+            <p>• <span class="highlight">Filtering</span> — Do not advertise peer routes to other peers</p>
+            <p>• <span class="highlight">Local preference</span> — Prefer routes from customers</p>
+            <p>• <span class="highlight">AS_PATH prepending</span> — Make path through you look longer</p>
+            <p>• <span class="highlight">Community tagging</span> — Mark routes for specific treatment</p>
+          </div>
+          <div class="card">
+            <h3>Consequences of Leaking</h3>
+            <p>• <span class="dim">Free transit</span> — Other ISPs get free bandwidth</p>
+            <p>• <span class="dim">Cost increase</span> — You pay for transit traffic</p>
+            <p>• <span class="dim">Relationship damage</span> — Peers may terminate peering</p>
+            <p>• <span class="dim">Reputation loss</span> — Prefix hijack or misconfiguration</p>
+          </div>
+        </div>
+
+        <h3>Peering Agreement Confidentiality</h3>
+        <p>Peering agreements between ISPs are typically confidential. They govern questions such as which routes are exchanged, traffic volume commitments, and geographic scope. The lack of standardization means BGP policy configuration must be carefully customized per peering relationship.</p>
+      </div>
+
+      <div class="section">
+        <h2>Why Inter-AS vs. Intra-AS Differ</h2>
+        <p>Three fundamental reasons explain why different protocols are used for inter-AS and intra-AS routing:</p>
+
+        <table>
+          <tr><th>Consideration</th><th>Inter-AS (BGP)</th><th>Intra-AS (OSPF, RIP)</th></tr>
+          <tr><td><span class="highlight">Policy</span></td><td>Policy dominates; routes selected based on commercial relationships</td><td>Single administrative domain; policy is less important</td></tr>
+          <tr><td><span class="highlight">Scale</span></td><td>Must handle Internet-scale routing (900K+ prefixes); data structures must scale to large numbers of networks</td><td>Limited to single AS; can split into OSPF areas for hierarchy, or divide one AS into two ASs</td></tr>
+          <tr><td><span class="highlight">Performance</span></td><td>Secondary concern; policy often selects longer paths</td><td>Primary concern; cost metrics optimize performance</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Key Insight:</strong> BGP is policy-first, performance-second. Intra-AS protocols like OSPF and RIP are performance-first. This is why the Internet needs both types of protocols operating together.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Multi-Homed Stub Route Advertisement</div>
+          <p><strong>Scenario:</strong> AS X is multi-homed to providers B and C (Figure 5.13). X has learned route X→C→Y to reach AS Y's prefix.</p>
+          <p><strong>Question:</strong> Should X advertise this route to B? Why or why not?</p>
+          <p><strong>Solution:</strong> No. If X advertises X→C→Y to B, then B will install path B→X→C→Y and may forward traffic to Y through X. This makes X a transit AS between B and C. X's traffic must be solely its own (source/destination within X).</p>
+          <p><strong>Implementation:</strong> X advertises only its own prefix to B and C. X does not re-advertise routes learned from one provider to the other. This is enforced via outbound route filters.</p>
+          <div class="code">
+prefix-list X-OWN permit 192.0.2.0/24
+route-map TO-B permit 10
+  match ip address prefix-list X-OWN
+neighbor 203.0.113.1 route-map TO-B export
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Provider Transit Traffic Prevention</div>
+          <p><strong>Scenario:</strong> Backbone ISP B has learned path A→W from peer A and path C→Y from peer C. B also has customer X.</p>
+          <p><strong>Question:</strong> Should B advertise route B→A→W to C? What would happen if it did?</p>
+          <p><strong>Analysis:</strong> If B advertises BAW to C, then traffic from C's customer Y destined to W would flow as Y→C→B→A→W. B carries this traffic even though neither source (Y) nor destination (W) is B's customer. B gets no revenue for this transit.</p>
+          <p><strong>Solution:</strong> B should advertise BAW only to its customer X, not to peer C. B applies the rule: "Traffic flowing across my backbone must have a source or destination in a customer network."</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Local Preference for Exit Selection</div>
+          <p><strong>Scenario:</strong> Multi-homed AS X connects to provider B and provider C. X learns the same prefix 203.0.113.0/24 from both. The link to B is 1 Gbps (cheaper), the link to C is 10 Gbps (more expensive per-GB).</p>
+          <p><strong>Question:</strong> How does X prefer the cheaper link while keeping the faster link as backup?</p>
+          <p><strong>Solution:</strong> Set local preference higher on routes learned from the preferred provider.</p>
+          <div class="code">
+route-map FROM-B permit 10
+  set local-preference 150
+route-map FROM-C permit 10
+  set local-preference 100
+
+neighbor 203.0.113.2 route-map FROM-B import
+neighbor 203.0.113.6 route-map FROM-C import
+          </div>
+          <p><strong>Result:</strong> All routes from B have local pref 150, all from C have 100. Traffic exits via B unless B's link fails. If B goes down, routes from B disappear and traffic shifts to C automatically.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: AS_PATH Prepending for Traffic Engineering</div>
+          <p><strong>Scenario:</strong> AS X has two links to provider B. X wants to use one link as primary and the other as backup for incoming traffic.</p>
+          <p><strong>Solution:</strong> Prepend AS_PATH on the backup link to make it appear longer.</p>
+          <div class="code">
+route-map TO-B-PRIMARY permit 10
+  set as-path prepend 64500
+route-map TO-B-BACKUP permit 10
+  set as-path prepend 64500 64500 64500
+          </div>
+          <p><strong>Result:</strong> Primary link advertises path "64500", backup advertises "64500 64500 64500". Incoming traffic prefers the shorter path (primary) because AS_PATH length is the second criterion in BGP selection.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: BGP Policy Conflict Resolution</div>
+          <p><strong>Scenario:</strong> AS X receives two routes to prefix 10.0.0.0/16:</p>
+          <p>Route 1: AS-PATH {B, A, Z}, NEXT-HOP 192.0.2.1, Local Pref 100</p>
+          <p>Route 2: AS-PATH {C, Z}, NEXT-HOP 198.51.100.1, Local Pref 200</p>
+          <p><strong>Question:</strong> Which route is selected and why?</p>
+          <p><strong>Answer:</strong> Route 2 is selected. Even though Route 1 has a shorter AS_PATH (3 vs 2? Actually Route 2 has shorter AS_PATH {C,Z} = 2 hops vs {B,A,Z} = 3 hops), the local preference criterion comes FIRST. Route 2 with Local Pref 200 wins regardless of path length. If both had same local pref, Route 2 would still win on shorter AS_PATH.</p>
+          <p><strong>Moral:</strong> Local preference can override any other routing consideration — it is the policy hammer.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison Tables</h2>
+        <h3>BGP vs. Intra-AS Protocols</h3>
+        <table>
+          <tr><th>Feature</th><th>BGP</th><th>OSPF</th><th>RIP</th></tr>
+          <tr><td>Type</td><td>Path Vector</td><td>Link State</td><td>Distance Vector</td></tr>
+          <tr><td>Scope</td><td>Inter-AS</td><td>Intra-AS</td><td>Intra-AS</td></tr>
+          <tr><td>Metric</td><td>Policy + AS_PATH</td><td>Cost (bandwidth)</td><td>Hop count</td></tr>
+          <tr><td>Convergence</td><td>Slow (policy-dependent)</td><td>Fast (sub-second)</td><td>Slow (count to infinity)</td></tr>
+          <tr><td>Scale</td><td>900K+ routes</td><td>Hundreds of routers</td><td>&lt; 15 hops</td></tr>
+        </table>
+
+        <h3>Policy Attributes Summary</h3>
+        <table>
+          <tr><th>Attribute</th><th>Direction</th><th>Scope</th><th>Purpose</th></tr>
+          <tr><td>Local Preference</td><td>Inbound from neighbor</td><td>Intra-AS</td><td>Select best exit point</td></tr>
+          <tr><td>AS_PATH</td><td>Both</td><td>Inter-AS</td><td>Loop detection, path length</td></tr>
+          <tr><td>MED</td><td>Inbound from neighbor</td><td>Inter-AS (same AS)</td><td>Select best entry point</td></tr>
+          <tr><td>Community</td><td>Both</td><td>Inter/Intra-AS</td><td>Tag for group policy</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>BGP Selection Order</h3>
+            <p>1. <span class="highlight">Highest Local Pref</span></p>
+            <p>2. <span class="highlight">Shortest AS_PATH</span></p>
+            <p>3. <span class="highlight">Lowest MED</span></p>
+            <p>4. <span class="highlight">eBGP &gt; iBGP</span></p>
+            <p>5. <span class="highlight">Closest IGP (hot potato)</span></p>
+            <p>6. <span class="highlight">Lowest Router ID</span></p>
+          </div>
+          <div class="card">
+            <h3>Route Advertisement Rules</h3>
+            <p>• <span class="dim">Customer</span> → Advertise own prefixes to provider</p>
+            <p>• <span class="dim">Provider</span> → Advertise full routes to customer</p>
+            <p>• <span class="dim">Peer</span> → Advertise only customer routes</p>
+            <p>• <span class="dim">Never</span> re-advertise peer routes to other peers</p>
+          </div>
+          <div class="card">
+            <h3>BGP Port &amp; Transport</h3>
+            <p>• TCP port <span class="highlight">179</span></p>
+            <p>• eBGP: between different ASes</p>
+            <p>• iBGP: within same AS</p>
+            <p>• Full mesh iBGP or route reflectors</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

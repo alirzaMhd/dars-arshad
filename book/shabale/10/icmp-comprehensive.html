@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پروتکل ICMP — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>پروتکل ICMP</h1>
+  <p class="subtitle">پروتکل پیام کنترل اینترنت — راهنمای مدیریت شبکه</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور ICMP</button>
+      <button class="tab" onclick="showSection('tab2')">انواع پیام</button>
+      <button class="tab" onclick="showSection('tab3')">Ping و Traceroute</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور ICMP</h2>
+        <p>پروتکل پیام کنترل اینترنت (ICMP) یک پروتکل اصلی در مجموعه پروتکل اینترنت است. توسط دستگاه‌های شبکه، از جمله مسیریاب‌ها، برای ارسال پیام‌های خطا و اطلاعات عملیاتی که موفقیت یا شکست در ارتباط با یک آدرس IP دیگر را نشان می‌دهد، استفاده می‌شود.</p>
+
+        <div class="formula">
+          <div class="label">حقایق کلیدی:</div>
+          <div class="expr">ICMP بخشی از IP است &bull; شماره پروتکل: 1</div>
+          <div class="desc">پیام‌های ICMP درون دیتاگرام‌های IP حمل می‌شوند (کپسوله، نه لایه‌بندی شده در بالا)</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>کپسوله‌سازی</h3>
+            <p>پیام‌های ICMP در <span class="highlight">دیتاگرام‌های IP حمل می‌شوند</span></p>
+            <p>فیلد پروتکل هدر IP = <span class="dim">1</span></p>
+          </div>
+          <div class="card">
+            <h3>هدف</h3>
+            <p>توابع <span class="highlight">گزارش خطا</span> و <span class="highlight">تشخیصی</span></p>
+            <p>نه برای حمل و نقل مطمئن داده</p>
+          </div>
+          <div class="card">
+            <h3>ICMPv4 در مقابل ICMPv6</h3>
+            <p>ICMPv6 شامل <span class="highlight">Packet Too Big</span></p>
+            <p>مدیریت <span class="dim">گزینه‌های ناشناخته</span></p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>مهم:</strong> ICMP باعث可靠 شدن IP نمی‌شود. فقط خطاها را گزارش می‌کند — پروتکل لایه بالاتر (مثلاً TCP) باید بازیابی را مدیریت کند.
+        </div>
+
+        <h3>فرمت پیام ICMP</h3>
+        <table>
+          <tr><th>offset</th><th>فیلد</th><th>اندازه</th><th>توضیح</th></tr>
+          <tr><td>0</td><td>نوع</td><td>1 بایت</td><td>نوع پیام ICMP را مشخص می‌کند</td></tr>
+          <tr><td>1</td><td>کد</td><td>1 بایت</td><td>نوع پیام را بیشتر توصیف می‌کند</td></tr>
+          <tr><td>2-3</td><td>Checksum</td><td>2 بایت</td><td>جمع کنترل پوشش‌دهنده پیام ICMP</td></tr>
+          <tr><td>4+</td><td>بقیه هدر</td><td>متغیر</td><td>بستگی به نوع/کد دارد؛ اغلب شامل 8 بایت اول دیتاگرام خطا است</td></tr>
+        </table>
+
+        <p style="margin-top:10px;">برای پیام‌های گزارش خطا، بار ICMP شامل <span class="highlight">8 بایت اول دیتاگرام IP خطا</span> (هدر IP + 8 بایت اول هدر حمل) است تا به فرستنده کمک کند مشخص کند کدام بسته باعث خطا شده است.</p>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>موقعیت در پشته پروتکل</h3>
+            <p>لایه: <span class="highlight">شبکه (لایه 3)</span></p>
+            <p>کپسوله در: <span class="dim">دیتاگرام IP</span></p>
+            <p>شماره پروتکل IP: <span class="highlight">1</span></p>
+          </div>
+          <div class="card">
+            <h3>ICMPv6 [RFC 4443]</h3>
+            <p><span class="highlight">Packet Too Big</span> (نوع 2) — نوع مورد نیاز جدید</p>
+            <p><span class="dim">گزینه‌های IPv6 ناشناخته</span> کد خطا برای Parameter Problem</p>
+            <p>کشف همسایه (NDP) جایگزین ARP می‌شود</p>
+          </div>
+          <div class="card">
+            <h3>کاربردهای رایج</h3>
+            <p><span class="highlight">Ping</span> — تست دسترس‌پذیری</p>
+            <p><span class="highlight">Traceroute</span> — کشف مسیر</p>
+            <p><span class="dim">کشف MTU مسیر</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>جدول نوع/کد ICMP (شکل 5.19)</h2>
+        <p>جدول زیر مهمترین انواع پیام ICMP و کدهای مرتبط آنها را فهرست می‌کند.</p>
+
+        <table>
+          <tr><th>نوع</th><th>کد</th><th>توضیح</th><th>دسته</th></tr>
+          <tr><td>0</td><td>0</td><td>پاسخ Echo</td><td>پرس و جو</td></tr>
+          <tr><td>3</td><td>0</td><td>مقصد غیرقابل دسترس — شبکه غیرقابل دسترس</td><td>خطا</td></tr>
+          <tr><td>3</td><td>1</td><td>مقصد غیرقابل دسترس — میزبان غیرقابل دسترس</td><td>خطا</td></tr>
+          <tr><td>3</td><td>2</td><td>مقصد غیرقابل دسترس — پروتکل غیرقابل دسترس</td><td>خطا</td></tr>
+          <tr><td>3</td><td>3</td><td>مقصد غیرقابل دسترس — پورت غیرقابل دسترس</td><td>خطا</td></tr>
+          <tr><td>3</td><td>4</td><td>مقصد غیرقابل دسترس — قطعه‌بندی لازم است اما DF تنظیم شده</td><td>خطا</td></tr>
+          <tr><td>3</td><td>5</td><td>مقصد غیرقابل دسترس — مسیر مبدأ ناموفق</td><td>خطا</td></tr>
+          <tr><td>3</td><td>6</td><td>مقصد غیرقابل دسترس — شبکه مقصد ناشناخته</td><td>خطا</td></tr>
+          <tr><td>3</td><td>7</td><td>مقصد غیرقابل دسترس — میزبان مقصد ناشناخته</td><td>خطا</td></tr>
+          <tr><td>4</td><td>0</td><td>Source Quench (کنترل ازدحام)</td><td>خطا</td></tr>
+          <tr><td>5</td><td>0-3</td><td>تغییر مسیر (شبکه، میزبان، و غیره)</td><td>کنترل</td></tr>
+          <tr><td>8</td><td>0</td><td>درخواست Echo</td><td>پرس و جو</td></tr>
+          <tr><td>9</td><td>0</td><td>اعلان مسیریاب</td><td>کنترل</td></tr>
+          <tr><td>10</td><td>0</td><td>درخواست مسیریاب</td><td>کنترل</td></tr>
+          <tr><td>11</td><td>0</td><td>زمان تجاوز شد — TTL در ترانزیت منقضی شد</td><td>خطا</td></tr>
+          <tr><td>11</td><td>1</td><td>زمان تجاوز شد — زمان مونتاژ مجدد قطعه تجاوز شد</td><td>خطا</td></tr>
+          <tr><td>12</td><td>0</td><td>مشکل پارامتر — هدر IP بد (اشاره‌گر خطا را نشان می‌دهد)</td><td>خطا</td></tr>
+        </table>
+
+        <div class="grid" style="margin-top:15px;">
+          <div class="card">
+            <h3>پیام‌های پرس و جو</h3>
+            <p>• درخواست Echo (8/0) ← پاسخ Echo (0/0)</p>
+            <p>• درخواست مسیریاب (10/0) ← اعلان مسیریاب (9/0)</p>
+            <p>برای <span class="highlight">تشخیص</span> و <span class="highlight">کشف</span> استفاده می‌شود</p>
+          </div>
+          <div class="card">
+            <h3>پیام‌های خطا</h3>
+            <p>• مقصد غیرقابل دسترس (3/*)</p>
+            <p>• Source Quench (4/0)</p>
+            <p>• زمان تجاوز شد (11/*)</p>
+            <p>• مشکل پارامتر (12/0)</p>
+            <p>همیشه شامل <span class="dim">8 بایت اول</span> دیتاگرام خطا هستند</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>هشدار:</strong> Source Quench (نوع 4) به ندرت در عمل استفاده می‌شود. هدف اصلی آن کنترل ازدحام بود، اما TCP مکانیزم کنترل ازدحام خود را در لایه حمل دارد و بیت‌های ECN (اعلان ازدحام صریح) می‌توانند ازدحام را در لایه شبکه علامت دهند.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>قوانین پیام خطای ICMP</h2>
+        <p>پیام‌های خطای ICMP <strong>هرگز</strong> در پاسخ به موارد زیر تولید نمی‌شوند:</p>
+        <ul style="margin:10px 0 0 20px; color:#ccc;">
+          <li>یک پیام خطای ICMP دیگر (جلوگیری از حلقه‌های بی‌نهایت)</li>
+          <li>دیتاگرام‌های broadcast یا multicast IP</li>
+          <li>دیتاگرام‌هایی با آدرس مبدأ که unicast نیست</li>
+          <li>قطعات به غیر از اولین قطعه</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Ping</h2>
+        <p>Ping از پیام‌های درخواست Echo و پاسخ Echo ICMP برای تست دسترس‌پذیری و اندازه‌گیری زمان رفت و برگشت استفاده می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مکانیزم Ping:</div>
+          <div class="expr">میزبان A نوع 8، کد 0 ICMP می‌فرستد ← میزبان B نوع 0، کد 0 ICMP پاسخ می‌دهد</div>
+          <div class="desc">زمان رفت و برگشت = زمان بین درخواست و پاسخ</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>پیاده‌سازی</h3>
+            <p>سرور ping مستقیماً در <span class="highlight">هسته سیستم عامل</span> پیاده‌سازی می‌شود، نه به عنوان یک فرآیند سطح کاربر</p>
+            <p>برنامه کلاینت به سیستم عامل دستور می‌دهد پیام‌های ICMP نوع 8 کد 0 تولید کند</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>درخواست</h3>
+            <p>نوع: <span class="highlight">8</span></p>
+            <p>کد: <span class="dim">0</span></p>
+            <p>شامل شناسه + شماره توالی</p>
+          </div>
+          <div class="card">
+            <h3>پاسخ</h3>
+            <p>نوع: <span class="highlight">0</span></p>
+            <p>کد: <span class="dim">0</span></p>
+            <p>داده بار را برمی‌گرداند</p>
+          </div>
+          <div class="card">
+            <h3>فیلدهای خروجی</h3>
+            <p><span class="highlight">TTL</span> — تعداد هاپ باقیمانده</p>
+            <p><span class="highlight">time</span> — RTT بر حسب میلی‌ثانیه</p>
+            <p>درصد از دست دادن بسته</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال خروجی Ping</div>
+          <div class="code">
+$ ping -c 4 8.8.8.8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=118 time=12.3 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=118 time=11.8 ms
+64 bytes from 8.8.8.8: icmp_seq=3 ttl=118 time=12.1 ms
+64 bytes from 8.8.8.8: icmp_seq=4 ttl=118 time=11.9 ms
+
+--- 8.8.8.8 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3005ms
+rtt min/avg/max/mdev = 11.827/12.025/12.300/0.176 ms
+          </div>
+          <p class="note">میزبان درخواست Echo ICMP (8/0) می‌فرستد و پاسخ Echo (0/0) دریافت می‌کند. TTL = 118 یعنی بسته 256 - 118 = 138 هاپ (یا 64 - 48 = 16 بسته به TTL اولیه) را طی کرده است.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Traceroute</h2>
+        <p>Traceroute مسیر بسته‌ها از مبدأ تا مقصد را با بهره‌برداری از فیلد TTL نقشه‌برداری می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مکانیزم Traceroute:</div>
+          <div class="expr">ارسال بسته‌ها با TTL افزایشی (1، 2، 3، ...) به یک پورت UDP غیرمحتمل</div>
+          <div class="desc">هر مسیریاب TTL را کاهش می‌دهد؛ وقتی TTL=0، مسیریاب ICMP Time Exceeded (11/0) می‌فرستد. traceroute استاندارد 3 بسته به ازای هر مقدار TTL می‌فرستد و 3 اندازه‌گیری RTT به ازای هر هاپ فراهم می‌کند.</div>
+        </div>
+
+        <table>
+          <tr><th>گام</th><th>TTL</th><th>عمل</th><th>پاسخ ICMP</th></tr>
+          <tr><td>1</td><td>1</td><td>اولین مسیریاب TTL را کاهش می‌دهد ← 0، بسته را می‌اندازد</td><td>Time Exceeded (11/0) از مسیریاب 1</td></tr>
+          <tr><td>2</td><td>2</td><td>مسیریاب 1 ارسال می‌کند، مسیریاب 2 TTL را کاهش می‌دهد ← 0</td><td>Time Exceeded (11/0) از مسیریاب 2</td></tr>
+          <tr><td>3</td><td>3</td><td>به مقصد می‌رسد، اما پورت استفاده نشده است</td><td>Port Unreachable (3/3) از مقصد</td></tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>روش UDP</h3>
+            <p>بسته‌ها به <span class="highlight">پورت UDP بالای غیرمحتمل</span> فرستاده می‌شوند</p>
+            <p>مقصد با <span class="dim">Port Unreachable (3/3)</span> پاسخ می‌دهد</p>
+            <p>Traceroute می‌فهمد به مقصد رسیده است</p>
+          </div>
+          <div class="card">
+            <h3>روش ICMP</h3>
+            <p>برخی پیاده‌سازی‌ها از <span class="highlight">درخواست Echo ICMP</span> استفاده می‌کنند</p>
+            <p>مقصد با <span class="dim">پاسخ Echo (0/0)</span> پاسخ می‌دهد</p>
+          </div>
+          <div class="card">
+            <h3>روش TCP</h3>
+            <p>از <span class="highlight">بسته‌های SYN</span> به پورت 80 استفاده می‌کند</p>
+            <p>مقصد با <span class="dim">SYN/ACK</span> پاسخ می‌دهد</p>
+            <p>مفید وقتی فایروال‌ها ICMP را مسدود می‌کنند</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>توجه:</strong> بسیاری از مسیریاب‌ها و فایروال‌ها طوری پیکربندی شده‌اند که پیام‌های Time Exceeded ICMP را نفرستند و باعث می‌شوند traceroute "* * *" را برای آن هاپ‌ها نشان دهد.
+        </div>
+
+        <div class="example">
+          <div class="title">تحلیل خروجی Traceroute</div>
+          <div class="code">
+$ traceroute google.com
+traceroute to google.com (142.250.80.46), 30 hops max
+ 1  192.168.1.1 (192.168.1.1)  1.234 ms  1.123 ms  1.045 ms
+ 2  10.0.0.1 (10.0.0.1)  5.678 ms  5.432 ms  5.321 ms
+ 3  72.14.215.85 (72.14.215.85)  12.345 ms  11.234 ms  11.123 ms
+ 4  108.170.252.129 (108.170.252.129)  12.456 ms  12.345 ms  12.234 ms
+ 5  142.250.80.46 (142.250.80.46)  13.567 ms  13.456 ms  13.345 ms
+          </div>
+          <p class="note">هر هاپ 3 اندازه‌گیری RTT را نشان می‌دهد (3 بسته به ازای هر مقدار TTL). مسیر از مبدأ تا مقصد 5 هاپ را طی می‌کند. اولین هاپ دروازه پیش‌فرض (192.168.1.1) و سپس مسیریاب لبه ISP (10.0.0.1) است.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: استفاده از Ping برای تست دسترس‌پذیری</div>
+          <p><strong>سناریو:</strong> یک مدیر شبکه باید تأیید کند که یک سرور راه دور در 203.0.113.50 قابل دسترس است و زمان پاسخ را اندازه‌گیری کند.</p>
+          <div class="code">
+$ ping -c 5 203.0.113.50
+PING 203.0.113.50 (203.0.113.50) 56(84) bytes of data.
+64 bytes from 203.0.113.50: icmp_seq=1 ttl=64 time=45.2 ms
+64 bytes from 203.0.113.50: icmp_seq=2 ttl=64 time=44.8 ms
+64 bytes from 203.0.113.50: icmp_seq=3 ttl=64 time=46.1 ms
+64 bytes from 203.0.113.50: icmp_seq=4 ttl=64 time=45.5 ms
+64 bytes from 203.0.113.50: icmp_seq=5 ttl=64 time=44.9 ms
+
+--- 203.0.113.50 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4005ms
+rtt min/avg/max/mdev = 44.800/45.300/46.100/0.504 ms
+          </div>
+          <p><strong>تحلیل:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li><span class="result">0% از دست دادن بسته</span> — همه بسته‌ها به مقصد رسیدند و پاسخ‌ها برگشتند</li>
+            <li>میانگین RTT: <span class="result">45.3 ms</span> — قابل قبول برای یک سرور راه دور</li>
+            <li>TTL = 64 نشان می‌دهد میزبان مقصد از TTL اولیه پیش‌فرض 64 استفاده می‌کند (رایج در سیستم‌های لینوکس) و مستقیماً قابل دسترس است</li>
+            <li>mdev پایین (0.504 ms) نشان‌دهنده <span class="result">مسیر شبکه پایدار</span> با نوسان حداقل است</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: تحلیل خروجی Traceroute</div>
+          <p><strong>سناریو:</strong> کاربران از اتصالات کند به یک سرور وب در 198.51.100.20 گزارش می‌دهند. مدیر traceroute را اجرا می‌کند تا تنگنا را پیدا کند.</p>
+          <div class="code">
+$ traceroute 198.51.100.20
+traceroute to 198.51.100.20 (198.51.100.20), 30 hops max
+ 1  10.0.0.1 (10.0.0.1)  0.5 ms  0.4 ms  0.4 ms
+ 2  172.16.1.1 (172.16.1.1)  2.1 ms  2.0 ms  2.0 ms
+ 3  192.168.20.1 (192.168.20.1)  15.3 ms  15.1 ms  15.2 ms
+ 4  203.0.113.1 (203.0.113.1)  45.8 ms  125.3 ms  46.1 ms
+ 5  198.51.100.20 (198.51.100.20)  48.2 ms  48.0 ms  48.1 ms
+          </div>
+          <p><strong>تحلیل:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>هاپ 4 تنوع قابل توجهی نشان می‌دهد: یک بسته <span class="dim">125.3 ms</span> در مقابل ~46 ms برای بقیه — این نشان‌دهنده <span class="result">ازدحام یا یک مسیریاب کند</span> است</li>
+            <li>تنگنا در هاپ 4 (203.0.113.1) است، احتمالاً یک مسیریاب تجمیع ISP تحت بار</li>
+            <li>تأخیر سرتاسری: <span class="result">~48 ms</span> — مناسب برای یک سرور راه دور</li>
+            <li><span class="warning">توصیه:</span> مسیریاب در 203.0.113.1 را برای ازدحام بررسی کنید یا بررسی کنید آیا مسیر جایگزینی موجود است</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: سناریوی خطای ICMP — قطعه‌بندی لازم است</div>
+          <p><strong>سناریو:</strong> یک میزبان یک بسته 2000 بایتی به مقصدی در آن سوی یک پیوند با MTU 1500 می‌فرستد. پرچم DF (قطعه‌بندی نکن) تنظیم شده است. مسیریاب با یک خطای ICMP پاسخ می‌دهد.</p>
+
+          <div class="formula">
+            <div class="label">پیام ICMP تولید شده:</div>
+            <div class="expr">نوع: 3 &bull; کد: 4 &bull; مقصد غیرقابل دسترس (قطعه‌بندی لازم است اما DF تنظیم شده)</div>
+            <div class="desc">مسیریاب 8 بایت اول دیتاگرام خطا (هدر IP + شروع هدر TCP/UDP) را شامل می‌کند</div>
+          </div>
+
+          <p><strong>توالی رویدادها:</strong></p>
+          <ol style="margin:5px 0 0 20px; color:#ccc;">
+            <li>میزبان دیتاگرام IP با طول کل 2000، DF=1 می‌فرستد</li>
+            <li>مسیریاب دیتاگرام را دریافت می‌کند، نیاز به ارسال روی پیوند با MTU 1500 دارد</li>
+            <li>مسیریاب نمی‌تواند قطعه‌بندی کند (DF=1) و نمی‌تواند بسته بیش از اندازه بزرگ را ارسال کند</li>
+            <li>مسیریاب ICMP نوع 3، کد 4 تولید می‌کند و MTU هاپ بعدی را در پیام قرار می‌دهد</li>
+            <li>میزبان خطای ICMP را دریافت می‌کند و MTU کاهش‌یافته را برای آن مقصد کش می‌کند (کشف MTU مسیر)</li>
+            <li>میزبان با اندازه بسته کوچکتر (≤ 1500 بایت) دوباره ارسال می‌کند</li>
+          </ol>
+          <p class="result">این اساس کشف MTU مسیر (PMTUD) است که به ICMP برای تعیین پویای حداکثر اندازه بسته قابل عبور از مسیر بدون قطعه‌بندی متکی است.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: حمله تغییر مسیر ICMP (امنیتی)</div>
+          <p><strong>سناریو:</strong> یک مهاجم یک پیام جعلی تغییر مسیر ICMP می‌فرستد تا ترافیک را از طریق دستگاه خود هدایت کند.</p>
+          <div class="code">
+مهاجم می‌فرستد: ICMP نوع 5، کد 1 (تغییر مسیر میزبان)
+  IP مبدأ: جعل شده به عنوان دروازه (192.168.1.1)
+  IP هدف: میزبان قربانی (192.168.1.100)
+  دروازه جدید: IP مهاجم (192.168.1.200)
+  شامل: 8 بایت اول دیتاگرام خطا (برای تطبیق با جریان موجود)
+          </div>
+          <p><strong>دفاع:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>سیستم‌عامل‌های مدرن پیام‌های تغییر مسیر ICMP را به طور پیش‌فرض نادیده می‌گیرند</li>
+            <li>مسیریاب‌ها فقط برای ترافیک <span class="highlight">واقعاً ارسال‌شده</span> توسط خودشان تغییر مسیر می‌فرستند</li>
+            <li>از IPsec برای احراز هویت پیام‌های ICMP استفاده کنید</li>
+            <li>پذیرش تغییر مسیر ICMP را غیرفعال کنید: <span class="code">sysctl net.ipv4.conf.all.accept_redirects=0</span></li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: ICMPv6 Packet Too Big — کشف MTU مسیر</div>
+          <p><strong>سناریو:</strong> یک میزبان IPv6 یک بسته 2000 بایتی می‌فرستد. یک پیوند میانی دارای MTU 1280 است. از آنجا که مسیریاب‌های IPv6 قطعه‌بندی نمی‌کنند، مسیریاب ICMPv6 Packet Too Big می‌فرستد.</p>
+
+          <div class="formula">
+            <div class="label">پیام ICMPv6:</div>
+            <div class="expr">ICMPv6 نوع: 2 &bull; کد: 0 &bull; Packet Too Big</div>
+            <div class="desc">شامل MTU پیوند محدودکننده (1280 بایت) در بدنه پیام است</div>
+          </div>
+
+          <p><strong>مقایسه IPv4 در مقابل IPv6:</strong></p>
+          <table>
+            <tr><th>ویژگی</th><th>IPv4</th><th>IPv6</th></tr>
+            <tr><td>قطعه‌بندی میانی</td><td>مسیریاب‌ها می‌توانند قطعه‌بندی کنند</td><td><span class="dim">مسیریاب‌ها نمی‌توانند قطعه‌بندی کنند</span></td></tr>
+            <tr><td>پیام ICMP</td><td>نوع 3، کد 4 (قطعه‌بندی لازم)</td><td><span class="highlight">نوع 2 (Packet Too Big)</span></td></tr>
+            <tr><td>PMTUD اجباری؟</td><td>اختیاری</td><td><span class="highlight">الزامی</span></td></tr>
+            <tr><td>حداقل MTU</td><td>576 بایت</td><td><span class="highlight">1280 بایت</span></td></tr>
+          </table>
+          <p class="note">در IPv6، میزبان مبدأ <strong>باید</strong> کشف MTU مسیر را انجام دهد. شبکه هرگز بسته‌ها را قطعه‌بندی نمی‌کند — آنها را می‌اندازد و از طریق ICMPv6 گزارش می‌دهد.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>جدول مقایسه: ICMPv4 در مقابل ICMPv6</h2>
+        <table>
+          <tr><th>ویژگی</th><th>ICMPv4</th><th>ICMPv6</th></tr>
+          <tr><td>مقصد غیرقابل دسترس</td><td>نوع 3</td><td>نوع 1</td></tr>
+          <tr><td>Packet Too Big</td><td>نوع 3، کد 4</td><td>نوع 2 (نوع جداگانه)</td></tr>
+          <tr><td>زمان تجاوز شد</td><td>نوع 11</td><td>نوع 3</td></tr>
+          <tr><td>مشکل پارامتر</td><td>نوع 12</td><td>نوع 4</td></tr>
+          <tr><td>درخواست/پاسخ Echo</td><td>انواع 8/0</td><td>انواع 128/129</td></tr>
+          <tr><td>کشف مسیریاب</td><td>انواع 9/10</td><td>کشف همسایه (NDP)</td></tr>
+          <tr><td>کشف همسایه</td><td>ARP</td><td>انواع 135/136 (NS/NA)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

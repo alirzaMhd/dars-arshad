@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مبانی BGP و اعلان مسیر — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>BGP — پروتکل دروازه مرزی (مبانی و اعلان مسیر)</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — مسیریابی بین-AS و پروتکل بردار مسیر</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">نقش BGP</button>
+      <button class="tab" onclick="showSection('tab2')">eBGP در مقابل iBGP</button>
+      <button class="tab" onclick="showSection('tab3')">ویژگی‌ها</button>
+      <button class="tab" onclick="showSection('tab4')">فرآیند اعلان</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>نقش BGP در اینترنت</h2>
+        <p><strong>پروتکل دروازه مرزی (BGP)</strong> <span class="highlight">پروتکل مسیریابی بین-AS واقعی</span> است که اینترنت را به هم متصل می‌کند. در حالی که پروتکل‌های درون-AS (OSPF, RIP) مسیریابی درون یک سازمان را انجام می‌دهند، BGP مسیریابی <em>بین</em> سیستم‌های خودمختار را مدیریت می‌کند.</p>
+        <p>BGP یک پروتکل <strong>غیرمتمرکز و ناهمگام</strong> در رده مسیریابی بردار فاصله (بخش 5.2.2) است. می‌توان گفت مهم‌ترین پروتکل اینترنت پس از خود IP است — پروتکلی که هزاران ISP را به هم متصل می‌کند [RFC 4271].</p>
+
+        <div class="formula">
+          <div class="label">BGP: پروتکل بردار مسیر</div>
+          <div class="expr">مسیر = پیشوند + ویژگی‌های مسیر<br>مسیر = دنباله‌ای از شماره‌های AS (AS-PATH)<br>تصمیم = مبتنی بر سیاست‌ها، نه فقط کوتاه‌ترین مسیر</div>
+          <div class="desc">BGP یک پروتکل بردار مسیر است — نه فقط مقاصد، بلکه مسیر کامل ASها برای رسیدن به آنها را اعلام می‌کند.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های کلیدی</h3>
+            <p>• <span class="highlight">بین-AS</span>: سازمان‌های مختلف را متصل می‌کند</p>
+            <p>• <span class="highlight">مبتنی بر سیاست</span>: اپراتورها انتخاب مسیر را کنترل می‌کنند</p>
+            <p>• <span class="highlight">پشتیبانی CIDR</span>: پیشوندها با ماسک زیرشبکه اعلام می‌شوند</p>
+            <p>• <span class="highlight">بدون حلقه</span>: AS-PATH ذاتاً از حلقه جلوگیری می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>BGP در مقابل OSPF</h3>
+            <p>حوزه: <span class="highlight">بین-AS</span> در مقابل درون-AS</p>
+            <p>معیار: <span class="highlight">سیاست + مسیر</span> در مقابل هزینه</p>
+            <p>همگرایی: <span class="highlight">کندتر</span> در مقابل سریع</p>
+            <p>حمل: <span class="highlight">TCP (179)</span> در مقابل IP (89)</p>
+            <p>مقیاس: <span class="highlight">اینترنت جهانی</span> در مقابل سازمانی</p>
+          </div>
+        </div>
+
+        <h3>پیشوندهای CIDR به عنوان مقاصد</h3>
+        <p>در BGP، بسته‌ها به یک آدرس مقصد خاص مسیریابی نمی‌شوند بلکه به <strong>پیشوندهای CIDR</strong> مسیریابی می‌شوند. جدول ارسال مسیریاب شامل ورودی‌هایی به شکل <strong>(x, I)</strong> است که <span class="highlight">x</span> یک پیشوند (مثلاً 138.16.68/22 پوشش‌دهنده 1024 آدرس) و <span class="highlight">I</span> شماره رابط خروجی است.</p>
+        <p>BGP <strong>پیشوندهای IP با CIDR</strong> را اعلام می‌کند (مثلاً 128.119.0.0/16) به جای آدرس‌های IP تکی یا شبکه‌های کلاسی. این امکان را فراهم می‌کند:</p>
+        <ul>
+          <li><strong>تجمع مسیر</strong>: یک پیشوند واحد می‌تواند میلیون‌ها میزبان را نمایش دهد.</li>
+          <li><strong>آدرس‌دهی بدون کلاس</strong>: ماسک‌های زیرشبکه با طول متغیر امکان استفاده کارآمد از فضای آدرس را می‌دهند.</li>
+          <li><strong>ابرشبکه‌سازی</strong>: چندین شبکه کوچک‌تر می‌توانند در یک پیشوند بزرگ‌تر خلاصه شوند.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">مثال آگهی CIDR</div>
+          <p>یک دانشگاه با بلوک‌های IP 128.119.0.0/24 تا 128.119.255.0/24 می‌تواند یک مسیر تجمعی واحد 128.119.0.0/16 را اعلام کند. این باعث کاهش اندازه جدول مسیریابی جهانی می‌شود.</p>
+        </div>
+
+        <div class="warning">BGP اغلب "چسب اینترنت" نامیده می‌شود. بدون BGP، حدود 100,000+ AS راهی برای تبادل اطلاعات مسیریابی نداشتند و ارتباط بین-شبکه‌ای غیرممکن می‌شد.</div>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع: مبانی BGP</h2>
+        <table>
+          <tr><th>ویژگی</th><th>مقدار</th></tr>
+          <tr><td>نوع پروتکل</td><td>بردار مسیر</td></tr>
+          <tr><td>شماره پورت</td><td>179 (TCP)</td></tr>
+          <tr><td>حوزه</td><td>بین-AS (بین سازمان‌ها)</td></tr>
+          <tr><td>واحد مسیر</td><td>پیشوند CIDR (مثلاً 192.0.2.0/24)</td></tr>
+          <tr><td>جلوگیری از حلقه</td><td>ویژگی AS-PATH (اگر AS در مسیر باشد، رد کن)</td></tr>
+          <tr><td>حمل</td><td>TCP (قابل اعتماد، ارتباط‌گرا)</td></tr>
+          <tr><td>پیام‌ها</td><td>OPEN, UPDATE, KEEPALIVE, NOTIFICATION</td></tr>
+          <tr><td>انتخاب مسیر</td><td>مبتنی بر سیاست (LOCAL_PREF, AS-PATH, MED, ...)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>eBGP در مقابل iBGP</h2>
+        <p>BGP در دو حالت مجزا بسته به موقعیت همتاها عمل می‌کند:</p>
+
+        <table>
+          <tr><th>ویژگی</th><th>eBGP (خارجی)</th><th>iBGP (داخلی)</th></tr>
+          <tr><td>همتاها</td><td>بین ASهای مختلف</td><td>درون یک AS</td></tr>
+          <tr><td>AS-PATH</td><td>شماره AS خود را اضافه می‌کند</td><td>AS-PATH را تغییر نمی‌دهد</td></tr>
+          <tr><td>Next-Hop پیش‌فرض</td><td>IP رابط خارجی</td><td>بدون تغییر (حفظ می‌شود)</td></tr>
+          <tr><td>TTL</td><td>1 (همسایگان مستقیم)</td><td>255 (چند پرش فاصله)</td></tr>
+          <tr><td>توپولوژی</td><td>غیر مشبک (معمولاً)</td><td>مش کامل یا بازتاب‌دهنده مسیر</td></tr>
+        </table>
+
+        <h3>اتصالات eBGP</h3>
+        <p>eBGP بین مسیریاب‌های <strong>ASهای مختلف</strong> عمل می‌کند:</p>
+        <ul>
+          <li>معمولاً بین مسیریاب‌های مرزی <strong>مستقیماً متصل</strong> اجرا می‌شود.</li>
+          <li>از <strong>پورت TCP 179</strong> برای برقراری جلسه قابل اعتماد استفاده می‌کند.</li>
+          <li>هنگام اعلام مسیر، مسیریاب <strong>شماره AS خود را به AS-PATH اضافه می‌کند</strong>.</li>
+          <li>TTL پیش‌فرض 1 است (از جلسات BGP جعلی از مسیریاب‌های غیرمجاور جلوگیری می‌کند).</li>
+        </ul>
+
+        <h3>اتصالات iBGP</h3>
+        <p>iBGP بین مسیریاب‌های <strong>درون یک AS</strong> عمل می‌کند:</p>
+        <ul>
+          <li>برای <strong>توزیع مسیرهای خارجی</strong> یادگرفته شده از eBGP به مسیریاب‌های داخلی استفاده می‌شود.</li>
+          <li>اتصالات iBGP یک <strong>مش از اتصالات TCP</strong> درون هر AS ایجاد می‌کند — هر گوینده iBGP با هر گوینده iBGP دیگر همتا می‌شود.这是因为 iBGP مسیرهای یادگرفته شده از سایر همتایان iBGP را دوباره اعلام نمی‌کند (قانون جلوگیری از حلقه).</li>
+          <li>ویژگی AS-PATH را <strong>تغییر نمی‌دهد</strong>.</li>
+          <li>ممکن است چند پرش فاصله درون AS داشته باشد (TTL = 255).</li>
+          <li>توجه کنید اتصالات iBGP <strong>همیشه با پیوندهای فیزیکی مطابقت ندارند</strong> — آنها جلسات منطقی TCP هستند.</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">قانون مش کامل iBGP</div>
+          <div class="expr">اگر مسیری از طریق iBGP یاد گرفته شد، آن را به همتای iBGP دیگر اعلام نکن.</div>
+          <div class="desc">این کار از حلقه‌های مسیریابی درون AS جلوگیری می‌کند اما نیاز به N(N-1)/2 هم‌تایی برای N مسیریاب دارد. بازتاب‌دهنده‌های مسیر یا کنفدراسیون‌ها می‌توانند این پیچیدگی را کاهش دهند.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">تنظیم هم‌تایی eBGP+iBGP</div>
+          <p>AS 100 با دو مسیریاب مرزی (R1, R2) و یک مسیریاب داخلی (R3) را در نظر بگیرید. AS 200 یک مسیریاب مرزی (R4) دارد.</p>
+          <ul>
+            <li><strong>eBGP</strong>: R1 ↔ R4 (AS 100 ↔ AS 200)</li>
+            <li><strong>iBGP</strong>: R1 ↔ R2, R1 ↔ R3, R2 ↔ R3 (مش کامل درون AS 100)</li>
+          </ul>
+          <p>R4 (AS 200) پیشوند 10.1.0.0/16 را به R1 از طریق eBGP اعلام می‌کند. سپس R1 این را به R2 و R3 از طریق iBGP اعلام می‌کند. اکنون R2 و R3 می‌توانند به 10.1.0.0/16 از طریق R1 برسند.</p>
+        </div>
+
+        <div class="warning">مش کامل iBGP مقیاس‌پذیری ضعیفی دارد. در یک AS با 1000 گوینده iBGP، به 499,500 جلسه TCP نیاز دارید. بازتاب‌دهنده‌های مسیر یا کنفدراسیون‌های BGP برای حل این مشکل استفاده می‌شوند.</div>
+      </div>
+
+      <div class="section">
+        <h2>مقایسه: eBGP در مقابل iBGP در یک نگاه</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>eBGP</h3>
+            <p>• <span class="highlight">بین-AS</span></p>
+            <p>• <span class="dim">AS-PATH</span>: اضافه می‌کند</p>
+            <p>• <span class="dim">Next-Hop</span>: به IP همتای eBGP تنظیم می‌شود</p>
+            <p>• مستقیماً متصل (معمولاً)</p>
+            <p>• مسیرها را به همه همتایان اعلام می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>iBGP</h3>
+            <p>• <span class="highlight">درون-AS</span></p>
+            <p>• <span class="dim">AS-PATH</span>: بدون تغییر</p>
+            <p>• <span class="dim">Next-Hop</span>: حفظ شده از eBGP</p>
+            <p>• چند پرش فاصله</p>
+            <p>• مش کامل یا بازتاب‌دهنده مسیر</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>ویژگی‌های مسیر BGP</h2>
+        <p>مسیرهای BGP شامل <strong>ویژگی‌هایی</strong> هستند که بر انتخاب مسیر تأثیر می‌گذارند و سیاست‌های مسیریابی را اعمال می‌کنند. دو ویژگی اساسی برای جلوگیری از حلقه و انتخاب مسیر بین-AS عبارتند از <strong>AS-PATH</strong> و <strong>NEXT-HOP</strong>.</p>
+
+        <h3>ویژگی AS-PATH</h3>
+        <p>AS-PATH یک <strong>دنباله از شماره‌های AS</strong> است که یک مسیر از آنها عبور کرده است. وقتی یک مسیریاب BGP مسیری را از طریق eBGP اعلام می‌کند، شماره AS خود را به AS-PATH اضافه می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">فرمت AS-PATH</div>
+          <div class="expr">AS_PATH = { AS1, AS2, AS3, ... }<br>مثال: AS_PATH = "701 1239 3549"</div>
+          <div class="desc">مسیر از چپ به راست خوانده می‌شود: آخرین AS به ابتدا اضافه می‌کند.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>AS-PATH: جلوگیری از حلقه</h3>
+            <p>وقتی یک مسیریاب BGP یک UPDATE دریافت می‌کند، بررسی می‌کند آیا شماره AS خودش در AS-PATH هست یا نه. اگر باشد، مسیر <span class="highlight">رد می‌شود</span> (حلقه تشخیص داده شده). این مکانیزم اصلی جلوگیری از حلقه BGP است.</p>
+          </div>
+          <div class="card">
+            <h3>AS-PATH: انتخاب مسیر</h3>
+            <p>در میان مسیرهای با LOCAL_PREF یکسان، BGP <span class="highlight">AS-PATH کوتاه‌تر</span> را ترجیح می‌دهد (تعداد پرش AS کمتر). این با پرش مسیریاب متفاوت است — تعداد ASهای عبوری را شمارش می‌کند.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">AS-PATH در عمل</div>
+          <p>AS 100 پیشوند 10.1.0.0/16 را به AS 200 اعلام می‌کند. مسیریاب مرزی AS 200 UPDATE را با AS-PATH = [100] دریافت می‌کند. سپس AS 200 به AS 300 با AS-PATH = [200, 100] اعلام می‌کند.</p>
+          <p>حال AS 300 به AS 100 اعلام می‌کند. AS 100 AS-PATH = [300, 200, 100] را می‌بیند. از آنجا که شماره AS خود AS 100 در مسیر است، مسیر <span class="result">رد می‌شود</span> — حلقه جلوگیری شد.</p>
+        </div>
+
+        <h3>ویژگی NEXT-HOP</h3>
+        <p>ویژگی NEXT-HOP <strong>آدرس IP رابط مسیریاب</strong> است که باید به عنوان گام بعدی برای رسیدن به پیشوند اعلام شده استفاده شود. برای eBGP، NEXT-HOP به آدرس IP رابط همتای eBGP تنظیم می‌شود.</p>
+
+        <div class="formula">
+          <div class="label">رفتار NEXT-HOP</div>
+          <div class="expr">آگهی eBGP: NEXT-HOP = IP رابط همتای eBGP<br>آگهی iBGP: NEXT-HOP = بدون تغییر (حفظ شده از eBGP)</div>
+          <div class="desc">اگر NEXT-HOP از طریق IGP قابل دسترس نباشد، مسیر نامعتبر در نظر گرفته شده و نصب نمی‌شود.</div>
+        </div>
+
+        <div class="warning">یک سناریوی رایج عیب‌یابی BGP: مسیری از طریق iBGP یاد گرفته می‌شود اما نصب نمی‌شود چون NEXT-HOP در جدول مسیریابی نیست. این وقتی رخ می‌دهد که IGP مسیری به آدرس NEXT-HOP ندارد.</div>
+
+        <h3>ویژگی‌های اضافی BGP</h3>
+        <table>
+          <tr><th>ویژگی</th><th>نوع</th><th>هدف</th></tr>
+          <tr><td>LOCAL_PREF</td><td>شناخته شده (اجباری)</td><td>ترجیح محلی درون AS (بالاتر = بهتر)</td></tr>
+          <tr><td>MED</td><td>اختیاری (غیرانتقالی)</td><td>پیشنهاد به AS همسایه کدام نقطه ورود بهتر است (کمتر = بهتر)</td></tr>
+          <tr><td>COMMUNITY</td><td>اختیاری (انتقالی)</td><td>برچسب‌گذاری مسیرها برای اقدامات سیاستی (مثلاً NO_EXPORT)</td></tr>
+          <tr><td>ORIGIN</td><td>شناخته شده (اجباری)</td><td>نحوه یادگیری مسیر (IGP, EGP, یا INCOMPLETE)</td></tr>
+          <tr><td>Atomic Aggregate</td><td>شناخته شده (اختیاری)</td><td>نشان می‌دهد تجمع مسیر باعث از دست رفتن اطلاعات شده است</td></tr>
+          <tr><td>Aggregator</td><td>اختیاری (انتقالی)</td><td>AS و مسیریابی که مسیر را تجمیع کرده است</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع: ویژگی‌های BGP</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>AS-PATH</h3>
+            <p>هدف: <span class="highlight">جلوگیری از حلقه + طول مسیر</span></p>
+            <p>حوزه: شناخته شده اجباری</p>
+            <p>تغییر توسط: فقط eBGP</p>
+          </div>
+          <div class="card">
+            <h3>NEXT-HOP</h3>
+            <p>هدف: <span class="highlight">IP گام بعدی برای مقصد</span></p>
+            <p>حوزه: شناخته شده اجباری</p>
+            <p>تغییر توسط: eBGP</p>
+          </div>
+          <div class="card">
+            <h3>LOCAL_PREF</h3>
+            <p>هدف: <span class="highlight">ترجیح مسیر محلی</span></p>
+            <p>حوزه: شناخته شده اجباری</p>
+            <p>محدوده: 0–4294967295 (پیش‌فرض = 100)</p>
+          </div>
+          <div class="card">
+            <h3>MED</h3>
+            <p>هدف: <span class="highlight">راهنمای معیار بین-AS</span></p>
+            <p>حوزه: اختیاری غیرانتقالی</p>
+            <p>مقدار کمتر = ترجیح بیشتر</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>جریان اعلان مسیر</h2>
+        <p>جریان اعلان مسیر BGP از یک <strong>توپولوژی 3-AS</strong> پیروی می‌کند که در آن هر AS هم iBGP (داخلی) و هم eBGP (بین ASها) را اجرا می‌کند. درک نحوه انتشار مسیرها از طریق این توپولوژی برای امتحان ضروری است.</p>
+
+        <h3>مسیریاب دروازه در مقابل مسیریاب داخلی</h3>
+        <p>در هر AS، مسیریاب‌ها به دو نقش طبقه‌بندی می‌شوند:</p>
+        <ul>
+          <li><strong>مسیریاب دروازه</strong>: مسیریابی در لبه AS که به طور <span class="highlight">مستقیم</span> به یک یا چند مسیریاب در ASهای دیگر متصل می‌شود.</li>
+          <li><strong>مسیریاب داخلی</strong>: مسیریابی که فقط به میزبان‌ها و مسیریاب‌های <span class="highlight">درون AS خود</span> متصل می‌شود.</li>
+        </ul>
+
+        <h3>شکل 5.8 / 5.9 توپولوژی کلاسیک 3-AS</h3>
+        <p>سه AS را در نظر بگیرید: AS1, AS2, AS3. هر کدام چندین مسیریاب دارند.</p>
+
+        <div class="formula">
+          <div class="label">دنباله اعلان مسیر (AS3 یک پیشوند را اعلام می‌کند)</div>
+          <div class="expr">
+گام 1: 3a (eBGP) → 2c "AS3 x" [AS-PATH: 3]<br>
+گام 2: 2c (iBGP) → 2a, 2b "AS3 x" [AS-PATH: 3]<br>
+گام 3: 2a (eBGP) → 1c "AS2 AS3 x" [AS-PATH: 2, 3]<br>
+گام 4: 2b (eBGP) → 1d "AS2 AS3 x" [AS-PATH: 2, 3]<br>
+گام 5: 1c,1d (iBGP) → 1a,1b "AS2 AS3 x" [AS-PATH: 2, 3]
+          </div>
+          <div class="desc">هر پرش eBGP شماره AS را به نماد پیام اضافه می‌کند. iBGP AS-PATH را تغییر نمی‌دهد.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 1: انتشار مسیر در 3 AS</div>
+          <p><strong>تنظیم اولیه:</strong> AS3 پیشوند 10.3.0.0/16 را روی مسیریاب 3a ایجاد می‌کند.</p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>3a → 2c (eBGP)</strong>: 3a UPDATE به 2c با پیشوند 10.3.0.0/16 و AS-PATH = [3].</li>
+            <li><strong>2c → 2a, 2b (iBGP)</strong>: 2c مسیر را داخلی پخش می‌کند. AS-PATH = [3] باقی می‌ماند.</li>
+            <li><strong>2a → 1c (eBGP)</strong>: 2a AS 2 را اضافه می‌کند. AS-PATH = [2, 3].</li>
+            <li><strong>2b → 1d (eBGP)</strong>: همان پیشوند، AS-PATH = [2, 3].</li>
+            <li><strong>1c,1d → 1a,1b (iBGP)</strong>: توزیع داخلی درون AS1.</li>
+          </ol>
+          <p><strong>نتیجه:</strong> همه مسیریاب‌های AS1 می‌دانند 10.3.0.0/16 از طریق AS2 → AS3 قابل دسترس است.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: دو مسیر به یک مقصد</div>
+          <p>AS1 درباره پیشوند 10.3.0.0/16 از دو نقطه ورود مختلف یاد می‌گیرد. از آنجا که هر دو مسیر طول AS-PATH یکسان دارند، مسیریاب 1b از <strong>مسیریابی سیب‌زمینی داغ</strong> استفاده می‌کند: نزدیک‌ترین نقطه خروج را انتخاب می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: جلوگیری از حلقه AS-PATH</div>
+          <p>چهار AS: AS100, AS200, AS300, AS400. AS100 پیشوند 172.16.0.0/16 را اعلام می‌کند. اگر AS200 با AS400 همتا شود، AS400 مسیر را به AS200 برمی‌گرداند. AS200 UPDATE با AS-PATH = [400, 300, 200, 100] دریافت می‌کند. از آنجا که AS200 = 200 در AS-PATH است، مسیر <span class="result">رد می‌شود</span>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

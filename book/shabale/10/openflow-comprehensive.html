@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پروتکل OpenFlow — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>پروتکل OpenFlow</h1>
+  <p class="subtitle">پروتکل جنوبی SDN — ارسال تطبیق+عمل برای امتحان</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور پروتکل</button>
+      <button class="tab" onclick="showSection('tab2')">کنترلر → سوییچ</button>
+      <button class="tab" onclick="showSection('tab3')">سوییچ → کنترلر</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور پروتکل OpenFlow</h2>
+        <p>OpenFlow [OpenFlow 2009, ONF 2020] قدیمی‌ترین و پراستقرارترین پروتکل جنوبی برای SDN است. این پروتکل بین یک کنترلر SDN و یک سوییچ یا دستگاه تحت کنترل SDN که API OpenFlow را پیاده‌سازی می‌کند، عمل می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">حمل‌ونقل OpenFlow:</div>
+          <div class="expr">پروتکل: TCP</div>
+          <div class="expr">پورت پیش‌فرض: 6653</div>
+          <div class="desc">پیام‌های OpenFlow از طریق یک اتصال TCP بین کنترلر و سوییچ ارسال می‌شوند</div>
+        </div>
+
+        <h3>پارادایم تطبیق + عمل</h3>
+        <p>OpenFlow از یک انتزاع "تطبیق + عمل" استفاده می‌کند که در آن بسته‌های ورودی با ورودی‌های جدول جریان تطبیق داده می‌شوند و ورودی‌های منطبق مشخص می‌کنند چه عملیاتی انجام شود.</p>
+
+        <h3>ساختار ورودی جدول جریان</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>فیلدهای هدر (تطبیق)</h3>
+            <p>• <span class="highlight">پورت ورودی</span></p>
+            <p>• <span class="highlight">Ether src/dst</span></p>
+            <p>• <span class="highlight">نوع Ether</span></p>
+            <p>• <span class="highlight">VLAN ID / priority</span></p>
+            <p>• <span class="highlight">IP src/dst</span></p>
+            <p>• <span class="highlight">پروتکل IP</span></p>
+            <p>• <span class="highlight">بیت‌های IP ToS</span></p>
+            <p>• <span class="highlight">پورت TCP/UDP src/dst</span></p>
+          </div>
+          <div class="card">
+            <h3>شمارنده‌ها</h3>
+            <p>• <span class="dim">در هر جدول</span>: بسته‌ها، بایت‌ها، مدت</p>
+            <p>• <span class="dim">در هر جریان</span>: بسته‌ها، بایت‌ها، مدت</p>
+            <p>• <span class="dim">در هر پورت</span>: بسته‌های rx/tx، بایت‌های rx/tx</p>
+            <p>• <span class="dim">در هر صف</span>: بسته‌های tx، بایت‌های tx</p>
+          </div>
+          <div class="card">
+            <h3>عملها</h3>
+            <p>• <span class="highlight">ارسال</span> به پورت(ها)</p>
+            <p>• <span class="highlight">Drop</span> کردن بسته</p>
+            <p>• <span class="highlight">تغییر فیلد</span> (بازنویسی هدرها)</p>
+            <p>• <span class="highlight">ارسال به کنترلر</span> (Packet-In)</p>
+            <p>• <span class="highlight">صف‌بندی</span> به صف QoS</p>
+          </div>
+        </div>
+
+        <h3>OpenFlow 1.0: 11 فیلد هدر</h3>
+        <p>OpenFlow 1.0 امکان تطبیق روی 11 فیلد هدر را فراهم می‌کند و طبقه‌بندی جریان دانه‌ریز را ممکن می‌سازد:</p>
+        <table>
+          <tr><th>لایه</th><th>فیلدها</th></tr>
+          <tr><td>فیزیکی</td><td>پورت ورودی</td></tr>
+          <tr><td>L2 (اترنت)</td><td>MAC مبدأ، MAC مقصد، EtherType، VLAN ID، اولویت VLAN</td></tr>
+          <tr><td>L3 (IP)</td><td>IP مبدأ، IP مقصد، پروتکل IP، IP ToS</td></tr>
+          <tr><td>L4 (TCP/UDP)</td><td>پورت مبدأ، پورت مقصد</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>نکته کلیدی:</strong> مسیریاب‌های سنتی فقط روی <strong>IP مقصد</strong> تطبیق می‌کنند. OpenFlow روی 11+ فیلد تطبیق می‌کند و تصمیمات ارسال به ازای جریان را بر اساس برنامه، کاربر، یا هر ترکیبی از مقادیر هدر ممکن می‌سازد. این چیزی است که SDN را "نرم‌افزار-تعریف" می‌کند.
+        </div>
+
+        <h3>خط لوله پردازش جدول جریان</h3>
+        <div class="code">
+بسته روی پورت می‌رسد
+  → جستجو در جدول جریان (تطبیق با ورودی‌ها)
+    → تطبیق یافت: اجرای عمل‌ها (ارسال، drop، تغییر، و غیره)
+    → تطبیق نیافت: ارسال Packet-In به کنترلر
+      → کنترلر تصمیم می‌گیرد و ورودی جریان نصب می‌کند
+      → بسته‌های بعدی تطبیق یافته و با نرخ خط ارسال می‌شوند
+        </div>
+        <p class="note">اولین بسته یک جریان باعث تعامل با کنترلر می‌شود؛ بسته‌های بعدی کاملاً در صفحه داده سوییچ مدیریت می‌شوند.</p>
+        <p class="note">پیام‌های OpenFlow اضافی در [OpenFlow 2009, ONF 2020] تعریف شده‌اند. مشخصات پروتکل OpenFlow توسط Open Networking Foundation (ONF) نگهداری می‌شود.</p>
+      </div>
+
+      <div class="section">
+        <h2>مقایسه: OpenFlow در مقابل مسیریابی سنتی</h2>
+        <table>
+          <tr><th>جنبه</th><th>OpenFlow (SDN)</th><th>مسیریابی سنتی</th></tr>
+          <tr><td>مبنای ارسال</td><td>تطبیق روی 11+ فیلد هدر</td><td>فقط IP مقصد</td></tr>
+          <tr><td>تصمیم ارسال</td><td>کنترلر جداول جریان را برنامه‌ریزی می‌کند</td><td>هر مسیریاب مستقل تصمیم می‌گیرد</td></tr>
+          <tr><td>دانه‌بندی جریان</td><td>به ازای جریان (دانه‌ریز)</td><td>به ازای پیشوند (درشت)</td></tr>
+          <tr><td>پردازش پروتکل</td><td>نرم‌افزار روی کنترلر</td><td>جاسازی شده در هر مسیریاب</td></tr>
+          <tr><td>اجرای سیاست</td><td>متمرکز، سازگار</td><td>توزیع‌شده، ممکن است تضاد داشته باشد</td></tr>
+          <tr><td>نوع جدول</td><td>جدول جریان (تطبیق + عمل)</td><td>جدول ارسال (پیشوند → هاپ بعدی)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>پیام‌های کنترلر به سوییچ</h2>
+        <p>کنترلر SDN این انواع پیام مهم را به سوییچ تحت کنترل می‌فرستد:</p>
+
+        <div class="formula">
+          <div class="label">چهار نوع پیام کنترلر→سوییچ:</div>
+          <div class="expr">1. Configuration</div>
+          <div class="expr">2. Modify-State</div>
+          <div class="expr">3. Read-State</div>
+          <div class="expr">4. Send-Packet</div>
+        </div>
+
+        <h3>1. پیام Configuration</h3>
+        <p>به کنترلر اجازه می‌دهد پارامترهای پیکربندی سوییچ را پرس‌وجو و تنظیم کند.</p>
+        <table>
+          <tr><th>پارامتر</th><th>توضیح</th></tr>
+          <tr><td>قابلیت‌های سوییچ</td><td>پرس‌وجوی ویژگی‌های پشتیبانی‌شده توسط سوییچ</td></tr>
+          <tr><td>پیکربندی جدول جریان</td><td>تنظیم رفتار عدم تطبیق جدول (ارسال به کنترلر، drop)</td></tr>
+          <tr><td>پیکربندی پورت</td><td>فعال/غیرفعال کردن پورت‌ها، تنظیم محدودیت نرخ</td></tr>
+          <tr><td>شناسه Datapath</td><td>تنظیم یا تأیید شناسه سوییچ</td></tr>
+        </table>
+
+        <h3>2. پیام Modify-State</h3>
+        <p>برای افزودن، حذف، یا تغییر ورودی‌های جدول جریان سوییچ و تنظیم ویژگی‌های پورت سوییچ استفاده می‌شود.</p>
+        <div class="code">
+انواع دستور Modify-State:
+  OFPFC_ADD    ← افزودن ورودی جریان جدید
+  OFPFC_MODIFY ← تغییر ورودی جریان منطبق
+  OFPFC_DELETE ← حذف ورودی جریان منطبق
+
+مثال: افزودن ورودی جریان (IP مقصد = 10.0.0.0/8 ← خروجی پورت 3)
+  match: {nw_dst: 10.0.0.0/8}
+  actions: [OUTPUT: 3]
+  priority: 100
+  idle_timeout: 30
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>زیردستورهای Modify-State</h3>
+            <p>• <span class="highlight">Add</span> — درج ورودی جریان جدید</p>
+            <p>• <span class="highlight">Modify</span> — بروزرسانی ورودی موجود</p>
+            <p>• <span class="highlight">Delete</span> — حذف ورودی</p>
+            <p>• <span class="highlight">Modify-Strict</span> — تغییر تطبیق دقیق</p>
+            <p>• <span class="highlight">Delete-Strict</span> — حذف تطبیق دقیق</p>
+          </div>
+          <div class="card">
+            <h3>زمان‌سنج‌های ورودی جریان</h3>
+            <p>• <span class="dim">idle_timeout</span> — حذف در صورت عدم تطبیق به مدت N ثانیه</p>
+            <p>• <span class="dim">hard_timeout</span> — حذف پس از N ثانیه صرف‌نظر از تطبیق</p>
+            <p>• مقدار 0 = ورودی دائمی</p>
+            <p>• ورودی‌های منقضی شده پیام Flow-Removed را فعال می‌کنند</p>
+          </div>
+        </div>
+
+        <h3>3. پیام Read-State</h3>
+        <p>توسط کنترلر برای جمع‌آوری آمار و مقادیر شمارنده از جدول جریان و پورت‌های سوییچ استفاده می‌شود.</p>
+        <table>
+          <tr><th>نوع آمار</th><th>داده برگشتی</th></tr>
+          <tr><td>آمار جریان</td><td>به ازای جریان: تعداد بسته، تعداد بایت، مدت</td></tr>
+          <tr><td>آمار تجمعی</td><td>تجمعی در تمام جریان‌ها</td></tr>
+          <tr><td>آمار پورت</td><td>به ازای پورت: بسته‌های rx/tx، بایت‌ها، drops، خطاها</td></tr>
+          <tr><td>آمار صف</td><td>به ازای صف: بسته‌های tx، بایت‌ها، drops</td></tr>
+          <tr><td>آمار جدول</td><td>به ازای جدول: ورودی‌های فعال، تطبیق‌ها، جستجوها</td></tr>
+        </table>
+
+        <h3>4. پیام Send-Packet</h3>
+        <p>توسط کنترلر برای ارسال یک بسته مشخص از یک پورت مشخص در سوییچ تحت کنترل استفاده می‌شود. خود بسته در بار پیام قرار دارد.</p>
+        <div class="code">
+Send-Packet:
+  buffer_id: (ندارد - بسته در بار)
+  data: [بایت‌های خام بسته]
+  actions: [OUTPUT: شماره_پورت]
+  in_port: OFPP_CONTROLLER
+        </div>
+        <p class="note">این زمانی استفاده می‌شود که خود کنترلر نیاز به تزریق یک بسته در شبکه دارد - مثلاً ارسال پاسخ ARP، پیشنهاد DHCP، یا بسته کشف LLDP.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>پیام‌های سوییچ به کنترلر</h2>
+        <p>سوییچ تحت کنترل SDN این پیام‌ها را به کنترلر می‌فرستد تا رویدادها را گزارش کند و بسته‌های نامطابق را تحویل دهد:</p>
+
+        <div class="formula">
+          <div class="label">سه نوع پیام سوییچ→کنترلر:</div>
+          <div class="expr">1. Flow-Removed</div>
+          <div class="expr">2. Port-Status</div>
+          <div class="expr">3. Packet-In</div>
+        </div>
+
+        <h3>1. پیام Flow-Removed</h3>
+        <p>به کنترلر اطلاع می‌دهد که یک ورودی جدول جریان حذف شده است، یا به دلیل:</p>
+        <ul>
+          <li><strong>انقضای زمان</strong> — idle_timeout منقضی شده (بدون بسته منطبق) یا hard_timeout منقضی شده (زمان مطلق سپری شده)</li>
+          <li><strong>درخواست کنترلر</strong> — دستور حذف Modify-State</li>
+          <li><strong>اخراج جریان</strong> — محدودیت منابع سوییچ</li>
+        </ul>
+        <div class="code">
+Flow-Removed:
+  match: (فیلدهای تطبیق اصلی)
+  cookie: (شناسه opaque کنترلر)
+  priority: 100
+  reason: OFPRR_IDLE_TIMEOUT
+  duration_sec: 45
+  idle_timeout: 30
+  packet_count: 142
+  byte_count: 18907
+        </div>
+        <p>پیام شامل شمارنده‌ها است تا کنترلر بتواند حالت خود را حتی پس از حذف جریان بروزرسانی کند.</p>
+
+        <h3>2. پیام Port-Status</h3>
+        <p>توسط سوییچ برای اطلاع کنترلر از تغییر وضعیت پورت استفاده می‌شود.</p>
+        <table>
+          <tr><th>دلیل</th><th>توضیح</th></tr>
+          <tr><td><span class="highlight">OFPPR_ADD</span></td><td>پورت اضافه شد (کابل وصل شد، پیوند بالا آمد)</td></tr>
+          <tr><td><span class="highlight">OFPPR_DELETE</span></td><td>پورت حذف شد (کابل جدا شد، پیوند پایین رفت)</td></tr>
+          <tr><td><span class="highlight">OFPPR_MODIFY</span></td><td>پیکربندی پورت تغییر کرد (نرخ، duplex، و غیره)</td></tr>
+        </table>
+        <p>پیام‌های Port-Status برای حفظ نمای توپولوژی دقیق شبکه توسط کنترلر حیاتی هستند. آنها مکانیزم بروزرسانی حالت پیوند را فعال می‌کنند.</p>
+
+        <h3>3. پیام Packet-In</h3>
+        <p>این یکی از مهمترین پیام‌های OpenFlow است. بسته‌ای که به پورت سوییچ می‌رسد و <strong>با هیچ ورودی جدول جریان تطبیق نمی‌کند</strong> برای پردازش به کنترلر فرستاده می‌شود.</p>
+
+        <div class="formula">
+          <div class="label">فعال‌کننده‌های Packet-In:</div>
+          <div class="expr">عدم تطبیق جدول (بدون ورودی جریان منطبق)</div>
+          <div class="expr">عمل ورودی جریان = "send to controller"</div>
+          <div class="expr">عمل ورودی جریان = "send to controller with buffer"</div>
+          <div class="desc">کنترلر تصمیم می‌گیرد چه کند و می‌تواند یک ورودی جریان برای بسته‌های بعدی نصب کند</div>
+        </div>
+
+        <div class="warning">
+          <strong>مهم:</strong> مکانیزم Packet-In نحوه یادگیری کنترلر درباره جریان‌های جدید و نصب قوانین ارسال است. اولین بسته یک جریان تأخیر رفت و برگشت کنترلر را متحمل می‌شود؛ بسته‌های بعدی با سرعت خط ارسال می‌شوند. این مصالحه "مسیر آهسته" در مقابل "مسیر سریع" است.
+        </div>
+
+        <h3>حالت‌های تحویل Packet-In</h3>
+        <table>
+          <tr><th>حالت</th><th>توضیح</th><th>موارد استفاده</th></tr>
+          <tr><td>بافر (با buffer_id)</td><td>سوییچ بسته را بافر می‌کند، فقط هدر را به کنترلر می‌فرستد</td><td>پیش‌فرض؛ صرفه‌جویی در پهنای باند</td></tr>
+          <tr><td>بدون بافر (بسته در بار)</td><td>کل بسته به کنترلر فرستاده می‌شود</td><td>زمانی که بافر در دسترس نیست یا بسته کوچک است</td></tr>
+        </table>
+
+        <h3>خلاصه جریان پیام</h3>
+        <div class="code">
+کنترلر ← سوییچ:
+  Configuration:   "طول ارسال-عدم-تطبیق خود را 128 بایت تنظیم کن"
+  Modify-State:    "جریان اضافه کن: TCP 10.0.0.1:80 ← 10.0.0.2:1234 ← پورت 4"
+  Read-State:      "آمار پورت 3 را بفرست"
+  Send-Packet:     "این پاسخ ARP را از پورت 2 بفرست"
+
+سوییچ ← کنترلر:
+  Flow-Removed:    "ورودی جریان منقضی شد: 142 بسته ارسال شدند"
+  Port-Status:     "پورت 5 پایین است"
+  Packet-In:       "بسته جدید، تطبیقی یافت نشد: اینم هدر، چیکار کنم؟"
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: راه‌اندازی جریان جدید (Packet-In ← نصب جریان)</div>
+          <p><strong>سناریو:</strong> میزبان A (10.0.0.1) اولین TCP SYN را به میزبان B (10.0.0.2) از طریق سوییچ OpenFlow s1 می‌فرستد. هیچ ورودی جریانی وجود ندارد.</p>
+          <p><strong>تبادل پیام:</strong></p>
+          <ol>
+            <li>میزبان A TCP SYN (src=10.0.0.1:4000, dst=10.0.0.2:80) را به سوییچ s1 روی پورت 1 می‌فرستد.</li>
+            <li>s1 جستجوی جدول جریان انجام می‌دهد — هیچ ورودی منطبقی نیست ← پیام <strong>Packet-In</strong> به کنترلر فرستاده می‌شود.</li>
+            <li><div class="code">Packet-In:
+  buffer_id: 256
+  in_port: 1
+  data: [TCP SYN: 10.0.0.1:4000←10.0.0.2:80]
+  reason: OFPR_NO_MATCH</div></li>
+            <li>برنامه مسیریابی کنترلر مسیر را تعیین می‌کند: ارسال از پورت 3 برای رسیدن به میزبان B.</li>
+            <li>کنترلر <strong>Modify-State</strong> (OFPFC_ADD) را برای نصب ورودی جریان می‌فرستد:</li>
+            <li><div class="code">Modify-State ADD:
+  match: in_port=1, nw_src=10.0.0.1, nw_dst=10.0.0.2,
+         tp_src=4000, tp_dst=80, proto=TCP
+  actions: [OUTPUT: 3]
+  priority: 100, idle_timeout: 60</div></li>
+            <li>کنترلر <strong>Packet-Out</strong> را با بسته SYN بافر شده و عمل [OUTPUT: 3] می‌فرستد.</li>
+            <li>سوییچ بسته SYN را از پورت 3 ارسال می‌کند. همه بسته‌های بعدی در این جریان TCP با ورودی جدید تطبیق کرده و با نرخ خط ارسال می‌شوند.</li>
+          </ol>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: تشخیص و بازیابی خرابی پیوند</div>
+          <p><strong>سناریو:</strong> پیوند بین سوییچ s2 و s4 خراب می‌شود. کنترلر باید مطلع شود و جداول جریان را بروزرسانی کند.</p>
+          <p><strong>تبادل پیام:</strong></p>
+          <ol>
+            <li>سوییچ s2 از دست رفتن پیوند روی پورت 5 (متصل به s4) را تشخیص می‌دهد.</li>
+            <li>s2 پیام <strong>Port-Status</strong> به کنترلر می‌فرستد:</li>
+            <li><div class="code">Port-Status:
+  reason: OFPPR_DELETE
+  port_no: 5
+  port_config: 0
+  state: OFPPS_LINK_DOWN</div></li>
+            <li>مدیر حالت پیوند کنترلر گراف شبکه را بروزرسانی می‌کند: پیوند s2-s4 حذف شد.</li>
+            <li>برنامه مسیریابی (دیکسترا) مطلع می‌شود، مسیرها را دوباره محاسبه می‌کند.</li>
+            <li>کنترلر <strong>Modify-State DELETE</strong> را برای ورودی‌های جریان استفاده‌کننده از s2→s4 می‌فرستد.</li>
+            <li>کنترلر <strong>Modify-State ADD</strong> را برای ورودی‌های جریان جدید با مسیرهای جایگزین می‌فرستد.</li>
+            <li><div class="code">قدیمی: match: dst=10.0.0.0/24 ← actions: [OUTPUT: 5] (مستقیم به s4)
+جدید: match: dst=10.0.0.0/24 ← actions: [OUTPUT: 3] (از طریق s3→s4)</div></li>
+          </ol>
+          <p><strong>نتیجه:</strong> ترافیک در اطراف پیوند خراب مسیریابی مجدد می‌شود. در SDN، این کار به صورت متمرکز انجام می‌شود؛ در شبکه‌های سنتی، OSPF باید در تمام مسیریاب‌ها همگرا شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: حذف جریان به دلیل انقضای Idle Timeout</div>
+          <p><strong>سناریو:</strong> یک ورودی جریان برای ترافیک SSH (TCP پورت 22) بین دو میزبان با idle_timeout=300 ثانیه (5 دقیقه) نصب شد. به مدت 5 دقیقه هیچ ترافیک SSH دیده نشده است.</p>
+          <p><strong>تبادل پیام:</strong></p>
+          <ol>
+            <li>سوییچ 300 ثانیه از آخرین تطبیق بسته با ورودی جریان را شمارش می‌کند.</li>
+            <li>سوییچ ورودی جریان را از جدول جریان خود حذف می‌کند.</li>
+            <li>سوییچ <strong>Flow-Removed</strong> را با آمار نهایی به کنترلر می‌فرستد:</li>
+          </ol>
+          <div class="code">Flow-Removed:
+  match: nw_src=10.0.0.1, nw_dst=10.0.0.2, tp_dst=22, proto=TCP
+  priority: 100
+  reason: OFPRR_IDLE_TIMEOUT
+  duration_sec: 784
+  idle_timeout: 300
+  packet_count: 14582
+  byte_count: 21873000
+          </div>
+          <p><strong>عمل کنترلر:</strong> کنترلر آمار را برای اهداف صورتحساب/حسابداری ثبت می‌کند. ورودی جریان از پایگاه داده حالت آن حذف می‌شود. اگر یک بسته SSH جدید برسد، یک چرخه جدید Packet-In ← Modify-State آغاز می‌شود.</p>
+          <p><strong>چرا زمان‌سنج‌ها مهم هستند:</strong> Idle timeout ورودی‌های جریان استفاده‌نشده را حذف می‌کند و حافظه TCAM سوییچ (گران، پرمصرف) را حفظ می‌کند. Hard timeout تضمین می‌کند جریان‌ها به طور دوره‌ای تازه می‌شوند و از ورودی‌های کهنه جلوگیری می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: تزریق بسته توسط کنترلر (Send-Packet)</div>
+          <p><strong>سناریو:</strong> یک کنترلر SDN می‌خواهد توپولوژی شبکه را با استفاده از LLDP (پروتکل کشف لایه پیوند) کشف کند. کنترلر باید بسته‌های LLDP را از تمام پورت‌های سوییچ بفرستد.</p>
+          <p><strong>تبادل پیام:</strong></p>
+          <ol>
+            <li>کنترلر یک بسته LLDP با chassis ID = شناسه سوییچ، port ID = شماره پورت می‌سازد.</li>
+            <li>برای هر سوییچ و پورت، کنترلر <strong>Send-Packet</strong> می‌فرستد:</li>
+          </ol>
+          <div class="code">Send-Packet (s1, پورت 1):
+  buffer_id: OFP_NO_BUFFER
+  data: [LLDP: chassis=00:00:00:00:00:01, port=1]
+  actions: [OUTPUT: 1]
+  in_port: OFPP_CONTROLLER
+
+Send-Packet (s1, پورت 2):
+  data: [LLDP: chassis=00:00:00:00:00:01, port=2]
+  actions: [OUTPUT: 2]
+  in_port: OFPP_CONTROLLER
+          </div>
+          <ol start="3">
+            <li>سوییچ‌های همسایه بسته‌های LLDP را دریافت می‌کنند. اگر هیچ ورودی جریانی تطبیق نکند، Packet-In به کنترلر می‌فرستند.</li>
+            <li>کنترلر می‌آموزد: "s1 پورت 2 ← s2 پورت 3" از LLDP دریافتی، و توپولوژی شبکه را می‌سازد.</li>
+          </ol>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: Read-State برای مهندسی ترافیک</div>
+          <p><strong>سناریو:</strong> یک برنامه مهندسی ترافیک هر 60 ثانیه اجرا می‌شود تا استفاده از پیوند را بررسی کند و تصمیم بگیرد آیا جریان‌ها نیاز به مسیریابی مجدد دارند یا خیر.</p>
+          <p><strong>تبادل پیام:</strong></p>
+          <ol>
+            <li>کنترلر درخواست <strong>Read-State</strong> برای آمار پورت روی همه سوییچ‌ها می‌فرستد:</li>
+          </ol>
+          <div class="code">Read-State:
+  type: OFPST_PORT
+  match: (همه پورت‌ها)
+          </div>
+          <ol start="2">
+            <li>هر سوییچ پاسخ می‌دهد:</li>
+          </ol>
+          <div class="code">پاسخ (s1):
+  port_no: 3
+  rx_packets: 45891324
+  tx_packets: 51234891
+  rx_bytes: 38917000345
+  tx_bytes: 41234905123
+  rx_dropped: 234
+  tx_dropped: 15
+  duration_sec: 3600
+          </div>
+          <ol start="3">
+            <li>برنامه TE محاسبه می‌کند: utilization = (tx_bytes / مدت) / سرعت_پیوند = 41234905123 / 3600 / 1.25e9 ≈ 91.6%. پیوند شلوغ است!</li>
+            <li>برنامه TE مسیرهای جدیدی برای برخی جریان‌ها برای متعادل کردن بار محاسبه می‌کند.</li>
+            <li>کنترلر <strong>Modify-State</strong> را برای نصب ورودی‌های جریان جدید با مسیرهای مختلف می‌فرستد.</li>
+          </ol>
+          <p><strong>مزیت SDN:</strong> دید متمرکز مهندسی ترافیک سراسری را ممکن می‌سازد که در مسیریابی سنتی هاپ-به-هاپ غیرممکن است.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>مقایسه: OpenFlow در مقابل مسیریابی سنتی</h2>
+        <table>
+          <tr><th>جنبه</th><th>OpenFlow</th><th>مسیریابی سنتی</th></tr>
+          <tr><td>فیلدهای تطبیق</td><td>11+ (پورت ورودی، هدرهای L2-L4)</td><td>1 (IP مقصد)</td></tr>
+          <tr><td>مدل کنترل</td><td>کنترلر سوییچ را برنامه‌ریزی می‌کند</td><td>مسیریاب خودپیکربندی می‌کند</td></tr>
+          <tr><td>اولین بسته</td><td>رفت و برگشت کنترلر (مسیر آهسته)</td><td>فوری (تصمیم توزیع‌شده)</td></tr>
+          <tr><td>بسته‌های بعدی</td><td>سرعت خط (مسیر سریع)</td><td>سرعت خط</td></tr>
+          <tr><td>دانه‌بندی جریان</td><td>به ازای برنامه، به ازای کاربر</td><td>به ازای پیشوند (درشت)</td></tr>
+          <tr><td>تحول پروتکل</td><td>بروزرسانی نرم‌افزار کنترلر</td><td>ارتقای فریمور در هر مسیریاب</td></tr>
+          <tr><td>پورت پیش‌فرض</td><td>TCP 6653</td><td>نامعتبر</td></tr>
+        </table>
+
+        <h3>کارت مرجع سریع</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>کنترلر ← سوییچ</h3>
+            <p>• <span class="highlight">Configuration</span> — پرس/تنظیم پارامترها</p>
+            <p>• <span class="highlight">Modify-State</span> — افزودن/حذف/تغییر جریان‌ها</p>
+            <p>• <span class="highlight">Read-State</span> — دریافت آمار</p>
+            <p>• <span class="highlight">Send-Packet</span> — تزریق بسته</p>
+          </div>
+          <div class="card">
+            <h3>سوییچ ← کنترلر</h3>
+            <p>• <span class="highlight">Flow-Removed</span> — ورودی منقضی/حذف شد</p>
+            <p>• <span class="highlight">Port-Status</span> — رویداد تغییر پورت</p>
+            <p>• <span class="highlight">Packet-In</span> — عدم تطبیق / ارسال به کنترلر</p>
+          </div>
+          <div class="card">
+            <h3>فیلدهای ورودی جریان</h3>
+            <p><span class="dim">Match</span> — 11 فیلد هدر</p>
+            <p><span class="dim">Priority</span> — بالاتر = تطبیق اول</p>
+            <p><span class="dim">Counters</span> — بسته‌ها، بایت‌ها</p>
+            <p><span class="dim">Actions</span> — ارسال، drop، تغییر</p>
+            <p><span class="dim">Timers</span> — idle + hard timeout</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

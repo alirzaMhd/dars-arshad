@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پروتکل OSPF — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>OSPF — Open Shortest Path First</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — پروتکل مسیریابی حالت پیوند و سیستم‌های خودمختار</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور AS و OSPF</button>
+      <button class="tab" onclick="showSection('tab2')">ویژگی‌های OSPF</button>
+      <button class="tab" onclick="showSection('tab3')">سلسله‌مراتب و نواحی</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <!-- Tab 1: AS & OSPF Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مفهوم سیستم‌های خودمختار</h2>
+        <p><strong>سیستم خودمختار (AS)</strong> مجموعه‌ای از مسیریاب‌ها و شبکه‌ها تحت یک دامنه اداری واحد با یک سیاست مسیریابی یکپارچه است. هر AS با یک <strong>شماره AS (ASN)</strong> 16 بیتی یا 32 بیتی منحصربه‌فرد جهانی شناسایی می‌شود. شماره‌های AS، مانند آدرس‌های IP، توسط ثبت‌های منطقه‌ای ICANN اختصاص داده می‌شوند [ICANN 2020].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>شماره‌های AS</h3>
+            <p>• <strong>ASN عمومی</strong>: 1–64511 (قابل مسیریابی جهانی)</p>
+            <p>• <strong>ASN خصوصی</strong>: 64512–65535 (استفاده داخلی)</p>
+            <p>• <strong>ASN 32 بیتی</strong>: 65536–4294967295 (فرمت جدیدتر)</p>
+          </div>
+          <div class="card">
+            <h3>انواع AS</h3>
+            <p>• <span class="highlight">AS Stub</span>: اتصال تنها به یک ISP</p>
+            <p>• <span class="highlight">AS Multihomed</span>: متصل به چندین ISP</p>
+            <p>• <span class="highlight">AS Transit</span>: حمل ترافیک بین ASهای دیگر</p>
+          </div>
+        </div>
+
+        <div class="warning">اینترنت شبکه‌ای از ASهاست. مسیریابی درون-AS (مثلاً OSPF) داخل یک AS عمل می‌کند، در حالی که مسیریابی بین-AS (مثلاً BGP) ASها را به هم متصل می‌کند.</div>
+
+        <h2>بررسی اجمالی پروتکل OSPF</h2>
+        <p><strong>OSPF (Open Shortest Path First)</strong> یک <span class="highlight">پروتکل مسیریابی حالت پیوند</span> است که برای مسیریابی درون-AS استفاده می‌شود. از <strong>الگوریتم دیکسترا</strong> برای محاسبه درخت کوتاه‌ترین مسیر از هر مسیریاب به هر مسیریاب دیگر استفاده می‌کند.</p>
+        <p>"Open" در OSPF نشان می‌دهد مشخصات پروتکل مسیریابی <strong>عمومی</strong> است (در مقابل پروتکل اختصاصی EIGRP سیسکو که حدود 20 سال بسته بود). OSPF نسخه 2 در <strong>RFC 2328</strong> تعریف شده است [RFC 2328].</p>
+
+        <div class="formula">
+          <div class="label">الگوریتم دیکسترا</div>
+          <div class="expr">SPT(v) = { v } با dist(v) = 0<br>while گره‌های بازدید نشده باقی مانده:<br>&nbsp;&nbsp;انتخاب u با کوچکترین dist(u)<br>&nbsp;&nbsp;برای هر همسایه w از u:<br>&nbsp;&nbsp;&nbsp;&nbsp;dist(w) = min(dist(w), dist(u) + cost(u,w))</div>
+          <div class="desc">هر مسیریاب یک نقشه توپولوژی کامل می‌سازد و کوتاه‌ترین مسیرها را به طور مستقل محاسبه می‌کند.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های کلیدی</h3>
+            <p>• <span class="highlight">حالت پیوند</span>: هر مسیریاب توپولوژی کامل را می‌داند</p>
+            <p>• <span class="highlight">همگرایی سریع</span>: تغییرات از طریق HELLO شناسایی می‌شوند</p>
+            <p>• <span class="highlight">بدون کلاس</span>: پشتیبانی از VLSM و CIDR</p>
+            <p>• <span class="highlight">بدون حلقه</span>: همیشه مسیرهای بدون حلقه محاسبه می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>OSPF در مقابل RIP</h3>
+            <p>معیار: <span class="highlight">هزینه</span> (قابل تنظیم) در مقابل تعداد پرش</p>
+            <p>همگرایی: <span class="highlight">سریع</span> در مقابل کند (بروزرسانی هر 30 ثانیه)</p>
+            <p>مقیاس‌پذیری: <span class="highlight">بسیار بزرگ</span> در مقابل شبکه‌های کوچک</p>
+            <p>الگوریتم: <span class="highlight">دیکسترا</span> در مقابل بلمن-فورد</p>
+          </div>
+        </div>
+
+        <h3>نحوه کار OSPF</h3>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li>هر مسیریاب <strong>پیام‌های HELLO</strong> (هر 10 ثانیه) برای کشف همسایگان ارسال می‌کند.</li>
+          <li>مسیریاب‌ها <strong>آگهی‌های حالت پیوند (LSA)</strong> توصیف‌کننده رابط‌ها، همسایگان و هزینه‌های پیوند خود را می‌سازند.</li>
+          <li>LSAها به همه مسیریاب‌های ناحیه <strong>پخش</strong> می‌شوند.</li>
+          <li>هر مسیریاب یک <strong>پایگاه داده حالت پیوند (LSDB)</strong> کامل می‌سازد.</li>
+          <li>الگوریتم دیکسترا <strong>درخت کوتاه‌ترین مسیر (SPT)</strong> را محاسبه می‌کند.</li>
+          <li>جدول مسیریابی با بهترین مسیرها پر می‌شود.</li>
+        </ol>
+
+        <div class="warning">OSPF <strong>بروزرسانی‌های دوره‌ای حالت پیوند را هر 30 دقیقه</strong> حتی در صورت عدم تغییر ارسال می‌کند. این امر قابلیت اطمینان پایگاه داده را از طریق مکانیزم‌های تازه‌سازی تضمین می‌کند.</div>
+      </div>
+
+      <div class="section">
+        <h2>کارت مرجع سریع</h2>
+        <table>
+          <tr><th>ویژگی</th><th>مقدار</th></tr>
+          <tr><td>نوع پروتکل</td><td>حالت پیوند</td></tr>
+          <tr><td>الگوریتم</td><td>دیکسترا SPF</td></tr>
+          <tr><td>شماره پورت</td><td>89 (پروتکل IP)</td></tr>
+          <tr><td>معیار</td><td>هزینه (پیش‌فرض = 10^8 / پهنای باند)</td></tr>
+          <tr><td>فرکانس بروزرسانی</td><td>زننده + هر 30 دقیقه</td></tr>
+          <tr><td>فاصله HELLO</td><td>10 ثانیه (پیش‌فرض)</td></tr>
+          <tr><td>احراز هویت</td><td>MD5، رمز عبور ساده</td></tr>
+          <tr><td>پشتیبانی چندپخشی</td><td>MOSPF</td></tr>
+          <tr><td>سلسله‌مراتبی</td><td>بله (نواحی)</td></tr>
+          <tr><td>پشتیبانی IPv6</td><td>OSPFv3</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: OSPF Features -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>ویژگی‌های اصلی OSPF</h2>
+
+        <h3>پخش اطلاعات حالت پیوند</h3>
+        <p>وقتی یک مسیریاب تغییری را تشخیص می‌دهد (پیوند بالا/پایین، تغییر هزینه)، بلافاصله یک LSA جدید ایجاد کرده و آن را به همه همسایگان <strong>پخش</strong> می‌کند. هر همسایه آن را به همه همسایگان دیگر به جز رابط ورودی ارسال می‌کند. پخش <strong>قابل اعتماد</strong> است — مسیریاب‌ها باید LSAها را تأیید کنند. این تضمین می‌کند همه مسیریاب‌ها به همان دیدگاه توپولوژی همگرا می‌شوند.</p>
+
+        <div class="formula">
+          <div class="label">رفتار پخش</div>
+          <div class="expr">دریافت LSA → بررسی LSDB → جدیدتر؟ → پخش از همه رابط‌ها (به جز ورودی) → ارسال ACK</div>
+          <div class="desc">پخش وقتی متوقف می‌شود که همه مسیریاب‌ها LSDBهای یکسان داشته باشند.</div>
+        </div>
+
+        <h3>حمل OSPF: مستقیم روی IP (پروتکل 89)</h3>
+        <p>پیام‌های OSPF مستقیماً روی IP، با استفاده از <strong>پروتکل لایه بالایی 89</strong> (نه TCP یا UDP) حمل می‌شوند. از آنجا که OSPF به TCP متکی نیست، پروتکل OSPF باید خودش <strong>انتقال قابل اعتماد پیام</strong> و عملکرد پخش حالت پیوند، از جمله مکانیزم‌های تأیید برای LSAها را پیاده‌سازی کند.</p>
+        <p>به طور پیش‌فرض، بسته‌های OSPF بین مسیریاب‌ها <strong>احراز هویت نمی‌شوند</strong> و می‌توانند جعل شوند. احراز هویت باید به صراحت پیکربندی شود.</p>
+
+        <h3>امنیت: احراز هویت</h3>
+        <p>OSPF از دو روش احراز هویت برای جلوگیری از حملات مسیریابی پشتیبانی می‌کند:</p>
+        <table>
+          <tr><th>روش</th><th>نوع</th><th>سطح امنیت</th></tr>
+          <tr><td>Null</td><td>نوع 0</td><td>بدون احراز هویت (پیش‌فرض)</td></tr>
+          <tr><td>رمز عبور ساده</td><td>نوع 1</td><td>ضعیف — رمز عبور یکسان روی هر مسیریاب پیکربندی می‌شود و در بسته OSPF به صورت متن ساده قرار می‌گیرد</td></tr>
+          <tr><td>رمزنگاری MD5</td><td>نوع 2</td><td>قوی — مسیریاب هش MD5 از محتوای بسته + کلید مخفی مشترک را محاسبه می‌کند؛ گیرنده دوباره محاسبه و مقایسه می‌کند</td></tr>
+        </table>
+        <div class="warning">احراز هویت رمز عبور ساده در برابر شنود آسیب‌پذیر است. احراز هویت MD5 به شدت برای شبکه‌های تولیدی توصیه می‌شود.</div>
+
+        <h4>محافظت در برابر حملات بازپخش</h4>
+        <p>هنگام استفاده از احراز هویت MD5، OSPF <strong>شماره‌های توالی</strong> را در هر بسته برای محافظت در برابر <strong>حملات بازپخش</strong> شامل می‌کند. یک بسته OSPF ضبط شده نمی‌تواند بعداً بازپخش شود زیرا شماره توالی قدیمی خواهد بود و توسط مسیریاب گیرنده رد می‌شود.</p>
+
+        <h3>مسیرهای چندگانه با هزینه برابر</h3>
+        <p>OSPF از مسیریابی <strong>ECMP (Equal-Cost Multi-Path)</strong> پشتیبانی می‌کند. وقتی چندین مسیر هزینه یکسان دارند، OSPF می‌تواند ترافیک را در حداکثر 16 مسیر (یا بیشتر) با هزینه برابر به طور همزمان توزیع کند. این کار توان عملیاتی و افزونگی را بهبود می‌بخشد.</p>
+
+        <div class="example">
+          <div class="title">مثال ECMP</div>
+          <p>مسیریاب R1 سه مسیر به 10.0.0.0/16 دارد، هر کدام با هزینه 20. با ECMP فعال، ترافیک بین هر سه مسیر با استفاده از توزیع بار به صورت درشت دانه (per-packet) یا ریزدانه (per-flow) توزیع می‌شود.</p>
+        </div>
+
+        <h3>MOSPF — افزونه‌های چندپخشی</h3>
+        <p><strong>MOSPF (Multicast OSPF)</strong> OSPF را برای پشتیبانی از مسیریابی چندپخشی IP گسترش می‌دهد. از LSDB موجود برای محاسبه درختان توزیع چندپخشی استفاده می‌کند. وقتی یک مسیریاب یک بسته چندپخشی دریافت می‌کند، از پایگاه داده حالت پیوند برای تعیین اینکه کدام مسیریاب‌های پایین‌دستی اعضای گروه را دارند استفاده می‌کند.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های MOSPF</h3>
+            <p>• استفاده از LSDB OSPF برای محاسبه درخت چندپخشی</p>
+            <p>• محاسبه درختان مبتنی بر مبدأ (درخت کوتاه‌ترین مسیر به ازای هر مبدأ)</p>
+            <p>• کارآمد برای گروه‌های <span class="highlight">چگال</span> چندپخشی</p>
+            <p>• پخش دوره‌ای LSAهای عضویت گروه</p>
+          </div>
+          <div class="card">
+            <h3>محدودیت‌های MOSPF</h3>
+            <p>• <span class="dim">مقیاس‌پذیری</span>: سنگین از نظر CPU برای گروه‌های زیاد</p>
+            <p>• <span class="dim">ترافیک ناپیوسته</span>: پخش دوره‌ای پهنای باند را هدر می‌دهد اگر گروه‌ها پراکنده باشند</p>
+            <p>• عمدتاً توسط PIM (Protocol Independent Multicast) جایگزین شده است</p>
+          </div>
+        </div>
+
+        <h3>پیکربندی وزن پیوند</h3>
+        <p>OSPF اجازه <strong>پیکربندی دستی وزن (هزینه) پیوند</strong> را می‌دهد. هزینه پیش‌فرض = 10⁸ / پهنای باند (bps). اپراتورهای شبکه می‌توانند هزینه‌ها را تنظیم کنند تا:</p>
+        <ul>
+          <li><strong>ظرفیت معکوس</strong>: پیوندهای با پهنای باند بالاتر هزینه‌های کمتری می‌گیرند (مثلاً 10 گیگابیت → هزینه 10، 1 گیگابیت → هزینه 100).</li>
+          <li><strong>مهندسی ترافیک</strong>: تنظیم دستی هزینه‌ها برای تأثیر بر انتخاب مسیر، جلوگیری از ازدحام، یا پیاده‌سازی سیاست‌های هدایت ترافیک.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">پیکربندی وزن پیوند</div>
+          <p>یک اپراتور می‌خواهد ترافیک ترجیحاً از پیوند 10 گیگابیت نسبت به 1 گیگابیت عبور کند:</p>
+          <div class="code">
+interface GigabitEthernet0/1<br>
+&nbsp;ip ospf cost 10<br>
+!<br>
+interface GigabitEthernet0/2<br>
+&nbsp;ip ospf cost 100
+          </div>
+          <p>نتیجه: الگوریتم دیکسترا ترافیک را از طریق مسیر با هزینه کمتر (پهنای باند بالاتر) مسیریابی می‌کند.</p>
+        </div>
+
+        <div class="warning">
+          <strong>تنظیم وزن‌های OSPF — معکوس علت و معلول.</strong> در تئوری، وزن‌های پیوند ابتدا داده می‌شوند و الگوریتم دیکسترا مسیرهای مسیریابی را به عنوان نتیجه تولید می‌کند. در عمل، رابطه علت و معلولی اغلب معکوس است: اپراتورهای شبکه ابتدا مسیریابی مطلوب جریان‌ها را تعیین می‌کنند (مثلاً به حداقل رساندن حداکثر استفاده از پیوند در سراسر شبکه) و سپس باید <strong>مجموعه وزن‌های پیوندی</strong> را پیدا کنند که باعث می‌شود OSPF آن مسیریابی مطلوب را تولید کند [Fortz 2000, Fortz 2002]. این یک بینش کلیدی مهندسی ترافیک است — "دسته" اصلی اپراتور برای تنظیم جریان‌ها، پیکربندی وزن پیوند است.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>جدول مقایسه OSPF</h2>
+        <table>
+          <tr><th>ویژگی</th><th>OSPF</th><th>RIP</th><th>EIGRP</th></tr>
+          <tr><td>الگوریتم</td><td>دیکسترا (حالت پیوند)</td><td>بلمن-فورد (بردار فاصله)</td><td>DUAL (ترکیبی)</td></tr>
+          <tr><td>معیار</td><td>هزینه</td><td>تعداد پرش</td><td>ترکیبی (پهنای باند، تأخیر، بار، قابلیت اطمینان)</td></tr>
+          <tr><td>حداکثر پرش</td><td>نامحدود</td><td>15</td><td>نامحدود</td></tr>
+          <tr><td>همگرایی</td><td>سریع (&lt;1 ثانیه)</td><td>کند (تا 2 دقیقه)</td><td>بسیار سریع</td></tr>
+          <tr><td>سلسله‌مراتبی</td><td>بله (نواحی)</td><td>خیر (مسطح)</td><td>خیر (مسطح)</td></tr>
+          <tr><td>احراز هویت</td><td>MD5، ساده</td><td>ساده</td><td>MD5</td></tr>
+          <tr><td>چندپخشی</td><td>224.0.0.5, 224.0.0.6</td><td>پخش</td><td>224.0.0.10</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Hierarchy & Areas -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>سلسله‌مراتب OSPF و نواحی</h2>
+        <p>OSPF از <strong>سلسله‌مراتب دو-سطحی</strong> برای بهبود مقیاس‌پذیری پشتیبانی می‌کند. شبکه‌های بزرگ به <strong>نواحی</strong> تقسیم می‌شوند تا اندازه LSDB، سربار CPU و ترافیک پخش کاهش یابد.</p>
+
+        <div class="formula">
+          <div class="label">ساختار ناحیه</div>
+          <div class="expr">ناحیه主干 (ناحیه 0) — همه نواحی دیگر را متصل می‌کند<br>&nbsp;&nbsp;├── ناحیه 1 (ناحیه استاندارد)<br>&nbsp;&nbsp;├── ناحیه 2 (ناحیه استاندارد)<br>&nbsp;&nbsp;└── ناحیه 3 (ناحیه استاندارد)</div>
+          <div class="desc">همه ترافیک بین نواحی باید از ناحیه 0 عبور کند.</div>
+        </div>
+
+        <h3>مسیریابی بین-ناحیه‌ای (مسیر 3-گام)</h3>
+        <p>وقتی یک بسته باید بین دو ناحیه مختلف درون یک AS حرکت کند، مسیریابی از یک دنباله دقیق سه گام پیروی می‌کند:</p>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li><strong>گام 1 — مسیریابی درون-ناحیه‌ای</strong>: بسته از مسیریاب مبدأ به یک <strong>مسیریاب مرزی ناحیه (ABR)</strong> در ناحیه مبدأ مسیریابی می‌شود.</li>
+          <li><strong>گام 2 — عبور از主干</strong>: ABR بسته را از طریق <strong>ناحیه主干 (ناحیه 0)</strong> به ABR در ناحیه مقصد ارسال می‌کند.</li>
+          <li><strong>گام 3 — مسیریابی درون-ناحیه‌ای</strong>: ABR مقصد بسته را درون ناحیه خود به مقصد نهایی مسیریابی می‌کند.</li>
+        </ol>
+        <p>نقش اصلی ناحیه主干، مسیریابی ترافیک بین همه نواحی دیگر در AS است.主干 همیشه شامل همه مسیریاب‌های مرزی ناحیه در AS است.</p>
+
+        <h3>انواع ناحیه</h3>
+        <table>
+          <tr><th>نوع ناحیه</th><th>توضیح</th><th>LSAها</th></tr>
+          <tr><td>主干 (ناحیه 0)</td><td>ناحیه مرکزی متصل‌کننده همه نواحی دیگر</td><td>همه انواع</td></tr>
+          <tr><td>ناحیه استاندارد</td><td>ناحیه OSPF معمولی</td><td>همه انواع</td></tr>
+          <tr><td>ناحیه Stub</td><td>LSAهای خارجی (نوع 5) را مسدود می‌کند</td><td>بدون نوع 5</td></tr>
+          <tr><td>کاملاً Stubby</td><td>LSAهای خارجی + بین-ناحیه‌ای را مسدود می‌کند</td><td>فقط نوع 1، 2، 3 (مسیر پیش‌فرض)</td></tr>
+          <tr><td>NSSA</td><td>اجازه مسیرهای خارجی محدود را می‌دهد</td><td>نوع 7 به جای نوع 5</td></tr>
+        </table>
+
+        <h3>انواع مسیریاب</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>مسیریاب主干</h3>
+            <p>مسیریاب با حداقل یک رابط در ناحیه 0.</p>
+          </div>
+          <div class="card">
+            <h3>مسیریاب مرزی ناحیه (ABR)</h3>
+            <p>مسیریاب با رابط‌های در <span class="highlight">چندین ناحیه</span>، از جمله ناحیه 0. مسیرهای بین نواحی را خلاصه می‌کند.</p>
+          </div>
+          <div class="card">
+            <h3>مسیریاب داخلی</h3>
+            <p>مسیریاب با همه رابط‌ها در یک ناحیه.</p>
+          </div>
+          <div class="card">
+            <h3>مسیریاب مرزی AS (ASBR)</h3>
+            <p>مسیریاب که <span class="highlight">مسیرهای خارجی</span> را به OSPF تزریق می‌کند (مثلاً از BGP یا مسیرهای ایستا).</p>
+          </div>
+        </div>
+
+        <h3>مزایای OSPF سلسله‌مراتبی</h3>
+        <ul>
+          <li><strong>LSDBهای کوچکتر</strong>: هر ناحیه فقط توپولوژی خود را می‌داند.</li>
+          <li><strong>محاسبات SPF سریع‌تر</strong>: دیکسترا فقط روی توپولوژی ناحیه اجرا می‌شود.</li>
+          <li><strong>کاهش پخش LSA</strong>: LSAها در مرزهای ناحیه باقی می‌مانند.</li>
+          <li><strong>خلاصه‌سازی مسیر</strong>: ABRها می‌توانند چندین مسیر را به یک آگهی واحد خلاصه کنند.</li>
+          <li><strong>جداسازی خطا</strong>: مشکل در یک ناحیه بر نواحی دیگر تأثیر نمی‌گذارد.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">OSPF سلسله‌مراتبی در یک شرکت بزرگ</div>
+          <p>یک شرکت با 500 مسیریاب شبکه را به موارد زیر تقسیم می‌کند:</p>
+          <ul>
+            <li><strong>ناحیه 0 (主干)</strong>: 10 مسیریاب اصلی در مرکز داده.</li>
+            <li><strong>ناحیه 1</strong>: 100 مسیریاب در آمریکای شمالی.</li>
+            <li><strong>ناحیه 2</strong>: 150 مسیریاب در اروپا.</li>
+            <li><strong>ناحیه 3</strong>: 120 مسیریاب در آسیا-اقیانوسیه.</li>
+            <li><strong>ناحیه 4</strong>: 120 مسیریاب در آمریکای جنوبی.</li>
+          </ul>
+          <p>هر ناحیه حدود 100-150 مسیریاب با اندازه‌های LSDB قابل مدیریت دارد. هر ABR ناحیه خود را به ناحیه 0 متصل می‌کند و مسیرهای ناحیه را خلاصه می‌کند.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>فرمت پیام OSPF</h2>
+        <p>پیام‌های OSPF مستقیماً در IP کپسوله می‌شوند (پروتکل 89). هدر ثابت 24 بایتی OSPF با داده‌های خاص نوع دنبال می‌شود.</p>
+        <table>
+          <tr><th>بایت</th><th>فیلد</th><th>اندازه</th><th>توضیح</th></tr>
+          <tr><td>0–1</td><td>نسخه</td><td>2</td><td>نسخه OSPF (2 برای IPv4، 3 برای IPv6)</td></tr>
+          <tr><td>2–3</td><td>نوع</td><td>2</td><td>1=HELLO, 2=DD, 3=LSR, 4=LSU, 5=LSAck</td></tr>
+          <tr><td>4–7</td><td>طول بسته</td><td>4</td><td>طول کل بسته بر حسب بایت</td></tr>
+          <tr><td>8–11</td><td>شناسه مسیریاب</td><td>4</td><td>شناسه مسیریاب مبدأ</td></tr>
+          <tr><td>12–15</td><td>شناسه ناحیه</td><td>4</td><td>ناحیه‌ای که بسته به آن تعلق دارد</td></tr>
+          <tr><td>16–17</td><td> Checksum</td><td>2</td><td> checksum مشابه IP</td></tr>
+          <tr><td>18–19</td><td>نوع احراز هویت</td><td>2</td><td>نوع احراز هویت (0, 1, 2)</td></tr>
+          <tr><td>20–23</td><td>احراز هویت</td><td>8</td><td>داده‌های احراز هویت</td></tr>
+        </table>
+
+        <h3>پیام‌های HELLO</h3>
+        <p>پیام‌های HELLO (نوع 1) به صورت دوره‌ای (هر 10 ثانیه به طور پیش‌فرض) روی همه رابط‌ها برای موارد زیر ارسال می‌شوند:</p>
+        <ul>
+          <li>کشف همسایگان OSPF</li>
+          <li>تأیید ارتباط دوطرفه (حالت 2-way)</li>
+          <li>انتخاب مسیریاب تعیین‌شده (DR) و پشتیبان (BDR) در شبکه‌های پخشی</li>
+          <li>حفظ مجاورت همسایه (فاصله مرگ = 4 × فاصله HELLO = 40 ثانیه)</li>
+        </ul>
+
+        <div class="warning">اگر یک مسیریاب HELLO از یک همسایه در فاصله مرگ دریافت نکند، آن همسایه را مرده اعلام کرده و LSAهای بروزرسانی شده را پخش می‌کند.</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: پیکربندی پایه OSPF</div>
+          <p>پیکربندی OSPF روی یک شبکه ساده 3-مسیریاب (R1, R2, R3) با همه مسیریاب‌ها در ناحیه 0.</p>
+          <div class="code">
+! مسیریاب R1<br>
+router ospf 1<br>
+&nbsp;network 192.168.1.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.0 0.0.0.3 area 0<br>
+!<br>
+! مسیریاب R2<br>
+router ospf 1<br>
+&nbsp;network 192.168.2.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.0 0.0.0.3 area 0<br>
+!<br>
+! مسیریاب R3<br>
+router ospf 1<br>
+&nbsp;network 192.168.3.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.4 0.0.0.3 area 0
+          </div>
+          <p><strong>نتیجه:</strong> R1, R2 و R3 مجاورت تشکیل می‌دهند، LSA تبادل می‌کنند و مسیرهای همه شبکه‌ها را یاد می‌گیرند. هر مسیریاب کوتاه‌ترین مسیر را به 192.168.1.0/24, 192.168.2.0/24 و 192.168.3.0/24 محاسبه می‌کند.</p>
+          <p>جدول مسیریابی R1 پس از همگرایی:</p>
+          <div class="code">
+O 192.168.2.0/24 [110/2] via 10.0.0.2<br>
+O 192.168.3.0/24 [110/3] via 10.0.0.2
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: OSPF چند-ناحیه با ABR</div>
+          <p>چهار مسیریاب در دو ناحیه. R1 و R2 در ناحیه 0 هستند. R3 و R4 در ناحیه 1 هستند. R2 ABR متصل‌کننده هر دو ناحیه است.</p>
+          <div class="code">
+! R2 (ABR)<br>
+router ospf 1<br>
+&nbsp;network 10.0.0.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.1.0 0.0.0.255 area 1<br>
+!<br>
+! R3 (داخلی ناحیه 1)<br>
+router ospf 1<br>
+&nbsp;network 10.0.1.0 0.0.0.255 area 1<br>
+&nbsp;network 192.168.10.0 0.0.0.255 area 1
+          </div>
+          <p><strong>انتشار مسیر:</strong></p>
+          <ul>
+            <li>R4 192.168.20.0/24 را از طریق یک LSA در ناحیه 1 آگهی می‌کند.</li>
+            <li>R2 (ABR) LSA را دریافت می‌کند، مسیر را نصب می‌کند و یک <strong>LSA خلاصه نوع 3</strong> برای ناحیه 0 ایجاد می‌کند.</li>
+            <li>R1 192.168.20.0/24 را به عنوان یک مسیر بین-ناحیه (O IA) با هزینه = هزینه تا ABR + هزینه در ناحیه 1 یاد می‌گیرد.</li>
+          </ul>
+          <p>جدول مسیریابی R1:</p>
+          <div class="code">
+O IA 192.168.20.0/24 [110/5] via 10.0.0.2
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: محاسبه هزینه OSPF با مهندسی ترافیک</div>
+          <p>یک شبکه OSPF سه مسیر بین مسیریاب A و B دارد:</p>
+          <ul>
+            <li>مسیر 1: A → R1 → B (پیوند 10 گیگابیت، هزینه پیش‌فرض = 10)</li>
+            <li>مسیر 2: A → R2 → B (پیوند 1 گیگابیت، هزینه پیش‌فرض = 100)</li>
+            <li>مسیر 3: A → R3 → R4 → B (10 گیگابیت + 10 گیگابیت، هزینه = 10 + 10 = 20)</li>
+          </ul>
+          <p><strong>سؤال:</strong> OSPF کدام مسیر را انتخاب می‌کند؟</p>
+          <p><strong>محاسبه:</strong> مسیر 1 هزینه 10، مسیر 2 هزینه 100، مسیر 3 هزینه 20 دارد. دیکسترا <span class="result">مسیر 1</span> را انتخاب می‌کند (کمترین هزینه کل = 10).</p>
+          <p><strong>مهندسی ترافیک:</strong> اگر مسیر 1 شلوغ است، اپراتور می‌تواند هزینه آن را افزایش دهد:</p>
+          <div class="code">
+interface TenGigE0/1<br>
+&nbsp;ip ospf cost 50
+          </div>
+          <p>اکنون مسیر 3 (هزینه 20) مسیر ترجیحی می‌شود. این نشان می‌دهد چگونه دستکاری هزینه OSPF <strong>مهندسی ترافیک</strong> را بدون تغییر توپولوژی فیزیکی امکان‌پذیر می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: پیکربندی احراز هویت OSPF</div>
+          <p>پیکربندی احراز هویت MD5 بین دو همسایه OSPF.</p>
+          <div class="code">
+! R1<br>
+interface GigabitEthernet0/0<br>
+&nbsp;ip ospf authentication message-digest<br>
+&nbsp;ip ospf message-digest-key 1 md5 MySecretKey<br>
+!<br>
+! R2<br>
+interface GigabitEthernet0/0<br>
+&nbsp;ip ospf authentication message-digest<br>
+&nbsp;ip ospf message-digest-key 1 md5 MySecretKey
+          </div>
+          <p><strong>نکات کلیدی:</strong></p>
+          <ul>
+            <li>هر دو مسیریاب باید از <strong>شناسه کلید</strong> و <strong>رمز عبور</strong> یکسان استفاده کنند.</li>
+            <li>احراز هویت MD5 یک هش رمزنگاری به هر بسته OSPF اضافه می‌کند.</li>
+            <li>بدون تطابق احراز هویت، مسیریاب‌ها مجاورت تشکیل نمی‌دهند.</li>
+          </ul>
+          <div class="warning">رمزهای عبور MD5 را به طور منظم تغییر دهید. از <strong>زنجیره کلید</strong> برای انتقال بدون وقفه رمز عبور استفاده کنید.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 5: توزیع بار ECMP با OSPF</div>
+          <p>مسیریاب R1 چهار مسیر با هزینه برابر به مقصد 172.16.0.0/16 دارد (هزینه = 30 هر کدام). با ECMP OSPF، ترافیک توزیع می‌شود:</p>
+          <ul>
+            <li><strong>درشت دانه (Per-packet)</strong>: بسته‌ها به صورت چرخشی در مسیرها توزیع می‌شوند. ممکن است باعث تحویل خارج از ترتیب شود.</li>
+            <li><strong>ریزدانه (Per-flow)</strong>: جریان‌ها (مشخص شده توسط 5-تایی) به یک مسیر خاص هش می‌شوند. ترتیب بسته حفظ می‌شود.</li>
+          </ul>
+          <p>پیکربندی:</p>
+          <div class="code">
+router ospf 1<br>
+&nbsp;maximum-paths 4
+          </div>
+          <p>با maximum-paths تنظیم شده به 4، OSPF تا 4 گام بعدی با هزینه برابر در جدول مسیریابی برای 172.16.0.0/16 نصب می‌کند:</p>
+          <div class="code">
+O 172.16.0.0/16 [110/30] via 10.0.1.1, via 10.0.2.1, via 10.0.3.1, via 10.0.4.1
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

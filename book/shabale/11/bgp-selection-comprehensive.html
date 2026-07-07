@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BGP Route Selection & Hot Potato - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>BGP Route Selection & Hot Potato Routing</h1>
+  <p class="subtitle">Computer Networks — The BGP Decision Process & Forwarding Table Construction</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Hot Potato Routing</button>
+      <button class="tab" onclick="showSection('tab2')">Route Selection Algorithm</button>
+      <button class="tab" onclick="showSection('tab3')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Summary</button>
+    </div>
+
+    <!-- Tab 1: Hot Potato Routing -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Hot Potato Routing</h2>
+        <p><strong>Hot potato routing</strong> is a BGP route selection policy where a router prefers to <span class="highlight">minimize the intra-AS cost to the NEXT-HOP</span>. The idea is simple: get the traffic out of your AS as quickly as possible — like a hot potato you want to drop.</p>
+        <p>Hot potato routing is a <strong>selfish algorithm</strong> — it tries to reduce the cost in its own AS while ignoring the other components of the end-to-end costs outside the AS. With hot potato routing, two routers in the same AS may choose <strong>two different AS paths</strong> to the same prefix.</p>
+
+        <div class="formula">
+          <div class="label">Hot Potato Rule</div>
+          <div class="expr">Select the route whose NEXT-HOP has the smallest IGP cost from the current router.</div>
+          <div class="desc">Among routes with equal local preference and equal AS-PATH length, pick the one closest to you.</div>
+        </div>
+
+        <h3>Why "Selfish"?</h3>
+        <p>Hot potato routing is considered <strong>selfish</strong> because each AS independently minimizes its own internal costs without considering the overall network efficiency. The AS passes traffic to the next AS as quickly as possible, shifting the burden outward.</p>
+
+        <h3>Forwarding Table Construction (Figure 5.11)</h3>
+        <p>Adding an outside-AS prefix to a router's forwarding table involves both BGP (inter-AS) and the IGP (intra-AS) protocol:</p>
+        <div class="code">
+1. Learn from inter-AS protocol (BGP) that subnet x is reachable via multiple gateways.<br>
+2. Use routing info from intra-AS protocol (OSPF/etc.) to determine costs of least-cost paths to each gateway.<br>
+3. Hot potato routing: choose the gateway that has the smallest least cost.<br>
+4. Determine from forwarding table the interface I that leads to the least-cost gateway.<br>
+5. Enter (x, I) in the forwarding table.
+        </div>
+        <p>Because each router independently applies this procedure, <strong>two routers in the same AS may choose different AS paths</strong> to the same prefix. For example, in Figure 5.10, router 1b sends packets through AS2 to reach x, while router 1d would bypass AS2 and send packets directly to AS3.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Advantages</h3>
+            <p>• <span class="highlight">Minimizes internal bandwidth</span>: Traffic exits at the closest point.</p>
+            <p>• <span class="highlight">Simple to implement</span>: Uses existing IGP metrics.</p>
+            <p>• <span class="highlight">Decentralized</span>: Each router decides independently.</p>
+          </div>
+          <div class="card">
+            <h3>Disadvantages</h3>
+            <p>• <span class="dim">Global suboptimality</span>: May choose a path that is longer overall.</p>
+            <p>• <span class="dim">No cooperation</span>: Each AS acts in its own interest.</p>
+            <p>• <span class="dim">Unpredictable end-to-end paths</span>.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Hot Potato: Textbook Example (Figure 5.10)</div>
+          <p>Router 1b in AS1 learns about prefix x. The two BGP routes to x are:</p>
+          <div class="code">
+Route via AS2 (through gateway 1c):<br>
+&nbsp;NEXT-HOP = IP of router 2a's left interface; AS-PATH: AS2 AS3; destination: x<br>
+Route via AS3 (direct, through gateway 1d):<br>
+&nbsp;NEXT-HOP = IP of router 3d's left interface; AS-PATH: AS3; destination: x
+          </div>
+          <p>Router 1b consults its intra-AS routing to find the least-cost path to each NEXT-HOP:</p>
+          <ul>
+            <li><strong>Cost to NEXT-HOP 2a</strong> (via gateway 1c): <span class="highlight">2</span></li>
+            <li><strong>Cost to NEXT-HOP 3d</strong> (via gateway 1d): <span class="highlight">3</span></li>
+          </ul>
+          <p>Under hot potato routing alone, router 1b selects the route via <span class="result">AS2 (gateway 1c → 2a)</span> because cost 2 &lt; cost 3. The traffic leaves AS1 sooner.</p>
+          <p><strong>Important:</strong> With the full BGP route-selection algorithm (Rule 2 — shortest AS-PATH — comes before Rule 3), the direct AS3 route (AS-PATH = [3], length 1) wins because it has a <strong>shorter AS-PATH</strong> than the AS2 route (AS-PATH = [2,3], length 2). The full algorithm thus overrides the hot potato result.</p>
+        </div>
+
+        <div class="warning">Hot potato routing is applied as the <strong>third rule</strong> in the BGP route selection algorithm, after local preference and AS-PATH length. It is only decisive when the first two rules produce a tie.</div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card: Hot Potato</h2>
+        <table>
+          <tr><th>Concept</th><th>Description</th></tr>
+          <tr><td>Rule</td><td>Minimize IGP cost to NEXT-HOP</td></tr>
+          <tr><td>Priority</td><td>3rd in BGP decision process</td></tr>
+          <tr><td>Scope</td><td>Intra-AS (each router decides independently)</td></tr>
+          <tr><td>Metric</td><td>IGP distance (OSPF cost, RIP hops, etc.)</td></tr>
+          <tr><td>Alternative Name</td><td>Early exit routing</td></tr>
+          <tr><td>Example</td><td>Path with NEXT-HOP at cost 2 wins over cost 10</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Route Selection Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>BGP Route Selection: The 4-Rule Algorithm</h2>
+        <p>When a BGP router has multiple routes to the same prefix, it selects the best route using the following tie-breaking rules, applied <strong>in order</strong>:</p>
+
+        <div class="formula">
+          <div class="label">BGP Best Route Selection (4 Rules)</div>
+          <div class="expr">
+1. Highest LOCAL_PREF<br>
+2. Shortest AS-PATH<br>
+3. Closest NEXT-HOP (Hot Potato)<br>
+4. Lowest BGP Router ID
+          </div>
+          <div class="desc">Rules are evaluated sequentially. The first rule that produces a unique winner determines the best route.</div>
+        </div>
+
+        <h3>Rule 1: Highest Local Preference</h3>
+        <p><strong>LOCAL_PREF</strong> is a <span class="highlight">policy attribute</span> set by AS administrators to influence outbound traffic. Higher values are preferred. Default is 100.</p>
+        <ul>
+          <li>Used to prefer certain paths (e.g., prefer customer routes over peer routes).</li>
+          <li>Propagated throughout the AS via iBGP.</li>
+          <li>Set using route maps or BGP community policies.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">Local Preference Example</div>
+          <p>AS1 has two upstream ISPs: ISP-A (LOCAL_PREF = 150) and ISP-B (LOCAL_PREF = 100). Both advertise 0.0.0.0/0 (default route). Router 1a prefers ISP-A because LOCAL_PREF 150 > 100.</p>
+        </div>
+
+        <h3>Rule 2: Shortest AS-PATH</h3>
+        <p>Among routes with equal LOCAL_PREF, the router prefers the <strong>shortest AS-PATH</strong> (fewest AS hops).</p>
+        <ul>
+          <li>This is the closest BGP gets to "shortest path" routing.</li>
+          <li>AS-PATH length counts the number of ASs in the path, not router hops.</li>
+          <li>Operators can artificially inflate AS-PATH length (AS-PATH prepending) to make a path less preferred.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">AS-PATH Length Example</div>
+          <p>Router receives two routes for 10.1.0.0/16:</p>
+          <ul>
+            <li>Route A: AS-PATH = [100, 200] (length 2)</li>
+            <li>Route B: AS-PATH = [300, 400, 500] (length 3)</li>
+          </ul>
+          <p>Route A is preferred (shorter AS-PATH).</p>
+        </div>
+
+        <h3>Rule 3: Closest NEXT-HOP (Hot Potato)</h3>
+        <p>SAME as the hot potato rule — pick the route with the <strong>lowest IGP cost to the NEXT-HOP</strong>.</p>
+        <ul>
+          <li>This rule is decisive only when rules 1 and 2 tie.</li>
+          <li>The IGP cost comes from the intra-AS routing protocol (OSPF, etc.).</li>
+          <li>This is the "hot potato" step.</li>
+        </ul>
+
+        <h3>Rule 4: Lowest BGP Router ID</h3>
+        <p>If all previous rules tie, the route from the BGP router with the <strong>lowest Router ID</strong> is preferred.</p>
+        <ul>
+          <li>The Router ID is a 32-bit number (usually the highest loopback IP).</li>
+          <li>This is the ultimate tie-breaker — it is deterministic.</li>
+        </ul>
+
+        <h3>Why BGP Is No Longer "Selfish"</h3>
+        <p>With the full route-selection algorithm, BGP is <strong>no longer a purely selfish algorithm</strong>. Rule 2 (shortest AS-PATH) is applied <em>before</em> Rule 3 (hot potato). This means BGP first looks for routes with short AS paths (thereby likely reducing end-to-end delay), and only falls back to hot potato when AS-PATH lengths are equal. This is a fundamental difference from pure hot potato routing.</p>
+
+        <div class="warning">There are additional BGP tie-breaking rules (e.g., eBGP over iBGP, lower MED, oldest route) that may be considered in full implementations, but the 4-rule algorithm above covers the core exam material.</div>
+
+        <div class="note">BGP routing tables in tier-1 ISP routers often contain over half a million routes (prefixes and corresponding attributes). Live BGP table data is available at <strong>http://www.routeviews.org</strong>. Statistics on BGP table size and characteristics are maintained in [Huston 2019b].</div>
+      </div>
+
+      <div class="section">
+        <h2>Route Selection Decision Flowchart</h2>
+        <div class="code">
+Received routes for prefix P:<br>
+│<br>
+├─ Highest LOCAL_PREF? → Unique? → SELECT<br>
+│  (Tie continues)<br>
+├─ Shortest AS-PATH? → Unique? → SELECT<br>
+│  (Tie continues)<br>
+├─ Lowest IGP cost to NEXT-HOP? → Unique? → SELECT<br>
+│  (Tie continues)<br>
+└─ Lowest BGP Router ID → SELECT (always unique)
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Worked Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Worked Examples: Route Selection Decisions</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Router 1b Choosing Between AS2 and AS3 Paths</div>
+          <p><strong>Topology:</strong> AS1 has routers 1a, 1b, 1c, 1d. 1c peers with AS2 (router 2a), 1d peers with AS3 (router 3a). Router 1b learns about prefix 10.5.0.0/16 from both entry points.</p>
+          <p><strong>Route A (via 1c → AS2):</strong> LOCAL_PREF = 100, AS-PATH = [2, 4], NEXT-HOP = 2a (IGP cost from 1b to 1c = 5)</p>
+          <p><strong>Route B (via 1d → AS3):</strong> LOCAL_PREF = 100, AS-PATH = [3, 4], NEXT-HOP = 3a (IGP cost from 1b to 1d = 3)</p>
+
+          <p><strong>Decision Process:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>Rule 1 (LOCAL_PREF):</strong> Both = 100 → tie.</li>
+            <li><strong>Rule 2 (AS-PATH):</strong> Both = 2 → tie.</li>
+            <li><strong>Rule 3 (Hot Potato):</strong> Cost to 1c = 5, Cost to 1d = 3 → <span class="result">Route B wins</span>.</li>
+          </ol>
+          <p><strong>Result:</strong> Router 1b installs the route via 1d → AS3, because the NEXT-HOP is closer (hot potato).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Local Preference Overrides Shorter AS-PATH</div>
+          <p><strong>Scenario:</strong> Router receives two routes for 172.16.0.0/16:</p>
+          <ul>
+            <li><strong>Route A:</strong> LOCAL_PREF = 200, AS-PATH = [300, 400, 500] (length 3)</li>
+            <li><strong>Route B:</strong> LOCAL_PREF = 100, AS-PATH = [100] (length 1)</li>
+          </ul>
+
+          <p><strong>Decision Process:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>Rule 1 (LOCAL_PREF):</strong> Route A = 200 > Route B = 100 → <span class="result">Route A wins immediately</span>.</li>
+          </ol>
+          <p><strong>Key takeaway:</strong> LOCAL_PREF is always evaluated first. Even though Route B has a much shorter AS-PATH, the locally configured preference overrides. This is how ASs implement routing policies (e.g., prefer customer-learned routes).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: AS-PATH Prepending and Its Effect</div>
+          <p><strong>Scenario:</strong> ISP-A wants to make its path less preferred for backup use only. It configures <strong>AS-PATH prepending</strong> on its primary competitor ISP-B's prefix.</p>
+          <p>Prefix: 10.0.0.0/16</p>
+          <ul>
+            <li><strong>Via ISP-A (primary):</strong> LOCAL_PREF = 100, AS-PATH = [100] (length 1), NEXT-HOP cost = 10</li>
+            <li><strong>Via ISP-B (backup):</strong> LOCAL_PREF = 100, AS-PATH = [200, 200, 200] (length 3, prepended), NEXT-HOP cost = 5</li>
+          </ul>
+
+          <p><strong>Decision Process:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>Rule 1 (LOCAL_PREF):</strong> Both = 100 → tie.</li>
+            <li><strong>Rule 2 (AS-PATH):</strong> Length 1 < Length 3 → <span class="result">Via ISP-A wins</span>.</li>
+          </ol>
+          <p><strong>Key takeaway:</strong> AS-PATH prepending makes ISP-B's path appear longer, causing traffic to prefer ISP-A. If ISP-A fails, ISP-B's route becomes the best. This is a common technique for implementing <strong>primary/backup BGP peering</strong>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Four-Way Tie Broken by Router ID</div>
+          <p><strong>Scenario:</strong> Router receives four routes for 192.168.0.0/16, all with identical:</p>
+          <ul>
+            <li>LOCAL_PREF = 100</li>
+            <li>AS-PATH = [100, 200] (length 2)</li>
+            <li>IGP cost to NEXT-HOP = 10</li>
+          </ul>
+          <p>The four BGP peers have Router IDs: 10.0.0.1, 10.0.0.2, 10.0.0.3, 10.0.0.4</p>
+
+          <p><strong>Decision Process:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>Rules 1–3:</strong> All tie.</li>
+            <li><strong>Rule 4 (Router ID):</strong> Lowest = 10.0.0.1 → <span class="result">Route from peer 10.0.0.1 wins</span>.</li>
+          </ol>
+          <p><strong>Key takeaway:</strong> Router ID is the ultimate tie-breaker. It ensures deterministic route selection when all other attributes are equal.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Forwarding Table Construction (Figure 5.11)</div>
+          <p><strong>Topology:</strong> AS1 with routers 1a, 1b, 1c, 1d. AS2 interconnects via 2a, 2b. AS3 via 3a.</p>
+          <p>Router 1b learns about prefix 10.3.0.0/16. It has two possible paths:</p>
+          <ul>
+            <li><strong>Path 1</strong>: 1b → 1c → (eBGP) → 2a → ... (NEXT-HOP = 2a, IGP cost = 5)</li>
+            <li><strong>Path 2</strong>: 1b → 1d → (eBGP) → 2b → ... (NEXT-HOP = 2b, IGP cost = 15)</li>
+          </ul>
+
+          <p><strong>Step-by-step forwarding table construction:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li>1b learns both paths via iBGP from 1c and 1d.</li>
+            <li>Both have LOCAL_PREF = 100 → tie.</li>
+            <li>Both have AS-PATH = [2, 3] → tie.</li>
+            <li>IGP cost to NEXT-HOP: 5 vs 15 → <span class="result">Path 1 wins</span>.</li>
+            <li>1b installs: destination 10.3.0.0/16 → interface to 1c → NEXT-HOP 2a.</li>
+          </ol>
+
+          <p>The forwarding table entry at 1b:</p>
+          <div class="code">
+Prefix         | Next Hop | Interface | IGP Cost<br>
+10.3.0.0/16    | 2a       | Gi0/0     | 5
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Summary -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>BGP Route Selection — Complete Summary</h2>
+
+        <div class="formula">
+          <div class="label">The 4-Rule Algorithm (Memorize This)</div>
+          <div class="expr">
+1. Highest LOCAL_PREF — Policy preference<br>
+2. Shortest AS-PATH — Fewest AS hops<br>
+3. Lowest IGP cost to NEXT-HOP — Hot potato<br>
+4. Lowest BGP Router ID — Ultimate tie-breaker
+          </div>
+          <div class="desc">Rules are evaluated sequentially. Stop at the first rule that breaks the tie.</div>
+        </div>
+
+        <h3>Comparison of Route Selection Criteria</h3>
+        <table>
+          <tr><th>Rule</th><th>Attribute</th><th>Meaning</th><th>Winner</th><th>Scope</th></tr>
+          <tr><td>1</td><td>LOCAL_PREF</td><td>Administrative preference</td><td>Highest</td><td>Intra-AS policy</td></tr>
+          <tr><td>2</td><td>AS-PATH</td><td>Number of ASs traversed</td><td>Shortest</td><td>Inter-AS path length</td></tr>
+          <tr><td>3</td><td>NEXT-HOP cost</td><td>IGP distance to exit point</td><td>Lowest</td><td>Intra-AS cost</td></tr>
+          <tr><td>4</td><td>Router ID</td><td>BGP speaker identifier</td><td>Lowest</td><td>Deterministic tie-break</td></tr>
+        </table>
+
+        <h3>Common Exam Scenarios</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Scenario A: Policy Preference</h3>
+            <p>Route A: LOCAL_PREF = 200, AS-PATH = 10</p>
+            <p>Route B: LOCAL_PREF = 100, AS-PATH = 1</p>
+            <p><span class="result">Winner: A</span> (Rule 1 decides)</p>
+          </div>
+          <div class="card">
+            <h3>Scenario B: Path Length</h3>
+            <p>Both LOCAL_PREF = 100</p>
+            <p>Route A: AS-PATH = 3</p>
+            <p>Route B: AS-PATH = 5</p>
+            <p><span class="result">Winner: A</span> (Rule 2 decides)</p>
+          </div>
+          <div class="card">
+            <h3>Scenario C: Hot Potato</h3>
+            <p>Both LOCAL_PREF = 100, AS-PATH = 3</p>
+            <p>Route A: IGP cost to NH = 2</p>
+            <p>Route B: IGP cost to NH = 8</p>
+            <p><span class="result">Winner: A</span> (Rule 3 decides)</p>
+          </div>
+          <div class="card">
+            <h3>Scenario D: Router ID</h3>
+            <p>All prior rules tie</p>
+            <p>RTR-ID A: 1.1.1.1</p>
+            <p>RTR-ID B: 9.9.9.9</p>
+            <p><span class="result">Winner: A</span> (Rule 4 decides)</p>
+          </div>
+        </div>
+
+        <h3>Forwarding Table Construction Summary</h3>
+        <p>The forwarding table is populated by taking the <strong>best BGP route</strong> (after the 4-rule algorithm) and combining it with the IGP next-hop information:</p>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li>Learn all BGP routes for a prefix via UPDATE messages.</li>
+          <li>Apply the 4-rule algorithm to select the single best route.</li>
+          <li>Resolve the NEXT-HOP via the IGP routing table (find the outgoing interface).</li>
+          <li>Install the prefix + next-hop + interface into the forwarding table.</li>
+        </ol>
+
+        <div class="warning">The forwarding table (FIB) is the <strong>final output</strong> used for actual packet forwarding. A BGP route that cannot resolve its NEXT-HOP (e.g., no IGP route) will not be installed, even if it wins the BGP selection.</div>
+      </div>
+
+      <div class="section">
+        <h2>Hot Potato vs. Optimal Routing</h2>
+        <table>
+          <tr><th>Aspect</th><th>Hot Potato</th><th>Cold Potato (Optimal)</th></tr>
+          <tr><td>Goal</td><td>Minimize intra-AS cost</td><td>Minimize end-to-end cost</td></tr>
+          <tr><td>BGP Rule</td><td>Rule 3 (default)</td><td>Requires LOCAL_PREF or MED tuning</td></tr>
+          <tr><td>Cooperation</td><td>Selfish (AS-centric)</td><td>Cooperative (Internet-centric)</td></tr>
+          <tr><td>Implementation</td><td>Automatic (based on IGP)</td><td>Manual policy configuration</td></tr>
+          <tr><td>Typical Use</td><td>Default behavior</td><td>Paid peering, traffic engineering</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سیاست مسیریابی BGP — جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>سیاست مسیریابی BGP</h1>
+  <p class="subtitle">لایه شبکه — مسیریابی بین-AS و کنترل سیاست برای امتحان</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مبانی سیاست</button>
+      <button class="tab" onclick="showSection('tab2')">مشتری/ارائه‌دهنده</button>
+      <button class="tab" onclick="showSection('tab3')">هم‌ترازی</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>انتخاب مسیر BGP و سیاست</h2>
+        <p>BGP پروتکل مسیریابی بین-AS واقعی اینترنت است. برخلاف پروتکل‌های درون-AS که برای کارایی بهینه می‌شوند، BGP اساساً مبتنی بر سیاست است. سیاست می‌تواند بر همه ملاحظات مسیریابی دیگر از جمله کوتاه‌ترین مسیر AS یا مسیریابی سیب‌زمینی داغ غلبه کند.</p>
+
+        <h3>الگوریتم انتخاب مسیر BGP</h3>
+        <p>وقتی مسیریاب دو یا چند مسیر به یک پیشوند دارد، BGP از قوانین مرتب زیر استفاده می‌کند:</p>
+
+        <div class="formula">
+          <div class="label">اولویت انتخاب مسیر BGP (بالا به پایین):</div>
+          <div class="expr">1. LOCAL_PREF (بالاترین برنده می‌شود)</div>
+          <div class="expr">2. کوتاه‌ترین AS-PATH</div>
+          <div class="expr">3. نزدیک‌ترین NEXT-HOP (سیب‌زمینی داغ)</div>
+          <div class="expr">4. BGP Router ID (کمترین برنده می‌شود)</div>
+        </div>
+
+        <div class="warning">BGP یک الگوریتم کوتاه‌ترین مسیر نیست. سیاست بر طول مسیر غلبه می‌کند. مسیری از 10 AS با LOCAL_PREF بالا بر مسیر 2-AS با پیش‌فرض ترجیح داده می‌شود.</div>
+
+        <h3>ویژگی‌های BGP</h3>
+        <table>
+          <tr><th>ویژگی</th><th>نوع</th><th>هدف</th></tr>
+          <tr><td>LOCAL_PREF</td><td>اجباری</td><td>نشان‌دهنده نقطه خروج ترجیحی برای AS</td></tr>
+          <tr><td>AS-PATH</td><td>اجباری</td><td>دنباله ASهای عبوری؛ تشخیص حلقه و طول مسیر</td></tr>
+          <tr><td>NEXT-HOP</td><td>اجباری</td><td>آدرس IP مسیریاب گام بعدی</td></tr>
+          <tr><td>MED</td><td>اختیاری</td><td>پیشنهاد نقطه ورود به AS</td></tr>
+          <tr><td>Community</td><td>اختیاری</td><td>برچسب برای اقدامات گروهی</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>روابط مشتری/ارائه‌دهنده</h2>
+        <p>در سلسله‌مراتب اینترنت، ISPها روابط مشتری-ارائه‌دهنده تشکیل می‌دهند. رابطه تجاری نحوه اعلام مسیرها و حمل ترافیک را تعیین می‌کند.</p>
+
+        <h3>شکل 5.13: توپولوژی 6-AS</h3>
+        <div class="formula">
+          <div class="label">توپولوژی شبکه (شکل 5.13):</div>
+          <div class="expr">主干: A - B - C (ارائه‌دهندگان主干 همتا)</div>
+          <div class="expr">دسترسی: W (مشتری A), X (چند-متصل), Y (مشتری C)</div>
+        </div>
+
+        <h3>قوانین ترافیک مشتری/ارائه‌دهنده</h3>
+        <table>
+          <tr><th>قانون</th><th>مشتری</th><th>ارائه‌دهنده</th></tr>
+          <tr><td>مبدأ ترافیک</td><td>باید در شبکه مشتری باشد</td><td>هر مبدأ</td></tr>
+          <tr><td>مقصد ترافیک</td><td>باید در شبکه مشتری باشد</td><td>هر مقصد</td></tr>
+          <tr><td>ترافیک عبوری</td><td>مجاز نیست</td><td>حمل می‌کند</td></tr>
+          <tr><td>اعلان مسیر</td><td>پیشوندهای خود را اعلام می‌کند</td><td>کل اینترنت را اعلام می‌کند</td></tr>
+        </table>
+
+        <h3>اعلان مسیر انتخابی: شبکه‌های Stub</h3>
+        <p>یک ISP دسترسی مانند X در شکل 5.13 به دو ارائه‌دهنده (B و C) متصل است. برای عملکرد به عنوان شبکه stub، X باید مسیرهای خود را <strong>انتخابی</strong> اعلام کند. X به همسایگان B و C اعلام می‌کند که <strong>هیچ مسیری به جز خودش ندارد</strong>. حتی اگر X مسیر X→C→Y را بداند، این مسیر را به B اعلام <strong>نمی‌کند</strong>.</p>
+
+        <div class="warning">اگر یک AS stub چنده‌متصل مسیرهای یادگرفته شده از یک ارائه‌دهنده را به دیگری اعلام کند، به AS تبدیل تبدیل می‌شود و باید ترافیک سایر شبکه‌ها را حمل کند — احتمالاً نقض توافق تجاری.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>توافقات هم‌ترازی و ترافیک عبوری</h2>
+        <p>هم‌ترازی یک ترتیب تجاری است که در آن دو ISP توافق می‌کنند ترافیک بین شبکه‌های خود را بدون هزینه تبادل کنند.</p>
+
+        <h3>هم‌ترازی در مقابل عبور</h3>
+        <table>
+          <tr><th>جنبه</th><th>هم‌ترازی</th><th>عبور</th></tr>
+          <tr><td>پرداخت</td><td>بدون تبادل پول</td><td>مشتری به ارائه‌دهنده پرداخت می‌کند</td></tr>
+          <tr><td>حوزه مسیر</td><td>فقط مسیرهای مشتریان همتا</td><td>جدول کامل اینترنت</td></tr>
+          <tr><td>نوع ترافیک</td><td>فقط بین مشتریان همتا</td><td>همه مقاصد</td></tr>
+        </table>
+
+        <h3>قوانین ترافیک هم‌ترازی</h3>
+        <p>در توافق هم‌ترازی، ISP معمولاً:</p>
+        <ul>
+          <li>فقط مسیرهای شبکه‌های مشتری خود را به همتا اعلام می‌کند</li>
+          <li>ترافیک عبوری بین همتا و شبکه‌های دیگر را حمل <strong>نمی‌کند</strong></li>
+          <li>مسیرهای همتا را به سایر همتایان اعلام <strong>نمی‌کند</strong></li>
+        </ul>
+
+        <div class="section">
+          <h2>چرا بین-AS با درون-AS متفاوت است</h2>
+          <table>
+            <tr><th>ملاحظه</th><th>بین-AS (BGP)</th><th>درون-AS (OSPF, RIP)</th></tr>
+            <tr><td><span class="highlight">سیاست</span></td><td>سیاست غالب است</td><td>دامنه اداری واحد</td></tr>
+            <tr><td><span class="highlight">مقیاس</span></td><td>باید مقیاس اینترنت را مدیریت کند</td><td>محدود به یک AS</td></tr>
+            <tr><td><span class="highlight">کارایی</span></td><td>اولویت دوم</td><td>اولویت اول</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های حل شده</h2>
+
+        <div class="example">
+          <div class="title">مثال 1: اعلان مسیر Stub چندمتصل</div>
+          <p><strong>سناریو:</strong> AS X به ارائه‌دهندگان B و C متصل است. X مسیر X→C→Y را یاد گرفته است. آیا X باید این مسیر را به B اعلام کند؟</p>
+          <p><strong>راه‌حل:</strong> خیر. اگر X مسیر را به B اعلام کند، B مسیر B→X→C→Y را نصب می‌کند و X به AS تبدیل تبدیل می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 2: جلوگیری از ترافیک عبوری ارائه‌دهنده</div>
+          <p>ارائه‌دهنده B مسیر A→W را از همتا A یاد گرفته است. آیا B باید BAW را به C اعلام کند؟ خیر — اگر این کار را کند، ترافیک از C به W از B عبور می‌کند بدون اینکه B هیچ درآمدی داشته باشد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 3: LOCAL_PREF برای انتخاب خروج</div>
+          <p>AS X به B و C متصل است. B ارزان‌تر است. X LOCAL_PREF را روی مسیرهای B=150 و روی مسیرهای C=100 تنظیم می‌کند. <span class="result">همه ترافیک از B خارج می‌شود مگر اینکه B خراب شود.</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال 4: AS_PATH Prepending</div>
+          <p>AS X دو پیوند به B دارد. در پیوند اصلی: AS-PATH تک. در پیوند پشتیبان: AS-PATH سه بار تکرار. <span class="result">ترافیک ورودی مسیر کوتاه‌تر (اصلی) را ترجیح می‌دهد.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
