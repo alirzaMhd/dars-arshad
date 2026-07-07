@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Congestion Control - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Congestion Control</h1>
+  <p class="subtitle">Transport Layer — Section 3.7.1 | Classic TCP Tahoe &amp; Reno, CUBIC</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Slow Start</button>
+      <button class="tab" onclick="showSection('tab3')">Congestion Avoidance</button>
+      <button class="tab" onclick="showSection('tab4')">Fast Recovery &amp; AIMD</button>
+      <button class="tab" onclick="showSection('tab5')">TCP CUBIC</button>
+      <button class="tab" onclick="showSection('tab6')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Overview of TCP Congestion Control</h2>
+        <p>TCP limits its sending rate using a congestion window (cwnd). The sender cannot have more than cwnd bytes of unacknowledged data. The rate is roughly cwnd/RTT.</p>
+
+        <div class="formula">
+          <div class="label">Fundamental Constraint</div>
+          <div class="expr">LastByteSent − LastByteAcked ≤ min{cwnd, rwnd}</div>
+          <div class="desc">Unacknowledged data limited by both congestion window and receive window. cwnd primarily limits rate during congestion control.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Send Rate (approx)</div>
+          <div class="expr">rate ≈ cwnd / RTT &nbsp;bytes/sec</div>
+          <div class="desc">When loss/delay is negligible and cwnd bytes sent per RTT.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Three Principles</h3>
+            <p>1. <span class="highlight">Loss → Congestion</span></p>
+            <p class="note">Timeout or 3 duplicate ACKs = loss event</p>
+            <p>2. <span class="highlight">ACK → Good</span></p>
+            <p class="note">ACK signals successful delivery, increase rate</p>
+            <p>3. <span class="highlight">Bandwidth Probing</span></p>
+            <p class="note">Increase until loss, then back off, repeat</p>
+          </div>
+          <div class="card">
+            <h3>Key Variables</h3>
+            <p><span class="highlight">cwnd</span> — congestion window</p>
+            <p><span class="highlight">ssthresh</span> — slow start threshold</p>
+            <p><span class="dim">Loss event:</span> timeout OR 3 dupACKs</p>
+            <p><span class="dim">Self-clocking:</span> ACKs trigger cwnd increase</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Self-Clocking:</strong> TCP uses ACKs to clock (trigger) its increase in cwnd. Faster ACK arrival → faster window growth. This naturally adapts to the RTT of the path.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Historical &amp; Standardization References</h3>
+            <p><span class="dim">[Jacobson 1988]</span> — "Congestion Avoidance and Control" first described the TCP congestion control algorithm</p>
+            <p><span class="dim">RFC 2581</span> — TCP Congestion Control (original standard)</p>
+            <p><span class="dim">RFC 5681</span> — TCP Congestion Control (current standard, obsoletes RFC 2581)</p>
+          </div>
+          <div class="card">
+            <h3>Congestion Control FSM</h3>
+            <p><span class="highlight">Slow Start:</span> cwnd &lt; ssthresh, exponential growth</p>
+            <p>↓ cwnd ≥ ssthresh</p>
+            <p><span class="dim">Congestion Avoidance:</span> linear growth (+1 MSS/RTT)</p>
+            <p>↓ loss → ssthresh = cwnd/2</p>
+            <p>Timeout → cwnd = 1 (back to Slow Start)</p>
+            <p>3 dupACK → cwnd = cwnd/2 (Reno Fast Recovery)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Slow Start</h2>
+        <p>At connection start, cwnd is initialized to 1 MSS (RFC 3390). TCP doubles cwnd every RTT until it detects congestion or reaches ssthresh.</p>
+
+        <div class="formula">
+          <div class="label">Slow Start Growth (per ACK)</div>
+          <div class="expr">cwnd += 1 MSS &nbsp;(doubles every RTT)</div>
+          <div class="desc">For each ACK received, cwnd increases by 1 MSS. This doubles the window per RTT (exponential growth).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">On Loss (timeout)</div>
+          <div class="expr">ssthresh = cwnd/2  &nbsp;&nbsp;  cwnd = 1 MSS</div>
+          <div class="desc">After timeout, reset to 1 MSS and start slow start again. ssthresh records half the loss window.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Slow Start Timeline</h3>
+            <p>t=0: cwnd = 1 MSS, send 1 segment</p>
+            <p>t=RTT: ACK arrives, cwnd = 2 MSS, send 2</p>
+            <p>t=2RTT: both ACKed, cwnd = 4, send 4</p>
+            <p>t=3RTT: cwnd = 8, send 8</p>
+            <p>... Exponentially fast</p>
+          </div>
+          <div class="card">
+            <h3>When Slow Start Ends</h3>
+            <p>1. <span class="dim">Timeout</span> → cwnd=1, ssthresh=cwnd/2</p>
+            <p>2. <span class="dim">cwnd ≥ ssthresh</span> → transition to congestion avoidance</p>
+            <p>3. <span class="dim">3 duplicate ACKs</span> → fast retransmit + fast recovery</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Despite the name "slow start," the growth is <em>exponential</em>, not slow at all! The name comes from the fact that it starts from cwnd=1 rather than pumping the full receiver window immediately.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Congestion Avoidance</h2>
+        <p>Once cwnd reaches ssthresh, TCP switches to linear (additive) increase: +1 MSS per RTT. This is the AIMD phase.</p>
+
+        <div class="formula">
+          <div class="label">Linear Increase (per ACK)</div>
+          <div class="expr">cwnd += MSS × (MSS / cwnd)</div>
+          <div class="desc">This gives +1 MSS per RTT. If cwnd = 10 MSS, each ACK increases cwnd by MSS/10.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">On Loss</div>
+          <div class="expr">Timeout: &nbsp;cwnd = 1 MSS, ssthresh = cwnd/2</div>
+          <div class="expr">Triple dupACK: &nbsp;cwnd = cwnd/2, ssthresh = cwnd/2</div>
+          <div class="desc">Timeout is treated more severely (full reset to 1). Triple dupACK only halves cwnd (Reno).</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCP Tahoe</h3>
+            <p>• On <em>any</em> loss: cwnd = 1 MSS</p>
+            <p>• Always enters slow start after loss</p>
+            <p>• Simpler, more aggressive reduction</p>
+            <p>• Lower throughput after triple dupACK</p>
+          </div>
+          <div class="card">
+            <h3>TCP Reno</h3>
+            <p>• On timeout: cwnd = 1 MSS (slow start)</p>
+            <p>• On 3 dupACK: cwnd = cwnd/2 (fast recovery)</p>
+            <p>• Differentiates between mild and severe loss</p>
+            <p>• Better throughput than Tahoe</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Key Difference:</strong> Tahoe always goes back to slow start (cwnd=1). Reno distinguishes: timeouts are severe (cwnd=1), but triple dupACKs are mild (cwnd/=2). This makes Reno much more efficient when packet loss is due to occasional drops.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Fast Recovery &amp; AIMD</h2>
+
+        <h3>Fast Recovery (Reno only)</h3>
+        <p>After receiving 3 duplicate ACKs, Reno enters fast recovery:</p>
+
+        <div class="formula">
+          <div class="label">On Each Duplicate ACK (fast recovery)</div>
+          <div class="expr">cwnd += 1 MSS</div>
+          <div class="desc">Inflates cwnd to keep pipe full while waiting for retransmission.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">On New ACK (exit fast recovery)</div>
+          <div class="expr">cwnd = ssthresh</div>
+          <div class="desc">Returns to congestion avoidance at half the pre-loss rate.</div>
+        </div>
+
+        <h3>AIMD: Additive Increase / Multiplicative Decrease</h3>
+        <p>The saw-tooth pattern: cwnd increases by 1 MSS per RTT (additive), halves on triple dupACK (multiplicative).</p>
+
+        <div class="formula">
+          <div class="label">Average Throughput (Reno)</div>
+          <div class="expr">Average Throughput = 0.75 × W / RTT</div>
+          <div class="desc">W = window size at loss event. W/2 at bottom, W at top, average = 0.75W.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>AIMD Properties</h3>
+            <p>• Fairness: converges to equal share</p>
+            <p>• Efficiency: probes available bandwidth</p>
+            <p>• Stability: reduces rate on congestion</p>
+            <p>• Distributed: no central coordinator</p>
+          </div>
+          <div class="card">
+            <h3>Saw-Tooth Pattern</h3>
+            <p>cwnd: 10 → 11 → 12 → ... → 20 (loss)</p>
+            <p>↓</p>
+            <p>cwnd: 10 (after halving)</p>
+            <p>→ 11 → 12 → ... → 20 (loss again)</p>
+            <p>Average ≈ 15 segments</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Fast recovery is NOT present in TCP Tahoe. Tahoe always goes to slow start (cwnd=1). Fast recovery is a Reno-specific optimization. Many exam questions test this distinction.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>TCP CUBIC</h2>
+        <p>T he default congestion control algorithm in Linux. Unlike Reno's linear growth, CUBIC uses a cubic function to grow cwnd, allowing faster recovery to the pre-loss rate.</p>
+
+        <div class="formula">
+          <div class="label">CUBIC Window Growth</div>
+          <div class="expr">W(t) = C × (t − K)³ + W<sub>max</sub></div>
+          <div class="desc">C = scaling constant, t = time since loss, K = time to reach W<sub>max</sub>. When t &lt; K, growth is fast near W<sub>max</sub>; when t &gt; K, growth accelerates to find new bandwidth.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>CUBIC vs Reno</h3>
+            <p><span class="highlight">CUBIC</span> — Quickly ramps to W<sub>max</sub></p>
+            <p>Gentle probing near W<sub>max</sub></p>
+            <p>If congestion unchanged, stays near W<sub>max</sub></p>
+            <p>If congestion changed, probes quickly</p>
+          </div>
+          <div class="card">
+            <h3>Deployment</h3>
+            <p><span class="dim">~50%</span> of top 5000 web servers</p>
+            <p>Default in Linux kernel</p>
+            <p>Widely deployed in data centers</p>
+            <p>RFC 8312</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Why Cubic?</strong> In high-BW long-RTT paths, Reno's linear growth takes too long to reach the pre-loss rate. CUBIC's cubic growth gets there fast, then probes carefully near the known congestion point.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1 — Slow Start cwnd Evolution</div>
+          <p><strong>Setup:</strong> MSS = 1460 bytes, RTT = 200ms, ssthresh initially = 64 KB (≈ 44 MSS). No loss occurs during slow start.</p>
+          <table>
+            <tr><th>RTT</th><th>cwnd (MSS)</th><th>Segments Sent</th><th>Rate (Mbps)</th></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>0.058</td></tr>
+            <tr><td>1</td><td>2</td><td>2</td><td>0.117</td></tr>
+            <tr><td>2</td><td>4</td><td>4</td><td>0.234</td></tr>
+            <tr><td>3</td><td>8</td><td>8</td><td>0.467</td></tr>
+            <tr><td>4</td><td>16</td><td>16</td><td>0.934</td></tr>
+            <tr><td>5</td><td>32</td><td>32</td><td>1.869</td></tr>
+            <tr><td>6</td><td>44</td><td>44</td><td>2.570</td></tr>
+          </table>
+          <p>At RTT 6, cwnd (44) reaches ssthresh (44). Slow start ends, congestion avoidance begins.</p>
+          <p><span class="result">Observation:</span> In 6 RTTs (1.2 sec), rate grows from 58 Kbps to 2.57 Mbps — exponential growth!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Congestion Avoidance cwnd Evolution</div>
+          <p><strong>Setup:</strong> MSS = 1 KB, ssthresh = 32 KB, cwnd starts at 32 KB in congestion avoidance. RTT = 100ms.</p>
+          <p>cwnd grows by 1 MSS (1 KB) per RTT:</p>
+          <table>
+            <tr><th>RTT</th><th>cwnd (KB)</th><th>Rate (Mbps)</th></tr>
+            <tr><td>0</td><td>32</td><td>2.56</td></tr>
+            <tr><td>1</td><td>33</td><td>2.64</td></tr>
+            <tr><td>2</td><td>34</td><td>2.72</td></tr>
+            <tr><td>...</td><td>...</td><td>...</td></tr>
+            <tr><td>8</td><td>40</td><td>3.20</td></tr>
+          </table>
+          <p>At RTT 8, loss occurs at cwnd = 40 KB. Under Reno: cwnd = 20 KB (halved), ssthresh = 20 KB. Under Tahoe: cwnd = 1 KB (reset), slow start begins again.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — Tahoe vs Reno on Triple DupACK</div>
+          <p><strong>Setup:</strong> cwnd = 24 MSS, ssthresh = 12 MSS when 3 duplicate ACKs arrive.</p>
+          <table>
+            <tr><th>Action</th><th>Tahoe</th><th>Reno</th></tr>
+            <tr><td>ssthresh (both)</td><td>24/2 = 12</td><td>24/2 = 12</td></tr>
+            <tr><td>New cwnd</td><td>1 MSS</td><td>12 + 3 = 15 MSS</td></tr>
+            <tr><td>Next phase</td><td>Slow start (exponential)</td><td>Fast recovery (linear from 15)</td></tr>
+            <tr><td>Time to reach 24 MSS again</td><td>~5 RTTs (1→2→4→8→16→24)</td><td>~9 RTTs (15→16→...→24)</td></tr>
+          </table>
+          <p><span class="result">Key insight:</span> Tahoe recovers faster in terms of RTT count but at the cost of losing all window progress. In practice, Tahoe's cwnd=1 reset is very costly for throughput.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4 — Average Throughput Calculation</div>
+          <p><strong>Setup:</strong> MSS = 1500 bytes, RTT = 200ms. Loss occurs when cwnd = 60 KB (40 segments).</p>
+          <p>The Reno saw-tooth: cwnd ranges from W/2 = 30 KB to W = 60 KB.</p>
+          <p><strong>Average cwnd:</strong> (30 + 60) / 2 = 45 KB (0.75 × 60 KB = 45 KB ✓)</p>
+          <p><strong>Average throughput:</strong> (45 KB × 8 bits/byte) / 0.200 sec = 360 Kb / 0.2 = 1.8 Mbps</p>
+          <p><span class="result">Throughput = 0.75 × 60 KB / 200ms = 1.8 Mbps</span></p>
+          <div class="formula">
+            <div class="label">Loss Rate vs Throughput</div>
+            <div class="expr">Average Throughput = (1 / RTT) × √(1.5 × MSS / loss_rate)</div>
+            <div class="desc">For the example, to achieve 1.8 Mbps (1500 KB/s) with MSS=1500B, RTT=200ms: loss_rate ≈ 1.5 / (37.5²) ≈ 0.1%</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5 — CUBIC Ramp-Up Comparison</div>
+          <p><strong>Setup:</strong> W<sub>max</sub> = 100 segments. Loss at t=0. RTT = 100ms.</p>
+          <p><strong>Reno:</strong> cwnd drops to 50. Grows by 1 MSS/RTT. Takes 50 RTTs (5 sec) to return to 100.</p>
+          <p><strong>CUBIC:</strong> Calculates K such that cwnd reaches W<sub>max</sub> quickly. For typical C, K ≈ 5 RTTs. CUBIC grows fast initially (cubic), then gently probes near 100. Returns to 100 in ~5 RTTs (0.5 sec).</p>
+          <table>
+            <tr><th>Time after loss</th><th>Reno cwnd</th><th>CUBIC cwnd</th></tr>
+            <tr><td>0 RTT</td><td>50</td><td>50</td></tr>
+            <tr><td>1 RTT</td><td>51</td><td>~62</td></tr>
+            <tr><td>2 RTT</td><td>52</td><td>~78</td></tr>
+            <tr><td>3 RTT</td><td>53</td><td>~92</td></tr>
+            <tr><td>4 RTT</td><td>54</td><td>~99</td></tr>
+            <tr><td>5 RTT</td><td>55</td><td>100</td></tr>
+            <tr><td>10 RTT</td><td>60</td><td>~101 (gentle probing)</td></tr>
+          </table>
+          <p><span class="result">Result:</span> CUBIC achieves near W<sub>max</sub> throughput 10x faster than Reno. In high-BDP networks, this gives CUBIC significantly higher average throughput.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Connection Management - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Connection Management</h1>
+  <p class="subtitle">Transport Layer — Section 3.5.6 | Complete Guide</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Three-Way Handshake</button>
+      <button class="tab" onclick="showSection('tab2')">Connection Teardown</button>
+      <button class="tab" onclick="showSection('tab3')">TCP State Machine</button>
+      <button class="tab" onclick="showSection('tab4')">SYN Flood &amp; Port Scanning</button>
+      <button class="tab" onclick="showSection('tab5')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Three-Way Handshake</h2>
+        <p>Before two application processes can exchange data, they must handshake to establish parameters. The client initiates, the server responds, and the client acknowledges — three segments total.</p>
+
+        <div class="formula">
+          <div class="label">Handshake Step 1: SYN</div>
+          <div class="expr">SYN=1, seq=client_isn</div>
+          <div class="desc">Client chooses random initial sequence number (client_isn), sets SYN bit, sends to server. No application data.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Handshake Step 2: SYNACK</div>
+          <div class="expr">SYN=1, seq=server_isn, ack=client_isn+1</div>
+          <div class="desc">Server allocates buffers, chooses its own initial sequence number (server_isn), acknowledges client's SYN.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Handshake Step 3: ACK</div>
+          <div class="expr">SYN=0, seq=client_isn+1, ack=server_isn+1</div>
+          <div class="desc">Client acknowledges server's SYNACK. SYN bit set to 0. This segment may carry application data. The client also allocates buffers and variables to the connection in this step.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Rock Climber and Belayer Analogy</div>
+          <p>A rock climber and belayer use a <strong>three-way handshake</strong> identical to TCP's to ensure both sides are ready before the climber begins ascent. The climber signals readiness (SYN), the belayer confirms and signals own readiness (SYNACK), and the climber acknowledges (ACK) before starting to climb (data transfer).</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>• Full-duplex: both sides can send simultaneously</p>
+            <p>• Point-to-point: exactly two hosts</p>
+            <p>• State initialized: buffers, seq numbers, window sizes</p>
+            <p>• MSS negotiated during handshake</p>
+          </div>
+          <div class="card">
+            <h3>Why Three-Way?</h3>
+            <p>• Prevents stale SYN from old connection</p>
+            <p>• Ensures both sides agree on initial seq numbers</p>
+            <p>• Two-way handshake is vulnerable to duplicate SYNs</p>
+            <p>• Three-way provides synchronization with bounded state</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> The SYN bit is set to 1 only during the first two steps. After the connection is established (Step 3 onward), the SYN bit is always 0. Do not confuse SYN with data-carrying segments.
+        </div>
+
+        <div class="note">
+          <strong>Protocol Detail:</strong> The initial sequence numbers (client_isn, server_isn) are chosen randomly to prevent security attacks. A predictable ISN allows attackers to forge TCP segments.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Connection Teardown</h2>
+        <p>Either endpoint can close a TCP connection. The standard four-way teardown uses FIN and ACK segments to gracefully release resources.</p>
+
+        <div class="formula">
+          <div class="label">Teardown Step 1: Client FIN</div>
+          <div class="expr">FIN=1, seq=x</div>
+          <div class="desc">Client application calls close(), sending FIN segment to server.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Teardown Step 2: Server ACK</div>
+          <div class="expr">ACK, seq=y, ack=x+1</div>
+          <div class="desc">Server acknowledges the FIN. Connection half-closed: server can still send data.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Teardown Step 3: Server FIN</div>
+          <div class="expr">FIN=1, seq=y, ack=x+1</div>
+          <div class="desc">Server finishes its data transmission and sends its own FIN.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Teardown Step 4: Client ACK</div>
+          <div class="expr">ACK, seq=x+1, ack=y+1</div>
+          <div class="desc">Client acknowledges server's FIN. Client enters TIME_WAIT (30s–2min) before full closure.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Half-Close State</h3>
+            <p>After Step 2, the connection is half-closed:</p>
+            <p>• Client → Server: closed</p>
+            <p>• Server → Client: still open</p>
+            <p>• Server can finish sending data</p>
+          </div>
+          <div class="card">
+            <h3>TIME_WAIT Purpose</h3>
+            <p>• Ensures final ACK reaches server</p>
+            <p>• Allows retransmission of final ACK if lost</p>
+            <p>• Prevents delayed segments from new connection</p>
+            <p>• Duration: 30s, 1min, or 2min (OS-dependent)</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> The teardown is often called a "four-way handshake" but it is actually 4 segments, not 4 steps in a single exchange. The server can send its FIN together with its data, combining Steps 2 and 3 in some implementations.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>TCP State Machine</h2>
+        <p>TCP connections transition through well-defined states. The client and server have different state sequences.</p>
+
+        <h3>Client States</h3>
+        <div class="code">
+CLOSED → [send SYN] → SYN_SENT → [recv SYN+ACK, send ACK] → ESTABLISHED
+  → [send FIN] → FIN_WAIT_1 → [recv ACK] → FIN_WAIT_2 → [recv FIN, send ACK]
+  → TIME_WAIT → (timeout) → CLOSED
+        </div>
+
+        <h3>Server States</h3>
+        <div class="code">
+CLOSED → [create listen socket] → LISTEN → [recv SYN, send SYN+ACK] → SYN_RCVD
+  → [recv ACK] → ESTABLISHED → [recv FIN, send ACK] → CLOSE_WAIT
+  → [send FIN] → LAST_ACK → [recv ACK] → CLOSED
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Client States</h3>
+            <p><span class="highlight">CLOSED</span> — No connection</p>
+            <p><span class="highlight">SYN_SENT</span> — SYN sent, waiting for SYNACK</p>
+            <p><span class="highlight">ESTABLISHED</span> — Data transfer</p>
+            <p><span class="highlight">FIN_WAIT_1</span> — FIN sent, waiting for ACK</p>
+            <p><span class="highlight">FIN_WAIT_2</span> — ACK received, waiting for FIN</p>
+            <p><span class="highlight">TIME_WAIT</span> — Waiting for delayed segments</p>
+          </div>
+          <div class="card">
+            <h3>Server States</h3>
+            <p><span class="highlight">CLOSED</span> — No connection</p>
+            <p><span class="highlight">LISTEN</span> — Waiting for SYN</p>
+            <p><span class="highlight">SYN_RCVD</span> — SYN received, SYNACK sent</p>
+            <p><span class="highlight">ESTABLISHED</span> — Data transfer</p>
+            <p><span class="highlight">CLOSE_WAIT</span> — FIN received, waiting to close</p>
+            <p><span class="highlight">LAST_ACK</span> — FIN sent, waiting for ACK</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> A server never enters FIN_WAIT_1 or FIN_WAIT_2. Those are exclusively client states. The server's teardown path goes through CLOSE_WAIT and LAST_ACK instead.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>SYN Flood Attack &amp; Port Scanning</h2>
+
+        <h3>SYN Flood Attack</h3>
+        <p>Attackers send many SYN segments without completing the handshake. Each SYN causes the server to <strong>allocate buffers and variables</strong> for a half-open connection and then send a SYNACK. The server waits for the client's ACK to complete the third step of the three-way handshake, but it never comes. Eventually (often after <strong>~1 minute</strong>), the server terminates the half-open connection. By flooding with rapid SYNs, the attacker exhausts server resources — a classic denial-of-service (DoS) attack.</p>
+
+        <div class="formula">
+          <div class="label">SYN Cookie Defense</div>
+          <div class="expr">cookie = hash(src_IP, src_port, dst_IP, dst_port, secret)</div>
+          <div class="desc">Server uses cookie as initial sequence number instead of allocating state. Only allocates resources when valid ACK returns.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>SYN Flood</h3>
+            <p>• Attacker sends massive SYN volume</p>
+            <p>• Server allocates buffers per SYN (before handshake completes!)</p>
+            <p>• Half-open connections exhaust memory</p>
+            <p>• Legitimate clients denied service (DoS)</p>
+            <p>• First documented: CERT SYN 1996</p>
+            <p>• Defense: SYN cookies [RFC 4987]</p>
+          </div>
+          <div class="card">
+            <h3>SYN Cookies</h3>
+            <p>• No state allocated on SYN receipt</p>
+            <p>• ISN = hash(connection_id, secret)</p>
+            <p>• Valid ACK contains cookie + 1</p>
+            <p>• Server recomputes hash to verify</p>
+            <p>• Deployed in all major OSes</p>
+          </div>
+        </div>
+
+        <h3>RST Segment — Rejecting Unwanted Segments</h3>
+        <p>What happens when a host receives a TCP segment whose port numbers or source IP do not match any ongoing socket? For example, if a host receives a TCP SYN packet with destination port 80 but is not running a Web server, the host sends a special <strong>reset segment</strong> with the <span class="highlight">RST flag</span> set to 1. This tells the source: "I don't have a socket for that segment. Please do not resend."</p>
+
+        <h3>Nmap Port Scanning</h3>
+        <p>nmap sends SYN segments to target ports and classifies outcomes:</p>
+
+        <table>
+          <tr>
+            <th>Received</th>
+            <th>Interpretation</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>SYNACK</td>
+            <td>Port is <span class="highlight">OPEN</span></td>
+            <td>Application running on that port</td>
+          </tr>
+          <tr>
+            <td>RST</td>
+            <td>Port is <span class="dim">CLOSED</span></td>
+            <td>No application on that port, but no firewall blocking</td>
+          </tr>
+          <tr>
+            <td>Nothing</td>
+            <td>Port is <span style="color:#ff4444;">BLOCKED</span></td>
+            <td>Firewall dropped the SYN segment</td>
+          </tr>
+        </table>
+
+        <p>nmap can also scan open <strong>UDP ports</strong>, probe <strong>firewalls and their configurations</strong>, and even detect <strong>operating system and application versions</strong> by manipulating TCP connection-management segments. Freely available at <strong>nmap.org</strong>.</p>
+
+        <div class="warning">
+          <strong>Security Alert:</strong> nmap is a dual-use tool. System administrators use it to audit networks, but attackers use it to identify vulnerable services. Always ensure you have permission before scanning a host.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Pathological States &amp; Worked Examples</h2>
+
+        <h3>Simultaneous Open / Simultaneous Close</h3>
+        <p>In certain scenarios, both sides may try to open or close simultaneously. For example, if two hosts send SYN to each other at the same time, each receives a SYN and sends SYNACK, entering ESTABLISHED state. Similarly, both can send FIN simultaneously. These pathological cases are handled correctly by the TCP state machine but are rarely encountered in practice [Stevens 1994].</p>
+
+        <div class="example">
+          <div class="title">Example 1 — Three-Way Handshake Walkthrough</div>
+          <p><strong>Setup:</strong> Client with ISN=1000, Server with ISN=5000.</p>
+          <p><strong>Step 1 (Client→Server):</strong> SYN=1, seq=1000</p>
+          <p><strong>Step 2 (Server→Client):</strong> SYN=1, seq=5000, ack=1001</p>
+          <p><strong>Step 3 (Client→Server):</strong> SYN=0, seq=1001, ack=5001</p>
+          <p><strong>Question:</strong> Why does the client use seq=1001 in Step 3, not 1000?</p>
+          <p><span class="result">Answer:</span> The SYN segment itself consumes one byte of sequence number space, even though it carries no data. The client's next byte after the SYN is seq 1001. This ensures reliable delivery of the SYN itself.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Connection Teardown with Lost ACK</div>
+          <p><strong>Scenario:</strong> During teardown, the client's final ACK (Step 4) is lost.</p>
+          <p><strong>Sequence:</strong></p>
+          <p>1. Client sends FIN (seq=2000) → Server</p>
+          <p>2. Server ACKs (ack=2001) → Client</p>
+          <p>3. Server sends FIN (seq=7000, ack=2001) → Client</p>
+          <p>4. Client sends ACK (ack=7001) → <span style="color:#ff4444;">(LOST)</span></p>
+          <p><strong>What happens next?</strong> Server's FIN timer expires, server retransmits FIN. Client, still in TIME_WAIT, re-sends the ACK. After successful ACK, both close.</p>
+          <p><span class="result">Key insight:</span> TIME_WAIT exists specifically to handle this case. The client waits 30s–2min before fully closing.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — SYN Cookie Calculation</div>
+          <p><strong>Setup:</strong> Server receives SYN from IP=192.168.1.10, port=34567, dst port=80. Secret=42.</p>
+          <p><strong>Cookie computation:</strong></p>
+          <div class="code">cookie = hash(192.168.1.10, 34567, server_IP, 80, 42)
+     = 0x8A3F1B2C  (simplified example)</div>
+          <p>Server sends SYNACK with seq=0x8A3F1B2C. No state allocated.</p>
+          <p><strong>Client responds:</strong> ACK with ack=0x8A3F1B2C+1 = 0x8A3F1B2D</p>
+          <p><strong>Server verifies:</strong> recomputes hash(192.168.1.10, 34567, server_IP, 80, 42) = 0x8A3F1B2C. Since 0x8A3F1B2C+1 = ack value, the ACK is valid. Server allocates full connection state.</p>
+          <p><span class="result">Result:</span> Legitimate client connected. Attacker's bogus SYN consumed zero server resources.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4 — Nmap Scan Outcomes</div>
+          <p><strong>Target:</strong> host 10.0.0.1, scanning ports 80, 443, 8080, 22.</p>
+          <table>
+            <tr><th>Port</th><th>Response</th><th>Status</th><th>Interpretation</th></tr>
+            <tr><td>80</td><td>SYNACK</td><td><span class="highlight">OPEN</span></td><td>Web server running</td></tr>
+            <tr><td>443</td><td>SYNACK</td><td><span class="highlight">OPEN</span></td><td>HTTPS server running</td></tr>
+            <tr><td>8080</td><td>RST</td><td><span class="dim">CLOSED</span></td><td>No app on port, but reachable</td></tr>
+            <tr><td>22</td><td>Nothing</td><td><span style="color:#ff4444;">BLOCKED</span></td><td>Firewall blocking SSH port</td></tr>
+          </table>
+          <p><span class="result">Analysis:</span> Two web services exposed (ports 80, 443), one closed port (8080), and SSH deliberately blocked by firewall (port 22). The firewall rule on port 22 prevents both legitimate and malicious SSH access.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

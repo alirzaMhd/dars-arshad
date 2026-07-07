@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ارسال عمومی و OpenFlow - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { color: #00ccff; font-size: 0.85em; margin: 5px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .card .green { color: #00ff88; }
+    .card .orange { color: #ff6600; }
+    .card .blue { color: #00ccff; }
+    .card .yellow { color: #ffcc00; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 4px; color: #ffcc66; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    td.highlight-cell { background: #002a1a; color: #00ff88; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .refcard { background: linear-gradient(135deg, #0a0a2e, #1a1a0a); border: 2px solid #00ff88; border-radius: 12px; padding: 15px; margin: 15px 0; }
+    .refcard h3 { color: #00ff88; font-size: 0.95em; margin-bottom: 10px; text-align: center; }
+    .refcard p { color: #ccc; font-size: 0.85em; margin: 4px 0; }
+    @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+    ul, ol { margin: 8px 0; padding-left: 20px; color: #ccc; font-size: 0.85em; }
+    li { margin: 4px 0; }
+    p { font-size: 0.88em; color: #ccc; margin: 8px 0; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>ارسال عمومی و OpenFlow</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری (کروس و راس) — فصل ۴: لایه شبکه: سطح داده</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">تطبیق-به-علاوه-اقدام</button>
+      <button class="tab" onclick="showSection('tab2')">فیلدهای تطبیق OpenFlow</button>
+      <button class="tab" onclick="showSection('tab3')">اقدامات OpenFlow</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: Match-Plus-Action                                      -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>پارادایم تطبیق-به-علاوه-اقدام</h2>
+        <p>مسیریاب‌های سنتی بر اساس یک فیلد واحد (IP مقصد) ارسال می‌کنند. ارسال عمومی روی <strong>چندین فیلد سرآیند در چندین لایه پروتکل</strong> تطبیق داده و یک یا چند <strong>اقدام</strong> را اجرا می‌کند. این کار سطح کنترل را از سطح داده جدا کرده و پایه شبکه‌سازی نرم‌افزارمحور (SDN) است. پروتکل OpenFlow [McKeown 2008, ONF 2020, Casado 2014, Tourrilhes 2014] پیاده‌سازی استاندارد ارسال عمومی است و از انقلاب گسترده‌تر SDN [Feamster 2013] پدید آمده است.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ارسال سنتی</h3>
+            <p>• تطبیق: فقط IP مقصد</p>
+            <p>• اقدام: ارسال به گام بعدی</p>
+            <p>• عملکرد ثابت به ازای هر دستگاه</p>
+            <p class="dim">سخت، مختص فروشنده</p>
+          </div>
+          <div class="card">
+            <h3>ارسال عمومی</h3>
+            <p>• تطبیق: ۱۲+ فیلد سرآیند</p>
+            <p>• اقدام: ارسال، رها، تغییر و غیره</p>
+            <p>• قابل برنامه‌ریزی به ازای هر جدول جریان</p>
+            <p class="green">انعطاف‌پذیر، API باز</p>
+          </div>
+        </div>
+
+        <h3>ساختار جدول جریان</h3>
+        <p>یک ورودی جدول جریان از سه مؤلفه تشکیل شده است:</p>
+        <div class="formula">
+          <div class="label">ورودی جدول جریان = (فیلدهای سرآیند، شمارنده‌ها، اقدامات)</div>
+          <div class="desc"><strong>فیلدهای سرآیند</strong> — الگوی تطبیق با wildcardها؛ <strong>شمارنده‌ها</strong> — بسته‌ها/بایت‌های مطابقت‌یافته؛ <strong>اقدامات</strong> — کاری که در صورت تطبیق انجام شود</div>
+        </div>
+
+        <h3>الگوریتم تطبیق-به-علاوه-اقدام (OpenFlow)</h3>
+        <div class="code">for each packet received:
+  for each flow table entry (in priority order):
+    if match(packet.headerFields, entry.pattern):
+      entry.counters.packets++
+      entry.counters.bytes += packet.size
+      execute(entry.actions)
+      break
+  if no match found:
+    send packet to controller (or drop)</div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> فرض اینکه ورودی‌های جریان به هر ترتیبی بررسی می‌شوند. ورودی‌ها دارای <strong>مقادیر اولویت صریح</strong> هستند — ورودی‌های با اولویت بالاتر ابتدا تطبیق داده می‌شوند. وقتی اولویت‌ها برابرند، خاص‌ترین (کمترین wildcard) ورودی برنده است.
+        </div>
+
+        <h3>مثال‌های عملی — تطبیق-به-علاوه-اقدام</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: ارسال ساده IP از طریق جدول جریان</div>
+          <p>یک سوئیچ دارای یک جدول جریان با دو ورودی است. یک بسته با <span class="highlight">IP مقصد = 10.1.2.3</span> روی <span class="highlight">پورت ۲</span> می‌رسد.</p>
+          <div class="step">ورودی ۱: match(IP dst = 10.1.1.*, priority=10) → forward(پورت ۳)</div>
+          <div class="step">ورودی ۲: match(IP dst = 10.1.2.*, priority=10) → forward(پورت ۴)</div>
+          <p class="result">نتیجه: بسته با ورودی ۲ مطابقت دارد (10.1.2.* شامل 10.1.2.3 می‌شود). از پورت ۴ ارسال می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: رفع ابهام اولویت</div>
+          <p>یک بسته دارای <span class="highlight">IP src = 192.168.1.5, IP dst = 10.0.0.1, TCP dst port = 80</span> است.</p>
+          <div class="step">ورودی A: match(IP dst = 10.0.0.*, priority=5) → forward(پورت ۱)</div>
+          <div class="step">ورودی B: match(IP src = 192.168.1.*, IP dst = 10.0.0.1, TCP dst=80, priority=20) → drop</div>
+          <p class="result">نتیجه: ورودی B اولویت بالاتری دارد (۲۰ > ۵). بسته حتی اگر هر دو مطابقت داشته باشند، رها می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: پردازش چند-اقدامی</div>
+          <p>یک بسته با <span class="highlight">VLAN ID = 100</span> می‌رسد. ورودی مطابقت‌یافته <strong>دو اقدام</strong> را مشخص می‌کند.</p>
+          <div class="step">ورودی: match(VLAN ID = 100) → [strip_vlan, forward(پورت ۵)]</div>
+          <div class="step">اقدام ۱: برچسب VLAN را از سرآیند بسته حذف کن.</div>
+          <div class="step">اقدام ۲: بسته اصلاح‌شده را از پورت ۵ ارسال کن.</div>
+          <p class="result">نتیجه: برچسب VLAN حذف می‌شود و فریم Ethernet ساده از پورت ۵ خارج می‌شود.</p>
+        </div>
+
+        <h3>مقایسه: ارسال سنتی در مقابل عمومی</h3>
+        <table>
+          <tr>
+            <th>ویژگی</th>
+            <th>مسیریاب سنتی</th>
+            <th>سوئیچ OpenFlow</th>
+          </tr>
+          <tr><td>فیلدهای تطبیق</td><td>فقط IP مقصد</td><td>۱۲+ فیلد (L2-L4)</td></tr>
+          <tr><td>اقدامات</td><td>ارسال به گام بعدی</td><td>ارسال، رها، تغییر، ارسال به کنترلر</td></tr>
+          <tr><td>قابلیت برنامه‌ریزی</td><td>ASIC ثابت</td><td>API جدول جریان</td></tr>
+          <tr><td>سطح کنترل</td><td>یکپارچه</td><td>جداگانه (کنترلر راه دور)</td></tr>
+          <tr><td>به‌روزرسانی جدول</td><td>فقط پروتکل مسیریابی</td><td>کنترلر هر زمان ورودی‌ها را ارسال می‌کند</td></tr>
+        </table>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <p><span class="green">تطبیق-به-علاوه-اقدام:</span> تطبیق روی فیلدهای L2-L4؛ اجرای اقدامات</p>
+          <p><span class="orange">جدول جریان:</span> (الگو، شمارنده‌ها، اقدامات) به ازای هر ورودی</p>
+          <p><span class="blue">اولویت:</span> عدد بالاتر = اولویت بالاتر؛ تطبیق‌های دقیق ترجیح داده می‌شوند</p>
+          <p><span class="yellow">Wildcard:</span> '*' با هر مقداری در آن فیلد مطابقت دارد</p>
+          <p><span class="green">عدم تطبیق:</span> اقدام پیش‌فرض — معمولاً ارسال به کنترلر</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: OpenFlow Match Fields                                  -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>فیلدهای تطبیق OpenFlow 1.0</h2>
+        <p>OpenFlow 1.0 <strong>۱۲ فیلد تطبیق</strong> را تعریف می‌کند که لایه فیزیکی (پورت)، لایه پیوند (Ethernet)، لایه شبکه (IP) و لایه انتقال (TCP/UDP) را پوشش می‌دهند. هر فیلد می‌تواند به یک مقدار دقیق یا یک wildcard تنظیم شود.</p>
+
+        <div class="code">OpenFlow 1.0 Flow Match Structure (12 fields):
+  ┌─────────────────────────────────────────────┐
+  │ Ingress Port    │  Physical port of arrival │
+  │ Ethernet src    │  48-bit MAC address       │
+  │ Ethernet dst    │  48-bit MAC address       │
+  │ Ethernet Type   │  0x0800 (IPv4), 0x0806...│
+  │ VLAN ID         │  12-bit VLAN identifier   │
+  │ VLAN Priority   │  3-bit 802.1p priority    │
+  │ IP src          │  32-bit IPv4 address+mask │
+  │ IP dst          │  32-bit IPv4 address+mask │
+  │ IP Protocol     │  TCP=6, UDP=17, ICMP=1    │
+  │ IP ToS          │  8-bit Type of Service    │
+  │ TCP/UDP src port│  16-bit transport src     │
+  │ TCP/UDP dst port│  16-bit transport dst     │
+  └─────────────────────────────────────────────┘</div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> اشتباه گرفتن تطبیق wildcard با تطبیق زیرشبکه CIDR. در OpenFlow، فیلدهای IP مبدأ و مقصد از یک <strong>bitmask</strong> استفاده می‌کنند (نه طول پیشوند CIDR). برای مثال، 10.1.0.0/255.255.0.0 معادل طول پیشوند ۱۶ بیتی است.
+        </div>
+
+        <h3>شکست لایه به لایه</h3>
+        <table>
+          <tr><th>لایه</th><th>فیلدها</th><th>بیت‌ها</th><th>کاربرد معمول</th></tr>
+          <tr><td>فیزیکی</td><td>پورت ورودی</td><td>۳۲</td><td>شناسایی رابط ورودی</td></tr>
+          <tr><td>L2 (Ethernet)</td><td>مبدأ Eth، مقصد Eth، نوع Eth</td><td>48+48+16</td><td>ارسال سطح MAC، فیلتر</td></tr>
+          <tr><td>L2.5 (VLAN)</td><td>شناسه VLAN، اولویت VLAN</td><td>12+3</td><td>تقسیم‌بندی LAN مجازی</td></tr>
+          <tr><td>L3 (IPv4)</td><td>IP src, IP dst, IP proto, IP ToS</td><td>32+32+8+8</td><td>مسیریابی IP، QoS</td></tr>
+          <tr><td>L4 (TCP/UDP)</td><td>پورت مبدأ TCP/UDP، پورت مقصد</td><td>16+16</td><td>فایروال، توازن بار</td></tr>
+        </table>
+
+        <h3>Wildcardها و Bitmaskها</h3>
+        <p>هر فیلد در یک ورودی جریان می‌تواند یک <strong>مقدار دقیق</strong> یا یک <strong>مقدار wildcard</strong> باشد. برای فیلدهای IP، یک bitmask مشخص می‌کند کدام بیت‌ها باید مطابقت داشته باشند. فیلد <strong>اولویت</strong> تعارضات را وقتی چندین ورودی مطابقت دارند حل می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">معناشناسی Wildcard:</div>
+          <div class="expr">match(header, pattern) = (header &amp; mask) == (value &amp; mask)</div>
+          <div class="desc">یک فیلد مطابقت دارد اگر بیت‌های سرآیند (ماسک‌شده) برابر بیت‌های الگو (ماسک‌شده) باشند. ماسک ۰ به معنای "wildcard" است (با هر چیزی مطابقت دارد).</div>
+        </div>
+
+        <h3>تکامل فیلدهای تطبیق OpenFlow</h3>
+        <p>در حالی که OpenFlow 1.0 <strong>۱۲ فیلد تطبیق</strong> را تعریف کرد، نسخه‌های جدیدتر مشخصات OpenFlow این مجموعه را به <strong>۴۱ فیلد تطبیق</strong> افزایش داده‌اند [Bosshart 2014]. این گسترش نشان‌دهنده تقاضا برای کنترل دقیق‌تر بر ترافیک شبکه با بالغ شدن استقرارهای SDN است.</p>
+
+        <h3>محدودیت‌های طراحی: چرا برخی فیلدها نمی‌توانند تطبیق داده شوند</h3>
+        <p>ممکن است تعجب کنید چرا برخی فیلدهای سرآیند — مانند فیلد <strong>TTL (Time-to-Live)</strong> یا <strong>طول دیتاگرام</strong> — در میان فیلدهای قابل تطبیق گنجانده نشده‌اند. پاسخ در مصالحه اساسی بین <strong>عملکرد</strong> و <strong>پیچیدگی</strong> نهفته است. "هنر" در انتخاب یک انتزاع برای ارسال عمومی، ارائه عملکرد کافی برای مفید بودن بدون بارگذاری بیش از حد انتزاع با جزئیات زیاد است که عملکرد را به خطر می‌اندازد یا رابط را پیچیده می‌کند.</p>
+
+        <p>این فلسفه طراحی به خوبی توسط معمار کامپیوتر Butler Lampson بیان شده است:</p>
+
+        <div class="formula">
+          <div class="label">اصل انتزاع Lampson [Lampson 1983]:</div>
+          <div class="expr">"یک کار را در یک زمان انجام بده، و آن را خوب انجام بده. یک رابط باید حداقل essentials یک انتزاع را捕获 کند. تعمیم نده؛ تعمیم‌ها معمولاً اشتباه هستند."</div>
+        </div>
+
+        <p>در زمینه OpenFlow، طراحان عمداً فیلدهای تطبیق را به مفیدترین مجموعه متداول — که L2 تا L4 را پوشش می‌دهد — محدود کردند، به جای تلاش برای نمایش هر فیلد سرآیند ممکن. افزودن تطبیق TTL یا طول دیتاگرام به سخت‌افزار سوئیچ و رابط کنترلر با سود عملی محدود پیچیدگی می‌افزاید، زیرا آن فیلدها به ندرت در سیاست‌های ارسال ظاهر می‌شوند.</p>
+
+        <h3>مثال‌های عملی — فیلدهای تطبیق</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: فیلتر سطح MAC</div>
+          <p>یک ورودی جریان پیکربندی کنید که با همه بسته‌های ARP (EtherType = 0x0806) از یک MAC مبدأ خاص مطابقت داشته باشد.</p>
+          <div class="step">Eth Type = 0x0806, Eth src = AA:BB:CC:DD:EE:FF, همه فیلدهای دیگر = wildcard</div>
+          <div class="step">اقدام: ارسال به کنترلر</div>
+          <p class="result">نتیجه: فقط بسته‌های ARP از AA:BB:CC:DD:EE:FF رهگیری می‌شوند؛ بقیه ترافیک عادی ادامه می‌یابد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: تطبیق ترافیک زیرشبکه</div>
+          <p>همه ترافیک <strong>به یا از</strong> زیرشبکه 10.10.0.0/16 با پورت مقصد TCP 443 (HTTPS) را تطبیق بده.</p>
+          <div class="step">IP src = 10.10.0.0/255.255.0.0, IP dst = 10.10.0.0/255.255.0.0</div>
+          <div class="step">IP proto = 6 (TCP), TCP dst port = 443</div>
+          <p class="result">نتیجه: هر جلسه HTTPS شامل زیرشبکه 10.10.x.x مطابقت داده می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: ارسال آگاه از VLAN</div>
+          <p>همه بسته‌های با VLAN ID = 200 و اولویت = 5 (بالاترین) از یک پورت ورودی خاص را تطبیق بده.</p>
+          <div class="step">پورت ورودی = ۳, VLAN ID = 200, اولویت VLAN = ۵</div>
+          <div class="step">همه فیلدهای دیگر = wildcard</div>
+          <p class="result">نتیجه: ترافیک با اولویت بالا VLAN 200 که روی پورت ۳ می‌رسد برای پردازش ویژه ایزوله می‌شود.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <p><span class="green">۱۲ فیلد:</span> پورت ورودی، مبدأ/مقصد/نوع Eth، شناسه/اولویت VLAN، مبدأ/مقصد/پروتکل/ToS IP، مبدأ/مقصد TCP/UDP</p>
+          <p><span class="orange">Wildcard:</span> Bitmask به ازای هر فیلد؛ همه صفرها = با هر چیزی مطابقت دارد</p>
+          <p><span class="blue">اولویت:</span> عدد صحیح؛ مقدار بالاتر = ابتدا بررسی می‌شود</p>
+          <p><span class="yellow">پیش‌فرض:</span> ورودی missing-table با کمترین اولویت بسته‌های تطبیق‌نشده را می‌گیرد</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: OpenFlow Actions                                       -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>اقدامات OpenFlow</h2>
+        <p>وقتی یک بسته با یک ورودی جریان مطابقت دارد، سوئیچ <strong>مجموعه اقدام</strong> مرتبط را اجرا می‌کند. اقدامات تعیین می‌کنند چه اتفاقی برای بسته می‌افتد — ممکن است ارسال، رها، اصلاح یا به کنترلر فرستاده شود.</p>
+
+        <h3>انواع اقدام</h3>
+        <table>
+          <tr><th>اقدام</th><th>توضیحات</th><th>مورد استفاده</th></tr>
+          <tr><td>Forward(port)</td><td>ارسال بسته از یک پورت فیزیکی خاص</td><td>مسیریابی/سوئیچینگ عادی</td></tr>
+          <tr><td>Flood</td><td>ارسال به همه پورت‌ها به جز پورت ورودی</td><td>Broadcast، سوئیچ یادگیرنده</td></tr>
+          <tr><td>Drop</td><td>رها کردن بی‌صدا بسته</td><td>فایروال، کنترل دسترسی</td></tr>
+          <tr><td>Modify-Field</td><td>بازنویسی یک فیلد سرآیند (مثلاً MAC, IP, VLAN)</td><td>NAT, تونل‌زنی, برچسب‌زنی</td></tr>
+          <tr><td>Send-to-Controller</td><td>کپسوله‌سازی و ارسال به کنترلر SDN</td><td>مدیریت بسته اول، سیاست</td></tr>
+          <tr><td>Enqueue(port, queue)</td><td>قرار دادن در صف QoS خاص</td><td>شکل‌دهی ترافیک, QoS</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> فرض اینکه forward و flood یکسان هستند. <strong>Forward(port)</strong> به دقیقاً یک پورت ارسال می‌کند. <strong>Flood</strong> به <em>همه</em> پورت‌ها به جز پورتی که بسته روی آن آمده ارسال می‌کند. Flood کردن بدون جلوگیری از حلقه می‌تواند باعث طوفان broadcast شود.
+        </div>
+
+        <h3>اجرای مجموعه اقدام</h3>
+        <p>یک ورودی جریان می‌تواند یک <strong>لیست از اقدامات</strong> را مشخص کند که به ترتیب اجرا می‌شوند. ترتیب مهم است — یک اقدام modify-field که به دنبال آن forward می‌آید، بسته را قبل از ارسال تغییر می‌دهد.</p>
+
+        <div class="code">Action Set Processing:
+  for each action in entry.actions:
+    switch action.type:
+      case FORWARD:
+        output packet to specified port
+      case DROP:
+        discard packet (stop processing)
+      case MODIFY_FIELD:
+        packet.header[field] = newValue
+      case SEND_TO_CONTROLLER:
+        encapsulate and send via OpenFlow protocol
+      case FLOOD:
+        output to all ports except ingress
+      case ENQUEUE:
+        place packet on QoS queue</div>
+
+        <h3>شمارنده‌ها</h3>
+        <p>هر ورودی جریان شمارنده‌هایی را نگهداری می‌کند که تعداد بسته‌ها و بایت‌های مطابقت‌یافته را ردیابی می‌کنند. این شمارنده‌ها جمع‌آوری آمار، مهندسی ترافیک و نظارت را امکان‌پذیر می‌کنند.</p>
+        <table>
+          <tr><th>شمارنده</th><th>به ازای هر ورودی</th><th>به ازای هر جدول</th><th>به ازای هر پورت</th></tr>
+          <tr><td>بسته‌های مطابقت‌یافته</td><td>بله</td><td>بله</td><td>بله</td></tr>
+          <tr><td>بایت‌های مطابقت‌یافته</td><td>بله</td><td>بله</td><td>بله</td></tr>
+          <tr><td>مدت (ثانیه)</td><td>بله</td><td>—</td><td>—</td></tr>
+          <tr><td>خطاها</td><td>—</td><td>بله</td><td>—</td></tr>
+        </table>
+
+        <h3>مثال‌های عملی — اقدامات</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: DNAT از طریق Modify-Field</div>
+          <p>MAC و IP مقصد را برای ترافیکی که روی پورت ۲ به یک IP مجازی می‌رسد بازنویسی کن.</p>
+          <div class="step">تطبیق: ingress=2, IP dst=10.0.0.100</div>
+          <div class="step">لیست اقدام: [modify_field(IP dst → 10.0.0.50), modify_field(Eth dst → 00:11:22:33:44:55), forward(پورت ۵)]</div>
+          <p class="result">نتیجه: IP مقصد بسته به 10.0.0.50 بازنویسی می‌شود، MAC آن بازنویسی می‌شود و از پورت ۵ ارسال می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: آینه‌سازی ترافیک از طریق چند اقدام</div>
+          <p>ترافیک عادی را ارسال کن در حالی که یک کپی به پورت نظارت ارسال می‌شود.</p>
+          <div class="step">تطبیق: IP dst = 10.1.1.0/24, TCP dst = 80</div>
+          <div class="step">لیست اقدام: [forward(پورت ۳), forward(پورت ۱۰)]  // پورت ۱۰ = نظارت</div>
+          <p class="result">نتیجه: ترافیک HTTP به 10.1.1.x به طور عادی ارسال می‌شود (پورت ۳) و یک کپی به مانیتور می‌رود (پورت ۱۰).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: رها کردن ترافیک مشکوک</div>
+          <p>همه ترافیک از یک IP منبع حمله شناخته‌شده قبل از رسیدن به سرورهای داخلی رها می‌شود.</p>
+          <div class="step">تطبیق: IP src = 198.51.100.5</div>
+          <div class="step">اقدام: drop</div>
+          <p class="result">نتیجه: هر بسته از 198.51.100.5 بی‌صدا رها می‌شود. هیچ ورودی دیگری بعد از drop بررسی نمی‌شود.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <p><span class="green">Forward:</span> ارسال به یک یا چند پورت فیزیکی</p>
+          <p><span class="orange">Drop:</span> رها کردن بی‌صدا — به عنوان قانون فایروال عمل می‌کند</p>
+          <p><span class="blue">Modify-Field:</span> بازنویسی هر فیلد سرآیند</p>
+          <p><span class="yellow">Send-to-Controller:</span> ارتقا به کنترلر SDN برای تصمیم سیاست</p>
+          <p><span class="green">شمارنده‌ها:</span> ردیابی بسته‌ها، بایت‌ها و مدت به ازای هر ورودی</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: Examples                                               -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های کاربردی شبکه</h2>
+        <p>این مثال‌ها نشان می‌دهند که چگونه ورودی‌های جدول جریان OpenFlow فیلدهای تطبیق و اقدامات را برای پیاده‌سازی کارکردهای واقعی شبکه ترکیب می‌کنند.</p>
+
+        <h3>مثال A: ارسال ساده لایه ۳</h3>
+        <p>دو سوئیچ (s1، s2) بسته‌ها را بر اساس زیرشبکه IP مقصد ارسال می‌کنند. میزبان‌های h1 و h2 در زیرشبکه‌های مختلف پشت s1 و s2 قرار دارند.</p>
+
+        <div class="code">Network topology:
+  h1 (10.3.0.1) ── port 1 ─ [s1] ── port 4 ── [s2] ── port 2 ── h2 (10.2.0.1)
+
+Flow table for s1 (highest priority first):
+  Priority  Entry Pattern                                   Action
+   20        ingress=1, IP src=10.3.*.*, IP dst=10.2.*.*    forward(4)
+   15        IP dst=10.2.*.*                                 forward(4)
+   10        ingress=4, IP src=10.2.*.*, IP dst=10.3.*.*    forward(1)
+   5         (table-miss, all wildcards)                     send_to_controller</div>
+
+        <div class="example">
+          <div class="title">مثال ۱: h1 به h2 ارسال می‌کند</div>
+          <p>بسته: <span class="highlight">IP src=10.3.0.1, IP dst=10.2.0.1</span>، روی پورت ۱ s1 می‌رسد.</p>
+          <div class="step">ورودی با اولویت ۲۰ مطابقت دارد (ingress=1, IP src=10.3.*.*, IP dst=10.2.*.*).</div>
+          <p class="result">نتیجه: از پورت ۴ به سمت s2 ارسال می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: h2 به h1 ارسال می‌کند</div>
+          <p>بسته: <span class="highlight">IP src=10.2.0.1, IP dst=10.3.0.1</span>، روی پورت ۴ s1 می‌رسد.</p>
+          <div class="step">ورودی با اولویت ۱۰ مطابقت دارد (ingress=4, IP src=10.2.*.*, IP dst=10.3.*.*).</div>
+          <p class="result">نتیجه: از پورت ۱ به سمت h1 ارسال می‌شود.</p>
+        </div>
+
+        <h3>مثال B: توازن بار</h3>
+        <p>یک سوئیچ OpenFlow ترافیک HTTP ورودی را بین دو استخر سرور بر اساس پورت TCP 80 توزیع می‌کند. پورت ورودی تعیین می‌کند کدام استخر سرور درخواست را مدیریت می‌کند.</p>
+
+        <div class="code">Load balancer flow table on s1:
+  Priority  Entry Pattern                               Action
+   30        ingress=1, TCP dst=80                       forward(2)   → Server Pool A
+   30        ingress=2, TCP dst=80                       forward(3)   → Server Pool B
+   20        TCP dst=80                                  forward(2)   → default to Pool A
+   10        (table-miss)                                send_to_controller</div>
+
+        <div class="example">
+          <div class="title">مثال ۳: درخواست HTTP از لینک خارجی</div>
+          <p>بسته: <span class="highlight">TCP dst=80</span>، روی پورت ۱ (uplink خارجی) می‌رسد.</p>
+          <div class="step">ورودی اولویت ۳۰ مطابقت دارد: ingress=1, TCP dst=80 → forward(2).</div>
+          <p class="result">نتیجه: به استخر سرور A (پورت ۲) ارسال می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴: درخواست HTTP از شبکه داخلی</div>
+          <p>بسته: <span class="highlight">TCP dst=80</span>، روی پورت ۲ می‌رسد.</p>
+          <div class="step">ورودی اولویت ۳۰ مطابقت دارد: ingress=2, TCP dst=80 → forward(3).</div>
+          <p class="result">نتیجه: به استخر سرور B (پورت ۳) ارسال می‌شود. ترافیک بر اساس منبع توازن می‌شود.</p>
+        </div>
+
+        <h3>مثال C: فایروال حالت‌مند</h3>
+        <p>یک سوئیچ فایروال فقط به ترافیک از منابع مورد اعتماد خاص اجازه می‌دهد و بقیه ترافیک را رها می‌کند. کنترلر قوانین را به صورت پویا نصب می‌کند.</p>
+
+        <div class="code">Firewall flow table on s1:
+  Priority  Entry Pattern                                    Action
+   100       IP src=203.0.113.0/24, TCP dst=443               forward(4)
+   100       IP src=203.0.113.0/24, TCP dst=80                forward(4)
+   50        IP dst=10.0.0.0/8                                drop
+   10        (table-miss)                                     send_to_controller</div>
+
+        <div class="example">
+          <div class="title">مثال ۵: ترافیک مجاز</div>
+          <p>بسته: <span class="highlight">IP src=203.0.113.5, TCP dst=443</span>.</p>
+          <div class="step">ورودی اولویت ۱۰۰ مطابقت دارد (IP src در 203.0.113.0/24, TCP dst=443).</div>
+          <p class="result">نتیجه: از پورت ۴ به شبکه داخلی ارسال می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۶: ترافیک مسدودشده</div>
+          <p>بسته: <span class="highlight">IP src=198.51.100.99, IP dst=10.0.0.5</span>.</p>
+          <div class="step">ورودی اولویت ۵۰ مطابقت دارد (IP dst در 10.0.0.0/8).</div>
+          <p class="result">نتیجه: بسته رها می‌شود. توجه: قوانین ارسال خاص‌تر مطابقت ندارند زیرا IP src در 203.0.113.0/24 نیست.</p>
+        </div>
+
+        <h3>مثال D: شبکه‌های مجازی با جداول جریان</h3>
+        <p>در مسائل تمرینی، دانشجویان بررسی می‌کنند که چگونه جداول جریان می‌توانند برای ایجاد <strong>شبکه‌های مجازی</strong> استفاده شوند — دو یا چند شبکه منطقی جداگانه (هرکدام با رفتار ارسال مستقل و مجزای خود) که از مجموعه فیزیکی یکسانی از سوئیچ‌ها و لینک‌های بسته استفاده می‌کنند. این یک کاربرد مستقیم از انتزاع ارسال عمومی است: با نصب ورودی‌های جریان متفاوت برای مستأجران مختلف، یک بافت سوئیچ فیزیکی واحد می‌تواند چندین شبکه مجازی ایزوله را میزبانی کند.</p>
+
+        <div class="example">
+          <div class="title">مثال ۷: دو شبکه مجازی که یک سوئیچ را به اشتراک می‌گذارند</div>
+          <p>یک سوئیچ فیزیکی s1 را در نظر بگیرید که باید از دو شبکه مجازی، <strong>قرمز</strong> و <strong>آبی</strong> پشتیبانی کند. بسته‌های هر شبکه مجازی با پورت ورودی و برچسب VLAN آنها شناسایی می‌شوند. هر شبکه مجازی باید رفتار ارسال مستقل داشته باشد — یعنی یک بسته در شبکه قرمز نمی‌تواند به شبکه آبی نشت کند.</p>
+          <div class="step">قرمز مجازی: پورت‌های ورودی {1,2}, VLAN ID = 10 → ارسال بر اساس جدول مسیریابی قرمز</div>
+          <div class="step">آبی مجازی: پورت‌های ورودی {3,4}, VLAN ID = 20 → ارسال بر اساس جدول مسیریابی آبی</div>
+          <div class="step">ترافیک بین شبکه‌ای مجازی به طور ضمنی رها می‌شود زیرا هیچ ورودی جریانی با ترافیک قرمز مقصد پورت‌های آبی مطابقت ندارد و بالعکس.</div>
+          <p class="result">نتیجه: دو شبکه مجازی مستقل روی همان سوئیچ فیزیکی کار می‌کنند، هرکدام با معناشناسی ارسال خود.</p>
+        </div>
+
+        <h3>فراتر از OpenFlow: P4 — قابلیت برنامه‌ریزی غنی‌تر</h3>
+        <p>جداول جریان تطبیق-به-علاوه-اقدام OpenFlow یک <strong>شکل محدود از برنامه‌پذیری</strong> را نشان می‌دهند — کنترلر می‌تواند جفت‌های (تطبیق، اقدام) دلخواه نصب کند، اما مجموعه فیلدهای قابل تطبیق و مجموعه اقدامات ممکن توسط مشخصات ثابت شده است. P4 (Programming Protocol-independent Packet Processors) [P4 2020, Bosshart 2014] زبانی است که <strong>برنامه‌پذیری حتی غنی‌تری</strong> را فراهم می‌کند که به طور خاص برای پردازش دیتاگرام در نرخ خط طراحی شده است:</p>
+
+        <ul>
+          <li><strong>متغیرها</strong> — نگهداری حالت در بین بسته‌ها</li>
+          <li><strong>محاسبات عمومی</strong> — محاسبه مقادیر فیلدهای سرآیند</li>
+          <li><strong>عملیات بولی</strong> — منطق تطبیق شرطی پیچیده</li>
+          <li><strong>توابع</strong> — بلوک‌های پردازش قابل استفاده مجدد</li>
+          <li><strong>عبارات شرطی</strong> — انشعاب if/else در سطح داده</li>
+          <li><strong>فرمت‌های سرآیند سفارشی</strong> — تجزیه هر پروتکل، نه فقط Ethernet/IP/TCP</li>
+          <li><strong>اقدامات سفارشی</strong> — اولیه‌های پردازش تعریف‌شده توسط برنامه‌نویس</li>
+        </ul>
+
+        <p>در حالی که OpenFlow فیلدهای تطبیق و اقدامات از پیش تعریف‌شده را ثابت می‌کند، P4 به برنامه‌نویس اجازه می‌دهد کل خط لوله پردازش بسته — شامل تجزیه‌گر، جداول تطبیق و منطق اقدام — را تعریف کند، همه در حالی که عملکرد نرخ خط را روی سخت‌افزار هدف حفظ می‌کند.</p>
+
+        <table>
+          <tr><th>ویژگی</th><th>OpenFlow</th><th>P4</th></tr>
+          <tr><td>تعاریف سرآیند</td><td>ثابت (۱۲ فیلد)</td><td>تعریف‌شده توسط برنامه‌نویس</td></tr>
+          <tr><td>انواع تطبیق</td><td>دقیق + wildcard</td><td>دقیق، سه‌گانه، LPM، محدوده</td></tr>
+          <tr><td>اقدامات</td><td>۸ نوع از پیش تعریف‌شده</td><td>اقدامات سفارشی در کد P4</td></tr>
+          <tr><td>تجزیه‌گر</td><td>تجزیه‌گر ثابت</td><td>تجزیه‌گر قابل برنامه‌ریزی</td></tr>
+          <tr><td>هدف</td><td>سوئیچ‌های OpenFlow</td><td>ASICها, FPGAها, NPUها, نرم‌افزار</td></tr>
+          <tr><td>برنامه‌پذیری</td><td>محدود (فیلدها + اقدامات ثابت)</td><td>کامل (سرآیندها + منطق سفارشی)</td></tr>
+        </table>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <p><span class="green">ارسال ساده:</span> تطبیق زیرشبکه IP مقصد → ارسال به پورت گام بعدی</p>
+          <p><span class="orange">توازن بار:</span> تطبیق پورت ورودی + پورت TCP → استخرهای سرور مختلف</p>
+          <p><span class="blue">فایروال:</span> تطبیق IPهای منبع مورد اعتماد → ارسال؛ تطبیق مقصد داخلی → رها</p>
+          <p><span class="yellow">P4:</span> خط لوله تطبیق-اقدام کاملاً قابل برنامه‌ریزی؛ سرآیندها و اقدامات سفارشی</p>
+          <p><span class="green">جدول جریان = API:</span> کنترلر رفتار سوئیچ را از راه دور برنامه‌ریزی می‌کند</p>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> فکر کردن اینکه OpenFlow و P4 فناوری‌های رقیب هستند. OpenFlow یک <strong>پروتکل</strong> برای رابط سطح کنترل-داده است. P4 یک <strong>زبان</strong> برای برنامه‌ریزی خود سطح داده است. آن‌ها می‌توانند با هم استفاده شوند — P4 برای پیاده‌سازی یک خط لوله سازگار با OpenFlow.
+        </div>
+      </div>
+    </div>
+    <!-- ============================================================ -->
+    <!-- References                                                    -->
+    <!-- ============================================================ -->
+    <div class="section">
+      <h2>مراجع</h2>
+      <p style="font-size:0.85em; color:#888; line-height:1.8;">
+        [McKeown 2008] N. McKeown et al., "OpenFlow: Enabling Innovation in Campus Networks," ACM SIGCOMM CCR, 2008.<br>
+        [ONF 2020] Open Networking Foundation, "OpenFlow Switch Specification," Version 1.5.1, 2020.<br>
+        [Casado 2014] M. Casado et al., "Fabric: A Retrospective on Evolving SDN," ACM HotSDN, 2014.<br>
+        [Tourrilhes 2014] J. Tourrilhes et al., "OpenFlow: The Anatomy of a Switch," HP Labs Technical Report, 2014.<br>
+        [Feamster 2013] N. Feamster et al., "The Road to SDN: An Intellectual History of Programmable Networks," ACM SIGCOMM CCR, 2013.<br>
+        [Bosshart 2014] P. Bosshart et al., "P4: Programming Protocol-Independent Packet Processors," ACM SIGCOMM, 2014.<br>
+        [Lampson 1983] B. Lampson, "Hints for Computer System Design," ACM SOSP, 1983.<br>
+        [P4 2020] The P4 Language Consortium, "P4_16 Language Specification," Version 1.2.2, 2020.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById(id).classList.add('active');
+      document.querySelector('.tab.active')?.classList.remove('active');
+      var tabs = document.querySelectorAll('.tab');
+      var idx = {'tab1':0,'tab2':1,'tab3':2,'tab4':3}[id];
+      if (tabs[idx]) tabs[idx].classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>انتقال بدون اتصال: UDP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>انتقال بدون اتصال: UDP</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای کامل برای آزمون ۲۰/۲۰</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">بررسی UDP</button>
+      <button class="tab" onclick="showSection('tab2')">ساختار سگمنت</button>
+      <button class="tab" onclick="showSection('tab3')">Checksum</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>بررسی UDP</h2>
+        <p>UDP (پروتکل دیتاگرام کاربر)، که در <strong>RFC 768</strong> تعریف شده است، یک پروتکل انتقال بدون زرق و برق و پایه است. به غیر از مالتی‌پلکسینگ/دیمالتی‌پلکسینگ و بررسی خطای سبک، هیچ چیزی به IP اضافه نمی‌کند. اگر یک توسعه‌دهنده برنامه UDP را انتخاب کند، برنامه تقریباً مستقیماً با IP صحبت می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مدل خدمات UDP:</div>
+          <div class="expr">تحویل دیتاگرام غیرقابل اطمینان، بدون اتصال</div>
+          <div class="desc">بدون دست‌دهی، بدون قابلیت اطمینان، بدون کنترل ازدحام، بدون کنترل جریان</div>
+        </div>
+
+        <div class="example">
+          <div class="title">آزمایش فکری: پروتکل انتقال "تهی"</div>
+          <p>فرض کنید می‌خواهید یک پروتکل انتقال <strong>بدون زرق و برق و پایه</strong> طراحی کنید. ابتدا ممکن است یک <strong>پروتکل انتقال تهی</strong> را در نظر بگیرید — در سمت فرستنده، پیام‌ها را از برنامه گرفته و مستقیماً به لایه شبکه بدهید; در سمت گیرنده، پیام‌ها را از شبکه گرفته و مستقیماً به برنامه بدهید.</p>
+          <p>اما باید <strong>کمی بیشتر از هیچ</strong> انجام دهید! حداقل، لایه انتقال باید مالتی‌پلکسینگ/دیمالتی‌پلکسینگ را برای عبور داده بین لایه شبکه و فرایند صحیح سطح برنامه فراهم کند. UDP تقریباً به اندازه‌ای که یک پروتکل انتقال می‌تواند انجام دهد، کم کار می‌کند — و این دقیقاً نقطه قوت آن است.</p>
+        </div>
+
+        <h3>چرا UDP را انتخاب کنیم؟</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>کنترل دقیق‌تر برنامه</h3>
+            <p>UDP داده را فوراً وقتی برنامه آن را تحویل می‌دهد می‌فرستد. بدون محدودیت کنترل ازدحام. ایده‌آل برای برنامه‌های بلادرنگ که نیاز به نرخ ارسال حداقلی دارند.</p>
+          </div>
+          <div class="card">
+            <h3>بدون برقراری اتصال</h3>
+            <p>UDP بدون مقدمات رسمی "بلافاصله شلیک می‌کند". بدون تأخیر دست‌دهی سه‌طرفه — صرفه‌جویی ۱ RTT قبل از شروع جریان داده.</p>
+          </div>
+          <div class="card">
+            <h3>بدون حالت اتصال</h3>
+            <p>UDP هیچ بافر ارسال/دریافت، پارامترهای کنترل ازدحام یا شماره‌های توالی نگهداری نمی‌کند. یک سرور UDP می‌تواند از <strong>بسیار بیشتر از یک سرور TCP</strong> کلاینت پشتیبانی کند.</p>
+          </div>
+          <div class="card">
+            <h3>سربار هدر کوچک</h3>
+            <p>UDP: هدر <strong>۸ بایت</strong> در مقابل TCP: <strong>۲۰ بایت</strong>. این برای برنامه‌هایی با پیام‌های کوچک زیاد مهم است (مثلاً پرس‌وجوهای DNS).</p>
+          </div>
+        </div>
+
+        <h3>برنامه‌های استفاده‌کننده از UDP</h3>
+        <table>
+          <tr>
+            <th>برنامه</th>
+            <th>پروتکل</th>
+            <th>چرا UDP؟</th>
+          </tr>
+          <tr>
+            <td>سیستم نام دامنه</td>
+            <td>DNS</td>
+            <td>جلوگیری از تأخیر برقراری اتصال; پیام‌های کوچک</td>
+          </tr>
+          <tr>
+            <td>مدیریت شبکه</td>
+            <td>SNMP</td>
+            <td>باید تحت فشار شبکه کار کند وقتی TCP ممکن است شکست بخورد</td>
+          </tr>
+          <tr>
+            <td>پخش چندرسانه‌ای</td>
+            <td>DASH, RTP</td>
+            <td>گم‌شدگی کوچک را تحمل می‌کند; نیاز به نرخ ثابت دارد، نه محدودشده توسط ازدحام</td>
+          </tr>
+          <tr>
+            <td>تلفن اینترنتی</td>
+            <td>SIP/RTP (معمولاً)</td>
+            <td>حساس به تأخیر; تحمل‌کننده گم‌شدگی; واکنش ضعیف به کنترل ازدحام TCP</td>
+          </tr>
+          <tr>
+            <td>QUIC (HTTP/3)</td>
+            <td>QUIC روی UDP</td>
+            <td>قابلیت اطمینان در لایه کاربرد; جلوگیری از مسدود شدن سرخط TCP</td>
+          </tr>
+        </table>
+
+        <div class="example">
+          <div class="title">"هم کیک را داشته باش و هم بخور"</div>
+          <p>یک برنامه با استفاده از UDP می‌تواند <strong>قابلیت اطمینان را در خود برنامه بسازد</strong> (با استفاده از ACKها، شماره‌های توالی، تایمرها). این امکان ارتباط قابل اطمینان <strong>بدون</strong> محدودیت‌های نرخ کنترل ازدحام TCP را فراهم می‌کند. پروتکل QUIC (بخش ۳.۸) یک مثال عالی است — این قابلیت اطمینان را در لایه کاربرد روی UDP پیاده‌سازی می‌کند. برنامه می‌تواند "هم کیک را داشته باشد و هم بخورد" — تحویل قابل اطمینان بدون محدودیت‌های نرخ ارسال TCP.</p>
+        </div>
+
+        <div class="warning">UDP <strong>هیچ کنترل ازدحامی</strong> ندارد. اگر همه ویدئوی با نرخ بیت بالا را روی UDP بدون نظارت پخش کنند، مسیریاب‌ها سرریز می‌شوند و شبکه فرو می‌ریزد. UDP کنترل‌نشده می‌تواند جلسات TCP را کنار بزند.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>ساختار سگمنت UDP</h2>
+        <p>سگمنت UDP یک هدر <strong>۸ بایتی</strong> دارد که به دنبال آن داده برنامه قرار می‌گیرد. هدر از چهار فیلد ۲-بایتی تشکیل شده است:</p>
+
+        <div class="code">
+          UDP Segment Format:<br>
+          +--------+--------+--------+--------+<br>
+          |     Source Port    |  Destination Port  |<br>
+          +--------+--------+--------+--------+<br>
+          |       Length      |      Checksum      |<br>
+          +--------+--------+--------+--------+<br>
+          |           Application Data ...        |<br>
+          +---------------------------------------+
+        </div>
+
+        <table>
+          <tr>
+            <th>فیلد</th>
+            <th>اندازه</th>
+            <th>توضیحات</th>
+          </tr>
+          <tr>
+            <td>پورت مبدأ</td>
+            <td>۲ بایت (۱۶ بیت)</td>
+            <td>شماره پورت فرایند فرستنده (۰-۶۵۵۳۵). به عنوان آدرس بازگشت استفاده می‌شود.</td>
+          </tr>
+          <tr>
+            <td>پورت مقصد</td>
+            <td>۲ بایت (۱۶ بیت)</td>
+            <td>شماره پورت فرایند مقصد. برای دیمالتی‌پلکسینگ استفاده می‌شود.</td>
+          </tr>
+          <tr>
+            <td>طول</td>
+            <td>۲ بایت (۱۶ بیت)</td>
+            <td>طول سگمنت UDP بر حسب بایت (هدر + داده). حداقل = ۸ (فقط هدر).</td>
+          </tr>
+          <tr>
+            <td>Checksum</td>
+            <td>۲ بایت (۱۶ بیت)</td>
+            <td>تشخیص خطا روی سگمنت + هدر مجازی. جمع متمم ۱.</td>
+          </tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">فرمول فیلد طول:</div>
+          <div class="expr">Length = 8 + len(Application Data)</div>
+          <div class="desc">که در آن ۸ اندازه ثابت هدر بر حسب بایت است. حداقل مقدار = ۸ (داده خالی).<br>حداکثر مقدار = ۶۵۵۳۵ بایت (نظری، در عمل محدود به اندازه دیتاگرام IP).</div>
+        </div>
+
+        <p>فیلد داده برنامه شامل بار است — برای DNS پرس‌وجو/پاسخ است، برای صوتی پخش نمونه‌های صوتی و غیره.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>UDP Checksum</h2>
+        <p>UDP checksum <strong>تشخیص خطا</strong> را فراهم می‌کند — تعیین اینکه آیا بیت‌های سگمنت در طول انتقال (توسط نویز در لینک‌ها یا خطاهای حافظه در مسیریاب‌ها) تغییر کرده‌اند.</p>
+
+        <div class="formula">
+          <div class="label">محاسبه Checksum:</div>
+          <div class="expr">Checksum = ~(مجموع همه کلمات ۱۶-بیتی با پیچش متمم ۱)</div>
+          <div class="desc">فرستنده متمم ۱ از مجموع متمم ۱ (با پیچش سرریز) را محاسبه می‌کند.<br>گیرنده همه کلمات ۱۶-بیتی شامل checksum را جمع می‌کند — نتیجه باید همه ۱ها باشد (0xFFFF) اگر خطایی نباشد.</div>
+        </div>
+
+        <h3>مثال Checksum (از کتاب درسی)</h3>
+        <p>سه کلمه ۱۶-بیتی داده شده:</p>
+        <div class="code">
+          Word 1:  0110011001100000<br>
+          Word 2:  0101010101010101<br>
+          Word 3:  1000111100001100<br>
+          <br>
+          Sum 1+2: 1011101110110101<br>
+          Add 3:   0100101011000010  (overflow wrapped around)<br>
+          1s Compl: 1011010100111101 ← Checksum<br>
+          <br>
+          At Receiver (all 4 words including checksum):<br>
+          Sum: 1111111111111111 ← No errors detected!
+        </div>
+
+        <h3>چرا UDP Checksum وقتی لایه پیوند بررسی می‌کند؟</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>دلایل UDP Checksum</h3>
+            <p>• همه پروتکل‌های لایه پیوند بررسی خطا ارائه نمی‌دهند</p>
+            <p>• خطاهای بیت می‌توانند در حافظه مسیریاب رخ دهند (توسط لینک تشخیص داده نمی‌شوند)</p>
+            <p>• <strong>اصل انتها-به-انتها</strong>: توابع باید در بالاترین سطحی که مورد نیاز هستند پیاده‌سازی شوند</p>
+          </div>
+          <div class="card">
+            <h3>اصل انتها-به-انتها</h3>
+            <p>از آنجا که عملکرد خاصی (تشخیص خطا) باید به صورت انتها-به-انتها پیاده‌سازی شود: "توابع قرار داده شده در سطوح پایین‌تر ممکن است اضافی یا با ارزش کم در مقایسه با هزینه ارائه آنها در سطح بالاتر باشند." [Saltzer 1984]</p>
+          </div>
+        </div>
+
+        <div class="warning">UDP <strong>تشخیص</strong> خطا را فراهم می‌کند اما NOT <strong>بازیابی</strong> خطا را. اگر checksum ناموفق باشد، برخی پیاده‌سازی‌ها به سادگی سگمنت آسیب‌دیده را دور می‌ریزند; برخی دیگر آن را با اخطار به برنامه منتقل می‌کنند. برنامه‌هایی که نیاز به قابلیت اطمینان دارند باید خودشان آن را اضافه کنند.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های عملی: UDP</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱: محاسبه Checksum با ۴ کلمه</div>
+          <p><strong>داده شده:</strong> چهار کلمه ۱۶-بیتی: 1100110011001100, 1010101010101010, 1111000011110000, 0000111100001111</p>
+          <p><strong>مرحله ۱:</strong> جمع کلمه ۱ + کلمه ۲:</p>
+          <div class="code">
+            1100110011001100<br>
+          + 1010101010101010<br>
+          = 0111011101110110  (با خروج نقلی=۱, پیچیده شده)<br>
+          = 0111011101110111
+          </div>
+          <p><strong>مرحله ۲:</strong> اضافه کردن کلمه ۳:</p>
+          <div class="code">
+            0111011101110111<br>
+          + 1111000011110000<br>
+          = 0110011101100111  (نقلی=۱, پیچیده شده)<br>
+          = 0110011101101000
+          </div>
+          <p><strong>مرحله ۳:</strong> اضافه کردن کلمه ۴:</p>
+          <div class="code">
+            0110011101101000<br>
+          + 0000111100001111<br>
+          = 0111010101110111  (بدون سرریز)
+          </div>
+          <p><strong>مرحله ۴:</strong> متمم ۱ هر بیت:</p>
+          <p><span class="result">Checksum = 1000101010001000</span></p>
+          <p class="note">در گیرنده، جمع همه ۵ کلمه با هم (شامل checksum) 1111111111111111 می‌دهد اگر خطایی نباشد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: DNS روی UDP — مزیت تأخیر</div>
+          <p><strong>سناریو:</strong> یک پرس‌وجوی DNS به یک resolver در فاصله ۵۰ms فرستاده می‌شود (RTT=50ms).</p>
+          <p><strong>مسیر UDP:</strong> پرس‌وجو فوراً فرستاده شد (t=0) → پاسخ دریافت شد (t=25ms). کل: <span class="result">۲۵ms</span> (به علاوه پردازش سرور DNS).</p>
+          <p><strong>مسیر فرضی TCP:</strong> SYN (t=0) → SYN-ACK (t=25ms) → ACK+Query (t=50ms) → Reply (t=75ms). کل: <span class="result">۷۵ms</span>.</p>
+          <p>UDP برای این پرس‌وجوی ساده <span class="highlight">۳ برابر سریع‌تر</span> است به دلیل عدم برقراری اتصال.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: محاسبه طول سگمنت UDP</div>
+          <p><strong>سناریو:</strong> یک برنامه ۱۴۶۰ بایت داده از طریق UDP می‌فرستد.</p>
+          <p><strong>مرحله ۱:</strong> هدر UDP = ۸ بایت</p>
+          <p><strong>مرحله ۲:</strong> فیلد Length = هدر + داده = 8 + 1460 = <span class="result">۱۴۶۸ بایت</span></p>
+          <p><strong>مرحله ۳:</strong> این در MTU معمولی Ethernet ۱۵۰۰ بایت جا می‌شود (۱۴۶۸ + ۲۰ هدر IP + ۱۴ Ethernet = ۱۵۰۲... اما اگر MTU Ethernet = ۱۵۰۰، ممکن است قطعه‌بندی IP لازم باشد).</p>
+          <p><span class="result">پاسخ:</span> مقدار فیلد Length = ۱۴۶۸. سگمنت می‌تواند حداکثر ۶۵۵۲۷ بایت داده (۶۵۵۳۵ - ۸) را نگه دارد.</p>
+          <p class="note">در عمل، بار UDP توسط MTU مسیر برای جلوگیری از قطعه‌بندی محدود می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴: UDP در مقابل TCP — مقایسه ظرفیت سرور</div>
+          <p><strong>سناریو:</strong> یک سرور حافظه برای حالت اتصال دارد. TCP به حدود ~۴KB به ازای هر اتصال نیاز دارد (بافرهای ارسال/دریافت، حالت ازدحام).</p>
+          <p><strong>سرور TCP با ۴GB RAM:</strong> 4GB / 4KB = <span class="result">~۱,۰۴۸,۵۷۶ اتصال همزمان</span></p>
+          <p><strong>سرور UDP با ۴GB RAM:</strong> هیچ حالت به‌ازای-اتصال. می‌تواند <span class="result">احتمالاً میلیون‌ها بیشتر</span> کلاینت را مدیریت کند زیرا هیچ حالتی به ازای هر کلاینت ذخیره نمی‌شود.</p>
+          <p>صرفه‌جویی حافظه از طراحی بدون اتصال UDP به سرورها اجازه می‌دهد برای برنامه‌هایی مانند DNS و SNMP به طور چشمگیری مقیاس‌پذیری بیشتری داشته باشند.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>چه موقع از UDP استفاده کنیم</h3>
+            <p>• پرس‌وجوهای DNS</p>
+            <p>• مدیریت شبکه SNMP</p>
+            <p>• رسانه پخش</p>
+            <p>• VoIP / تلفن اینترنتی</p>
+            <p>• DHCP (راه‌اندازی اولیه)</p>
+          </div>
+          <div class="card">
+            <h3>اشتباهات رایج UDP</h3>
+            <p>• فرض اینکه UDP قابل اطمینان است (نیست)</p>
+            <p>• فراموش کردن مراحل محاسبه checksum</p>
+            <p>• محاسبه نادرست پیچش متمم ۱</p>
+            <p>• فکر کردن UDP کنترل ازدحام دارد</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

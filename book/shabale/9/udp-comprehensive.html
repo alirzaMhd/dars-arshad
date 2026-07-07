@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connectionless Transport: UDP - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Connectionless Transport: UDP</h1>
+  <p class="subtitle">Computer Networking — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">UDP Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Segment Structure</button>
+      <button class="tab" onclick="showSection('tab3')">Checksum</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>UDP Overview</h2>
+        <p>UDP (User Datagram Protocol), defined in <strong>RFC 768</strong>, is a no-frills, bare-bones transport protocol. Aside from multiplexing/demultiplexing and light error checking, it adds nothing to IP. If an application developer chooses UDP, the application is almost directly talking with IP.</p>
+
+        <div class="formula">
+          <div class="label">UDP Service Model:</div>
+          <div class="expr">Unreliable, Connectionless Datagram Delivery</div>
+          <div class="desc">No handshaking, no reliability, no congestion control, no flow control</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Thought Experiment: The "Vacuous" Transport Protocol</div>
+          <p>Suppose you wanted to design a <strong>no-frills, bare-bones</strong> transport protocol. You might first consider a <strong>vacuous transport protocol</strong> — on the sending side, take messages from the application and pass them directly to the network layer; on the receiving side, take messages from the network and pass them directly to the application.</p>
+          <p>But you must do a <strong>little more than nothing</strong>! At minimum, the transport layer must provide multiplexing/demultiplexing to pass data between the network layer and the correct application-level process. UDP does just about as little as a transport protocol can do — and that's exactly its strength.</p>
+        </div>
+
+        <h3>Why Choose UDP?</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Finer Application Control</h3>
+            <p>UDP sends data immediately when the app passes it. No congestion-control throttling. Ideal for real-time apps that need a minimum sending rate.</p>
+          </div>
+          <div class="card">
+            <h3>No Connection Establishment</h3>
+            <p>UDP "blasts away" without formal preliminaries. No three-way handshake delay — saving 1 RTT before data starts flowing.</p>
+          </div>
+          <div class="card">
+            <h3>No Connection State</h3>
+            <p>UDP maintains no send/receive buffers, congestion-control params, or sequence numbers. A UDP server can support <strong>many more clients</strong> than a TCP server.</p>
+          </div>
+          <div class="card">
+            <h3>Small Header Overhead</h3>
+            <p>UDP: <strong>8 bytes</strong> header vs TCP: <strong>20 bytes</strong>. This matters for applications with many small messages (e.g., DNS queries).</p>
+          </div>
+        </div>
+
+        <h3>Applications Using UDP</h3>
+        <table>
+          <tr>
+            <th>Application</th>
+            <th>Protocol</th>
+            <th>Why UDP?</th>
+          </tr>
+          <tr>
+            <td>Domain Name System</td>
+            <td>DNS</td>
+            <td>Avoids connection-establishment delay; tiny messages</td>
+          </tr>
+          <tr>
+            <td>Network Management</td>
+            <td>SNMP</td>
+            <td>Must work under network stress when TCP would fail</td>
+          </tr>
+          <tr>
+            <td>Streaming Multimedia</td>
+            <td>DASH, RTP</td>
+            <td>Tolerates small loss; needs consistent rate, not congestion-throttled</td>
+          </tr>
+          <tr>
+            <td>Internet Telephony</td>
+            <td>SIP/RTP (typically)</td>
+            <td>Delay-sensitive; loss-tolerant; poor reaction to TCP congestion control</td>
+          </tr>
+          <tr>
+            <td>QUIC (HTTP/3)</td>
+            <td>QUIC over UDP</td>
+            <td>Reliability at app layer; avoids TCP head-of-line blocking</td>
+          </tr>
+        </table>
+
+        <div class="example">
+          <div class="title">"Have Your Cake and Eat It Too"</div>
+          <p>An application using UDP can <strong>build reliability into the application itself</strong> (using ACKs, sequence numbers, timers). This allows reliable communication <strong>without</strong> being subjected to TCP's congestion-control rate limits. The QUIC protocol (Section 3.8) is a prime example — it implements reliability at the application layer over UDP. The application can "have its cake and eat it too" — reliable delivery without TCP's transmission-rate constraints.</p>
+        </div>
+
+        <div class="warning">UDP has <strong>NO congestion control</strong>. If everyone streams high-bit-rate video over UDP without regulation, routers overflow and the network collapses. Uncontrolled UDP can crowd out TCP sessions.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>UDP Segment Structure</h2>
+        <p>The UDP segment has an <strong>8-byte header</strong> followed by application data. The header consists of four 2-byte fields:</p>
+
+        <div class="code">
+          UDP Segment Format:<br>
+          +--------+--------+--------+--------+<br>
+          |     Source Port    |  Destination Port  |<br>
+          +--------+--------+--------+--------+<br>
+          |       Length      |      Checksum      |<br>
+          +--------+--------+--------+--------+<br>
+          |           Application Data ...        |<br>
+          +---------------------------------------+
+        </div>
+
+        <table>
+          <tr>
+            <th>Field</th>
+            <th>Size</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>Source Port</td>
+            <td>2 bytes (16 bits)</td>
+            <td>Port number of sending process (0-65535). Used as return address.</td>
+          </tr>
+          <tr>
+            <td>Destination Port</td>
+            <td>2 bytes (16 bits)</td>
+            <td>Port number of destination process. Used for demultiplexing.</td>
+          </tr>
+          <tr>
+            <td>Length</td>
+            <td>2 bytes (16 bits)</td>
+            <td>Length of UDP segment in bytes (header + data). Minimum = 8 (header only).</td>
+          </tr>
+          <tr>
+            <td>Checksum</td>
+            <td>2 bytes (16 bits)</td>
+            <td>Error detection over segment + pseudo header. 1s complement sum.</td>
+          </tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Length Field Formula:</div>
+          <div class="expr">Length = 8 + len(Application Data)</div>
+          <div class="desc">Where 8 is the fixed header size in bytes. Minimum value = 8 (empty data).<br>Maximum value = 65535 bytes (theoretical, limited by IP datagram size in practice).</div>
+        </div>
+
+        <p>The application data field contains the payload — for DNS it's the query/response, for streaming audio it's audio samples, etc.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>UDP Checksum</h2>
+        <p>The UDP checksum provides <strong>error detection</strong> — determining whether bits in the segment have been altered during transit (by noise in links or memory errors in routers).</p>
+
+        <div class="formula">
+          <div class="label">Checksum Calculation:</div>
+          <div class="expr">Checksum = ~(sum of all 16-bit words with 1s complement wrap-around)</div>
+          <div class="desc">Sender computes the 1s complement of the 1s complement sum (wrapping overflow).<br>Receiver adds all 16-bit words including checksum — result must be all 1s (0xFFFF) if no errors.</div>
+        </div>
+
+        <h3>Checksum Example (from textbook)</h3>
+        <p>Given three 16-bit words:</p>
+        <div class="code">
+          Word 1:  0110011001100000<br>
+          Word 2:  0101010101010101<br>
+          Word 3:  1000111100001100<br>
+          <br>
+          Sum 1+2: 1011101110110101<br>
+          Add 3:   0100101011000010  (overflow wrapped around)<br>
+          1s Compl: 1011010100111101 ← Checksum<br>
+          <br>
+          At Receiver (all 4 words including checksum):<br>
+          Sum: 1111111111111111 ← No errors detected!
+        </div>
+
+        <h3>Why UDP Checksum When Link Layer Checks?</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Reasons for UDP Checksum</h3>
+            <p>• Not all link-layer protocols provide error checking</p>
+            <p>• Bit errors can occur in router memory (not detected by link)</p>
+            <p>• <strong>End-end principle</strong>: functions must be implemented at the highest level where they are needed</p>
+          </div>
+          <div class="card">
+            <h3>End-End Principle</h3>
+            <p>Since certain functionality (error detection) must be implemented on an end-end basis: "functions placed at lower levels may be redundant or of little value when compared to the cost of providing them at the higher level." [Saltzer 1984]</p>
+          </div>
+        </div>
+
+        <div class="warning">UDP provides error <strong>detection</strong> but NOT error <strong>recovery</strong>. If the checksum fails, some implementations simply discard the damaged segment; others pass it to the application with a warning. Applications that need reliability must add it themselves.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples: UDP</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Checksum Calculation with 4 Words</div>
+          <p><strong>Given:</strong> Four 16-bit words: 1100110011001100, 1010101010101010, 1111000011110000, 0000111100001111</p>
+          <p><strong>Step 1:</strong> Sum word 1 + word 2:</p>
+          <div class="code">
+            1100110011001100<br>
+          + 1010101010101010<br>
+          = 0111011101110110  (with carry out=1, wrapped)<br>
+          = 0111011101110111
+          </div>
+          <p><strong>Step 2:</strong> Add word 3:</p>
+          <div class="code">
+            0111011101110111<br>
+          + 1111000011110000<br>
+          = 0110011101100111  (carry=1, wrapped)<br>
+          = 0110011101101000
+          </div>
+          <p><strong>Step 3:</strong> Add word 4:</p>
+          <div class="code">
+            0110011101101000<br>
+          + 0000111100001111<br>
+          = 0111010101110111  (no overflow)
+          </div>
+          <p><strong>Step 4:</strong> 1s complement of each bit:</p>
+          <p><span class="result">Checksum = 1000101010001000</span></p>
+          <p class="note">At the receiver, adding all 5 words together (including checksum) gives 1111111111111111 if no errors.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: DNS over UDP — Latency Advantage</div>
+          <p><strong>Scenario:</strong> A DNS query is sent to a resolver 50ms away (RTT=50ms).</p>
+          <p><strong>UDP path:</strong> Query sent immediately (t=0) → Reply received (t=25ms). Total: <span class="result">25ms</span> (plus DNS server processing).</p>
+          <p><strong>Hypothetical TCP path:</strong> SYN (t=0) → SYN-ACK (t=25ms) → ACK+Query (t=50ms) → Reply (t=75ms). Total: <span class="result">75ms</span>.</p>
+          <p>UDP is <span class="highlight">3x faster</span> for this simple query due to no connection establishment.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: UDP Segment Length Calculation</div>
+          <p><strong>Scenario:</strong> An application sends 1460 bytes of data via UDP.</p>
+          <p><strong>Step 1:</strong> UDP header = 8 bytes</p>
+          <p><strong>Step 2:</strong> Length field = header + data = 8 + 1460 = <span class="result">1468 bytes</span></p>
+          <p><strong>Step 3:</strong> This fits within a typical Ethernet MTU of 1500 bytes (1468 + 20 IP header + 14 Ethernet = 1502... but if Ethernet MTU = 1500, IP fragmentation may be needed).</p>
+          <p><span class="result">Answer:</span> Length field value = 1468. The segment can hold max 65527 bytes of data (65535 - 8).</p>
+          <p class="note">In practice, UDP payloads are limited by the path MTU to avoid fragmentation.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: UDP vs TCP — Server Capacity Comparison</div>
+          <p><strong>Scenario:</strong> A server has memory for connection state. TCP requires ~4KB per connection (send/receive buffers, congestion state).</p>
+          <p><strong>TCP server with 4GB RAM:</strong> 4GB / 4KB = <span class="result">~1,048,576 concurrent connections</span></p>
+          <p><strong>UDP server with 4GB RAM:</strong> No per-connection state. Can handle <span class="result">potentially millions more</span> clients since no state is stored per client.</p>
+          <p>The memory savings from UDP's connectionless design allow servers to scale dramatically higher for applications like DNS and SNMP.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>When to Use UDP</h3>
+            <p>• DNS queries</p>
+            <p>• SNMP network management</p>
+            <p>• Streaming media</p>
+            <p>• VoIP / Internet telephony</p>
+            <p>• DHCP (bootstrapping)</p>
+          </div>
+          <div class="card">
+            <h3>Common UDP Mistakes</h3>
+            <p>• Assuming UDP is reliable (it's not)</p>
+            <p>• Forgetting checksum calculation steps</p>
+            <p>• Miscomputing 1s complement wrap-around</p>
+            <p>• Thinking UDP has congestion control</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

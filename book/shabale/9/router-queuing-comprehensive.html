@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queuing in Routers - Comprehensive Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; font-size: 0.88em; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .quickref { background: linear-gradient(135deg, #0a2a1a, #111); border: 1px solid #00ff8844; border-radius: 10px; padding: 15px; margin: 15px 0; }
+    .quickref .title { color: #00ff88; font-weight: bold; font-size: 0.9em; margin-bottom: 8px; }
+    .quickref .item { padding: 2px 0; font-size: 0.85em; color: #ccc; }
+    .quickref .item span { color: #00ff88; }
+    .ki { background: #0d0d1a; border: 1px solid #ffcc0044; border-radius: 6px; padding: 8px 12px; margin: 10px 0; font-size: 0.85em; color: #ffcc00; }
+    @media (max-width: 600px) { .tabs { flex-direction: column; } .tab { text-align: center; } }
+    .step-table td:first-child { color: #00ccff; font-weight: bold; width: 30px; }
+    .bull { color: #00ff88; }
+  </style>
+</head>
+<body>
+  <h1>Queuing in Routers</h1>
+  <p class="subtitle">Computer Networking: A Top-Down Approach &mdash; Kurose &amp; Ross &mdash; Chapter 4</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Input Queueing</button>
+      <button class="tab" onclick="showSection('tab2')">HOL Blocking</button>
+      <button class="tab" onclick="showSection('tab3')">Output Queueing</button>
+      <button class="tab" onclick="showSection('tab4')">Bufferbloat</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: Input Queueing -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Input Queueing</h2>
+        <p style="margin-bottom:10px;">In a router with input-buffered switching, packets arriving on an input port are placed in a queue <em>at that input port</em> when the switching fabric is busy. This occurs when <strong>R<sub>switch</sub></strong> (the rate of the switching fabric) is <em>not</em> fast enough to transfer all arriving packets simultaneously.</p>
+
+        <div class="quickref">
+          <div class="title">Quick Reference Card</div>
+          <div class="item"><span>Definition:</span> Packets wait at input ports when the switching fabric cannot keep up</div>
+          <div class="item"><span>Root Cause:</span> R<sub>switch</sub> &lt; N &times; R<sub>line</sub></div>
+          <div class="item"><span>Key Risk:</span> Head-of-Line (HOL) blocking</div>
+          <div class="item"><span>Buffer Sizing:</span> B = RTT &times; C</div>
+        </div>
+
+        <h3>Buffer Sizing Formula</h3>
+        <div class="formula">
+          <div class="label">Traditional Buffer Sizing Rule</div>
+          <div class="expr">B = RTT &times; C</div>
+          <div class="desc">Where <strong>B</strong> = buffer size (bits), <strong>RTT</strong> = round-trip time (seconds), <strong>C</strong> = link capacity (bps). A router needs enough buffering to store one RTT's worth of data.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Large Number of TCP Flows (Modern)</div>
+          <div class="expr">B = RTT &times; C / &radic;(2N)</div>
+          <div class="desc">Where <strong>N</strong> = number of long-lived TCP flows sharing the link. As N grows, statistical multiplexing allows smaller buffers.</div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1.1 &mdash; Basic Input Queue Buffer Sizing</div>
+          <p>A router has a line rate <strong>C = 10 Gbps</strong> and the average RTT of flows is <strong>50 ms</strong>. Calculate the required input buffer size using the traditional rule.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>B = RTT &times; C = 0.050 s &times; 10 &times; 10<sup>9</sup> bps = 500 &times; 10<sup>6</sup> bits = <span class="result">62.5 MB</span></p>
+          <p class="note">This is the amount of data a TCP sender can transmit in one RTT before seeing an ACK.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.2 &mdash; Multiple TCP Flows Buffer Sizing</div>
+          <p>If <strong>N = 100</strong> long-lived TCP flows share the same 10 Gbps link (RTT = 50 ms), what buffer size does the modern formula recommend?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>B = (RTT &times; C) / &radic;(2N) = (500 Mb) / &radic;(200) = 500 / 14.14 = <span class="result">35.36 Mb &asymp; 4.42 MB</span></p>
+          <p class="note">With 100 flows, statistical multiplexing reduces required buffering by a factor of &asymp;14 compared to the traditional rule.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.3 &mdash; Determining Queue Depth from Arrival Rate</div>
+          <p>Four input lines each at <strong>1 Gbps</strong> arrive at a switch fabric with capacity <strong>2.5 Gbps</strong>. If packets are 1500 bytes each, estimate how quickly the input queue grows under sustained full load.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Aggregate arrival rate = 4 &times; 1 Gbps = 4 Gbps. Switch capacity = 2.5 Gbps. Excess rate = 4 &minus; 2.5 = 1.5 Gbps.</p>
+          <p>In 1 second, excess data = 1.5 Gb = 187.5 MB. Each packet = 1500 B, so queue grows at 187.5 MB / 1500 B = <span class="result">125,000 packets/second</span>.</p>
+        </div>
+
+        <h3>Comparison: Input Queueing vs Output Queueing</h3>
+        <table>
+          <tr><th>Property</th><th>Input Queueing</th><th>Output Queueing</th></tr>
+          <tr><td>Queue location</td><td>At input ports</td><td>At output ports</td></tr>
+          <tr><td>Switch speed needed</td><td>R<sub>switch</sub> &ge; R<sub>line</sub></td><td>R<sub>switch</sub> &ge; N &times; R<sub>line</sub></td></tr>
+          <tr><td>Susceptible to HOL</td><td>Yes &mdash; major drawback</td><td>No</td></tr>
+          <tr><td>Throughput limit</td><td>~58% under HOL</td><td>Up to 100%</td></tr>
+          <tr><td>Hardware complexity</td><td>Lower (slower fabric OK)</td><td>Higher (fast fabric needed)</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong> Assuming input queues only grow when the switching fabric is slower than the line rate. In reality, contention <em>between</em> input ports for the <em>same</em> output port also causes queue buildup even when R<sub>switch</sub> &gt; R<sub>line</sub>.
+        </div>
+
+        <h3>When Does Input Queuing Occur?</h3>
+        <p>Input queuing occurs when the switching fabric cannot keep up with the aggregate arrival rate. However, if <strong>R<sub>switch</sub></strong> (switching fabric transfer rate) is <strong>N times faster</strong> than <strong>R<sub>line</sub></strong> (line rate), then only <em>negligible</em> queuing will occur at input ports. This is because even in the worst case where all N input lines simultaneously receive packets destined for the <em>same</em> output, each batch of N packets can be cleared through the fabric before the next batch arrives.</p>
+
+        <div class="formula">
+          <div class="label">Condition for Negligible Input Queuing</div>
+          <div class="expr">R<sub>switch</sub> &ge; N &times; R<sub>line</sub></div>
+          <div class="desc">When the switching fabric is at least N times faster than the line rate, all N input ports can be serviced before the next packet arrival, eliminating persistent input queues.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example &mdash; Negligible Input Queuing</div>
+          <p>A router has N = <strong>8</strong> input ports each at R<sub>line</sub> = <strong>1 Gbps</strong>. The switching fabric operates at R<sub>switch</sub> = <strong>10 Gbps</strong>. Is R<sub>switch</sub> fast enough to prevent input queuing?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Required R<sub>switch</sub> = N &times; R<sub>line</sub> = 8 &times; 1 Gbps = 8 Gbps. Actual R<sub>switch</sub> = 10 Gbps &ge; 8 Gbps. <span class="result">Yes &mdash; negligible input queuing.</span></p>
+          <p class="note">Even in the worst case where all 8 inputs send to the same output, the fabric can clear all 8 packets before the next packet arrives (1 Gbps &rarr; one packet every ~1.2 &mu;s at 1500 bytes).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: HOL Blocking -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Head-of-Line (HOL) Blocking</h2>
+        <p style="margin-bottom:10px;">HOL blocking occurs when the packet at the <em>front</em> of an input queue is destined for a <em>busy</em> output port. All packets behind it are blocked&mdash;even if <em>their</em> output ports are free. This severely limits throughput.</p>
+
+        <div class="ki">
+          <strong>Key Insight:</strong> Under HOL blocking, the maximum throughput of an input-buffered switch is limited to approximately <strong>58%</strong> of capacity, regardless of how fast the switching fabric is.
+        </div>
+
+        <div class="quickref">
+          <div class="title">Quick Reference Card</div>
+          <div class="item"><span>Definition:</span> Front packet blocks others behind it when its output is busy</div>
+          <div class="item"><span>Max Throughput:</span> ~58% under uniform random traffic</div>
+          <div class="item"><span>Cause:</span> Single FIFO queue per input port</div>
+          <div class="item"><span>Mitigation:</span> Virtual Output Queues (VOQs)</div>
+        </div>
+
+        <h3>Key Formula</h3>
+        <div class="formula">
+          <div class="label">Maximum Achievable Throughput (HOL)</div>
+          <div class="expr">&lambda;<sub>max</sub> &asymp; 0.586 &times; R<sub>switch</sub></div>
+          <div class="desc">For a uniform traffic pattern, the maximum arrival rate per input port before the queue grows unbounded is about 58.6% of the switching fabric rate.</div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 2.1 &mdash; Throughput Loss from HOL</div>
+          <p>An input-buffered switch has 8 input ports, each at <strong>10 Gbps</strong>, and the switching fabric can run at <strong>80 Gbps</strong>. What is the <em>effective</em> throughput per port under HOL?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Even though the fabric could handle 80 Gbps, HOL blocking limits each port to ~58.6% of its line rate:</p>
+          <p>Effective throughput per port = 10 Gbps &times; 0.586 = <span class="result">5.86 Gbps</span></p>
+          <p>Total effective throughput = 8 &times; 5.86 = <span class="result">46.88 Gbps</span> (only 58.6% of the switch's 80 Gbps capacity is usable).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2.2 &mdash; Queue Growth Near the HOL Threshold</div>
+          <p>An input port has arrival rate <strong>&lambda; = 0.55</strong> (relative to line rate) and service rate <strong>&mu; = 1.0</strong>. The HOL blocking factor reduces the effective service rate to <strong>&mu;<sub>eff</sub> = 0.586</strong> for each port. Is the queue stable? If &lambda; = 0.60, what happens?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>At &lambda; = 0.55, &lambda; &lt; &mu;<sub>eff</sub> = 0.586 &rArr; queue is <span class="result">stable</span>.</p>
+          <p>At &lambda; = 0.60, &lambda; &gt; &mu;<sub>eff</sub> = 0.586 &rArr; queue grows <span class="result">unbounded</span>.</p>
+          <p class="note">This is why HOL blocking is so dangerous: only ~2.4% above threshold causes instability.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2.3 &mdash; Mitigation with Virtual Output Queues</div>
+          <p>A 4-port router using simple input FIFO queues sees 55% throughput. After switching to Virtual Output Queues (VOQs), throughput reaches 95%. Calculate the improvement.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Instead of one FIFO per input, VOQ maintains <em>one queue per output port</em> at each input. This eliminates HOL because a packet destined for a free output is not blocked by one destined for a busy output.</p>
+          <p>Throughput gain = (95% &minus; 55%) / 55% = 40 / 55 = <span class="result">72.7% improvement</span></p>
+        </div>
+
+        <h3>Comparison: FIFO vs VOQ</h3>
+        <table>
+          <tr><th>Property</th><th>FIFO Input Queue</th><th>Virtual Output Queues</th></tr>
+          <tr><td>HOL blocking</td><td>Yes</td><td>Eliminated</td></tr>
+          <tr><td>Max throughput</td><td>~58%</td><td>&gt;95%</td></tr>
+          <tr><td>Queue complexity</td><td>One queue per input</td><td>N &times; N queues</td></tr>
+          <tr><td>Scheduling needed</td><td>None (FIFO)</td><td>Arbiter required</td></tr>
+          <tr><td>Scalability</td><td>Excellent</td><td>O(N&sup2;) queue scaling</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong> Thinking HOL blocking only matters at high utilization. Even at moderate loads (40&ndash;50%), HOL blocking can cause unnecessary queuing delay because packets are delayed behind unrelated traffic.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: Output Queueing -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Output Queueing</h2>
+        <p style="margin-bottom:10px;">In an output-buffered switch, packets are transferred from inputs to outputs <em>immediately</em> through a fast switching fabric (R<sub>switch</sub> &ge; N &times; R<sub>line</sub>). Queuing only occurs at the <em>output</em> port when multiple input packets arrive simultaneously for the same output.</p>
+
+        <p>Even when the switching fabric is <em>N times faster</em> than the line rate, output queues still form due to traffic <strong>contention</strong>.</p>
+
+        <div class="quickref">
+          <div class="title">Quick Reference Card</div>
+          <div class="item"><span>Definition:</span> Packets queue at the output port when multiple inputs target one output</div>
+          <div class="item"><span>Switch Speed:</span> R<sub>switch</sub> &ge; N &times; R<sub>line</sub></div>
+          <div class="item"><span>Key Mechanisms:</span> Drop-tail, RED, PIE, CoDel</div>
+          <div class="item"><span>Drop-tail:</span> Drops arriving packet when buffer is full</div>
+        </div>
+
+        <h3>Explicit Congestion Notification (ECN)</h3>
+        <p>ECN [RFC 3168] is a mechanism that provides <em>explicit</em> congestion signaling without dropping packets. Instead of dropping a packet to signal congestion (as RED does probabilistically), an ECN-capable router marks the <strong>ECN bits</strong> in the IP packet header <em>before</em> the buffer is full. The receiver echoes this signal back to the sender, which then reduces its transmission rate.</p>
+
+        <div class="formula">
+          <div class="label">ECN Marking (Section 3.7.2)</div>
+          <div class="expr">ECN = ECT(0), ECT(1), or CE</div>
+          <div class="desc">The IP header uses two bits: <strong>ECT</strong> (ECN-Capable Transport) set by the sender, and <strong>CE</strong> (Congestion Experienced) set by the router. When CE is set, the receiver marks the TCP ACK with ECE (ECN-Echo) to notify the sender of congestion.</div>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; Note:</strong> ECN requires support from both endpoints. If either endpoint is not ECN-capable, the router falls back to dropping packets. ECN is particularly valuable for latency-sensitive, loss-intolerant applications.
+        </div>
+
+        <h3>Buffer Management Formulas</h3>
+        <div class="formula">
+          <div class="label">Drop-tail Queue Behavior</div>
+          <div class="expr">P(drop) = max(0, (Q &minus; B) / Q)</div>
+          <div class="desc">When queue occupancy <strong>Q</strong> reaches buffer limit <strong>B</strong>, arriving packets are dropped. Q is measured in packets or bytes.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Average Queue Length (RED)</div>
+          <div class="expr">avg_Q = (1 &minus; w) &times; avg_Q + w &times; Q</div>
+          <div class="desc">RED maintains an exponentially weighted moving average of queue length. <strong>w</strong> is a small weight (typically 0.002). Drop probability increases as avg_Q moves between min<sub>th</sub> and max<sub>th</sub>.</div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 3.1 &mdash; Output Queue Buildup at Full Load</div>
+          <p>A 16-port router has R<sub>line</sub> = <strong>1 Gbps</strong> and R<sub>switch</sub> = <strong>32 Gbps</strong> (twice N &times; R<sub>line</sub> = 16 Gbps). Under uniform random traffic, each output port receives packets from 16 inputs. If each input sends at 50% load, what is the offered load to one output?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Each input sends 0.5 Gbps. Each output gets traffic from all 16 inputs. Fraction of each input's traffic destined to a given output = 1/16 (uniform).</p>
+          <p>Load per output = 16 &times; 0.5 Gbps &times; (1/16) = 0.5 Gbps = <span class="result">50% utilization</span>.</p>
+          <p class="note">Even with a fast fabric, output queues form when aggregate demand to an output exceeds the output line rate.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3.2 &mdash; Drop-tail Buffer Overflow</div>
+          <p>An output buffer has capacity <strong>B = 100 packets</strong>. Traffic arrives at rate <strong>&lambda; = 1200 pkts/s</strong> and the output line transmits at <strong>&mu; = 1000 pkts/s</strong>. How long until the buffer overflows?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Net queue growth rate = &lambda; &minus; &mu; = 200 pkts/s. Starting from empty, time to fill 100 packets = 100 / 200 = <span class="result">0.5 seconds</span>.</p>
+          <p>After 0.5 s, every new packet is dropped (drop-tail). After the burst subsides, the buffer drains at 1000 pkts/s.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3.3 &mdash; RED Early Detection</div>
+          <p>A RED-enabled output queue has min<sub>th</sub> = <strong>20 pkts</strong>, max<sub>th</sub> = <strong>60 pkts</strong>, max<sub>p</sub> = <strong>0.1</strong>. The average queue length is 40 packets. Compute the drop probability.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>P(drop) = max<sub>p</sub> &times; (avg_Q &minus; min<sub>th</sub>) / (max<sub>th</sub> &minus; min<sub>th</sub>)</p>
+          <p>P(drop) = 0.1 &times; (40 &minus; 20) / (60 &minus; 20) = 0.1 &times; 20/40 = 0.1 &times; 0.5 = <span class="result">0.05 (5%)</span></p>
+          <p class="note">RED probabilistically drops packets before the buffer fills, signalling TCP senders to slow down proactively.</p>
+        </div>
+
+        <h3>Comparison: Drop-Tail vs AQM</h3>
+        <table>
+          <tr><th>Property</th><th>Drop-tail</th><th>RED (AQM)</th><th>CoDel (AQM)</th></tr>
+          <tr><td>Drop decision</td><td>When buffer full</td><td>Probabilistic (avg Q)</td><td>Based on sojourn time</td></tr>
+          <tr><td>Fairness</td><td>Poor (capture effect)</td><td>Better</td><td>Good</td></tr>
+          <tr><td>Configuration</td><td>One parameter (B)</td><td>Three parameters</td><td>Parameter-less</td></tr>
+          <tr><td>Global sync</td><td>Yes (all TCP flows)</td><td>Reduces sync</td><td>Minimizes sync</td></tr>
+          <tr><td>Delay control</td><td>None</td><td>Indirect</td><td>Direct (target &sim;5ms)</td></tr>
+        </table>
+
+        <h3>Modern AQM: PIE and CoDel</h3>
+        <p>Beyond RED, two more recent Active Queue Management (AQM) policies have been widely deployed to keep queuing delay low while maintaining high throughput:</p>
+
+        <div class="formula">
+          <div class="label">PIE &mdash; Proportional Integral controller Enhanced [RFC 8033]</div>
+          <div class="expr">p(t) = &alpha; &times; (Q(t) &minus; Q<sub>ref</sub>) + &beta; &times; (Q(t) &minus; Q(t &minus; &Delta;t))</div>
+          <div class="desc">PIE uses a control-theoretic approach: it calculates a drop probability based on both the <em>current queue deviation</em> from a reference (proportional term) and the <em>queue trend</em> (integral term). This allows it to respond quickly to sudden congestion while maintaining stability.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">CoDel &mdash; Controlled Delay [Nichols 2012]</div>
+          <div class="expr">if (sojourn_time &gt; target) &amp;&amp; (count &gt; 0) then drop</div>
+          <div class="desc">CoDel focuses on <em>packet sojourn time</em> (time spent in the buffer) rather than queue length. It maintains a minimum sojourn time over a sliding window. When the minimum sojourn time exceeds a target (typically 5 ms), CoDel enters a dropping regime, with the drop rate increasing as the good queueing time persists.</div>
+        </div>
+
+        <div class="quickref">
+          <div class="title">AQM Evolution</div>
+          <div class="item"><span>RED (1993):</span> Pioneering AQM; probabilistically drops based on avg queue length</div>
+          <div class="item"><span>PIE (2013):</span> Control-theoretic; uses proportional-integral of queue deviation</div>
+          <div class="item"><span>CoDel (2012):</span> Parameter-light; uses sojourn time as the congestion signal</div>
+          <div class="item"><span>Common Goal:</span> Keep queues small while maintaining high link utilization</div>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong> Assuming a faster switching fabric eliminates all queuing. Output queues form because of <em>contention</em> from multiple inputs to the same output, not because of fabric speed. A 2&times; faster fabric does not solve the contention problem.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: Bufferbloat -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Bufferbloat</h2>
+        <p style="margin-bottom:10px;"><strong>Bufferbloat</strong> is the phenomenon of <em>persistently large queues</em> in router buffers that cause <em>excessively high delay</em> without improving throughput. It arises when buffers are sized using the traditional B = RTT &times; C rule in environments with many flows or when buffers are cheap and over-provisioned.</p>
+
+        <div class="ki">
+          <strong>Key Insight:</strong> Buffering is a double-edged sword. It absorbs bursts (good), but persistent large queues inflate latency without increasing throughput (bad). The goal is <em>just enough</em> buffering&mdash;enough to absorb bursts, not enough to cause bufferbloat.
+        </div>
+
+        <div class="quickref">
+          <div class="title">Quick Reference Card</div>
+          <div class="item"><span>Definition:</span> Large persistent queues causing high delay</div>
+          <div class="item"><span>Cause:</span> Over-sized buffers + drop-tail + TCP</div>
+          <div class="item"><span>Consequence:</span> RTT inflation (100ms &rarr; 1s+)</div>
+          <div class="item"><span>Solution:</span> AQM (RED, PIE, CoDel) + smaller buffers</div>
+          <div class="item"><span>Real-world:</span> DOCSIS 3.1 added a specific AQM mechanism [RFC 8033, RFC 8034] to combat bufferbloat while preserving bulk throughput performance</div>
+        </div>
+
+        <h3>Core Formulas</h3>
+        <div class="formula">
+          <div class="label">Traditional Buffer Sizing (over-estimates for many flows)</div>
+          <div class="expr">B<sub>trad</sub> = RTT &times; C</div>
+          <div class="desc">Assumes one TCP flow. With N flows, this over-allocates by a factor of &radic;(2N).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Modern Buffer Sizing (avoids bufferbloat)</div>
+          <div class="expr">B<sub>mod</sub> = RTT &times; C / &radic;(2N)</div>
+          <div class="desc">For large N, buffers can be dramatically smaller without sacrificing throughput.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Queuing Delay under Bufferbloat</div>
+          <div class="expr">D<sub>queue</sub> = Q / C</div>
+          <div class="desc">If a buffer holds <strong>Q</strong> bits and the link rate is <strong>C</strong>, the queuing delay is Q / C. With bufferbloat, Q &asymp; B even under moderate load.</div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 4.1 &mdash; Bufferbloat Delay Inflation</div>
+          <p>A home router has a 1 MB buffer on a <strong>10 Mbps</strong> DOCSIS link. RTT to a server is <strong>30 ms</strong> without queuing. When the buffer is full, compute the additional queuing delay and the inflated RTT.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>D<sub>queue</sub> = 1 MB / 10 Mbps = 8 Mb / 10 Mbps = <span class="result">0.8 seconds = 800 ms</span></p>
+          <p>Inflated RTT = 30 ms (base) + 800 ms (queuing) = <span class="result">830 ms</span></p>
+          <p class="note">The user experiences 830 ms RTT for web browsing&mdash;extremely noticeable lag&mdash;even though throughput remains 10 Mbps.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.2 &mdash; Buffer Sizing Comparison</div>
+          <p>A link with <strong>C = 100 Mbps</strong>, <strong>RTT = 100 ms</strong>, and <strong>N = 500</strong> TCP flows. Compare the traditional vs modern buffer recommendation.</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>B<sub>trad</sub> = 0.1 s &times; 100 Mbps = 10 Mb = <span class="result">1.25 MB</span></p>
+          <p>B<sub>mod</sub> = 10 Mb / &radic;(2 &times; 500) = 10 Mb / &radic;(1000) = 10 / 31.62 Mbps = <span class="result">316 Kb &asymp; 39.5 KB</span></p>
+          <p>The traditional rule over-allocates by <strong>31.6&times;</strong>, creating massive bufferbloat potential.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.3 &mdash; DOCSIS 3.1 AQM Benefit</div>
+          <p>A DOCSIS 3.1 cable modem previously had a 500 KB buffer with drop-tail. After enabling PIE AQM, the average queue occupancy drops from 80% to 10%. Link speed is <strong>50 Mbps</strong>. What is the delay reduction?</p>
+          <p><span class="bull">&#9656;</span> <strong>Solution:</strong></p>
+          <p>Before AQM: Q = 500 KB &times; 0.8 = 400 KB = 3.2 Mb. D<sub>queue</sub> = 3.2 / 50 = <span class="result">64 ms</span></p>
+          <p>After AQM: Q = 500 KB &times; 0.1 = 50 KB = 0.4 Mb. D<sub>queue</sub> = 0.4 / 50 = <span class="result">8 ms</span></p>
+          <p>Delay reduction: 64 &minus; 8 = <span class="result">56 ms savings</span> (87.5% reduction). Throughput remains unchanged.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.4 &mdash; Bufferbloat: ACK Clocking and Persistent Queues</div>
+          <p>A home router sends TCP segments to a remote game server. The path has a base RTT of <strong>200 ms</strong> and one packet is transmitted from the queue every <strong>20 ms</strong>.</p>
+          <p><span class="bull">&#9656;</span> <strong>ACK clocking explained:</strong></p>
+          <p>When a burst of packets arrives at the queue, one packet is transmitted every 20 ms. When the first ACK arrives (at <strong>t = 200 ms</strong>), the TCP sender immediately transmits another packet, which is queued at the tail. This creates a steady-state where the queue always holds exactly <strong>five packets</strong>. The end-to-end pipe is fully utilized (throughput is maximized), but the queuing delay is constant and persistent. The interactive application (the game) experiences this delay even though throughput is fine.</p>
+          <p class="note">This is the essence of <strong>bufferbloat</strong>: good throughput, terrible delay. The buffer absorbs the ACK clock, preventing TCP from naturally draining the queue. With RTT = 200 ms and one packet every 20 ms, the pipeline holds 10 packets; the additional 5 packets in the queue inflate RTT by 100 ms without increasing throughput.</p>
+        </div>
+
+        <h3>Comparison: Symptoms &amp; Solutions</h3>
+        <table>
+          <tr><th>Scenario</th><th>Symptom</th><th>Throughput</th><th>Delay</th><th>Solution</th></tr>
+          <tr><td>Properly sized buffer</td><td>Burst absorption only</td><td>Full</td><td>Low (RTT)</td><td>&mdash;</td></tr>
+          <tr><td>Bufferbloat</td><td>Persistent high queue</td><td>Full</td><td>10&times;&ndash;100&times; RTT</td><td>Smaller buffer + AQM</td></tr>
+          <tr><td>Drop-tail + large buffer</td><td>TCP global sync</td><td>Fluctuating</td><td>High</td><td>RED / PIE / CoDel</td></tr>
+          <tr><td>Too-small buffer</td><td>Low throughput</td><td>Reduced</td><td>Low</td><td>Larger buffer</td></tr>
+        </table>
+
+        <h3>Bufferbloat: Double-Edged Sword Summary</h3>
+        <table>
+          <tr><th>Pro (Buffering)</th><th>Con (Too Much Buffering)</th></tr>
+          <tr><td>Absorbs transient bursts</td><td>Inflates latency unnecessarily</td></tr>
+          <tr><td>Prevents packet loss during spikes</td><td>Hides congestion signals from TCP</td></tr>
+          <tr><td>Smooths traffic for jitter-sensitive apps</td><td>Causes &ldquo;buffer full&rdquo; loss cascades</td></tr>
+          <tr><td>Improves link utilization</td><td>Creates unfairness (large flows dominate)</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong> Believing &ldquo;more buffering always improves performance.&rdquo; In TCP networks, over-buffering increases delay without helping throughput&mdash;TCP will fill any available buffer. The result is bufferbloat: high RTT, sluggish interactive applications, and no throughput gain.
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong> Applying B = RTT &times; C blindly to all links. This rule was derived for a <em>single</em> TCP flow. For backbone links with thousands of flows, it grossly over-estimates buffer needs by a factor of &radic;(2N).
+        </div>
+
+        <div class="quickref" style="margin-top:15px;">
+          <div class="title">The Bufferbloat Triad: Symptoms to Watch For</div>
+          <div class="item">1. <span>High latency</span> &mdash; ping RTT &gt; 2&times; base RTT under load</div>
+          <div class="item">2. <span>Good throughput, bad responsiveness</span> &mdash; downloads fast but web pages lag</div>
+          <div class="item">3. <span>Latency under load &gt;&gt; latency idle</span> &mdash; classic bufferbloat indicator</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">The Bufferbloat Lesson [Kleinrock 2018]</div>
+          <div class="expr">"Not only is throughput important, but also minimal delay is important."</div>
+          <div class="desc">Kleinrock's reminder that network design must consider both throughput <em>and</em> delay. Bufferbloat demonstrates that optimizing for throughput alone (oversized buffers) can severely degrade delay without any throughput benefit.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

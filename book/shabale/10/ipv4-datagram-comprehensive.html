@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فرمت دیتاگرام IPv4 - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 4px solid #ff6600; padding: 12px; margin: 12px 0; border-radius: 6px; color: #ffcc88; font-size: 0.9em; }
+    .warning::before { content: "! هشدار: "; color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.82em; color: #00ccff; overflow-x: auto; border-left: 3px solid #00ccff; margin: 10px 0; line-height: 1.5; }
+    .refcard { background: linear-gradient(135deg, #0d1a0d, #001a0d); border: 2px solid #00ff8844; border-radius: 10px; padding: 15px; margin: 15px 0; }
+    .refcard h3 { color: #00ff88; margin-bottom: 10px; text-align: center; }
+    .refcard table { margin: 5px 0; }
+    .refcard td:first-child { color: #ffcc00; text-align: left; font-weight: bold; }
+    .refcard td:last-child { color: #e0e0e0; text-align: left; }
+    .refcard td { border: none; padding: 4px 8px; background: transparent; }
+    .diagram { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #333; overflow-x: auto; }
+    .diagram pre { color: #00ff88; font-size: 0.7em; line-height: 1.3; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
+    .tag-green { background: #00331a; color: #00ff88; border: 1px solid #00ff8844; }
+    .tag-orange { background: #331a00; color: #ff9944; border: 1px solid #ff994444; }
+    .tag-blue { background: #001a33; color: #00ccff; border: 1px solid #00ccff44; }
+    @media (max-width: 768px) { .tabs { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <h1>فرمت دیتاگرام IPv4</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری: رویکرد از بالا به پایین — کروس و راس، فصل ۴</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('header-fields')">فیلدهای سرآیند</button>
+      <button class="tab" onclick="showSection('fragmentation')">قطعه‌قطعه‌سازی</button>
+      <button class="tab" onclick="showSection('checksum-ttl')">Checksum و TTL</button>
+      <button class="tab" onclick="showSection('encapsulation')">کپسوله‌سازی</button>
+    </div>
+
+    <!-- TAB 1: Header Fields -->
+    <div class="content active" id="header-fields">
+      <div class="section">
+        <h2>ساختار سرآیند دیتاگرام IPv4</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">دیتاگرام IPv4 بسته لایه شبکه است که توسط پروتکل اینترنت استفاده می‌شود. سرآیند استاندارد <strong style="color:#00ff88;">۲۰ بایت</strong> است (بدون گزینه‌ها). هر فیلد نقش خاصی در مسیریابی، قطعه‌قطعه‌سازی و تشخیص خطا دارد.</p>
+
+        <div class="diagram">
+          <pre>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|Version|  HLEN |    TOS       |        Total Length (bytes)     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|         Identification        |Flags|   Fragment Offset        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   TTL  |  Protocol  |        Header Checksum                   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       Source IP Address                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                    Destination IP Address                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     Options (if any, variable)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              Data (payload)                     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</pre>
+        </div>
+
+        <div class="formula">
+          <div class="label">اندازه سرآیند استاندارد (بدون گزینه):</div>
+          <div class="expr">Header = 20 bytes</div>
+          <div class="desc">سرآیند دیتاگرام IP دارای بخش ۲۰ بایتی ثابت است زمانی که هیچ گزینه‌ای وجود نداشته باشد</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">حداکثر اندازه دیتاگرام:</div>
+          <div class="expr">Max Size = 2<sup>16</sup> - 1 = 65,535 bytes</div>
+          <div class="desc">فیلد Total Length ۱۶ بیتی، دیتاگرام‌ها را به 65,535 بایت کل (سرآیند + بار) محدود می‌کند</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">سربار سرآیند + TCP:</div>
+          <div class="expr">IP Header (20) + TCP Header (20) = 40 bytes</div>
+          <div class="desc">هر segment TCP متحمل ۴۰ بایت سربار لایه شبکه+انتقال می‌شود</div>
+        </div>
+
+        <h3>مرجع فیلدهای سرآیند</h3>
+        <table>
+          <tr><th>فیلد</th><th>بیت</th><th>هدف</th><th>توضیحات</th></tr>
+          <tr><td>Version</td><td>۴</td><td>نسخه پروتکل IP</td><td>IPv4 = 4</td></tr>
+          <tr><td>Header Length (HLEN)</td><td>۴</td><td>محل شروع بار</td><td>بر حسب کلمات ۳۲ بیتی؛ حداقل=5 (20B)</td></tr>
+          <tr><td>Type of Service (TOS)</td><td>۸</td><td>تمایز انواع ترافیک</td><td>شامل بیت‌های ECN</td></tr>
+          <tr><td>Total Length</td><td>۱۶</td><td>مجموع بایت‌های دیتاگرام</td><td>حداکثر 65,535</td></tr>
+          <tr><td>Identification</td><td>۱۶</td><td>گروه‌بندی قطعات</td><td>ID یکسان = دیتاگرام اصلی یکسان</td></tr>
+          <tr><td>Flags</td><td>۳</td><td>کنترل قطعه‌قطعه‌سازی</td><td>DF=1 (قطعه نکن), MF=1 (قطعات بیشتر)</td></tr>
+          <tr><td>Fragment Offset</td><td>۱۳</td><td>موقعیت در اصلی</td><td>بر حسب واحد ۸ بایتی</td></tr>
+          <tr><td>Time-to-Live (TTL)</td><td>۸</td><td>محدودیت عمر دیتاگرام</td><td>توسط هر مسیریاب کاهش می‌یابد؛ در ۰ رها می‌شود</td></tr>
+          <tr><td>Protocol</td><td>۸</td><td>پروتکل لایه بالایی</td><td>TCP=6, UDP=17, ICMP=1</td></tr>
+          <tr><td>Header Checksum</td><td>۱۶</td><td>تشخیص خطا روی سرآیند</td><td>در هر مسیریاب دوباره محاسبه می‌شود</td></tr>
+          <tr><td>Source IP</td><td>۳۲</td><td>آدرس فرستنده</td><td>نماد نقطه-دهدهی</td></tr>
+          <tr><td>Destination IP</td><td>۳۲</td><td>آدرس گیرنده</td><td>نماد نقطه-دهدهی</td></tr>
+          <tr><td>Options</td><td>متغیر</td><td>ویژگی‌های سرآیند گسترده</td><td>به ندرت استفاده می‌شود؛ در IPv6 حذف شده است</td></tr>
+          <tr><td>Data (Payload)</td><td>متغیر</td><td>segment لایه بالایی</td><td>معمولاً segment TCP یا UDP</td></tr>
+        </table>
+
+        <div class="warning">
+          فیلد HLEN بر حسب کلمات ۳۲ بیتی شمارش می‌کند، NOT بایت. مقدار ۵ یعنی 5 x 4 = 20 بایت. اگر HLEN=7 باشد، سرآیند ۲۸ بایت است. همیشه HLEN را در ۴ ضرب کنید تا تعداد بایت‌ها به دست آید.
+        </div>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: محاسبه اندازه بار</div>
+          <p>یک دیتاگرام IPv4 دارای Total Length = 1200 بایت و HLEN = 5 است. اندازه بار چقدر است؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>گام ۱:</strong> HLEN = 5 یعنی سرآیند = 5 &times; 4 = 20 بایت<br>
+            <strong>گام ۲:</strong> بار = Total Length - Header = 1200 - 20 = <span class="result">1180 بایت</span>
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: تفسیر فیلد پروتکل</div>
+          <p>یک مسیریاب یک دیتاگرام IPv4 با فیلد Protocol = 6 دریافت می‌کند. چه پروتکل لایه انتقالی باید بار را در مقصد دریافت کند؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            شماره پروتکل 6 مربوط به <span class="result">TCP</span> است. لایه IP میزبان مقصد، بار دیتاگرام را به ماژول TCP برای پردازش تحویل می‌دهد. اگر Protocol = 17 بود، به UDP تحویل داده می‌شد.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: TTL و طول سرآیند</div>
+          <p>یک دیتاگرام ضبط‌شده دارای ۲۰ بایت هگز اول است: <code style="color:#00ccff;">45 00 00 3C 1C 46 40 00 40 06 B1 E6 C0 A8 00 01 C0 A8 00 02</code>. نسخه، طول سرآیند و TTL را تعیین کنید.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>بایت ۱ (0x45):</strong><br>
+            &nbsp;&nbsp;نیم‌بایت بالا = 4 &rarr; <span class="result">IPv4</span><br>
+            &nbsp;&nbsp;نیم‌بایت پایین = 5 &rarr; سرآیند = 5 &times; 4 = <span class="result">۲۰ بایت</span><br>
+            <strong>بایت ۹ (0x40):</strong> TTL = <span class="result">۶۴</span> (دهدهی)<br>
+            <strong>بایت ۱۰ (0x06):</strong> پروتکل = <span class="result">6 (TCP)</span>
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <table>
+            <tr><td>اندازه سرآیند IPv4</td><td>۲۰ بایت (بدون گزینه)</td></tr>
+            <tr><td>حداکثر دیتاگرام</td><td>65,535 بایت</td></tr>
+            <tr><td>حداکثر بار</td><td>65,515 بایت (با سرآیند 20B)</td></tr>
+            <tr><td>MTU معمول</td><td>1500 بایت (Ethernet)</td></tr>
+            <tr><td>TCP = 6, UDP = 17</td><td>شماره پروتکل‌ها</td></tr>
+            <tr><td>حداکثر TTL</td><td>255</td></tr>
+            <tr><td>واحد HLEN</td><td>کلمات ۳۲ بیتی</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Fragmentation -->
+    <div class="content" id="fragmentation">
+      <div class="section">
+        <h2>قطعه‌قطعه‌سازی IP</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">وقتی یک دیتاگرام IP بزرگتر از حداکثر واحد انتقال (MTU) لینک خروجی است، مسیریاب آن را به قطعات کوچک‌تر تقسیم می‌کند. قطعات در <strong style="color:#00ff88;">میزبان مقصد</strong> بازسازی می‌شوند، نه در مسیریاب‌های میانی.</p>
+
+        <div class="formula">
+          <div class="label">رمزگذاری افست قطعه:</div>
+          <div class="expr">Offset (bytes) = Fragment Offset field value &times; 8</div>
+          <div class="desc">فیلد افست ۱۳ بیتی موقعیت تقسیم بر ۸ را ذخیره می‌کند (زیرا افست باید روی مرزهای ۸ بایتی باشد)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تعداد قطعات:</div>
+          <div class="expr">N = ceil( (Payload Length) / (MTU - Header Length) )</div>
+          <div class="desc">هر قطعه سرآیند IP خود را حمل می‌کند (معمولاً ۲۰ بایت)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">حداکثر داده به ازای هر قطعه:</div>
+          <div class="expr">Max Data per Fragment = (MTU - Header) rounded down to nearest multiple of 8</div>
+          <div class="desc">بار قطعات باید مضرب ۸ بایت باشد (به جز آخرین قطعه)</div>
+        </div>
+
+        <h3>فیلدهای قطعه‌قطعه‌سازی</h3>
+        <table>
+          <tr><th>فیلد</th><th>بیت</th><th>نقش در قطعه‌قطعه‌سازی</th></tr>
+          <tr><td>Identification</td><td>۱۶</td><td>همه قطعات یک دیتاگرام ID یکسانی دارند</td></tr>
+          <tr><td>Flag: Reserved (R)</td><td>۱</td><td>همیشه ۰</td></tr>
+          <tr><td>Flag: Don't Fragment (DF)</td><td>۱</td><td>اگر =1 باشد، مسیریاب دیتاگرام را رها می‌کند به جای قطعه‌قطعه کردن</td></tr>
+          <tr><td>Flag: More Fragments (MF)</td><td>۱</td><td>MF=1 یعنی قطعات بیشتری می‌آید؛ MF=0 یعنی آخرین قطعه</td></tr>
+          <tr><td>Fragment Offset</td><td>۱۳</td><td>موقعیت داده این قطعه در دیتاگرام اصلی (بر حسب واحد ۸ بایتی)</td></tr>
+        </table>
+
+        <div class="warning">
+          بار قطعات (به جز آخرین) MUST مضرب ۸ بایت باشد. اگر بار محاسبه‌شده شما مضرب ۸ نیست، آن را به نزدیک‌ترین مضرب پایین گرد کنید. آخرین قطعه می‌تواند هر اندازه‌ای باشد.
+        </div>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: قطعه‌قطعه‌سازی پایه</div>
+          <p>یک دیتاگرام IP 4000 بایتی (سرآیند ۲۰ بایت، بار 3980 بایت) باید از لینکی با MTU = 1500 بایت عبور کند. چند قطعه و افست آن‌ها چیست؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>حداکثر داده به ازای هر قطعه:</strong> floor((1500 - 20) / 8) &times; 8 = floor(1480/8) &times; 8 = 185 &times; 8 = <span class="result">1480 بایت</span><br>
+            <strong>قطعه ۱:</strong> offset = 0, data = 1480 بایت, MF=1<br>
+            <strong>قطعه ۲:</strong> offset = 185 &times; 8 = 1480, data = 1480 بایت, MF=1<br>
+            <strong>قطعه ۳:</strong> offset = 370 &times; 8 = 2960, data = 3980 - 2960 = <span class="result">1020 بایت</span>, MF=0<br>
+            مجموعاً ۳ قطعه. همه از Identification = مقدار یکسان استفاده می‌کنند.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: پرچم DF تنظیم شده</div>
+          <p>یک میزبان یک دیتاگرام 2000 بایتی (شامل سرآیند) با DF=1 روی لینک Ethernet (MTU=1500) ارسال می‌کند. چه اتفاقی می‌افتد؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            دیتاگرام (2000 بایت) از MTU (1500 بایت) فراتر می‌رود. از آنجا که DF=1 (Don't Fragment)، مسیریاب <span class="result">دیتاگرام را رها می‌کند</span> و یک پیام خطای ICMP "Fragmentation Needed" به مبدأ ارسال می‌کند.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: بازسازی افست‌ها</div>
+          <p>سه قطعه با مقادیر افست و MF زیر به مقصد می‌رسند: (offset=0, MF=1), (offset=185, MF=1), (offset=370, MF=0). اندازه کل بار بازساخته‌شده چقدر است؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>قطعه ۱:</strong> بایت‌های 0-1479 (1480 بایت)<br>
+            <strong>قطعه ۲:</strong> بایت‌های 1480-2959 (1480 بایت)<br>
+            <strong>قطعه ۳:</strong> از 370 &times; 8 = 2960 شروع می‌شود. از آنجا که MF=0، این آخرین است.<br>
+            برای یافتن اندازه بار قطعه ۳، به فیلد Total Length نیاز داریم. اگر Total Length = 1040، آنگاه بار = 1040 - 20 = 1020 بایت.<br>
+            کل بار بازساخته‌شده = 1480 + 1480 + 1020 = <span class="result">3980 بایت</span>
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <table>
+            <tr><td>MTU Ethernet</td><td>1500 بایت</td></tr>
+            <tr><td>حداقل داده قطعه</td><td>۸ بایت (به جز آخرین)</td></tr>
+            <tr><td>واحد افست</td><td>۸ بایت</td></tr>
+            <tr><td>DF=1 یعنی ...</td><td>قطعه نکن؛ رها کن اگر بزرگ است</td></tr>
+            <tr><td>MF=1 یعنی ...</td><td>قطعات بیشتری می‌آید</td></tr>
+            <tr><td>محل بازسازی</td><td>فقط میزبان مقصد</td></tr>
+            <tr><td>نقش فیلد ID</td><td>قطعات را گروه‌بندی می‌کند</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Checksum & TTL -->
+    <div class="content" id="checksum-ttl">
+      <div class="section">
+        <h2>Header Checksum</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">checksum سرآیند IPv4 فقط از <strong style="color:#00ff88;">سرآیند</strong> محافظت می‌کند (نه بار). باید در هر گام دوباره محاسبه شود زیرا فیلد TTL تغییر می‌کند. الگوریتم Internet checksum است: جمع متمم ۱ همه کلمات ۱۶ بیتی در سرآیند.</p>
+
+        <div class="formula">
+          <div class="label">الگوریتم Internet Checksum:</div>
+          <div class="expr">Checksum = ~( &sum; (header 16-bit words in 1s complement) )</div>
+          <div class="desc">checksum متمم ۱ جمع متمم ۱ همه کلمات ۱۶ بیتی در سرآیند است (فیلد checksum خود در طول محاسبه صفر در نظر گرفته می‌شود)</div>
+        </div>
+
+        <h3>شبه‌کد محاسبه Checksum</h3>
+        <div class="code">
+// Input: array of 16-bit words representing IP header (checksum field = 0)
+// Output: 16-bit Internet checksum
+
+function computeInternetChecksum(words[]):
+    sum = 0
+    for each word in words:
+        sum = sum + word          // ordinary binary addition
+        if sum &gt; 0xFFFF:           // carry-out detected
+            sum = (sum &amp; 0xFFFF) + 1  // wrap-around (end-around carry)
+    checksum = ~sum &amp; 0xFFFF       // ones' complement
+    return checksum
+
+// Verification at receiver:
+// Compute checksum over entire header INCLUDING checksum field
+// If result == 0, no error detected
+        </div>
+
+        <div class="warning">
+          Checksum IP فقط سرآیند HEADER را پوشش می‌دهد، نه بار را. TCP و UDP checksumهای خود را دارند که کل segment را پوشش می‌دهند. checksum IP باید در هر مسیریاب دوباره محاسبه شود زیرا TTL تغییر می‌کند. این یک هزینه پردازش قابل توجه است — به همین دلیل IPv6 checksum سرآیند را به طور کلی حذف کرد.
+        </div>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: محاسبه ساده Checksum</div>
+          <p>با فرض سه کلمه ۱۶ بیتی سرآیند: 0x4500، 0x003C، 0x1C46. checksum را محاسبه کنید.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>جمع:</strong> 0x4500 + 0x003C = 0x453C<br>
+            <strong>افزودن بعدی:</strong> 0x453C + 0x1C46 = 0x6182 (بدون نقلی)<br>
+            <strong>متمم ۱:</strong> ~0x6182 = <span class="result">0x9E7D</span><br>
+            (برای یک سرآیند کامل، همه ۱۰ کلمه سرآیند ۲۰ بایتی جمع می‌شدند)
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: نقلی انتها-به-انتها</div>
+          <p>دو کلمه ۱۶ بیتی را جمع کنید: 0xFFFF + 0x0001.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>جمع معمولی:</strong> 0xFFFF + 0x0001 = <span class="result">0x10000</span> (این ۱۷ بیت است)<br>
+            <strong>نقلی انتها-به-انتها:</strong> 0x0000 + 1 = <span class="result">0x0001</span><br>
+            این جمع متمم ۱ است. متمم ۱ (~0x0001) = <span class="result">0xFFFE</span> به عنوان checksum ذخیره می‌شود.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: تأیید در گیرنده</div>
+          <p>در مقصد، کل سرآیند (شامل فیلد checksum) پردازش می‌شود. جمع متمم ۱ محاسبه‌شده همه کلمات = 0xFFFF. این به چه معناست؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            اگر جمع کل سرآیند (شامل checksum) = 0xFFFF باشد، پس از گرفتن متمم ۱، ~0xFFFF = 0x0000 را می‌گیریم. نتیجه <span class="result">0 نشان می‌دهد هیچ خطایی تشخیص داده نشده است</span>. هر نتیجه غیرصفر به معنای تشخیص خطای بیتی است و دیتاگرام معمولاً دور ریخته می‌شود.
+          </p>
+        </div>
+
+        <div class="section" style="margin-top:20px;">
+          <h2>فیلد Time-to-Live (TTL)</h2>
+          <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">فیلد ۸ بیتی TTL از چرخش بی‌نهایت دیتاگرام‌ها در شبکه جلوگیری می‌کند. هر مسیریاب TTL را ۱ واحد کاهش می‌دهد. وقتی TTL به ۰ می‌رسد، مسیریاب دیتاگرام را رها کرده و یک پیام ICMP Time Exceeded به مبدأ ارسال می‌کند.</p>
+
+          <div class="formula">
+            <div class="label">رفتار TTL:</div>
+            <div class="expr">TTL<sub>new</sub> = TTL<sub>old</sub> - 1 &nbsp; (if TTL<sub>old</sub> &gt; 0 &rarr; forward; if TTL<sub>old</sub> = 0 &rarr; drop)</div>
+            <div class="desc">دقیقاً یک بار در هر گام مسیریاب کاهش می‌یابد</div>
+          </div>
+
+          <div class="warning">
+            برخی سیستم‌های عامل TTL اولیه را ۶۴ (Linux)، ۱۲۸ (Windows) یا ۲۵۵ (Solaris) تنظیم می‌کنند. هنگام تحلیل ردپای شبکه، TTL اولیه منهای TTL فعلی برابر با تعداد گام‌های مسیریاب طی‌شده است.
+          </div>
+
+          <h3>مثال‌های عملی</h3>
+
+          <div class="example">
+            <div class="title">مثال ۱: تعداد گام‌ها از TTL</div>
+            <p>یک میزبان Linux بسته‌ای با TTL اولیه=64 ارسال می‌کند. بسته با TTL=51 به مقصد می‌رسد. چند مسیریاب را طی کرده است؟</p>
+            <p style="color:#aaa;margin:5px 0;">
+              گام‌ها = TTL اولیه - TTL ورود = 64 - 51 = <span class="result">۱۳ مسیریاب</span>
+            </p>
+          </div>
+
+          <div class="example">
+            <div class="title">مثال ۲: انقضای TTL</div>
+            <p>یک دیتاگرام با TTL=1 به مسیریاب A می‌رسد. پس از کاهش، چه اتفاقی می‌افتد؟</p>
+            <p style="color:#aaa;margin:5px 0;">
+              مسیریاب A TTL را از 1 به <span class="result">0</span> کاهش می‌دهد. مسیریاب <span class="result">دیتاگرام را رها می‌کند</span> و یک پیام ICMP "Time Exceeded" (Type 11) به آدرس IP مبدأ ارسال می‌کند.
+            </p>
+          </div>
+
+          <div class="example">
+            <div class="title">مثال ۳: مکانیزم Traceroute</div>
+            <p>Traceroute بسته‌هایی با TTL=1، سپس TTL=2، سپس TTL=3 و غیره ارسال می‌کند. در هر گام چه اتفاقی می‌افتد؟</p>
+            <p style="color:#aaa;margin:5px 0;">
+              <strong>TTL=1:</strong> اولین مسیریاب به 0 کاهش می‌دهد، رها می‌کند، ICMP Time Exceeded ارسال می‌کند. مبدأ RTT و IP مسیریاب A را ثبت می‌کند.<br>
+              <strong>TTL=2:</strong> اولین مسیریاب ارسال می‌کند (TTL 2&rarr;1)، دومین مسیریاب به 0 کاهش می‌دهد، رها می‌کند، ICMP ارسال می‌کند. مبدأ IP مسیریاب B را ثبت می‌کند.<br>
+              <strong>TTL=N:</strong> نهایتاً به مقصد می‌رسد. مقصد ICMP Port Unreachable (یا پاسخ برنامه) ارسال می‌کند. مبدأ اکنون <span class="result">کل مسیر و RTT هر گام</span> را می‌داند.
+            </p>
+          </div>
+
+          <div class="refcard">
+            <h3>کارت مرجع سریع</h3>
+            <table>
+              <tr><td>Checksum پوشش می‌دهد</td><td>فقط سرآیند IP (معمولاً ۲۰ بایت)</td></tr>
+              <tr><td>الگوریتم Checksum</td><td>جمع متمم ۱ کلمات ۱۶ بیتی</td></tr>
+              <tr><td>دوباره محاسبه در</td><td>هر مسیریاب (TTL تغییر می‌کند)</td></tr>
+              <tr><td>نتیجه تأیید</td><td>0 = هیچ خطایی تشخیص داده نشد</td></tr>
+              <tr><td>حداکثر مقدار TTL</td><td>255</td></tr>
+              <tr><td>مقادیر شروع رایج TTL</td><td>64 (Linux), 128 (Windows), 255 (Solaris)</td></tr>
+              <tr><td>هدف TTL</td><td>جلوگیری از حلقه‌های بی‌نهایت</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Encapsulation -->
+    <div class="content" id="encapsulation">
+      <div class="section">
+        <h2>کپسوله‌سازی در IPv4</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">فیلد بار دیتاگرام IP معمولاً یک segment لایه انتقال (TCP یا UDP) را حمل می‌کند. فیلد ۸ بیتی Protocol به میزبان مقصد می‌گوید کدام پروتکل لایه بالایی باید داده‌های خارج‌شده از کپسول را دریافت کند.</p>
+
+        <div class="formula">
+          <div class="label">نگاشت شماره پروتکل:</div>
+          <div class="expr">Protocol Number = 6 &rarr; TCP &nbsp;|&nbsp; Protocol Number = 17 &rarr; UDP</div>
+          <div class="desc">شماره پروتکل در IP نقشی مشابه شماره پورت در لایه انتقال ایفا می‌کند — لایه شبکه را به لایه انتقال بالای خود متصل می‌کند</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">نسبت سربار IPv4 + TCP:</div>
+          <div class="expr">Overhead % = 40 / (40 + Application Data) &times; 100%</div>
+          <div class="desc">برای پیام‌های کوچک برنامه (مثلاً ۴۰ بایت)، سربار = 40/(40+40) = 50%</div>
+        </div>
+
+        <h3>مقایسه سرآیند IPv4 در مقابل IPv6</h3>
+        <table>
+          <tr><th>فیلد</th><th>IPv4</th><th>IPv6</th><th>توضیحات</th></tr>
+          <tr><td>Version</td><td>۴ بیت (مقدار = ۴)</td><td>۴ بیت (مقدار = ۶)</td><td>فیلد یکسان، مقدار متفاوت</td></tr>
+          <tr><td>Header Length</td><td>۴ بیت</td><td>حذف شده</td><td>IPv6 سرآیند ثابت ۴۰ بایتی دارد</td></tr>
+          <tr><td>TOS / Traffic Class</td><td>TOS (۸ بیت)</td><td>Traffic Class (۸ بیت)</td><td>عملکرد مشابه</td></tr>
+          <tr><td>Total Length / Payload Length</td><td>Total Length (۱۶ بیت)</td><td>Payload Length (۱۶ بیت)</td><td>IPv6 طول سرآیند را شامل نمی‌شود</td></tr>
+          <tr><td>Identification</td><td>۱۶ بیت</td><td>حذف شده</td><td>IPv6 در مسیریاب‌ها قطعه‌قطعه نمی‌کند</td></tr>
+          <tr><td>Flags</td><td>۳ بیت</td><td>حذف شده</td><td>—</td></tr>
+          <tr><td>Fragment Offset</td><td>۱۳ بیت</td><td>حذف شده</td><td>—</td></tr>
+          <tr><td>TTL / Hop Limit</td><td>TTL (۸ بیت)</td><td>Hop Limit (۸ بیت)</td><td>عملکرد یکسان، نام متفاوت</td></tr>
+          <tr><td>Protocol / Next Header</td><td>Protocol (۸ بیت)</td><td>Next Header (۸ بیت)</td><td>مقادیر یکسان، با سرآیندهای گسترش‌یافته توسعه یافته</td></tr>
+          <tr><td>Header Checksum</td><td>۱۶ بیت</td><td>حذف شده</td><td>به checksum لایه پیوند + لایه انتقال متکی است</td></tr>
+          <tr><td>Source Address</td><td>۳۲ بیت</td><td>۱۲۸ بیت</td><td>گسترش عمده</td></tr>
+          <tr><td>Destination Address</td><td>۳۲ بیت</td><td>۱۲۸ بیت</td><td>گسترش عمده</td></tr>
+          <tr><td>Options</td><td>متغیر</td><td>سرآیندهای گسترش</td><td>سرآیندهای اختیاری جداگانه از طریق Next Header زنجیر شده</td></tr>
+          <tr><td>Flow Label</td><td>وجود ندارد</td><td>۲۰ بیت</td><td>جدید در IPv6 برای شناسایی جریان</td></tr>
+        </table>
+
+        <div class="warning">
+          شماره پروتکل (سرآیند IP) و شماره پورت (سرآیند TCP/UDP) اهداف متفاوتی دارند. شماره پروتکل مشخص می‌کند کدام پروتکل حمل و نقل استفاده شده است (TCP=6, UDP=17). شماره پورت مشخص می‌کند کدام فرآیند برنامه (مثلاً HTTP=80, DNS=53). آن‌ها در لایه‌های مختلف عمل می‌کنند — آن‌ها را اشتباه نگیرید!
+        </div>
+
+        <h3>شماره پروتکل در مقابل شماره پورت — تشبیه</h3>
+        <table>
+          <tr><th>لایه</th><th>فیلد</th><th>مکان</th><th>هدف</th><th>مثال</th></tr>
+          <tr><td>شبکه</td><td>شماره پروتکل</td><td>سرآیند IP</td><td>اتصال شبکه → انتقال</td><td>6 → TCP</td></tr>
+          <tr><td>انتقال</td><td>شماره پورت</td><td>سرآیند TCP/UDP</td><td>اتصال انتقال → برنامه</td><td>80 → HTTP</td></tr>
+          <tr><td>پیوند</td><td>EtherType</td><td>فریم Ethernet</td><td>اتصال پیوند → شبکه</td><td>0x0800 → IP</td></tr>
+        </table>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: محاسبه سربار</div>
+          <p>یک برنامه هر ۱۰ میلی‌ثانیه ۱۰۰ بایت داده تولید می‌کند که در TCP و سپس IP کپسوله می‌شود. درصد سربار سرآیند چقدر است؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>سرآیند IP:</strong> ۲۰ بایت<br>
+            <strong>سرآیند TCP:</strong> ۲۰ بایت<br>
+            <strong>کل سرآیند:</strong> ۴۰ بایت<br>
+            <strong>کل دیتاگرام:</strong> 40 + 100 = ۱۴۰ بایت<br>
+            <strong>درصد سربار:</strong> 40/140 &times; 100 = <span class="result">28.57%</span>
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: شناسایی پروتکل</div>
+          <p>یک دیتاگرام IP ضبط‌شده نشان می‌دهد بایت ۱۰ سرآیند (شمارش از ۱) = 0x11. چه پروتکل انتقالی حمل می‌شود؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            فیلد Protocol در بایت ۱۰ سرآیند IP قرار دارد. 0x11 = 17 دهدهی. شماره پروتکل 17 = <span class="result">UDP</span>. بنابراین بار یک segment UDP است.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: انتقال IPv6 — تونل‌زنی</div>
+          <p>دو مسیریاب IPv6 از طریق یک شبکه فقط-IPv4 ارتباط برقرار می‌کنند. یک دیتاگرام IPv6 (سرآیند 40B + بار 100B) باید تونل‌زنی شود. اندازه کل دیتاگرام IPv4 حمل‌کننده آن چقدر است؟</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>سرآیند IPv4:</strong> ۲۰ بایت<br>
+            <strong>بار IPv4 (کل دیتاگرام IPv6):</strong> 40 + 100 = ۱۴۰ بایت<br>
+            <strong>کل دیتاگرام IPv4:</strong> 20 + 140 = <span class="result">۱۶۰ بایت</span><br>
+            فیلد Protocol IPv4 برابر ۴۱ خواهد بود که نشان می‌دهد بار یک دیتاگرام IPv6 است.
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>کارت مرجع سریع</h3>
+          <table>
+            <tr><td>پشته کپسوله‌سازی</td><td>برنامه → TCP/UDP → IP → پیوند</td></tr>
+            <tr><td>شماره پروتکل TCP</td><td>6</td></tr>
+            <tr><td>شماره پروتکل UDP</td><td>17</td></tr>
+            <tr><td>شماره پروتکل ICMP</td><td>1</td></tr>
+            <tr><td>شماره پروتکل IPv6-in-IP</td><td>41</td></tr>
+            <tr><td>اندازه سرآیند IPv6</td><td>۴۰ بایت (ثابت)</td></tr>
+            <tr><td>اندازه آدرس IPv6</td><td>۱۲۸ بیت</td></tr>
+            <tr><td>قطعه‌قطعه‌سازی IPv6</td><td>فقط مبدأ (از طریق سرآیندهای گسترش)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

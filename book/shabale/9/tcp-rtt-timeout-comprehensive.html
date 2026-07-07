@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP RTT Estimation and Timeout - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP RTT Estimation &amp; Timeout</h1>
+  <p class="subtitle">Computer Networking — Comprehensive Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">RTT Estimation</button>
+      <button class="tab" onclick="showSection('tab2')">Timeout Calculation</button>
+      <button class="tab" onclick="showSection('tab3')">Examples &amp; Graph</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Round-Trip Time (RTT) Estimation</h2>
+        <p>TCP uses a <span class="highlight">timeout/retransmit</span> mechanism to recover from lost segments. The timeout interval must be larger than the connection's RTT, but estimating RTT is challenging due to network congestion variability.</p>
+
+        <h3>SampleRTT</h3>
+        <div class="formula">
+          <div class="label">SampleRTT</div>
+          <div class="expr">SampleRTT = time from segment sent → ACK received</div>
+          <div class="desc">SampleRTT is measured for only ONE segment at a time (not simultaneously for multiple outstanding segments). This is known as "once per RTT" measurement. Never computed for retransmitted segments.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h4>One Sample at a Time</h4>
+            <p>At any point, only one segment is being timed. A new SampleRTT is obtained approximately once every RTT.</p>
+          </div>
+          <div class="card">
+            <h4>Karn's Algorithm</h4>
+            <p>Never compute SampleRTT for retransmitted segments — ambiguous whether ACK is for original or retransmission.</p>
+          </div>
+        </div>
+
+        <h3>EstimatedRTT (Exponential Weighted Moving Average)</h3>
+        <div class="formula">
+          <div class="label">EstimatedRTT Formula (EWMA)</div>
+          <div class="expr">EstimatedRTT = (1 - α) × EstimatedRTT + α × SampleRTT</div>
+          <div class="desc">α = 0.125 (1/8). Recent samples get more weight; old samples decay exponentially.</div>
+        </div>
+
+        <div class="code">
+          // Pseudocode for EstimatedRTT update
+          // α = 0.125
+          EstimatedRTT = 0.875 * EstimatedRTT + 0.125 * SampleRTT;
+        </div>
+
+        <p>The EWMA smooths out short-term fluctuations. A small α makes the estimate less sensitive to transient spikes.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Timeout Calculation</h2>
+
+        <h3>DevRTT — RTT Variation</h3>
+        <div class="formula">
+          <div class="label">DevRTT Formula</div>
+          <div class="expr">DevRTT = (1 - β) × DevRTT + β × |SampleRTT - EstimatedRTT|</div>
+          <div class="desc">β = 0.25. Measure of how much SampleRTT deviates from EstimatedRTT.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h4>Low Fluctuation</h4>
+            <p>If SampleRTT is consistently close to EstimatedRTT, DevRTT is <span class="highlight">small</span>.</p>
+          </div>
+          <div class="card">
+            <h4>High Fluctuation</h4>
+            <p>If SampleRTT varies widely, DevRTT is <span class="highlight">large</span>, requiring a larger safety margin.</p>
+          </div>
+        </div>
+
+        <h3>TimeoutInterval</h3>
+        <div class="formula">
+          <div class="label">TimeoutInterval Formula</div>
+          <div class="expr">TimeoutInterval = EstimatedRTT + 4 × DevRTT</div>
+          <div class="desc">Adds 4 standard deviations of deviation as a safety margin.</div>
+        </div>
+
+        <h3>Timeout Management Rules</h3>
+        <table>
+          <tr><th>Rule</th><th>Value</th><th>Rationale</th></tr>
+          <tr><td>Initial TimeoutInterval</td><td>1 second (RFC 6298)</td><td>Conservative start before any RTT samples</td></tr>
+          <tr><td>After timeout (exponential backoff)</td><td>Timeout × 2</td><td>Avoid retransmission storm during congestion</td></tr>
+          <tr><td>After new ACK arrives</td><td>Recompute from EstimatedRTT + 4×DevRTT</td><td>Reset to current network conditions</td></tr>
+        </table>
+
+        <div class="warning">
+          <span class="label">⚠ Common Mistake:</span> Doubling the TimeoutInterval on timeout is <em>separate</em> from the formula above. The exponential backoff is triggered by the timeout event, not by normal ACK processing.
+        </div>
+
+        <h3>Algorithm Pseudocode</h3>
+        <div class="code">
+          // When a new SampleRTT is obtained:
+          EstimatedRTT = 0.875 * EstimatedRTT + 0.125 * SampleRTT;
+          DevRTT = 0.75 * DevRTT + 0.25 * |SampleRTT - EstimatedRTT|;
+          TimeoutInterval = EstimatedRTT + 4 * DevRTT;
+
+          // When a timeout occurs:
+          TimeoutInterval = TimeoutInterval * 2;
+          // (retransmit oldest unacknowledged segment, restart timer)
+
+          // On receiving ACK (non-duplicate):
+          // Recompute TimeoutInterval from latest EstimatedRTT and DevRTT
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Initial RTT Estimation Sequence</div>
+          <p><strong>Given:</strong> Initial EstimatedRTT = 100 ms, DevRTT = 10 ms.</p>
+          <p><strong>SampleRTT values:</strong> 120 ms, 90 ms, 110 ms, 130 ms.</p>
+          <p><strong>Step 1 — SampleRTT = 120 ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 100 + 0.125 × 120 = 87.5 + 15 = <span class="result">102.5 ms</span></p>
+          <p>DevRTT = 0.75 × 10 + 0.25 × |120 - 102.5| = 7.5 + 4.375 = <span class="result">11.875 ms</span></p>
+          <p>Timeout = 102.5 + 4 × 11.875 = 102.5 + 47.5 = <span class="result">150 ms</span></p>
+          <p><strong>Step 2 — SampleRTT = 90 ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 102.5 + 0.125 × 90 = 89.6875 + 11.25 = <span class="result">100.9375 ms</span></p>
+          <p>DevRTT = 0.75 × 11.875 + 0.25 × |90 - 100.9375| = 8.90625 + 2.734 = <span class="result">11.64 ms</span></p>
+          <p>Timeout = 100.9375 + 4 × 11.64 = 100.9375 + 46.56 = <span class="result">147.5 ms</span></p>
+          <p><strong>Step 3 — SampleRTT = 110 ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 100.9375 + 0.125 × 110 = 88.32 + 13.75 = <span class="result">102.07 ms</span></p>
+          <p>DevRTT = 0.75 × 11.64 + 0.25 × |110 - 102.07| = 8.73 + 1.98 = <span class="result">10.71 ms</span></p>
+          <p>Timeout = 102.07 + 4 × 10.71 = 102.07 + 42.84 = <span class="result">144.91 ms</span></p>
+          <p><strong>Step 4 — SampleRTT = 130 ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 102.07 + 0.125 × 130 = 89.31 + 16.25 = <span class="result">105.56 ms</span></p>
+          <p>DevRTT = 0.75 × 10.71 + 0.25 × |130 - 105.56| = 8.03 + 6.11 = <span class="result">14.14 ms</span></p>
+          <p>Timeout = 105.56 + 4 × 14.14 = 105.56 + 56.56 = <span class="result">162.12 ms</span></p>
+          <p class="note">Observe how the timeout adapts: when RTT increases, DevRTT grows, making the timeout margin larger.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Exponential Backoff on Timeout</div>
+          <p><strong>Given:</strong> EstimatedRTT = 80 ms, DevRTT = 5 ms.</p>
+          <p>TimeoutInterval = 80 + 4 × 5 = <span class="result">100 ms</span></p>
+          <p><strong>Timeout occurs:</strong> No ACK received within 100 ms.</p>
+          <p>TCP retransmits and sets: TimeoutInterval = 100 × 2 = <span class="result">200 ms</span></p>
+          <p><strong>Second timeout occurs:</strong> 200 ms later, still no ACK.</p>
+          <p>TimeoutInterval = 200 × 2 = <span class="result">400 ms</span></p>
+          <p><strong>Third timeout:</strong> TimeoutInterval = 400 × 2 = <span class="result">800 ms</span></p>
+          <p><strong>Finally ACK arrives:</strong> TimeoutInterval is recomputed from latest EstimatedRTT and DevRTT (resets to formula-based value).</p>
+          <p class="note">Backoff prevents network from being flooded with retransmissions during congestion.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Impact of a Spike in RTT</div>
+          <p><strong>Given:</strong> EstimatedRTT = 50 ms, DevRTT = 8 ms, Timeout = 50 + 32 = 82 ms.</p>
+          <p><strong>Network becomes congested:</strong> SampleRTT jumps to 200 ms.</p>
+          <p>New EstimatedRTT = 0.875 × 50 + 0.125 × 200 = 43.75 + 25 = <span class="result">68.75 ms</span></p>
+          <p>New DevRTT = 0.75 × 8 + 0.25 × |200 - 68.75| = 6 + 32.81 = <span class="result">38.81 ms</span></p>
+          <p>New Timeout = 68.75 + 4 × 38.81 = 68.75 + 155.24 = <span class="result">224 ms</span></p>
+          <p>The timeout increases dramatically to accommodate the new variability. Without DevRTT, the timeout would only be ~68.75 + small margin, causing premature timeouts.</p>
+          <p class="result">DevRTT prevents unnecessary retransmissions when RTT suddenly increases.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Figure 3.32 Data Points (UMass → France)</div>
+          <p>The graph from the textbook shows SampleRTT vs. EstimatedRTT over ~100 seconds for a TCP connection from gaia.cs.umass.edu to fantasia.eurecom.fr.</p>
+          <table>
+            <tr><th>Time (s)</th><th>SampleRTT (ms)</th><th>EstimatedRTT (ms)</th></tr>
+            <tr><td>1</td><td>180</td><td>180.0</td></tr>
+            <tr><td>5</td><td>220</td><td>0.875×180 + 0.125×220 = 185.0</td></tr>
+            <tr><td>10</td><td>160</td><td>0.875×185 + 0.125×160 = 181.9</td></tr>
+            <tr><td>20</td><td>250</td><td>0.875×181.9 + 0.125×250 = 190.4</td></tr>
+            <tr><td>40</td><td>300</td><td>0.875×190.4 + 0.125×300 = 204.1</td></tr>
+            <tr><td>60</td><td>150</td><td>0.875×204.1 + 0.125×150 = 197.3</td></tr>
+            <tr><td>80</td><td>200</td><td>0.875×197.3 + 0.125×200 = 197.6</td></tr>
+            <tr><td>100</td><td>170</td><td>0.875×197.6 + 0.125×170 = 194.2</td></tr>
+          </table>
+          <p>The EstimatedRTT smooths out the jagged SampleRTT curve, giving a stable baseline for timeout calculation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

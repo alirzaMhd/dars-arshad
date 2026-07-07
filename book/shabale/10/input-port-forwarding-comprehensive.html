@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پردازش پورت ورودی و ارسال مبتنی بر مقصد - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; word-break: break-all; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1000; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning strong { color: #ff6600; }
+    .warning p { color: #e0c080; font-size: 0.9em; margin-top: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; font-size: 0.85em; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .binary { font-family: monospace; letter-spacing: 2px; color: #00ff88; }
+    .refcard { background: linear-gradient(135deg, #0a0a18, #002a1a); border: 1px solid #00ff8844; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .refcard h3 { color: #00ff88; margin-bottom: 8px; }
+    .refcard p { font-size: 0.85em; color: #ccc; }
+    .match { color: #00ff88; }
+    .mismatch { color: #ff4444; }
+    @media (max-width: 768px) {
+      h1 { font-size: 1.2em; }
+      .section { padding: 12px; }
+      th, td { font-size: 0.75em; padding: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>پردازش پورت ورودی و ارسال مبتنی بر مقصد</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری: رویکرد از بالا به پایین (کروس و راس) — فصل ۴</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">پردازش ورودی</button>
+      <button class="tab" onclick="showSection('tab2')">تطبیق طولانی‌ترین پیشوند</button>
+      <button class="tab" onclick="showSection('tab3')">تطبیق-به-علاوه-اقدام</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: INPUT PORT PROCESSING                                  -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>بررسی اجمالی پردازش پورت ورودی</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">وقتی یک بسته به پورت ورودی یک مسیریاب می‌رسد، سه تابع متوالی در لایه‌های فیزیکی، پیوند و شبکه قبل از ارسال بسته اجرا می‌شوند.</p>
+
+        <div class="formula">
+          <div class="label">خط لوله پورت ورودی:</div>
+          <div class="expr">خاتمه خط ← پردازش لایه پیوند ← جستجو (ارسال)</div>
+          <div class="desc">هر مرحله باید قبل از شروع مرحله بعد کامل شود؛ جستجو گلوگاه است.</div>
+        </div>
+
+        <h3>شکست مرحله به مرحله</h3>
+        <table>
+          <tr><th>مرحله</th><th>عملکرد</th><th>جزئیات کلیدی</th></tr>
+          <tr><td>۱. خاتمه خط</td><td>دریافت بیت‌ها از محیط فیزیکی</td><td>بازیابی ساعت، رمزگشایی سیگنال</td></tr>
+          <tr><td>۲. پردازش لایه پیوند</td><td>بررسی صحت فریم، استخراج دیتاگرام IP</td><td>بررسی CRC، حذف سرآیند Ethernet</td></tr>
+          <tr><td>۳. جستجو (ارسال)</td><td>پرس‌وجوی جدول ارسال با استفاده از IP مقصد</td><td>استفاده از تطبیق طولانی‌ترین پیشوند؛ خروجی پورت</td></tr>
+        </table>
+
+        <h3>مکانیزم کپی سایه</h3>
+        <p style="font-size:0.9em;">پردازنده مسیریابی جدول ارسال را در نرم‌افزار محاسبه می‌کند. یک <strong style="color:#ff6600;">کپی سایه</strong> به هر کارت خط ارسال می‌شود تا جستجوها بدون درگیر کردن پردازنده مرکزی در نرخ خط انجام شوند.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>پردازنده مسیریابی</h3>
+            <p>جدول ارسال را از طریق پروتکل‌های مسیریابی (OSPF, BGP) با تعامل با سایر مسیریاب‌ها محاسبه می‌کند</p>
+            <p>یا قوانین ارسال را از یک کنترلر SDN راه دور دریافت می‌کند</p>
+            <p class="dim">کپی سایه را به کارت‌های خط ارسال می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>کارت خط (پورت ورودی)</h3>
+            <p>جدول ارسال محلی را ذخیره می‌کند</p>
+            <p>جستجوی سخت‌افزاری (TCAM/SRAM)</p>
+            <p class="highlight">&laquo; ۱ &mu;s به ازای هر جستجو</p>
+          </div>
+        </div>
+
+        <h3>ملاحظات حافظه جستجوی سریع</h3>
+        <div class="warning">
+          <strong>&#9889; زمان‌های دسترسی حافظه:</strong>
+          <p>جستجوهای ارسال باید در عرض نانوثانیه کامل شوند تا با نرخ‌های خط هماهنگ باشند. مسیریاب‌ها از <strong>DRAM روی تراشه</strong> و <strong>SRAM</strong> سریع‌تر (که به عنوان حافظه نهان DRAM استفاده می‌شود) برای ذخیره جداول ارسال و فعال‌سازی جستجوهای سریع استفاده می‌کنند. باید به زمان‌های دسترسی حافظه توجه ویژه شود — یک دسترسی DRAM واحد (~50 ns) می‌تواند بیشتر بودجه جستجو را در نرخ‌های خط بالا مصرف کند. حافظه‌های نهان SRAM با ذخیره‌سازی پیشوندهای پرتطبیق این مشکل را کاهش می‌دهند. برای بررسی الگوریتم‌های جستجوی سریع، به <strong>[Gupta 2001, Ruiz-Sanchez 2001]</strong> مراجعه کنید.</p>
+        </div>
+
+        <h3>مثال ۱: مرور پایه پورت ورودی</h3>
+        <div class="example">
+          <div class="title">مثال ۱: بسته ورودی به مسیریاب R1</div>
+          <p>یک دیتاگرام IP 1500 بایتی روی پورت ورودی ۲ مسیریاب R1 از طریق یک لینک ۱ گیگابیت بر ثانیه می‌رسد.</p>
+          <p><strong style="color:#00ccff;">گام ۱ (خاتمه خط):</strong> حدود ۱۲ &mu;s برای دریافت همه بیت‌ها.</p>
+          <p><strong style="color:#00ccff;">گام ۲ (لایه پیوند):</strong> CRC تأیید شد؛ سرآیند Ethernet حذف شد. هیچ خطایی یافت نشد.</p>
+          <p><strong style="color:#00ccff;">گام ۳ (جستجو):</strong> IP مقصد = <span class="binary">11001000.00010111.00010110.10100001</span> → مطابقت با پیشوند 200.23.16.0/20 → پورت خروجی ۱.</p>
+          <p><span class="result">نتیجه:</span> بسته در کمتر از ۱ &mu;s زمان جستجو از پورت ۱ ارسال شد.</p>
+        </div>
+
+        <h3>مثال ۲: به‌روزرسانی کپی سایه</h3>
+        <div class="example">
+          <div class="title">مثال ۲: انتشار به‌روزرسانی جدول مسیریابی</div>
+          <p>یک به‌روزرسانی BGP به پردازنده مسیریابی می‌رسد و گام بعدی برای پیشوند 200.23.18.0/23 را تغییر می‌دهد.</p>
+          <p><strong style="color:#00ccff;">زمان t=0:</strong> پردازنده مسیریابی جدول ارسال را دوباره محاسبه می‌کند.</p>
+          <p><strong style="color:#00ccff;">زمان t=2 ms:</strong> کپی سایه جدید به هر ۸ کارت خط ارسال شد.</p>
+          <p><strong style="color:#00ccff;">زمان t=2.5 ms:</strong> کارت خط شروع به استفاده از جدول به‌روزشده می‌کند. جستجوهای در حال انجام با جدول قدیمی تمام می‌شوند.</p>
+          <p><span class="result">نتیجه:</span> هیچ توقفی در ارسال؛ انتقال یکپارچه از طریق کپی سایه.</p>
+        </div>
+
+        <h3>مثال ۳: غیرعملی بودن روش brute-force</h3>
+        <div class="example">
+          <div class="title">مثال ۳: چرا ۲<sup>32</sup> ورودی شکست می‌خورد</div>
+          <p>یک جدول ارسال ساده‌لوحانه که یک ورودی به ازای هر آدرس IP فهرست می‌کند، شامل <strong>۴,۲۹۴,۹۶۷,۲۹۶</strong> ورودی خواهد بود.</p>
+          <p>در نرخ خط ۱ گیگابیت بر ثانیه با بسته‌های ۶۴ بایتی (~1.49 Mpps)، بودجه جستجو <strong>۶۷۲ ns</strong> به ازای هر بسته است.</p>
+          <p>اسکن خطی ۴ میلیارد ورودی با ۱۰ ns به ازای هر ورودی <strong>~۴۳ ثانیه</strong> طول می‌کشد — ۶۴ میلیون بار کندتر.</p>
+          <p><span class="result">راه‌حل:</span> تجمیع مبتنی بر پیشوند، جدول را به حدود ۹۰۰ هزار ورودی کاهش می‌دهد (جدول کامل BGP).</p>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; اشتباه رایج:</strong>
+          <p>دانشجویان اغلب فکر می‌کنند پردازنده مسیریابی جستجوهای هر بسته را انجام می‌دهد. در عمل، پردازنده مسیریابی فقط جدول را محاسبه می‌کند؛ جستجوها روی کارت‌های خط از طریق کپی‌های سایه انجام می‌شوند.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; مرجع سریع: پردازش پورت ورودی</h3>
+          <p><strong>خط لوله:</strong> خاتمه خط ← لایه پیوند ← جستجو</p>
+          <p><strong>کپی سایه:</strong> جدول ارسال به کارت‌های خط تکثیر می‌شود؛ CPU مرکزی در مسیر داده نیست</p>
+          <p><strong>بودجه جستجو:</strong> ~۱ &mu;s به ازای هر بسته در نرخ خط ۱۰ گیگابیت بر ثانیه</p>
+          <p><strong>اندازه جدول پیشوند:</strong> ~۹۰۰K–۱M ورودی (در مقابل ۴B brute-force)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: LONGEST PREFIX MATCHING                                -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>تطبیق طولانی‌ترین پیشوند (LPM)</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">وقتی چندین پیشوند جدول ارسال با یک آدرس مقصد مطابقت دارند، مسیریاب ورودی با <strong>طولانی‌ترین ماسک زیرشبکه</strong> (خاص‌ترین تطبیق) را انتخاب می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">قانون تطبیق طولانی‌ترین پیشوند:</div>
+          <div class="expr">output = argmax ( mask_len<sub>i</sub> ) روی i که در آن addr &amp; mask<sub>i</sub> = prefix<sub>i</sub></div>
+          <div class="desc">در میان همه ورودی‌های مطابقت‌یافته، یکی با بیشترین طول پیشوند را انتخاب کن.</div>
+        </div>
+
+        <h3>مثال جدول ارسال (۴ ورودی)</h3>
+        <table>
+          <tr><th>پیشوند</th><th>پیشوند دودویی</th><th>طول ماسک</th><th>پورت خروجی</th></tr>
+          <tr><td>200.23.16.0/20</td><td>11001000.00010111.0001</td><td>۲۰</td><td>۱</td></tr>
+          <tr><td>200.23.18.0/23</td><td>11001000.00010111.00010010</td><td>۲۳</td><td>۲</td></tr>
+          <tr><td>200.23.18.0/24</td><td>11001000.00010111.00010010.0</td><td>۲۴</td><td>۳</td></tr>
+          <tr><td>0.0.0.0/0</td><td>(بدون بیت)</td><td>۰</td><td>۴ (پیش‌فرض)</td></tr>
+        </table>
+
+        <h3>شبه‌کد الگوریتم LPM</h3>
+        <div class="code">Algorithm LongestPrefixMatch(FIB table T, IP address D):
+  best_len = -1
+  best_port = null
+
+  for each entry E = (prefix, mask_len, port) in T:
+    // Apply mask: keep only first mask_len bits
+    if (D AND generate_mask(mask_len)) == prefix:
+      if mask_len > best_len:
+        best_len = mask_len
+        best_port = port
+
+  if best_len == -1:
+    return default_port
+  return best_port
+
+Function generate_mask(len):
+  if len == 0: return 0
+  return (~0) << (32 - len)</div>
+
+        <h3>مثال ۱: تطبیق با 200.23.18.1</h3>
+        <div class="example">
+          <div class="title">مثال ۱: مقصد 200.23.18.1 (11001000.00010111.00010010.00000001)</div>
+          <table>
+            <tr><th>پیشوند</th><th>تطبیق؟</th><th>طول</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="match">&#10003; ۲۰ بیت اول مطابقت دارند</td><td>۲۰</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="match">&#10003; ۲۳ بیت اول مطابقت دارند</td><td>۲۳</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="match">&#10003; ۲۴ بیت اول مطابقت دارند</td><td>۲۴</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; همیشه مطابقت دارد</td><td>۰</td></tr>
+          </table>
+          <p><span class="result">برنده:</span> /24 (طول ۲۴) — خاص‌ترین تطبیق → <strong>پورت خروجی ۳</strong></p>
+        </div>
+
+        <h3>مثال ۲: تطبیق با 200.23.20.1</h3>
+        <div class="example">
+          <div class="title">مثال ۲: مقصد 200.23.20.1 (11001000.00010111.00010100.00000001)</div>
+          <table>
+            <tr><th>پیشوند</th><th>تطبیق؟</th><th>طول</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="match">&#10003; ۲۰ بیت اول مطابقت دارند</td><td>۲۰</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="mismatch">&#10007; بیت ۲۲ متفاوت است (بیت ۲۲: 1 در مقابل 0)</td><td>—</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="mismatch">&#10007; بیت ۲۲ متفاوت است</td><td>—</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; همیشه مطابقت دارد</td><td>۰</td></tr>
+          </table>
+          <p>بررسی بیت ۲۲: 200.23.20.1 دارای <span class="binary">00010100</span> (بایت ۳) است؛ 200.23.18.0 نیاز به <span class="binary">00010010</span> دارد. بیت‌های ۲۲–۲۳ متفاوت هستند.</p>
+          <p><span class="result">برنده:</span> /20 (طول ۲۰) → <strong>پورت خروجی ۱</strong></p>
+        </div>
+
+        <h3>مثال ۳: نقش مسیر پیش‌فرض</h3>
+        <div class="example">
+          <div class="title">مثال ۳: مقصد 10.0.0.1</div>
+          <table>
+            <tr><th>پیشوند</th><th>تطبیق؟</th><th>طول</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="mismatch">&#10007; بیت ۴ بایت ۱ متفاوت است (10 در مقابل 200)</td><td>—</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="mismatch">&#10007; بدون تطبیق</td><td>—</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="mismatch">&#10007; بدون تطبیق</td><td>—</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; مسیر پیش‌فرض (طول ۰)</td><td>۰</td></tr>
+          </table>
+          <p><span class="result">برنده:</span> /0 (پیش‌فرض) → <strong>پورت خروجی ۴</strong></p>
+          <p class="note">مسیر پیش‌فرض 0.0.0.0/0 با هر آدرسی مطابقت دارد. فقط زمانی انتخاب می‌شود که هیچ ورودی دیگری مطابقت نداشته باشد.</p>
+        </div>
+
+        <h3>TCAM — جستجوی زمان ثابت</h3>
+        <p style="font-size:0.9em;">حافظه‌های سه‌حالته قابل آدرس‌دهی محتوا (TCAM) یک کلید جستجو را به صورت موازی با همه ورودی‌ها مقایسه می‌کنند. هر سلول TCAM 0، 1 یا X (اهمیتی نمی‌دهد) را ذخیره می‌کند. طولانی‌ترین پیشوند با مرتب‌سازی ورودی‌ها بر اساس طول پیشوند حل می‌شود.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCAM در مقابل SRAM</h3>
+            <p><strong>TCAM:</strong> جستجوی O(1)، توان بالاتر، ~$350/Mb</p>
+            <p><strong>SRAM + الگوریتم:</strong> O(log N)، توان کمتر</p>
+            <p><span class="dim">Cisco Catalyst: تا ۱M ورودی TCAM</span></p>
+          </div>
+          <div class="card">
+            <h3>محدودیت ترتیب TCAM</h3>
+            <p>ورودی‌ها باید به ترتیب طولانی‌ترین پیشوند ابتدا ذخیره شوند</p>
+            <p>اولین تطبیق = طولانی‌ترین پیشوند</p>
+            <p class="highlight">بدون نیاز به محاسبه ماسک</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; اشتباه رایج:</strong>
+          <p>LPM از نظر عددی بزرگترین آدرس مطابقت‌یافته را انتخاب نمی‌کند؛ ورودی با طولانی‌ترین ماسک را انتخاب می‌کند. یک /24 همیشه بر /20 برنده می‌شود، حتی اگر محدوده آدرس /20 شامل آدرس‌های بیشتری باشد.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; مرجع سریع: تطبیق طولانی‌ترین پیشوند</h3>
+          <p><strong>قانون:</strong> در میان تطبیق‌ها، طولانی‌ترین ماسک برنده است</p>
+          <p><strong>پیاده‌سازی‌ها:</strong> درخت دودویی (O(32))، TCAM (O(1))</p>
+          <p><strong>ظرفیت TCAM:</strong> تا ۱M ورودی (Cisco Catalyst)</p>
+          <p><strong>مسیر پیش‌فرض:</strong> 0.0.0.0/0 با همه مطابقت دارد (طول ۰ — کمترین اولویت)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: MATCH-PLUS-ACTION                                      -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>انتزاع تطبیق-به-علاوه-اقدام</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">مسیریاب‌های مدرن ارسال را فراتر از جستجوهای ساده مبتنی بر مقصد تعمیم می‌دهند. پارادایم <strong>تطبیق-به-علاوه-اقدام</strong> تطبیق الگو را از عملیات‌های انجام‌شده روی بسته‌های مطابقت‌یافته جدا می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مدل تطبیق-به-علاوه-اقدام:</div>
+          <div class="expr">&#8704; بسته p : (match<sub>i</sub>(p)) &#8658; action<sub>i</sub>(p)</div>
+          <div class="desc">اگر بسته p شرط تطبیق i را برآورده کند، مجموعه اقدام مرتبط را اجرا کن.</div>
+        </div>
+
+        <h3>جدول ارسال عمومی</h3>
+        <table>
+          <tr><th>شرط تطبیق</th><th>اقدامات</th><th>مورد استفاده</th></tr>
+          <tr><td>IP مقصد = 200.23.18.0/24</td><td>Forward(پورت ۳), DecTTL</td><td>ارسال استاندارد</td></tr>
+          <tr><td>IP مبدأ = 10.0.0.0/8</td><td>Drop</td><td>ACL / فایروال</td></tr>
+          <tr><td>پورت مقصد = 80</td><td>NAT(ترجمه آدرس), Forward(پورت ۲)</td><td>دروازه NAT</td></tr>
+          <tr><td>پروتکل = TCP &amp; پرچم‌ها = SYN</td><td>Count++, Forward(پورت ۱)</td><td>نظارت ترافیک</td></tr>
+        </table>
+
+        <h3>اقدامات اضافی (فراتر از ارسال)</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>بررسی Checksum</h3>
+            <p>بررسی checksum سرآیند IP؛ اگر نامعتبر است، بسته را رها کن</p>
+            <p class="dim">checksum سرآیند در هر گام دوباره محاسبه می‌شود</p>
+          </div>
+          <div class="card">
+            <h3>کاهش TTL</h3>
+            <p>فیلد Time-to-Live یک واحد کاهش می‌یابد</p>
+            <p>اگر TTL = 0 پس از کاهش، ICMP TTL exceeded ارسال کن</p>
+            <p class="highlight">جلوگیری از حلقه‌های بی‌نهایت</p>
+          </div>
+          <div class="card">
+            <h3>به‌روزرسانی شمارنده‌ها</h3>
+            <p>شمارنده‌های بایت، شمارنده‌های بسته به ازای هر جریان</p>
+            <p>مورد استفاده برای حسابداری، SNMP، NetFlow</p>
+            <p class="dim">بحرانی برای نظارت شبکه</p>
+          </div>
+        </div>
+
+        <h3>اقدامات اضافی پردازش ورودی</h3>
+        <p style="font-size:0.9em;">فراتر از تصمیمات ارسال، پردازش ورودی چندین اقدام اجباری را شامل می‌شود که روی هر بسته ورودی اعمال می‌شوند:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>پردازش لایه فیزیکی و پیوند</h3>
+            <p>خاتمه خط، بازیابی ساعت، رمزگشایی سیگنال</p>
+            <p class="dim">بررسی صحت فریم (CRC)، استخراج سرآیند</p>
+          </div>
+          <div class="card">
+            <h3>بررسی‌های نسخه، Checksum و TTL</h3>
+            <p>شماره نسخه IP و checksum بسته بررسی می‌شوند</p>
+            <p>فیلد TTL بررسی می‌شود (کاهش به ۰ → رها)</p>
+            <p class="highlight">Checksum و TTL قبل از ارسال بازنویسی می‌شوند</p>
+          </div>
+          <div class="card">
+            <h3>شمارنده‌های مدیریت شبکه</h3>
+            <p>شمارنده‌هایی مانند تعداد دیتاگرام‌های IP دریافت‌شده باید به‌روزرسانی شوند</p>
+            <p>مورد استفاده برای SNMP، NetFlow، حسابداری</p>
+            <p class="dim">ضروری برای نظارت و اشکال‌زدایی</p>
+          </div>
+        </div>
+
+        <h3>مثال ۱: ACL فایروال (قانون رها)</h3>
+        <div class="example">
+          <div class="title">مثال ۱: مسدود کردن SSH خروجی</div>
+          <p><strong>تطبیق:</strong> پورت مقصد = 22 (SSH) و زیرشبکه مبدأ = 10.1.0.0/16</p>
+          <p><strong>اقدام:</strong> رها کردن بسته، افزایش شمارنده مسدودشده</p>
+          <p><strong>بسته:</strong> مبدأ=10.1.5.100، مقصد=192.168.1.1:22</p>
+          <p><span class="result">نتیجه:</span> تطبیق یافت → بسته رها شد. شمارنده افزایش یافت.</p>
+        </div>
+
+        <h3>مثال ۲: دروازه NAT</h3>
+        <div class="example">
+          <div class="title">مثال ۲: NAT مبدأ برای ترافیک وب</div>
+          <p><strong>تطبیق:</strong> IP مبدأ = 192.168.0.0/16 و پورت مقصد = 80</p>
+          <p><strong>اقدامات:</strong> ترجمه مبدأ به IP عمومی 203.0.113.1، Forward(پورت ۰)</p>
+          <p><strong>بسته:</strong> مبدأ=192.168.1.10:4000 → مقصد=93.184.216.34:80</p>
+          <p><span class="result">نتیجه:</span> مبدأ به 203.0.113.1:4000 بازنویسی شد، به پورت WAN 0 ارسال شد.</p>
+          <p class="note">ترافیک برگشتی با یک ورودی معکوس مطابقت دارد که به 192.168.1.10 ترجمه می‌کند.</p>
+        </div>
+
+        <h3>مثال ۳: آینه‌سازی ترافیک برای نظارت</h3>
+        <div class="example">
+          <div class="title">مثال ۳: آینه‌سازی ترافیک DNS</div>
+          <p><strong>تطبیق:</strong> پورت مقصد = 53 (DNS) یا پورت مبدأ = 53</p>
+          <p><strong>اقدامات:</strong> Forward(پورت ۲), Copy-to(پورت ۱۰), Count++</p>
+          <p><strong>بسته:</strong> مقصد=8.8.8.8:53, طول ۶۴ بایت</p>
+          <p><span class="result">نتیجه:</span> اصلی به پورت ۲ ارسال شد؛ کپی به پورت نظارت ۱۰ ارسال شد؛ شمارنده بسته DNS افزایش یافت.</p>
+        </div>
+
+        <h3>مقایسه: ارسال فقط-مقصد در مقابل تطبیق-به-علاوه-اقدام</h3>
+        <table>
+          <tr><th>ویژگی</th><th>ارسال فقط-مقصد</th><th>تطبیق-به-علاوه-اقدام</th></tr>
+          <tr><td>فیلدهای تطبیق</td><td>فقط IP مقصد</td><td>هر فیلد سرآیندی</td></tr>
+          <tr><td>اقدامات</td><td>ارسال به پورت</td><td>ارسال، رها، تغییر، شمارش، آینه، NAT و ...</td></tr>
+          <tr><td>پیاده‌سازی</td><td>TCAM / درخت (طولانی‌ترین پیشوند)</td><td>TCAM + حافظه اقدام</td></tr>
+          <tr><td>پشتیبانی پروتکل</td><td>مسیریابی استاندارد IP</td><td>OpenFlow، P4، SDN</td></tr>
+          <tr><td>موارد استفاده</td><td>مسیریاب‌های سنتی</td><td>فایروال‌ها، سوئیچ‌ها، NAT، توازن‌دهنده بار</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>&#9888; اشتباه رایج:</strong>
+          <p>تطبیق-به-علاوه-اقدام <em>محدود</em> به IP مقصد نیست. شرط تطبیق می‌تواند L2 (MAC)، L3 (IP، پروتکل)، L4 (پورت‌ها، پرچم‌ها) یا حتی فیلدهای L7 را بازرسی کند. فکر کردن "تطبیق = فقط IP مقصد" عمومیت انتزاع را از دست می‌دهد.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; مرجع سریع: تطبیق-به-علاوه-اقدام</h3>
+          <p><strong>تطبیق:</strong> هر ترکیبی از فیلدهای سرآیند (IP، پورت‌های TCP/UDP، پروتکل، پرچم‌ها)</p>
+          <p><strong>اقدام:</strong> ارسال، رها، کاهش TTL، محاسبه مجدد Checksum، شمارش، NAT، آینه</p>
+          <p><strong>کاربردها:</strong> فایروال‌ها، NAT، توازن‌دهنده بار، SDN (OpenFlow)، مهندسی ترافیک</p>
+          <p><strong>مزیت کلیدی:</strong> خط لوله واحد یکپارچه برای همه پردازش بسته</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

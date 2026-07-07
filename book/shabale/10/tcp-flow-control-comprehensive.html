@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کنترل جریان TCP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>کنترل جریان TCP</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای جامع برای آزمون ۲۰/۲۰</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مبانی کنترل جریان</button>
+      <button class="tab" onclick="showSection('tab2')">مکانیزم rwnd</button>
+      <button class="tab" onclick="showSection('tab3')">پنجره صفر</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها و مقایسه</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مبانی کنترل جریان</h2>
+        <p>کنترل جریان یک <span class="highlight">سرویس تطبیق سرعت</span> است — از سرریز شدن بافر گیرنده توسط فرستنده جلوگیری می‌کند.</p>
+
+        <div class="warning">
+          <span class="label">⚠ تمایز مهم:</span> کنترل جریان ≠ کنترل ازدحام. کنترل جریان از overwhelmed شدن <em>گیرنده</em> (بافر دریافت) جلوگیری می‌کند. کنترل ازدحام از overwhelmed شدن <em>شبکه</em> (بافرهای مسیریاب) جلوگیری می‌کند.
+        </div>
+
+        <h3>بافر دریافت</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>LastByteRead</h4>
+            <p>آخرین بایت در جریان که توسط برنامه از بافر <span class="highlight">خوانده</span> شده است.</p>
+          </div>
+          <div class="card">
+            <h4>LastByteRcvd</h4>
+            <p>آخرین بایت در جریان که از شبکه <span class="highlight">رسیده</span> و در بافر قرار گرفته است.</p>
+          </div>
+          <div class="card">
+            <h4>RcvBuffer</h4>
+            <p>اندازه کل بافر دریافت اختصاص داده شده برای اتصال.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">محدودیت سرریز بافر</div>
+          <div class="expr">LastByteRcvd - LastByteRead ≤ RcvBuffer</div>
+          <div class="desc">مقدار داده خوانده‌نشده در بافر نباید از ظرفیت بافر تجاوز کند.</div>
+        </div>
+
+        <p>برنامه داده را با سرعت خود از بافر می‌خواند. اگر فرستنده سریع‌تر از خواندن برنامه ارسال کند، بافر پر می‌شود. کنترل جریان از این سرریز جلوگیری می‌کند.</p>
+
+        <div class="warning">
+          <span class="label">⚠ فرض کلیدی:</span> در طول این بحث فرض می‌کنیم گیرنده TCP سگمنت‌های خارج‌ازترتیب را دور می‌ریزد. پیاده‌سازی‌های مدرن TCP اغلب داده‌های خارج‌ازترتیب را بافر می‌کنند، اما برای درک اصول کنترل جریان، فرض می‌کنیم سگمنت‌های خارج‌ازترتیب دور ریخته می‌شوند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>مکانیزم پنجره دریافت (rwnd)</h2>
+
+        <h3>تعریف</h3>
+        <div class="formula">
+          <div class="label">پنجره دریافت (rwnd)</div>
+          <div class="expr">rwnd = RcvBuffer - (LastByteRcvd - LastByteRead)</div>
+          <div class="desc">مقدار فضای خالی در بافر دریافت. پویا — با رسیدن داده و خواندن برنامه تغییر می‌کند.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">محدودیت فرستنده</div>
+          <div class="expr">LastByteSent - LastByteAcked ≤ rwnd</div>
+          <div class="desc">مقدار داده تأییدنشده نباید از پنجره اعلام‌شده گیرنده تجاوز کند.</div>
+        </div>
+
+        <h3>نحوه عملکرد</h3>
+        <p>۱. میزبان B مقدار <span class="highlight">rwnd</span> جاری خود را در فیلد <em>پنجره دریافت</em> <strong>هر</strong> سگمنتی که به A می‌فرستد قرار می‌دهد.</p>
+        <p>۲. در ابتدا، میزبان B rwnd = RcvBuffer تنظیم می‌کند.</p>
+        <p>۳. میزبان A دو متغیر را دنبال می‌کند:</p>
+        <div class="grid">
+          <div class="card">
+            <h4>LastByteSent</h4>
+            <p>آخرین بایت ارسال شده به اتصال.</p>
+          </div>
+          <div class="card">
+            <h4>LastByteAcked</h4>
+            <p>آخرین بایت تأیید شده.</p>
+          </div>
+        </div>
+        <p>۴. میزبان A تضمین می‌کند: <span class="highlight">LastByteSent - LastByteAcked ≤ rwnd</span></p>
+
+        <div class="example">
+          <div class="title">نمودار بافر دریافت (شکل ۳.۳۸)</div>
+          <p>بافر دریافت (RcvBuffer) به صورت زیر可视سازی می‌شود:</p>
+          <div class="code">
+            +--------------------------------------------+<br>
+            |             RcvBuffer                       |<br>
+            |---------------------------------------------|<br>
+            | TCP data in buffer (rwnd used) | Spare room |<br>
+            |<-- LastByteRcvd - LastByteRead -->|<-- rwnd ->|<br>
+            +--------------------------------------------+<br>
+            ↑ LastByteRead       ↑ LastByteRcvd      ↑ end
+          </div>
+          <p>متغیر <strong>rwnd</strong> = RcvBuffer - (LastByteRcvd - LastByteRead). با خواندن داده توسط برنامه، LastByteRead جلو می‌رود و rwnd افزایش می‌یابد. با رسیدن داده جدید، LastByteRcvd جلو می‌رود و rwnd کاهش می‌یابد.</p>
+        </div>
+
+        <p>از آنجا که TCP <strong>تمام‌دوطرفه</strong> است، فرستنده در هر طرف اتصال یک <strong>پنجره دریافت مجزا</strong> نگهداری می‌کند. میزبان A rwnd خود را (برای داده ورودی) دنبال می‌کند و همچنین به rwnd اعلام‌شده توسط میزبان B (برای داده خروجی) احترام می‌گذارد.</p>
+
+        <div class="code">
+          // بررسی کنترل جریان در سمت فرستنده
+          if ((NextSeqNum - SendBase) < rwnd_received) {
+            // ارسال سگمنت جدید مجاز است
+            send segment;
+          } else {
+            // باید صبر کند — بافر گیرنده پر است
+            buffer data for later;
+          }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ اشتباه رایج:</span> فیلد "پنجره دریافت" در هدر TCP، پنجره دریافت <em>فرستنده</em> (فضای خالی بافر گیرنده) را حمل می‌کند. هر طرف rwnd خود را به طرف دیگر اعلام می‌کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>مشکل پنجره صفر</h2>
+
+        <h3>مشکل</h3>
+        <p>اگر بافر دریافت میزبان B پر شود، <span class="result">rwnd = 0</span> اعلام می‌کند. میزبان A ارسال داده را متوقف می‌کند. اما اگر B <span class="highlight">داده‌ای برای ارسال</span> به A نداشته باشد چه؟</p>
+
+        <p>B نمی‌تواند فقط برای اعلام مقدار جدید rwnd یک سگمنت بفرستد — TCP فقط زمانی سگمنت می‌فرستد که داده‌ای برای ارسال یا ACK برای بازگشت وجود داشته باشد.</p>
+
+        <p>اگر برنامه B بافر را خالی کند، B چیزی برای ارسال به A ندارد، بنابراین A هرگز از فضای تازه آزاد شده مطلع نمی‌شود. <span class="highlight">بن‌بست!</span></p>
+
+        <h3>راه‌حل: سگمنت‌های کاوشگر ۱-بایتی</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>قانون مشخصات TCP</h4>
+            <p>وقتی rwnd = 0، فرستنده باید به ارسال سگمنت‌هایی با <span class="highlight">۱ بایت داده</span> ادامه دهد.</p>
+          </div>
+          <div class="card">
+            <h4>پاسخ گیرنده</h4>
+            <p>گیرنده این کاوشگرهای ۱-بایتی را تأیید می‌کند و ACK مقدار <span class="highlight">rwnd به‌روز شده</span> (اکنون > ۰) را حمل می‌کند.</p>
+          </div>
+          <div class="card">
+            <h4>چرا UDP کنترل جریان ندارد</h4>
+            <p>UDP هیچ کنترل جریانی فراهم نمی‌کند. در یک پیاده‌سازی UDP معمولی، UDP سگمنت‌ها را به یک بافر <strong>با اندازه محدود</strong> که قبل از سوکت متناظر قرار دارد اضافه می‌کند. فرایند هر بار یک سگمنت کامل را از بافر می‌خواند. اگر فرایند به اندازه کافی سریع نخواند، بافر سرریز می‌شود و سگمنت‌ها <span class="dim">رها</span> می‌شوند.</p>
+          </div>
+        </div>
+
+        <div class="code">
+          // مکانیزم کاوشگر پنجره صفر
+          if (rwnd == 0) {
+            // ارسال دوره‌ای سگمنت‌های کاوشگر ۱-بایتی
+            send segment with 1 byte of new data;
+            // پاسخ ACK حاوی rwnd به‌روز شده خواهد بود
+          }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ اشتباه رایج:</span> کاوشگر ۱-بایتی یک ارسال مجدد نیست — یک بایت داده جدید است که به طور خاص برای دریافت ACK با اطلاعات rwnd تازه فرستاده می‌شود.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های عملی و مقایسه</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱: محاسبه پایه بافر</div>
+          <p><strong>تنظیمات:</strong> RcvBuffer = 4096 بایت. برنامه ۵۰۰ بایت/ثانیه می‌خواند. فرستنده با ۱۰۰۰ بایت/ثانیه ارسال می‌کند.</p>
+          <p><strong>حالت اولیه:</strong> LastByteRcvd = 0, LastByteRead = 0, rwnd = 4096.</p>
+          <p><strong>بعد از ۱ ثانیه:</strong> LastByteRcvd = 1000 (فرستنده ۱۰۰۰ بایت فرستاد), LastByteRead = 500 (برنامه ۵۰۰ خواند).</p>
+          <p>داده خوانده‌نشده = 1000 - 500 = 500 بایت.</p>
+          <p class="result">rwnd = 4096 - 500 = 3596 بایت.</p>
+          <p><strong>بعد از ۵ ثانیه:</strong> LastByteRcvd = 5000, LastByteRead = 2500.</p>
+          <p>داده خوانده‌نشده = 5000 - 2500 = 2500 بایت.</p>
+          <p class="result">rwnd = 4096 - 2500 = 1596 بایت.</p>
+          <p><strong>بعد از ۸ ثانیه:</strong> LastByteRcvd = 8000, LastByteRead = 4000.</p>
+          <p>داده خوانده‌نشده = 8000 - 4000 = 4000 بایت.</p>
+          <p class="result">rwnd = 4096 - 4000 = 96 بایت (بافر تقریباً پر).</p>
+          <p><strong>بعد از ~۸.۲ ثانیه:</strong> rwnd به ۰ می‌رسد. فرستنده باید متوقف شود (یا کاوشگرهای ۱-بایتی بفرستد).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: کنترل جریان در عمل با نرخ خواندن متغیر برنامه</div>
+          <p><strong>تنظیمات:</strong> RcvBuffer = 8192 بایت. فرستنده هر ثانیه ۲۰۰۰ بایت می‌فرستد.</p>
+          <table>
+            <tr><th>زمان (ثانیه)</th><th>LastByteRcvd</th><th>LastByteRead</th><th>خوانده‌نشده</th><th>rwnd</th><th>می‌تواند ارسال کند؟</th></tr>
+            <tr><td>۰</td><td>۰</td><td>۰</td><td>۰</td><td>8192</td><td>بله</td></tr>
+            <tr><td>۱</td><td>2000</td><td>۰</td><td>2000</td><td>6192</td><td>بله</td></tr>
+            <tr><td>۲</td><td>4000</td><td>2000</td><td>2000</td><td>6192</td><td>بله</td></tr>
+            <tr><td>۳</td><td>6000</td><td>2000</td><td>4000</td><td>4192</td><td>بله</td></tr>
+            <tr><td>۴</td><td>8000</td><td>2000</td><td>6000</td><td>2192</td><td>بله</td></tr>
+            <tr><td>۵</td><td>10000</td><td>2500</td><td>7500</td><td>692</td><td>بله</td></tr>
+            <tr><td>۶</td><td>10692</td><td>3500</td><td>7192</td><td>1000</td><td>بله</td></tr>
+            <tr><td>۷</td><td>11692</td><td>4500</td><td>7192</td><td>1000</td><td>بله</td></tr>
+          </table>
+          <p>توجه کنید حتی اگر فرستنده می‌خواهد ۲۰۰۰ بایت/ثانیه ارسال کند، محدودیت rwnd ارسال واقعی را محدود می‌کند. فرستنده هرگز از ظرفیت بافر گیرنده تجاوز نمی‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: پنجره صفر و بازیابی کاوشگر</div>
+          <p><strong>تنظیمات:</strong> RcvBuffer = 2048 بایت. در ابتدا خالی.</p>
+          <p><strong>فاز ۱ — پر شدن بافر:</strong> فرستنده به سرعت ۲۰۴۸ بایت می‌فرستد. LastByteRcvd=2048. برنامه هنوز نخوانده. rwnd=0.</p>
+          <p><strong>فاز ۲ — گرفتاری:</strong> فرستنده نمی‌تواند داده بیشتری بفرستد. B داده‌ای برای ارسال به A ندارد.</p>
+          <p><strong>فاز ۳ — کاوشگر:</strong> A یک کاوشگر ۱-بایتی می‌فرستد (seq=2049). B آن را تأیید می‌کند (ack=2050, rwnd=0 همچنان).</p>
+          <p><strong>فاز ۴ — برنامه می‌خواند:</strong> برنامه ۱۰۲۴ بایت می‌خواند. LastByteRead = 1024. rwnd = 2048 - 1024 = 1024.</p>
+          <p><strong>فاز ۵ — ACK با rwnd جدید:</strong> B ACK=2049 (برای کاوشگر) با rwnd=1024 می‌فرستد.</p>
+          <p><strong>فاز ۶ — از سرگیری:</strong> A ارسال را از سر می‌گیرد (تا ۱۰۲۴ بایت تأییدنشده).</p>
+          <p class="result">مکانیزم کاوشگر ۱-بایتی برای شکستن بن‌بست پنجره صفر ضروری است.</p>
+        </div>
+
+        <h3>کنترل جریان در مقابل کنترل ازدحام</h3>
+        <table>
+          <tr><th>ویژگی</th><th>کنترل جریان</th><th>کنترل ازدحام</th></tr>
+          <tr><td>هدف</td><td>جلوگیری از سرریز بافر گیرنده</td><td>جلوگیری از بارگذاری بیش از حد شبکه</td></tr>
+          <tr><td>محدود شده توسط</td><td><span class="highlight">rwnd</span> گیرنده</td><td><span class="highlight">cwnd</span> شبکه (پنجره ازدحام)</td></tr>
+          <tr><td>دامنه</td><td>سرتاسر (فرستنده ↔ گیرنده)</td><td>کل شبکه (همه فرستنده‌های اشتراک‌گذار لینک)</td></tr>
+          <tr><td>سیگنال</td><td>صریح: rwnd در هدر TCP</td><td>ضمنی: گم‌شدگی / تأخیر / ECN</td></tr>
+          <tr><td>مکانیزم</td><td>محدودیت فرستنده: LastByteSent - LastByteAcked ≤ rwnd</td><td>محدودیت فرستنده: LastByteSent - LastByteAcked ≤ cwnd</td></tr>
+          <tr><td>پشتیبانی UDP</td><td><span class="dim">هیچ</span> — سگمنت‌ها در گیرنده رها می‌شوند</td><td><span class="dim">هیچ</span> — بدون کنترل ازدحام در UDP</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">محدودیت ترکیبی فرستنده</div>
+          <div class="expr">LastByteSent - LastByteAcked ≤ min{cwnd, rwnd}</div>
+          <div class="desc">فرستنده به طور همزمان توسط کنترل جریان و کنترل ازدحام محدود می‌شود.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

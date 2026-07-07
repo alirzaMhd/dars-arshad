@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Fairness - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Fairness</h1>
+  <p class="subtitle">Section 3.7.3 — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">AIMD Fairness</button>
+      <button class="tab" onclick="showSection('tab2')">Fairness Analysis</button>
+      <button class="tab" onclick="showSection('tab3')">UDP &amp; Parallel TCP</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <!-- Tab 1: AIMD Fairness -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>AIMD Fairness</h2>
+
+        <p>When K TCP connections share a bottleneck link of rate R bps, a fair congestion control mechanism gives each connection approximately R/K bandwidth — an equal share. TCP's Additive-Increase Multiplicative-Decrease (AIMD) algorithm provably converges to this equal share.</p>
+
+        <div class="formula">
+          <div class="label">Fair Share Definition:</div>
+          <div class="expr">Fair Rate per Connection = R / K</div>
+          <div class="desc">K connections sharing a bottleneck link of rate R bps, each gets R/K on average</div>
+        </div>
+
+        <h3>How AIMD Achieves Fairness</h3>
+        <p>TCP's AIMD algorithm produces a characteristic "saw-tooth" pattern: the congestion window increases linearly by 1 MSS per RTT and is cut in half upon packet loss. Over time, competing connections converge to equal bandwidth shares.</p>
+
+        <div class="formula">
+          <div class="label">AIMD Update Rules:</div>
+          <div class="expr">On ACK: cwnd ← cwnd + 1 MSS   (Additive Increase)</div>
+          <div class="expr">On Loss: cwnd ← cwnd / 2      (Multiplicative Decrease)</div>
+          <div class="desc">Each connection increases by the same absolute amount per RTT and decreases by the same factor (2x) on loss</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>45-Degree Increase Line</h3>
+            <p>In throughput space (connection 1 vs connection 2), the <span class="highlight">45-degree line</span> represents equal bandwidth share. AIMD always increases along this line because <span class="dim">both connections add 1 MSS per RTT</span>, maintaining equal absolute increment.</p>
+          </div>
+          <div class="card">
+            <h3>Multiplicative Decrease Toward Origin</h3>
+            <p>On loss, both connections <span class="highlight">halve their windows</span>, moving along a vector toward the origin. This preserves the ratio of their throughputs, so they stay on the equal-share trajectory.</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> AIMD does NOT guarantee instant fairness — it converges over multiple cycles. Connections starting at different times or with different RTTs may temporarily get unequal shares.
+        </div>
+
+        <h3>Chiu &amp; Jain Convergence Proof (Conceptual)</h3>
+        <p>Chiu and Jain (1989) proved that AIMD converges to fairness regardless of starting point. The key insight: additive increase moves both connections along the 45-degree line (equal absolute increase), and multiplicative decrease preserves the ratio of their throughputs. Over repeated cycles, the operating point converges to the intersection of the equal-share line and full-utilization line.</p>
+
+        <div class="code">
+AIMD Convergence (Two Connections):
+  Initial state: (x, y) where x ≠ y
+  Step 1: Both add 1 per RTT → (x+1, y+1) — moves toward 45° line
+  Step 2: Loss occurs at (x', y')
+  Step 3: Both halve → (x'/2, y'/2) — preserves ratio x'/y'
+  Step 4: Repeat — over cycles, ratio approaches 1:1
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>AIMD Convergence Diagram</h3>
+            <p>In throughput space (Connection 1 vs Connection 2):</p>
+            <p>• <span class="highlight">45° line</span> represents equal share (x = y)</p>
+            <p>• <span class="highlight">Full-utilization line</span>: x + y = R (bottleneck rate)</p>
+            <p>• Intersection of both lines → fair &amp; efficient point</p>
+            <p>• A → B: both increase (along 45° line)</p>
+            <p>• B → C: both halve (toward origin, preserving ratio)</p>
+            <p>• C → D: both increase again, closer to equal share</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Fairness Analysis -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Fairness Analysis</h2>
+
+        <p>Consider two TCP connections sharing a single bottleneck link of rate R. Throughput space is visualized with Connection 1 on the x-axis and Connection 2 on the y-axis.</p>
+
+        <div class="formula">
+          <div class="label">Convergence Cycle (Point A → B → C → D):</div>
+          <div class="expr">A → B: Both connections increase (45° line, total &lt; R)</div>
+          <div class="expr">B → C: Both halve on loss (vector toward origin)</div>
+          <div class="expr">C → D: Both increase again (45° line, total &lt; R)</div>
+          <div class="desc">The throughput oscillates along the equal-bandwidth share line over time</div>
+        </div>
+
+        <h3>The Convergence Process</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Point A</h3>
+            <p><span class="highlight">Underutilized:</span> x + y &lt; R. Both connections increase by 1 MSS/RTT → move along 45° line.</p>
+          </div>
+          <div class="card">
+            <h3>Point B</h3>
+            <p><span class="dim">Loss Event:</span> x + y &gt; R, packet drops. Both immediately halve cwnd → move toward origin.</p>
+          </div>
+          <div class="card">
+            <h3>Point C</h3>
+            <p><span class="highlight">Underutilized again:</span> At half the bandwidth, both start increasing linearly.</p>
+          </div>
+          <div class="card">
+            <h3>Point D</h3>
+            <p><span class="dim">Loss Event:</span> Repeat the cycle. Over multiple cycles, the trajectory converges to the equal share line.</p>
+          </div>
+        </div>
+
+        <h3>RTT Bias</h3>
+        <p>In practice, connections with smaller RTTs open their congestion windows faster and grab available bandwidth more aggressively. This RTT unfairness was formally analyzed in <span class="dim">[Lakshman 1997]</span>, which showed that shorter-RTT connections can obtain disproportionately higher throughput.</p>
+
+        <div class="formula">
+          <div class="label">Throughput with Different RTTs:</div>
+          <div class="expr">Throughput ≈ (1 / RTT) × f(cwnd)</div>
+          <div class="desc">A connection with half the RTT can achieve roughly double the throughput of a connection with the full RTT, given the same cwnd</div>
+        </div>
+
+        <table>
+          <tr><th>Factor</th><th>Impact on Fairness</th></tr>
+          <tr><td>Different RTTs</td><td>Smaller RTT → higher throughput (unfair advantage)</td></tr>
+          <tr><td>Different Start Times</td><td>Earlier start → initially larger window</td></tr>
+          <tr><td>Different MSS</td><td>Larger MSS → more data per ACK → faster increase</td></tr>
+          <tr><td>Number of Connections</td><td>More connections per host → larger aggregate share</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Warning:</strong> The idealized convergence assumes identical RTTs, identical MSS, and no UDP traffic. In real networks, these assumptions almost never hold, leading to significant unfairness.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: UDP & Parallel TCP -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>UDP &amp; Parallel TCP</h2>
+
+        <h3>UDP Unfairness</h3>
+        <p>UDP has no built-in congestion control. A UDP application can send at any rate, for as long as it pleases, without throttling. Since TCP reduces its rate during congestion while UDP does not, UDP sources can easily crowd out TCP traffic on a shared bottleneck link.</p>
+
+        <div class="note">
+          <strong>Proposed Solutions:</strong> <span class="dim">[Floyd 1999]</span> and <span class="dim">[Floyd 2000]</span> proposed mechanisms to regulate UDP traffic at the router level. <span class="dim">[Kohler 2006 / RFC 4340]</span> introduced the Datagram Congestion Control Protocol (DCCP) as a congestion-controlled alternative to raw UDP.
+        </div>
+
+        <div class="warning">
+          <strong>Critical Exam Point:</strong> Multimedia applications (Internet phone, video conferencing) often choose UDP precisely because they do NOT want their transmission rate throttled — even if it means being "unfair" to TCP flows.
+        </div>
+
+        <h3>Parallel TCP Connections</h3>
+        <p>Even among TCP-based applications, unfairness arises when applications use multiple parallel connections. Web browsers commonly open multiple parallel TCP connections to download page objects simultaneously.</p>
+
+        <div class="formula">
+          <div class="label">Parallel TCP Bandwidth Formula:</div>
+          <div class="expr">Fraction of R for App = (n_parallel) / (N_total + n_parallel - 1)</div>
+          <div class="desc">App with n parallel connections among N total single-connection apps gets more than fair share</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>9 Apps × 1 Connection Each</h3>
+            <p>Each gets <span class="highlight">R/10</span> ≈ 10% of bandwidth</p>
+            <p>New app with 1 connection: also <span class="dim">R/10</span></p>
+          </div>
+          <div class="card">
+            <h3>Same 9 Apps + New App with 11 Connections</h3>
+            <p>New app gets <span class="highlight">&gt; R/2</span> (more than half!)</p>
+            <p>Each of the 9 others gets &lt; <span class="dim">R/18</span></p>
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Scenario</th><th>Total Connections</th><th>New App Share</th><th>Others' Share</th></tr>
+          <tr><td>New app uses 1 connection</td><td>10</td><td>R/10 (fair)</td><td>R/10 each</td></tr>
+          <tr><td>New app uses 2 connections</td><td>11</td><td>2R/11 (~18%)</td><td>R/11 each (~9%)</td></tr>
+          <tr><td>New app uses 5 connections</td><td>14</td><td>5R/14 (~36%)</td><td>R/14 each (~7%)</td></tr>
+          <tr><td>New app uses 11 connections</td><td>20</td><td>11R/20 (55%)</td><td>R/20 each (5%)</td></tr>
+        </table>
+
+        <h3>Real-World Impact</h3>
+        <p>Web browsers commonly use 6-30+ parallel TCP connections per page. This gives web traffic a disproportionate share of bottleneck bandwidth compared to non-browser applications. Some protocols (like HTTP/2 and HTTP/3) mitigate this through connection multiplexing.</p>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: AIMD Fairness Convergence</div>
+          <p><strong>Problem:</strong> Two TCP connections share a bottleneck link of 100 Mbps. Connection A starts at cwnd = 10 MSS and Connection B starts at cwnd = 2 MSS. Assume MSS = 1,500 bytes and RTT = 100 ms for both. Show two AIMD cycles and compute the throughput after convergence.</p>
+          <p><strong>Solution:</strong></p>
+          <p><strong>Cycle 1:</strong><br>
+          - Initial: A = 10 MSS, B = 2 MSS. Total = 12 MSS = 12 × 1500 × 8 = 144,000 bits<br>
+          - AI (1 RTT): A = 11, B = 3. Total = 14 MSS<br>
+          - AI (2 RTT): A = 12, B = 4. Total = 16 MSS = 192,000 bits = 1.92 Mbps<br>
+          - Continue until total exceeds 100 Mbps bottleneck capacity<br>
+          - Loss at ~84 RTTs: A ≈ 94, B ≈ 86. Total ≈ 180 MSS ≈ 216 Mbps. Halve: A = 47, B = 43</p>
+          <p><strong>Cycle 2:</strong><br>
+          - A = 47, B = 43. Ratio ≈ 1.09:1 (much closer to equal)<br>
+          - Increase until next loss, then halve again<br>
+          - After several cycles: A ≈ B ≈ 50 MSS average → each gets ~50 Mbps</p>
+          <p class="result">After convergence: Each connection ≈ 50 Mbps (R/2)</p>
+          <p class="note">The ratio A:B converges from 5:1 toward 1:1 over successive cycles.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: RTT Bias Calculation</div>
+          <p><strong>Problem:</strong> Two TCP connections share a bottleneck link of 10 Mbps. Connection X has RTT = 40 ms, Connection Y has RTT = 120 ms. Both have MSS = 1,500 bytes and the same congestion window size at steady state. Estimate the throughput ratio between X and Y.</p>
+          <p><strong>Solution:</strong></p>
+          <p>TCP throughput ≈ (cwnd × MSS) / RTT. At the same cwnd:</p>
+          <p>Throughput_X / Throughput_Y = RTT_Y / RTT_X = 120 / 40 = 3</p>
+          <p>Connection X gets approximately 3× the throughput of Y.</p>
+          <p>If fair share would be 5 Mbps each, actual allocation:</p>
+          <p>- Throughput_X = 3/4 × 10 Mbps = <span class="result">7.5 Mbps</span></p>
+          <p>- Throughput_Y = 1/4 × 10 Mbps = <span class="result">2.5 Mbps</span></p>
+          <p class="note">This demonstrates why geographically distant connections (larger RTT) suffer throughput penalties compared to nearby connections.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Parallel TCP Bandwidth Allocation</div>
+          <p><strong>Problem:</strong> A bottleneck link of 1 Gbps carries traffic from 5 existing applications, each using 1 TCP connection. A new application arrives and opens 8 parallel TCP connections. What fraction of the bandwidth does the new application receive?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Total connections: 5 (existing) + 8 (new) = 13 connections</p>
+          <p>Per-connection fair share: 1 Gbps / 13 ≈ 76.9 Mbps</p>
+          <p>New application total: 8 × 76.9 Mbps ≈ <span class="result">615.4 Mbps</span> (61.5%)</p>
+          <p>Each existing application: 76.9 Mbps (7.7%)</p>
+          <p>Compare: If the new app used 1 connection, it would get 1/6 ≈ 166.7 Mbps (16.7%). By using 8 parallel connections, it gets 3.7× more bandwidth.</p>
+          <div class="warning">
+            <strong>Key Insight:</strong> Using 8 parallel connections gives the new app more than half the link bandwidth (61.5%), while each existing fair app suffers a 54% reduction (from 166.7 Mbps to 76.9 Mbps).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

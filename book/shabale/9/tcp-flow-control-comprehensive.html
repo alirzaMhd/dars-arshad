@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Flow Control - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Flow Control</h1>
+  <p class="subtitle">Computer Networking — Comprehensive Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Flow Control Basics</button>
+      <button class="tab" onclick="showSection('tab2')">rwnd Mechanism</button>
+      <button class="tab" onclick="showSection('tab3')">Zero Window</button>
+      <button class="tab" onclick="showSection('tab4')">Examples &amp; Comparison</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Flow Control Basics</h2>
+        <p>Flow control is a <span class="highlight">speed-matching service</span> — it prevents the sender from overflowing the receiver's buffer.</p>
+
+        <div class="warning">
+          <span class="label">⚠ Important Distinction:</span> Flow control ≠ Congestion control. Flow control prevents sender from overwhelming <em>receiver</em> (receive buffer). Congestion control prevents sender from overwhelming <em>the network</em> (router buffers).
+        </div>
+
+        <h3>The Receive Buffer</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>LastByteRead</h4>
+            <p>Last byte in stream <span class="highlight">read</span> by the application from the buffer.</p>
+          </div>
+          <div class="card">
+            <h4>LastByteRcvd</h4>
+            <p>Last byte in stream that has <span class="highlight">arrived</span> from the network and been placed in the buffer.</p>
+          </div>
+          <div class="card">
+            <h4>RcvBuffer</h4>
+            <p>Total size of the receive buffer allocated for the connection.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Buffer Overflow Constraint</div>
+          <div class="expr">LastByteRcvd - LastByteRead ≤ RcvBuffer</div>
+          <div class="desc">The amount of unread data in the buffer must not exceed the buffer capacity.</div>
+        </div>
+
+        <p>The application reads data from the buffer at its own pace. If the sender sends faster than the application reads, the buffer fills up. Flow control prevents this overflow.</p>
+
+        <div class="warning">
+          <span class="label">⚠ Key Assumption:</span> Throughout this discussion we assume the TCP receiver discards out-of-order segments. Modern TCP implementations often buffer out-of-order data, but for understanding flow control fundamentals, we assume out-of-order segments are discarded.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>The Receive Window (rwnd) Mechanism</h2>
+
+        <h3>Definition</h3>
+        <div class="formula">
+          <div class="label">Receive Window (rwnd)</div>
+          <div class="expr">rwnd = RcvBuffer - (LastByteRcvd - LastByteRead)</div>
+          <div class="desc">Amount of free space in the receive buffer. Dynamic — changes as data arrives and the application reads.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Sender Constraint</div>
+          <div class="expr">LastByteSent - LastByteAcked ≤ rwnd</div>
+          <div class="desc">The amount of unacknowledged data must not exceed the receiver's advertised window.</div>
+        </div>
+
+        <h3>How It Works</h3>
+        <p>1. Host B places its current <span class="highlight">rwnd</span> value in the <em>Receive Window</em> field of <strong>every</strong> segment it sends to A.</p>
+        <p>2. Initially, Host B sets rwnd = RcvBuffer.</p>
+        <p>3. Host A tracks two variables:</p>
+        <div class="grid">
+          <div class="card">
+            <h4>LastByteSent</h4>
+            <p>Last byte sent into the connection.</p>
+          </div>
+          <div class="card">
+            <h4>LastByteAcked</h4>
+            <p>Last byte acknowledged.</p>
+          </div>
+        </div>
+        <p>4. Host A ensures: <span class="highlight">LastByteSent - LastByteAcked ≤ rwnd</span></p>
+
+        <div class="example">
+          <div class="title">Receive Buffer Diagram (Figure 3.38)</div>
+          <p>The receive buffer (RcvBuffer) is visualized as:</p>
+          <div class="code">
+            +--------------------------------------------+<br>
+            |             RcvBuffer                       |<br>
+            |---------------------------------------------|<br>
+            | TCP data in buffer (rwnd used) | Spare room |<br>
+            |<-- LastByteRcvd - LastByteRead -->|<-- rwnd ->|<br>
+            +--------------------------------------------+<br>
+            ↑ LastByteRead       ↑ LastByteRcvd      ↑ end
+          </div>
+          <p>The variable <strong>rwnd</strong> = RcvBuffer - (LastByteRcvd - LastByteRead). As the application reads data, LastByteRead advances and rwnd grows. As new data arrives, LastByteRcvd advances and rwnd shrinks.</p>
+        </div>
+
+        <p>Because TCP is <strong>full-duplex</strong>, the sender at each side of the connection maintains a <strong>distinct receive window</strong>. Host A tracks its own rwnd (for incoming data) and also respects the rwnd advertised by Host B (for outgoing data).</p>
+
+        <div class="code">
+          // Sender-side flow control check
+          if ((NextSeqNum - SendBase) < rwnd_received) {
+            // OK to send new segment
+            send segment;
+          } else {
+            // Must wait — receiver's buffer is full
+            buffer data for later;
+          }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Common Mistake:</span> The "receive window" field in the TCP header carries the <em>sender's</em> receive window (the receiver's free buffer space). Each side advertises its own rwnd to the other.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Zero Window Problem</h2>
+
+        <h3>The Problem</h3>
+        <p>If Host B's receive buffer becomes full, it advertises <span class="result">rwnd = 0</span>. Host A stops sending data. But what if B has <span class="highlight">no data to send</span> to A?</p>
+
+        <p>B cannot send a segment just to advertise a new rwnd value — TCP only sends segments when there is data to send or an ACK to return.</p>
+
+        <p>If B's application empties the buffer, B has nothing to send A, so A never learns about the newly freed space. <span class="highlight">Deadlock!</span></p>
+
+        <h3>The Solution: 1-Byte Probe Segments</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>TCP Specification Rule</h4>
+            <p>When rwnd = 0, the sender must continue sending segments with <span class="highlight">1 data byte</span>.</p>
+          </div>
+          <div class="card">
+            <h4>Receiver's Response</h4>
+            <p>The receiver acknowledges these 1-byte probes, and the ACK carries the <span class="highlight">updated rwnd</span> value (now > 0).</p>
+          </div>
+          <div class="card">
+            <h4>Why UDP Has No Flow Control</h4>
+            <p>UDP provides no flow control. For a typical UDP implementation, UDP appends the segments to a <strong>finite-sized buffer</strong> that precedes the corresponding socket. The process reads one entire segment at a time from the buffer. If the process does not read fast enough, the buffer overflows and segments are <span class="dim">dropped</span>.</p>
+          </div>
+        </div>
+
+        <div class="code">
+          // Zero-window probe mechanism
+          if (rwnd == 0) {
+            // Send 1-byte probe segments periodically
+            send segment with 1 byte of new data;
+            // The ACK response will carry updated rwnd
+          }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Common Mistake:</span> The 1-byte probe is not a retransmission — it's a new data byte sent specifically to elicit an ACK with fresh rwnd information.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples &amp; Comparison</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Basic Buffer Calculation</div>
+          <p><strong>Setup:</strong> RcvBuffer = 4096 bytes. Application reads 500 bytes/sec. Sender sends at 1000 bytes/sec.</p>
+          <p><strong>Initial state:</strong> LastByteRcvd = 0, LastByteRead = 0, rwnd = 4096.</p>
+          <p><strong>After 1 second:</strong> LastByteRcvd = 1000 (sender sent 1000 bytes), LastByteRead = 500 (app read 500).</p>
+          <p>Unread data = 1000 - 500 = 500 bytes.</p>
+          <p class="result">rwnd = 4096 - 500 = 3596 bytes.</p>
+          <p><strong>After 5 seconds:</strong> LastByteRcvd = 5000, LastByteRead = 2500.</p>
+          <p>Unread data = 5000 - 2500 = 2500 bytes.</p>
+          <p class="result">rwnd = 4096 - 2500 = 1596 bytes.</p>
+          <p><strong>After 8 seconds:</strong> LastByteRcvd = 8000, LastByteRead = 4000.</p>
+          <p>Unread data = 8000 - 4000 = 4000 bytes.</p>
+          <p class="result">rwnd = 4096 - 4000 = 96 bytes (buffer nearly full).</p>
+          <p><strong>After ~8.2 seconds:</strong> rwnd reaches 0. Sender must stop (or send 1-byte probes).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Flow Control in Action with Variable Application Read Rate</div>
+          <p><strong>Setup:</strong> RcvBuffer = 8192 bytes. Sender sends 2000 bytes every second.</p>
+          <table>
+            <tr><th>Time (s)</th><th>LastByteRcvd</th><th>LastByteRead</th><th>Unread</th><th>rwnd</th><th>Can Send?</th></tr>
+            <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>8192</td><td>Yes</td></tr>
+            <tr><td>1</td><td>2000</td><td>0</td><td>2000</td><td>6192</td><td>Yes</td></tr>
+            <tr><td>2</td><td>4000</td><td>2000</td><td>2000</td><td>6192</td><td>Yes</td></tr>
+            <tr><td>3</td><td>6000</td><td>2000</td><td>4000</td><td>4192</td><td>Yes</td></tr>
+            <tr><td>4</td><td>8000</td><td>2000</td><td>6000</td><td>2192</td><td>Yes</td></tr>
+            <tr><td>5</td><td>10000</td><td>2500</td><td>7500</td><td>692</td><td>Yes</td></tr>
+            <tr><td>6</td><td>10692</td><td>3500</td><td>7192</td><td>1000</td><td>Yes</td></tr>
+            <tr><td>7</td><td>11692</td><td>4500</td><td>7192</td><td>1000</td><td>Yes</td></tr>
+          </table>
+          <p>Notice that even though the sender wants to send 2000 bytes/sec, the rwnd constraint limits actual transmission. The sender never exceeds the receiver's buffer capacity.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Zero Window and Probe Recovery</div>
+          <p><strong>Setup:</strong> RcvBuffer = 2048 bytes. Initially empty.</p>
+          <p><strong>Phase 1 — Buffer fills:</strong> Sender sends 2048 bytes quickly. LastByteRcvd=2048. App hasn't read yet. rwnd=0.</p>
+          <p><strong>Phase 2 — Stuck:</strong> Sender cannot send more data. B has no data to send to A.</p>
+          <p><strong>Phase 3 — Probe:</strong> A sends a 1-byte probe (seq=2049). B ACKs it (ack=2050, rwnd=0 still).</p>
+          <p><strong>Phase 4 — App reads:</strong> Application reads 1024 bytes. LastByteRead = 1024. rwnd = 2048 - 1024 = 1024.</p>
+          <p><strong>Phase 5 — ACK with new rwnd:</strong> B sends ACK=2049 (for the probe) with rwnd=1024.</p>
+          <p><strong>Phase 6 — Resume:</strong> A resumes sending (up to 1024 unacknowledged bytes).</p>
+          <p class="result">The 1-byte probe mechanism is essential to break the zero-window deadlock.</p>
+        </div>
+
+        <h3>Flow Control vs Congestion Control</h3>
+        <table>
+          <tr><th>Feature</th><th>Flow Control</th><th>Congestion Control</th></tr>
+          <tr><td>Purpose</td><td>Prevent receiver buffer overflow</td><td>Prevent network overload</td></tr>
+          <tr><td>Constrained by</td><td>Receiver's <span class="highlight">rwnd</span></td><td>Network's <span class="highlight">cwnd</span> (congestion window)</td></tr>
+          <tr><td>Scope</td><td>End-to-end (sender ↔ receiver)</td><td>Network-wide (all senders sharing links)</td></tr>
+          <tr><td>Signal</td><td>Explicit: rwnd in TCP header</td><td>Implicit: loss / delay / ECN</td></tr>
+          <tr><td>Mechanism</td><td>Sender limits: LastByteSent - LastByteAcked ≤ rwnd</td><td>Sender limits: LastByteSent - LastByteAcked ≤ cwnd</td></tr>
+          <tr><td>UDP support</td><td><span class="dim">None</span> — segments dropped at receiver</td><td><span class="dim">None</span> — no congestion control in UDP</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Combined Sender Constraint</div>
+          <div class="expr">LastByteSent - LastByteAcked ≤ min{cwnd, rwnd}</div>
+          <div class="desc">The sender is constrained by both flow control AND congestion control simultaneously.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ساختار اتصال و سگمنت TCP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>ساختار اتصال و سگمنت TCP</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای جامع برای آزمون ۲۰/۲۰</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">اتصال TCP</button>
+      <button class="tab" onclick="showSection('tab2')">هدر سگمنت</button>
+      <button class="tab" onclick="showSection('tab3')">شماره‌های توالی و تأیید</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>بررسی اجمالی اتصال TCP</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>اتصال‌گرا</h3>
+            <p>قبل از جریان داده، فرستنده و گیرنده سگمنت‌های کنترلی (دست‌دهی) را برای مقداردهی اولیه متغیرهای حالت مبادله می‌کنند.</p>
+          </div>
+          <div class="card">
+            <h3>تمام‌دوطرفه</h3>
+            <p>داده در <span class="highlight">هر دو</span> جهت به طور همزمان جریان دارد. هر طرف بافر ارسال و دریافت خود را دارد.</p>
+          </div>
+          <div class="card">
+            <h3>نقطه‌به‌نقطه</h3>
+            <p>دقیقاً <span class="highlight">یک فرستنده</span> و <span class="highlight">یک گیرنده</span>. بدون چندپخشی — "دو میزبان شرکت هستند، سه تا جمعیت است."</p>
+          </div>
+        </div>
+
+        <h3>بافرهای ارسال و دریافت</h3>
+        <p>هر طرف یک بافر ارسال (برای داده از برنامه که هنوز ارسال/تأیید نشده) و یک بافر دریافت (برای داده رسیده از شبکه که هنوز توسط برنامه خوانده نشده) تخصیص می‌دهد.</p>
+
+        <div class="formula">
+          <div class="label">حداکثر اندازه سگمنت (MSS)</div>
+          <div class="expr">MSS = MTU - (TCP Header + IP Header)</div>
+          <div class="desc">MTU معمولی = ۱۵۰۰ بایت (Ethernet); هدر TCP/IP ≈ ۴۰ بایت → MSS ≈ ۱۴۶۰ بایت</div>
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ اشتباه رایج:</span> MSS به بار <em>داده کاربردی</em> اشاره دارد، نه اندازه کل سگمنت. یک سگمنت با MSS=۱۴۶۰ بایت اندازه کل ≈ ۱۵۰۰ بایت شامل هدرها دارد.
+        </div>
+
+        <div class="note">MSS در طول دست‌دهی SYN/SYNACK از طریق فیلد options TCP مذاکره می‌شود. هر انتها MSS خود را اعلام می‌کند; حداقل دو مقدار استفاده می‌شود.</div>
+
+        <h3>دست‌دهی سه‌طرفه (مقدمه)</h3>
+        <table>
+          <tr>
+            <th>مرحله</th>
+            <th>فرستنده</th>
+            <th>گیرنده</th>
+            <th>هدف</th>
+          </tr>
+          <tr>
+            <td>۱</td>
+            <td>کلاینت → سرور</td>
+            <td>SYN=1, seq=<span class="highlight">client_isn</span></td>
+            <td>کلاینت درخواست اتصال می‌دهد، شماره توالی اولیه را می‌فرستد</td>
+          </tr>
+          <tr>
+            <td>۲</td>
+            <td>سرور → کلاینت</td>
+            <td>SYN=1, seq=<span class="highlight">server_isn</span>, ack=client_isn+1</td>
+            <td>سرور تأیید می‌کند، ISN خود را می‌فرستد</td>
+          </tr>
+          <tr>
+            <td>۳</td>
+            <td>کلاینت → سرور</td>
+            <td>SYN=0, ack=server_isn+1 (ممکن است داده حمل کند)</td>
+            <td>کلاینت تأیید می‌کند; اتصال برقرار شد</td>
+          </tr>
+        </table>
+
+        <div class="card">
+          <h3>ویژگی‌های کلیدی</h3>
+          <p>• بدون حالت اتصال در مسیریاب‌های میانی (مسیریاب‌ها دیتاگرام‌های IP را می‌بینند، نه اتصالات TCP)</p>
+          <p>• بافرها و متغیرها <span class="highlight">فقط در سیستم‌های انتهایی</span> وجود دارند</p>
+          <p>• TCP منطقی است، نه یک مدار فیزیکی</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>ساختار هدر سگمنت TCP</h2>
+        <p>هدر سگمنت TCP معمولاً <span class="highlight">۲۰ بایت</span> (بدون options) است و می‌تواند تا <span class="highlight">۶۰ بایت</span> با options باشد. هر فیلد هدر نقش مشخصی در انتقال داده قابل اطمینان، کنترل جریان و مدیریت اتصال دارد.</p>
+
+        <table>
+          <tr><th>فیلد</th><th>اندازه</th><th>هدف</th></tr>
+          <tr><td>پورت مبدأ</td><td>۱۶ بیت</td><td>فرایند برنامه فرستنده را شناسایی می‌کند</td></tr>
+          <tr><td>پورت مقصد</td><td>۱۶ بیت</td><td>فرایند برنامه گیرنده را شناسایی می‌کند</td></tr>
+          <tr><td>شماره توالی</td><td>۳۲ بیت</td><td>شماره جریان بایت اولین بایت در داده سگمنت</td></tr>
+          <tr><td>شماره تأیید</td><td>۳۲ بیت</td><td>شماره توالی بایت مورد انتظار بعدی (معتبر وقتی پرچم ACK تنظیم است)</td></tr>
+          <tr><td>طول هدر</td><td>۴ بیت</td><td>اندازه هدر TCP در کلمات ۳۲-بیتی (معمولی: ۵ → ۲۰ بایت)</td></tr>
+          <tr><td>رزرو شده</td><td>۶ بیت</td><td>استفاده نشده; برای آینده</td></tr>
+          <tr><td>پرچم‌ها (URG, ACK, PSH, RST, SYN, FIN)</td><td>۶ بیت</td><td>بیت‌های کنترلی برای حالت اتصال و معناشناسی سگمنت</td></tr>
+          <tr><td>پنجره دریافت (rwnd)</td><td>۱۶ بیت</td><td>تعداد بایت‌هایی که گیرنده مایل به پذیرش است (کنترل جریان)</td></tr>
+          <tr><td>Checksum</td><td>۱۶ بیت</td><td>تشخیص خطا برای هدر + داده</td></tr>
+          <tr><td>اشاگر داده فوری</td><td>۱۶ بیت</td><td>به آخرین بایت داده فوری اشاره می‌کند (معتبر وقتی پرچم URG تنظیم است)</td></tr>
+          <tr><td>Options</td><td>متغیر</td><td>مذاکره MSS، مقیاس‌بندی پنجره، timestampها</td></tr>
+          <tr><td>داده</td><td>متغیر ≤ MSS</td><td>بار کاربردی لایه کاربرد</td></tr>
+        </table>
+
+        <h3>جزئیات بیت‌های پرچم</h3>
+        <div class="grid">
+          <div class="card">
+            <span class="highlight">ACK</span> — فیلد تأیید معتبر است
+          </div>
+          <div class="card">
+            <span class="highlight">SYN</span> — همگام‌سازی شماره‌های توالی (برپایی اتصال)
+          </div>
+          <div class="card">
+            <span class="highlight">FIN</span> — فرستنده ارسال را تمام کرد (قطع اتصال)
+          </div>
+          <div class="card">
+            <span class="highlight">RST</span> — بازنشانی اتصال (خطا/رد)
+          </div>
+          <div class="card">
+            <span class="highlight">PSH</span> — داده را فوراً به برنامه فشار بده
+          </div>
+          <div class="card">
+            <span class="highlight">URG</span> — اشاره‌گر داده فوری معتبر است
+          </div>
+          <div class="card">
+            <span class="highlight">CWR</span> — پنجره ازدحام کاهش یافت
+          </div>
+          <div class="card">
+            <span class="highlight">ECE</span> — ECN-Echo (اعلان صریح ازدحام)
+          </div>
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ اشتباه رایج:</span> فیلد طول هدر در <em>کلمات ۳۲-بیتی</em> شمارش می‌شود، نه بایت. مقدار ۵ به معنی ۵ × ۴ = ۲۰ بایت است. حداقل ۵ است (بدون options).
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>شماره‌های توالی و شماره‌های تأیید</h2>
+
+        <p>TCP داده را به عنوان یک <span class="highlight">جریان بی‌ساختار اما مرتب از بایت‌ها</span> می‌نگرد. شماره‌های توالی به بایت‌ها اعمال می‌شوند، نه سگمنت‌ها.</p>
+
+        <div class="formula">
+          <div class="label">شماره توالی یک سگمنت</div>
+          <div class="expr">seq = شماره جریان بایت اولین بایت داده در سگمنت</div>
+          <div class="desc">اگر یک فایل ۵۰۰,۰۰۰ بایت داشته باشد و MSS = ۱۰۰۰، سگمنت ۱ seq=0 دارد، سگمنت ۲ seq=1000 دارد، و غیره.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">شماره تأیید</div>
+          <div class="expr">ack = شماره توالی بایت مورد انتظار بعدی (تجمعی)</div>
+          <div class="desc">اگر میزبان A بایت‌های ۰-۵۳۵ و ۹۰۰-۱۰۰۰ را دریافت کرده باشد اما ۵۳۶-۸۹۹ را نه، ack = ۵۳۶ (اولین بایت گم‌شده)</div>
+        </div>
+
+        <h3>ویژگی‌های کلیدی</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>ACK تجمعی</h4>
+            <p>ACK <span class="highlight">y</span> <em>همه</em> بایت‌ها تا اما به استثنای y را تأیید می‌کند.</p>
+          </div>
+          <div class="card">
+            <h4>ISN تصادفی</h4>
+            <p>شماره‌های توالی اولیه به صورت <span class="highlight">تصادفی</span> برای جلوگیری از سردرگمی با اتصالات قدیمی انتخاب می‌شوند.</p>
+          </div>
+          <div class="card">
+            <h4>مدیریت خارج‌ازترتیب</h4>
+            <p>RFCهای TCP به پیاده‌ساز واگذار می‌کنند: دور ریختن یا بافر کردن. TCP مدرن داده‌های خارج‌ازترتیب را بافر می‌کند.</p>
+          </div>
+          <div class="card">
+            <h4>فضای توالی ۳۲-بیتی</h4>
+            <p>فیلد شماره توالی <span class="highlight">۳۲ بیت</span> است (محدوده ۰ تا ۲<sup>۳۲</sup>−۱) و پس از رسیدن به حداکثر <span class="highlight">دور می‌زند</span> به ۰ برمی‌گردد.</p>
+          </div>
+        </div>
+
+        <h3>مطالعه موردی Telnet</h3>
+        <p>کاربر 'C' را در کلاینت تایپ می‌کند. ISN کلاینت = ۴۲، ISN سرور = ۷۹.</p>
+        <table>
+          <tr><th>سگمنت</th><th>جهت</th><th>Seq #</th><th>ACK #</th><th>داده</th><th>معنی</th></tr>
+          <tr><td>۱</td><td>کلاینت → سرور</td><td>۴۲</td><td>۷۹</td><td>'C'</td><td>کلاینت کاراکتر را می‌فرستد، منتظر بایت ۷۹ سرور</td></tr>
+          <tr><td>۲</td><td>سرور → کلاینت</td><td>۷۹</td><td>۴۳</td><td>'C' (echo)</td><td>سرور بایت ۴۲ را تأیید می‌کند، 'C' را برمی‌گرداند، تأیید سوارشده</td></tr>
+          <tr><td>۳</td><td>کلاینت → سرور</td><td>۴۳</td><td>۸۰</td><td>(خالی)</td><td>کلاینت بایت ۷۹ برگشتی را تأیید می‌کند، اکنون منتظر بایت ۸۰</td></tr>
+        </table>
+        <p class="note">سوار کردن: ACK برای داده کلاینت در داخل یک سگمنت داده سرور حمل می‌شود (سگمنت ۲).</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های عملی</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱: سناریوی Telnet با کاراکتر 'Z'</div>
+          <p><strong>تنظیمات:</strong> ISN کلاینت = ۱۰۰، ISN سرور = ۲۰۰. کاربر 'Z' (ASCII 90) را تایپ می‌کند.</p>
+          <p><strong>مرحله ۱:</strong> کلاینت seq=100, ack=200, data='Z' می‌فرستد. منتظر بایت ۲۰۰ از سرور است.</p>
+          <p><strong>مرحله ۲:</strong> سرور seq=200, ack=101, data='Z' (echo) می‌فرستد. دریافت بایت‌ها تا ۱۰۰ را تأیید می‌کند، اکنون بایت ۱۰۱ را می‌خواهد.</p>
+          <p><strong>مرحله ۳:</strong> کلاینت seq=101, ack=201, data خالی می‌فرستد. بایت ۲۰۰ سرور را تأیید می‌کند، اکنون بایت ۲۰۱ را می‌خواهد.</p>
+          <p class="result">هر کاراکتر دو بار در شبکه عبور می‌کند (echo).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: شماره‌گذاری سگمنت در انتقال فایل</div>
+          <p><strong>تنظیمات:</strong> اندازه فایل = ۱۲۰,۰۰۰ بایت، MSS = ۱۴۶۰ بایت، seq اولیه = ۰.</p>
+          <p>تعداد سگمنت‌ها = ceil(120,000 / 1460) = ۸۳ سگمنت.</p>
+          <p>مرزهای سگمنت:</p>
+          <p>سگمنت ۱: seq = 0, بایت‌های ۰-۱۴۵۹</p>
+          <p>سگمنت ۲: seq = 1460, بایت‌های ۱۴۶۰-۲۹۱۹</p>
+          <p>سگمنت ۱۰: seq = 13140, بایت‌های ۱۳۱۴۰-۱۴۵۹۹</p>
+          <p>سگمنت ۸۳: seq = 119720, بایت‌های ۱۱۹۷۲۰-۱۱۹۹۹۹ (فقط ۲۸۰ بایت)</p>
+          <p class="result">آخرین سگمنت کوچکتر از MSS است — معمولی برای تکه نهایی یک فایل.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: مدیریت خارج‌ازترتیب و ACK تجمعی</div>
+          <p><strong>تنظیمات:</strong> فرستنده سگمنت‌هایی با seq=1000 (۲۰۰ بایت), seq=1200 (۲۰۰ بایت), seq=1400 (۲۰۰ بایت) ارسال می‌کند.</p>
+          <p><strong>ورود به گیرنده:</strong> سگمنت seq=1000 می‌رسد، سپس seq=1400 می‌رسد (seq=1200 گم شده).</p>
+          <p><strong>اعمال گیرنده:</strong></p>
+          <p>• در دریافت seq=1000: بایت‌های ۱۰۰۰-۱۱۹۹ را تحویل می‌دهد، ACK=1200</p>
+          <p>• در دریافت seq=1400 (خارج‌ازترتیب): بایت‌های ۱۴۰۰-۱۵۹۹ را بافر می‌کند، <span class="highlight">ACK=1200 تکراری</span> می‌فرستد</p>
+          <p><strong>فرستنده ACK تکراری دریافت می‌کند:</strong> می‌داند گیرنده همچنان منتظر بایت ۱۲۰۰ است.</p>
+          <p class="result">ACK تجمعی ۱۲۰۰ به فرستنده می‌گوید که همه بایت‌های قبل از ۱۲۰۰ دریافت شده‌اند، اما چیزی فراتر از آن دریافت نشده است.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴: محاسبه MSS با MTUهای مختلف</div>
+          <p><strong>حالت A — Ethernet:</strong> MTU = ۱۵۰۰ بایت. هدر TCP = ۲۰ بایت، هدر IP = ۲۰ بایت.</p>
+          <p class="result">MSS = 1500 - 40 = ۱۴۶۰ بایت.</p>
+          <p><strong>حالت B — PPP:</strong> MTU = ۱۵۰۰ بایت. سربار هدر یکسان.</p>
+          <p class="result">MSS = 1500 - 40 = ۱۴۶۰ بایت.</p>
+          <p><strong>حالت C — Jumbo Frames:</strong> MTU = ۹۰۰۰ بایت.</p>
+          <p class="result">MSS = 9000 - 40 = ۸۹۶۰ بایت.</p>
+          <p><strong>حالت D — کشف MTU مسیر:</strong> اگر کوچکترین MTU در طول مسیر ۵۷۶ بایت باشد:</p>
+          <p class="result">MSS = 576 - 40 = ۵۳۶ بایت.</p>
+          <div class="warning">
+            <span class="label">⚠ مهم:</span> MSS در طول دست‌دهی TCP از طریق فیلد options مذاکره می‌شود. هر دو انتها MSS خود را اعلام می‌کنند; حداقل استفاده می‌شود.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

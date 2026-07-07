@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECN &amp; Delay-based Congestion Control - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>ECN &amp; Delay-based Congestion Control</h1>
+  <p class="subtitle">Transport Layer — Section 3.7.2 | Network-Assisted &amp; Proactive Approaches</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">ECN Overview</button>
+      <button class="tab" onclick="showSection('tab2')">ECN in TCP</button>
+      <button class="tab" onclick="showSection('tab3')">Delay-based CC</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>ECN Overview</h2>
+        <p>Explicit Congestion Notification (ECN) is a network-assisted congestion control mechanism defined in RFC 3168. It uses two bits in the IP Type of Service (ToS) field to signal congestion before packet loss occurs.</p>
+
+        <div class="formula">
+          <div class="label">ECN Codepoints (2 bits in IP ToS field)</div>
+          <div class="expr">00 = Not ECN-Capable (Non-ECT)</div>
+          <div class="expr">01 or 10 = ECN-Capable Transport (ECT)</div>
+          <div class="expr">11 = Congestion Experienced (CE)</div>
+          <div class="desc">Routers set the CE codepoint (00→11) when a packet encounters congestion. The receiver is notified and echoes the signal back to the sender.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Why ECN?</h3>
+            <p>• Classic TCP detects congestion only <em>after</em> packet loss</p>
+            <p>• ECN detects <em>impending</em> congestion before buffers overflow</p>
+            <p>• Avoids costly retransmissions</p>
+            <p>• Reduces latency for interactive traffic</p>
+            <p>• Especially beneficial in data centers</p>
+          </div>
+          <div class="card">
+            <h3>Router Marking</h3>
+            <p>Router monitors queue length</p>
+            <p>When queue exceeds threshold:</p>
+            <p>• If ECT(0) or ECT(1): change to CE(11)</p>
+            <p>• If Not-ECT: drop packet (no ECN support)</p>
+            <p>Threshold is configurable by operator</p>
+          </div>
+        </div>
+
+        <h3>ECN Protocol Stack Interaction</h3>
+        <table>
+          <tr>
+            <th>Layer</th>
+            <th>Component</th>
+            <th>Role</th>
+          </tr>
+          <tr>
+            <td>Network (IP)</td>
+            <td>ToS field (2 ECN bits)</td>
+            <td>Routers mark CE to signal congestion</td>
+          </tr>
+          <tr>
+            <td>Transport (TCP)</td>
+            <td>ECE bit in ACK</td>
+            <td>Receiver echoes congestion to sender</td>
+          </tr>
+          <tr>
+            <td>Transport (TCP)</td>
+            <td>CWR bit in data</td>
+            <td>Sender confirms window reduction</td>
+          </tr>
+          <tr>
+            <td>Transport (TCP)</td>
+            <td>cwnd halving</td>
+            <td>Sender reduces rate (same as loss reaction)</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> ECN does NOT replace loss-based congestion detection. It provides <em>earlier</em> notification. TCP still uses loss detection as a fallback when ECN is not supported along the path.
+        </div>
+
+        <div class="card">
+          <h3>DCCP — Datagram Congestion Control Protocol</h3>
+          <p><span class="dim">RFC 4340</span> defines DCCP, an unreliable transport protocol that uses ECN for congestion control. Unlike UDP, DCCP flows respond to congestion by reducing their rate. DCCP is designed for applications that need timeliness over reliability (e.g., streaming media).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>ECN in TCP</h2>
+        <p>The ECN feedback loop involves the receiver echoing the congestion indication back to the sender via TCP header bits.</p>
+
+        <div class="formula">
+          <div class="label">ECN Feedback Loop</div>
+          <div class="expr">IP CE(11) → Receiver → ACK[ECE=1] → Sender → halve cwnd → ACK[CWR=1]</div>
+          <div class="desc">Full loop takes 1 RTT. Sender halves cwnd (same as triple dupACK reaction) and sets CWR bit to acknowledge the reduction.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCP Header Bits for ECN</h3>
+            <p><span class="highlight">ECE</span> (ECN Echo)</p>
+            <p>Receiver→Sender: "I received a CE-marked packet"</p>
+            <p><span class="highlight">CWR</span> (Congestion Window Reduced)</p>
+            <p>Sender→Receiver: "I halved my cwnd"</p>
+            <p>Both bits in TCP header flags (Figure 3.29)</p>
+          </div>
+          <div class="card">
+            <h3>ECN Extensions</h3>
+            <p><span class="dim">DCTCP</span> — Data Center TCP</p>
+            <p>Uses ECN marking fraction to fine-tune cwnd</p>
+            <p><span class="dim">DCQCN</span> — Data Center QCN</p>
+            <p>For RDMA over Converged Ethernet</p>
+            <p>Both widely deployed in modern data centers</p>
+          </div>
+        </div>
+
+        <h3>DCTCP Algorithm</h3>
+        <div class="code">
+On each ACK:
+  if ACK has ECE=1:
+    mark_count++
+  alpha = (1 - g) * alpha + g * (mark_count / total_ACKs)
+  cwnd = cwnd * (1 - alpha/2)
+        </div>
+        <p>DCTCP uses the <em>fraction</em> of marked packets (α) rather than a binary signal. This allows more precise congestion control, keeping queues short in data center networks.</p>
+
+        <div class="note">
+          <strong>Deployment Status:</strong> Recent measurements show increasing ECN deployment on popular servers and intermediate routers. However, not all paths are ECN-capable, so TCP must always fall back to loss-based detection.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Delay-based Congestion Control</h2>
+        <p>Delay-based approaches detect congestion before loss by measuring changes in RTT. The core idea: increasing queueing delay signals building congestion.</p>
+
+        <h3>TCP Vegas</h3>
+        <div class="formula">
+          <div class="label">Vegas Congestion Detection</div>
+          <div class="expr">Throughput_expected = cwnd / RTT<sub>min</sub></div>
+          <div class="expr">Throughput_actual = cwnd / RTT<sub>current</sub></div>
+          <div class="expr">If Throughput_expected − Throughput_actual &gt; threshold → congested</div>
+          <div class="desc">RTT<sub>min</sub> = minimum observed RTT (uncongested path). When actual throughput is significantly less than expected, the path is congested.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Vegas cwnd Adjustment</div>
+          <div class="expr">If diff &lt; α: cwnd += 1 &nbsp;(underutilized)</div>
+          <div class="expr">If diff &gt; β: cwnd -= 1 &nbsp;(congested)</div>
+          <div class="expr">Else: cwnd unchanged &nbsp;(just right)</div>
+          <div class="desc">diff = expected − actual throughput difference. α and β are thresholds (typically 1 and 3 packets).</div>
+        </div>
+
+        <h3>BBR (Bottleneck Bandwidth and Round-trip)</h3>
+        <p>BBR, developed at Google, models the path as a pipe with bandwidth × RTT capacity. The key principle — "Keep the pipe just full, but no fuller" — originates from Kleinrock's power law and is also central to TCP Vegas.</p>
+
+        <div class="formula">
+          <div class="label">BBR Key Insight</div>
+          <div class="expr">BDP = Bottleneck Bandwidth × RTT<sub>min</sub></div>
+          <div class="desc">Bandwidth-Delay Product. Sending at this rate keeps the pipe full without building queues.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCP Vegas</h3>
+            <p>• Proactive: reduces rate before loss</p>
+            <p>• Uses RTT<sub>min</sub> as uncongested baseline</p>
+            <p>• Measures throughput deviation</p>
+            <p>• Can be unfair against Reno (which fills buffers)</p>
+          </div>
+          <div class="card">
+            <h3>BBR</h3>
+            <p>• Bandwidth-delay product model</p>
+            <p>• Used in Google B4 network</p>
+            <p>• Deployed on YouTube servers</p>
+            <p>• Fairness mechanisms for Reno coexistence</p>
+            <p>• RFC 8312</p>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>TCP Reno</th>
+            <th>TCP Vegas</th>
+            <th>BBR</th>
+          </tr>
+          <tr>
+            <td>Signal</td>
+            <td>Packet loss</td>
+            <td>RTT increase</td>
+            <td>Bandwidth + RTT</td>
+          </tr>
+          <tr>
+            <td>Proactive?</td>
+            <td>No (reacts after loss)</td>
+            <td>Yes (reduces before loss)</td>
+            <td>Yes (models path capacity)</td>
+          </tr>
+          <tr>
+            <td>Queue buildup</td>
+            <td>High (fills buffers)</td>
+            <td>Low (avoids queueing)</td>
+            <td>Minimal (targets BDP)</td>
+          </tr>
+          <tr>
+            <td>Deployment</td>
+            <td>Legacy/fallback</td>
+            <td>Limited</td>
+            <td>Google, YouTube</td>
+          </tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TIMELY</h3>
+            <p><span class="highlight">Delay-based CC for Data Centers</span></p>
+            <p>Uses RTT gradient (not absolute RTT) to detect congestion before queuing builds. Designed for high-speed data center networks with tight latency requirements.</p>
+          </div>
+          <div class="card">
+            <h3>Compound TCP (CTCP)</h3>
+            <p><span class="highlight">Loss-based + Delay-based</span></p>
+            <p>Default on Windows. Combines Reno's loss-based AIMD with a delay-based component for high-speed long-distance networks. Scales well without being overly aggressive.</p>
+          </div>
+          <div class="card">
+            <h3>FAST TCP</h3>
+            <p><span class="highlight">High-Speed Long-Distance</span></p>
+            <p>Uses queuing delay as the primary congestion signal. Aims to achieve high throughput in high-BDP paths by stabilizing around the equilibrium point where queue delay is small.</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Delay-based approaches (Vegas, BBR) do NOT replace loss-based congestion control entirely. They work best when competing with similar flows. When a Vegas flow shares a link with a Reno flow, Vegas may get less bandwidth because Reno aggressively fills buffers while Vegas backs off.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1 — Full ECN Signaling Walkthrough</div>
+          <p><strong>Setup:</strong> Host A (sender) → Router R → Host B (receiver). A sends data at 100 Mbps. R's link is 80 Mbps. ECN enabled.</p>
+          <p><strong>Step 1:</strong> A sets ECT(1) in IP header (both hosts ECN-capable).</p>
+          <p><strong>Step 2:</strong> R's queue grows past threshold. R sees ECT(1), changes it to CE(11). Forwards packet.</p>
+          <p><strong>Step 3:</strong> B receives packet with CE=11. B's TCP sets ECE=1 in the next ACK back to A.</p>
+          <p><strong>Step 4:</strong> A receives ACK[ECE=1]. A halves cwnd (e.g., from 100 to 50 segments). A sets CWR=1 in next data segment.</p>
+          <p><strong>Step 5:</strong> B receives CWR=1, stops setting ECE bit.</p>
+          <p><span class="result">Time:</span> Full feedback loop takes ~1 RTT. No packets were dropped, no retransmissions needed.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — TCP Vegas Throughput Calculation</div>
+          <p><strong>Setup:</strong> cwnd = 24 KB, RTT<sub>min</sub> = 100ms (uncongested). Current RTT = 120ms. MSS = 1 KB.</p>
+          <p><strong>Expected throughput:</strong> 24 KB / 0.100s = 240 KB/s</p>
+          <p><strong>Actual throughput:</strong> 24 KB / 0.120s = 200 KB/s</p>
+          <p><strong>diff:</strong> 240 − 200 = 40 KB/s = 40 packets/sec</p>
+          <p><span class="result">Analysis:</span> diff is large → path is congested (queueing delay = 20ms). Vegas would decrease cwnd by 1 MSS to reduce the queue buildup.</p>
+          <p>After decrease: cwnd = 23 KB. New expected rate = 23/0.1 = 230 KB/s. New actual ≈ 23/0.115 = 200 KB/s (assuming reduced queue). Vegas converges to keep diff within [α, β] where buffers stay small.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — DCTCP Fine-Tuned cwnd Control</div>
+          <p><strong>Setup:</strong> Data center flow, RTT = 200µs. In a window of 100 packets, 30 have CE marking.</p>
+          <p><strong>α calculation</strong> (with g = 0.0625):</p>
+          <p>Fraction marked = 30/100 = 0.3</p>
+          <p>α<sub>new</sub> = (1−0.0625) × α<sub>old</sub> + 0.0625 × 0.3</p>
+          <p>If α<sub>old</sub> = 0.1: α<sub>new</sub> = 0.9 × 0.1 + 0.0625 × 0.3 = 0.09 + 0.01875 = 0.10875</p>
+          <p><strong>cwnd adjustment:</strong> cwnd = cwnd × (1 − 0.10875/2) = cwnd × 0.9456</p>
+          <p><span class="result">Result:</span> Only 5.4% reduction. In classic ECN, cwnd would be halved (50% reduction). DCTCP's gentler reaction keeps queues short while maintaining high throughput.</p>
+        </div>
+
+        <h3>Comparison Summary</h3>
+        <table>
+          <tr>
+            <th>Protocol</th>
+            <th>Congestion Signal</th>
+            <th>Reaction</th>
+            <th>Primary Use</th>
+            <th>Loss Required?</th>
+          </tr>
+          <tr>
+            <td>TCP Reno</td>
+            <td>Packet loss</td>
+            <td>Halve cwnd</td>
+            <td>General Internet</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>ECN (RFC 3168)</td>
+            <td>IP CE mark</td>
+            <td>Halve cwnd (same as loss)</td>
+            <td>ECN-capable paths</td>
+            <td>No (proactive)</td>
+          </tr>
+          <tr>
+            <td>DCTCP</td>
+            <td>ECN mark fraction</td>
+            <td>Scale by (1−α/2)</td>
+            <td>Data centers</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>TCP Vegas</td>
+            <td>RTT increase</td>
+            <td>cwnd ± 1 per RTT</td>
+            <td>Research/limited</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>BBR</td>
+            <td>BW &amp; RTT estimation</td>
+            <td>Pacing at BDP rate</td>
+            <td>Google B4, YouTube</td>
+            <td>No</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

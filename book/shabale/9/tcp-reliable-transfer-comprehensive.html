@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Reliable Data Transfer - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Reliable Data Transfer</h1>
+  <p class="subtitle">Computer Networking — Comprehensive Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">TCP Sender</button>
+      <button class="tab" onclick="showSection('tab2')">Retransmission Scenarios</button>
+      <button class="tab" onclick="showSection('tab3')">Fast Retransmit</button>
+      <button class="tab" onclick="showSection('tab4')">GBN vs SR in TCP</button>
+      <button class="tab" onclick="showSection('tab5')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>TCP Sender — Three Major Events</h2>
+        <p>TCP creates a reliable data transfer service on top of IP's unreliable best-effort service. The sender manages two key variables:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h4>SendBase</h4>
+            <p>Sequence number of the <span class="highlight">oldest unacknowledged byte</span>. SendBase - 1 is the last byte confirmed received in order.</p>
+          </div>
+          <div class="card">
+            <h4>NextSeqNum</h4>
+            <p>Sequence number of the <span class="highlight">next byte</span> to be sent.</p>
+          </div>
+        </div>
+
+        <h3>Three Events (Simplified TCP Sender)</h3>
+        <table>
+          <tr><th>Event</th><th>Action</th></tr>
+          <tr>
+            <td>1. Data from application above</td>
+            <td>Create segment with seq = NextSeqNum; if timer not running, start it; pass to IP; NextSeqNum += length(data)</td>
+          </tr>
+          <tr>
+            <td>2. Timeout</td>
+            <td>Retransmit <span class="highlight">oldest unacknowledged</span> segment; restart timer</td>
+          </tr>
+          <tr>
+            <td>3. ACK received (value y)</td>
+            <td>If y > SendBase: SendBase = y; if unacknowledged segments remain, restart timer</td>
+          </tr>
+        </table>
+
+        <h3>Sender Pseudocode</h3>
+        <div class="code">
+          NextSeqNum = InitialSeqNumber;
+          SendBase = InitialSeqNumber;
+
+          loop forever {
+            switch (event) {
+              case data from application:
+                create segment with seq = NextSeqNum;
+                if (timer not running) start timer;
+                pass segment to IP;
+                NextSeqNum += length(data);
+                break;
+
+              case timeout:
+                retransmit oldest unacknowledged segment;
+                start timer;
+                break;
+
+              case ACK received (value y):
+                if (y > SendBase) {
+                  SendBase = y;
+                  if (unacknowledged segments remain)
+                    start timer;
+                }
+                break;
+            }
+          }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Key Point:</span> TCP uses a <span class="highlight">single timer</span> for the oldest unacknowledged segment, not one timer per segment. This simplifies timer management.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Retransmission Scenarios</h2>
+
+        <h3>Scenario 1: Lost ACK</h3>
+        <p>Host A sends seq=92 (8 bytes). Segment arrives, but B's ACK=100 is lost.</p>
+        <p><strong>Action:</strong> Timeout occurs. A retransmits seq=92. B receives duplicate, discards it, re-sends ACK=100.</p>
+        <p class="result">No harm — duplicate detection via sequence numbers prevents data corruption.</p>
+
+        <h3>Scenario 2: Cumulative ACK Prevents Unnecessary Retransmissions</h3>
+        <p>Host A sends two segments: seq=92 (8 bytes) and seq=100 (20 bytes).</p>
+        <p>Both arrive at B. B sends ACK=100 and ACK=120.</p>
+        <p>ACK=100 is lost, but before timeout, A receives ACK=120.</p>
+        <p><strong>Action:</strong> Since ACK=120 > SendBase=92, SendBase = 120. No retransmission needed!</p>
+        <p class="result">Cumulative ACKs provide robustness: a later ACK implicitly acknowledges all earlier data.</p>
+
+        <h3>Scenario 3: Doubling Timeout Interval</h3>
+        <div class="formula">
+          <div class="label">Exponential Backoff Rule</div>
+          <div class="expr">On timeout: TimeoutInterval = TimeoutInterval × 2</div>
+          <div class="desc">Each successive timeout doubles the interval: 0.75s → 1.5s → 3.0s → 6.0s</div>
+        </div>
+        <p>This provides a <span class="highlight">limited form of congestion control</span>. Timeout likely means congestion; persistent retransmission would worsen it.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Fast Retransmit</h2>
+        <p>Timeout periods can be <span class="highlight">relatively long</span>. The sender can detect packet loss sooner by noticing duplicate ACKs.</p>
+
+        <h3>How Duplicate ACKs Arise</h3>
+        <p>When a receiver detects a gap (out-of-order segment), it sends a <span class="highlight">duplicate ACK</span> for the last in-order byte received.</p>
+
+        <table>
+          <tr><th>Event</th><th>Receiver Action [RFC 5681]</th></tr>
+          <tr><td>In-order segment arrives, no pending ACK</td><td>Delayed ACK (wait up to 500 ms for next segment)</td></tr>
+          <tr><td>In-order segment arrives, one pending ACK</td><td>Immediately send cumulative ACK</td></tr>
+          <tr><td>Out-of-order segment (gap detected)</td><td>Immediately send <span class="highlight">duplicate ACK</span> (seq of next expected byte)</td></tr>
+          <tr><td>Segment fills gap partially/completely</td><td>Immediately send ACK (lower end of gap)</td></tr>
+        </table>
+
+        <h3>Fast Retransmit Algorithm</h3>
+        <div class="code">
+          event: ACK received, value y
+            if (y > SendBase) {
+              SendBase = y;
+              if (unacknowledged segments remain) start timer;
+            } else {
+              // duplicate ACK
+              dupACKcount[y]++;
+              if (dupACKcount[y] == 3) {
+                // 3 duplicate ACKs → fast retransmit
+                resend segment with seq = y;
+              }
+            }
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Why 3 duplicate ACKs?</span> A single duplicate ACK could be caused by packet reordering, not loss. Three duplicate ACKs strongly suggest the segment is lost.
+        </div>
+
+        <p>In the fast retransmit diagram (Figure 3.37), segment seq=100 is lost. The sender receives 4 ACKs for seq=100 (one original + three duplicates), triggering retransmission of seq=100 <em>before</em> its timer expires.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>GBN vs SR in TCP</h2>
+        <p>TCP is <span class="highlight">neither purely GBN nor purely SR</span> — it's a hybrid that combines features of both.</p>
+
+        <table>
+          <tr><th>Feature</th><th>Go-Back-N</th><th>Selective Repeat</th><th>TCP</th></tr>
+          <tr><td>ACK type</td><td>Cumulative</td><td>Individual (selective)</td><td>Cumulative (GBN-like)</td></tr>
+          <tr><td>Retransmit on timeout</td><td>All unacknowledged packets</td><td>Only lost packet</td><td>Only oldest unacknowledged (SR-like)</td></tr>
+          <tr><td>Buffers out-of-order</td><td>No (discards)</td><td>Yes</td><td>Yes (SR-like, in practice)</td></tr>
+          <tr><td>Window size</td><td>Fixed N</td><td>Fixed N</td><td>Dynamic (rwnd, cwnd)</td></tr>
+          <tr><td>Multiple timers</td><td>Single</td><td>Per packet</td><td>Single (GBN-like)</td></tr>
+        </table>
+
+        <h3>Why TCP is a Hybrid</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>GBN-like Features</h4>
+            <p>• Cumulative ACKs — one ACK covers all prior bytes</p>
+            <p>• Single timer for oldest unacknowledged segment</p>
+            <p>• SendBase + NextSeqNum window management</p>
+          </div>
+          <div class="card">
+            <h4>SR-like Features</h4>
+            <p>• Buffers out-of-order segments (modern implementations)</p>
+            <p>• Retransmits only one segment on timeout (not all N)</p>
+            <p>• Selective ACK (SACK, RFC 2018) adds explicit selective acknowledgment</p>
+          </div>
+        </div>
+
+        <p>TCP's error-recovery mechanism is <span class="highlight">best categorized as a hybrid</span> of GBN and SR protocols. SACK [RFC 2018] makes TCP even more SR-like by allowing receivers to acknowledge out-of-order segments selectively.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Timeout and Retransmission</div>
+          <p><strong>Setup:</strong> Host A sends segment seq=500 (100 bytes). TimeoutInterval = 200 ms.</p>
+          <p><strong>Sequence:</strong></p>
+          <p>t=0 ms: A sends seq=500, starts timer.</p>
+          <p>t=10 ms: Segment arrives at B. B sends ACK=600.</p>
+          <p>t=20 ms: ACK=600 is lost (router buffer overflow).</p>
+          <p>t=200 ms: Timer fires (no ACK received). A retransmits seq=500, restarts timer (doubled to 400 ms).</p>
+          <p>t=210 ms: Retransmitted segment arrives. B sees seq=500 (duplicate), discards data, sends ACK=600.</p>
+          <p>t=220 ms: ACK=600 arrives at A. SendBase = 600. Timer stopped.</p>
+          <p class="result">Total delay due to loss: ~220 ms (including retransmission and propagation).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Cumulative ACK Avoiding Retransmission</div>
+          <p><strong>Setup:</strong> A sends seq=200 (50 bytes) and seq=250 (60 bytes).</p>
+          <p><strong>Sequence:</strong></p>
+          <p>t=0: Send seq=200. t=1: Send seq=250.</p>
+          <p>t=10: B receives seq=200, sends ACK=250.</p>
+          <p>t=12: B receives seq=250, sends ACK=310.</p>
+          <p>t=20: ACK=250 is lost. t=22: ACK=310 arrives.</p>
+          <p>A checks: ACK=310 > SendBase(200). SendBase = 310. Timer stopped.</p>
+          <p class="result">Even though ACK=250 was lost, no retransmission needed because ACK=310 acknowledges all data up to byte 310.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Fast Retransmit Detection</div>
+          <p><strong>Setup:</strong> A sends 4 segments: seq=1000 (100B), seq=1100 (100B), seq=1200 (100B), seq=1300 (100B).</p>
+          <p><strong>Loss:</strong> Segment seq=1100 is dropped at a router.</p>
+          <p><strong>Receiver events:</strong></p>
+          <p>• Receives seq=1000 → ACK=1100</p>
+          <p>• Receives seq=1200 (out of order) → duplicate ACK=1100 (gap still at 1100)</p>
+          <p>• Receives seq=1300 (out of order) → duplicate ACK=1100</p>
+          <p><strong>Sender events:</strong></p>
+          <p>• Receives ACK=1100 (original) → SendBase = 1100</p>
+          <p>• Receives dup ACK=1100 (from seq=1200) → dupCount=1</p>
+          <p>• Receives dup ACK=1100 (from seq=1300) → dupCount=2</p>
+          <p>• Receives dup ACK=1100 (from seq=1400, if sent) → dupCount=3 → <span class="highlight">fast retransmit seq=1100!</span></p>
+          <p class="result">Fast retransmit avoids waiting for the timeout (which could be hundreds of ms).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Duplicate ACK from Packet Reordering</div>
+          <p><strong>Setup:</strong> A sends seq=500 (80B), seq=580 (80B), seq=660 (80B).</p>
+          <p><strong>Network reorders:</strong> seq=580 arrives before seq=500 (unusual but possible).</p>
+          <p><strong>Receiver:</strong></p>
+          <p>• Receives seq=580 first (out of order, expecting 500) → duplicate ACK=500</p>
+          <p>• Receives seq=500 (in order now) → delivers bytes 500-579, ACK=660 (cumulative)</p>
+          <p>• Receives seq=660 → ACK=740</p>
+          <p><strong>Sender:</strong> Receives one duplicate ACK=500 but not three. No fast retransmit triggered.</p>
+          <p class="result">TCP tolerates packet reordering — one duplicate ACK is not enough to trigger retransmission. This prevents unnecessary retransmission when packets are merely delayed/reordered.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: GBN vs TCP Behavior with Multiple Losses</div>
+          <p><strong>Setup:</strong> Window of 5 segments sent: seq=1,2,3,4,5. Segment 2 is lost.</p>
+          <p><strong>GBN behavior:</strong> When sender times out on segment 2, it retransmits <em>all</em> unacknowledged segments: 2,3,4,5.</p>
+          <p><strong>TCP behavior:</strong> When timeout occurs, TCP retransmits only segment with <em>smallest</em> sequence number (seq=2).</p>
+          <p>Segments 3,4,5 may already be buffered at receiver. When ACKs for 3,4,5 arrive (possibly after retransmission of 2), they are used to advance SendBase.</p>
+          <p class="result">TCP is more bandwidth-efficient than pure GBN; it avoids retransmitting segments already received.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

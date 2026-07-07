@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کنترل ازدحام TCP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>کنترل ازدحام TCP</h1>
+  <p class="subtitle">لایه حمل — بخش ۳.۷.۱ | کلاسیک TCP Tahoe و Reno, CUBIC</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور</button>
+      <button class="tab" onclick="showSection('tab2')">شروع آهسته</button>
+      <button class="tab" onclick="showSection('tab3')">اجتناب از ازدحام</button>
+      <button class="tab" onclick="showSection('tab4')">بازیابی سریع و AIMD</button>
+      <button class="tab" onclick="showSection('tab5')">TCP CUBIC</button>
+      <button class="tab" onclick="showSection('tab6')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور کنترل ازدحام TCP</h2>
+        <p>TCP نرخ ارسال خود را با استفاده از یک پنجره ازدحام (cwnd) محدود می‌کند. فرستنده نمی‌تواند بیش از cwnd بایت داده تأیید نشده داشته باشد. نرخ تقریباً cwnd/RTT است.</p>
+
+        <div class="formula">
+          <div class="label">محدودیت اساسی</div>
+          <div class="expr">LastByteSent − LastByteAcked ≤ min{cwnd, rwnd}</div>
+          <div class="desc">داده تأیید نشده توسط هر دو پنجره ازدحام و پنجره دریافت محدود می‌شود. cwnd در طول کنترل ازدحام، نرخ را عمدتاً محدود می‌کند.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">نرخ ارسال (تقریبی)</div>
+          <div class="expr">rate ≈ cwnd / RTT &nbsp;bytes/sec</div>
+          <div class="desc">وقتی فقدان/تأخیر ناچیز است و cwnd بایت در هر RTT ارسال می‌شود.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>سه اصل</h3>
+            <p>1. <span class="highlight">فقدان ← ازدحام</span></p>
+            <p class="note">وقفه یا ۳ ACK تکراری = رویداد فقدان</p>
+            <p>2. <span class="highlight">ACK ← خوب</span></p>
+            <p class="note">ACK نشان‌دهنده تحویل موفق، افزایش نرخ</p>
+            <p>3. <span class="highlight">کاوش پهنای باند</span></p>
+            <p class="note">افزایش تا فقدان، سپس عقب‌نشینی، تکرار</p>
+          </div>
+          <div class="card">
+            <h3>متغیرهای کلیدی</h3>
+            <p><span class="highlight">cwnd</span> — پنجره ازدحام</p>
+            <p><span class="highlight">ssthresh</span> — آستانه شروع آهسته</p>
+            <p><span class="dim">رویداد فقدان:</span> وقفه یا ۳ dupACK</p>
+            <p><span class="dim">خود-ساعت‌دهی:</span> ACKها باعث افزایش cwnd می‌شوند</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>خود-ساعت‌دهی:</strong> TCP از ACKها برای ساعت (راه‌اندازی) افزایش cwnd خود استفاده می‌کند. رسیدن سریع‌تر ACK ← رشد سریع‌تر پنجره. این به طور طبیعی با RTT مسیر سازگار می‌شود.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>مراجع تاریخی و استانداردسازی</h3>
+            <p><span class="dim">[Jacobson 1988]</span> — "Congestion Avoidance and Control" اولین بار الگوریتم کنترل ازدحام TCP را توصیف کرد</p>
+            <p><span class="dim">RFC 2581</span> — کنترل ازدحام TCP (استاندارد اصلی)</p>
+            <p><span class="dim">RFC 5681</span> — کنترل ازدحام TCP (استاندارد فعلی، جایگزین RFC 2581)</p>
+          </div>
+          <div class="card">
+            <h3>FSM کنترل ازدحام</h3>
+            <p><span class="highlight">شروع آهسته:</span> cwnd &lt; ssthresh, رشد نمایی</p>
+            <p>↓ cwnd ≥ ssthresh</p>
+            <p><span class="dim">اجتناب از ازدحام:</span> رشد خطی (+۱ MSS/RTT)</p>
+            <p>↓ فقدان → ssthresh = cwnd/2</p>
+            <p>وقفه → cwnd = 1 (بازگشت به شروع آهسته)</p>
+            <p>۳ dupACK → cwnd = cwnd/2 (Reno بازیابی سریع)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>شروع آهسته (Slow Start)</h2>
+        <p>در شروع اتصال، cwnd به ۱ MSS مقداردهی می‌شود (RFC 3390). TCP cwnd را در هر RTT دو برابر می‌کند تا زمانی که ازدحام را تشخیص دهد یا به ssthresh برسد.</p>
+
+        <div class="formula">
+          <div class="label">رشد شروع آهسته (در هر ACK)</div>
+          <div class="expr">cwnd += 1 MSS &nbsp;(در هر RTT دو برابر می‌شود)</div>
+          <div class="desc">برای هر ACK دریافت شده، cwnd به میزان ۱ MSS افزایش می‌یابد. این پنجره را در هر RTT دو برابر می‌کند (رشد نمایی).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">در فقدان (وقفه)</div>
+          <div class="expr">ssthresh = cwnd/2  &nbsp;&nbsp;  cwnd = 1 MSS</div>
+          <div class="desc">پس از وقفه، به ۱ MSS بازنشانی کنید و شروع آهسته را دوباره شروع کنید. ssthresh نصف پنجره فقدان را ثبت می‌کند.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>زمان‌بندی شروع آهسته</h3>
+            <p>t=0: cwnd = 1 MSS, ارسال ۱ سگمنت</p>
+            <p>t=RTT: ACK می‌رسد, cwnd = 2 MSS, ارسال ۲</p>
+            <p>t=2RTT: هر دو تأیید شدند, cwnd = 4, ارسال ۴</p>
+            <p>t=3RTT: cwnd = 8, ارسال ۸</p>
+            <p>... نمایی سریع</p>
+          </div>
+          <div class="card">
+            <h3>چه زمانی شروع آهسته پایان می‌یابد</h3>
+            <p>1. <span class="dim">وقفه</span> → cwnd=1, ssthresh=cwnd/2</p>
+            <p>2. <span class="dim">cwnd ≥ ssthresh</span> → انتقال به اجتناب از ازدحام</p>
+            <p>3. <span class="dim">۳ ACK تکراری</span> → بازارسال سریع + بازیابی سریع</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> با وجود نام "شروع آهسته"، رشد <em>نمایی</em> است، اصلاً آهسته نیست! این نام از این واقعیت می‌آید که از cwnd=1 شروع می‌شود نه اینکه بلافاصله پنجره کامل گیرنده را پمپاژ کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>اجتناب از ازدحام (Congestion Avoidance)</h2>
+        <p>وقتی cwnd به ssthresh می‌رسد، TCP به افزایش خطی (افزایشی) تغییر می‌کند: +۱ MSS در هر RTT. این فاز AIMD است.</p>
+
+        <div class="formula">
+          <div class="label">افزایش خطی (در هر ACK)</div>
+          <div class="expr">cwnd += MSS × (MSS / cwnd)</div>
+          <div class="desc">این +۱ MSS در هر RTT می‌دهد. اگر cwnd = 10 MSS باشد، هر ACK cwnd را به میزان MSS/10 افزایش می‌دهد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">در فقدان</div>
+          <div class="expr">وقفه: &nbsp;cwnd = 1 MSS, ssthresh = cwnd/2</div>
+          <div class="expr">سه‌تایی dupACK: &nbsp;cwnd = cwnd/2, ssthresh = cwnd/2</div>
+          <div class="desc">وقفه شدیدتر درمان می‌شود (بازنشانی کامل به ۱). سه‌تایی dupACK فقط cwnd را نصف می‌کند (Reno).</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCP Tahoe</h3>
+            <p>• در <em>هر</em> فقدان: cwnd = 1 MSS</p>
+            <p>• همیشه پس از فقدان وارد شروع آهسته می‌شود</p>
+            <p>• ساده‌تر، کاهش تهاجمی‌تر</p>
+            <p>• توان عملیاتی کمتر پس از سه‌تایی dupACK</p>
+          </div>
+          <div class="card">
+            <h3>TCP Reno</h3>
+            <p>• در وقفه: cwnd = 1 MSS (شروع آهسته)</p>
+            <p>• در ۳ dupACK: cwnd = cwnd/2 (بازیابی سریع)</p>
+            <p>• بین فقدان خفیف و شدید تمایز قائل می‌شود</p>
+            <p>• توان عملیاتی بهتر از Tahoe</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>تفاوت کلیدی:</strong> Tahoe همیشه به شروع آهسته بازمی‌گردد (cwnd=1). Reno تمایز قائل می‌شود: وقفه‌ها شدید هستند (cwnd=1)، اما سه‌تایی dupACKها خفیف هستند (cwnd/=2). این Reno را زمانی که فقدان بسته ناشی از رها شدن‌های گاه به گاه است بسیار کارآمدتر می‌کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>بازیابی سریع و AIMD</h2>
+
+        <h3>بازیابی سریع (فقط Reno)</h3>
+        <p>پس از دریافت ۳ ACK تکراری، Reno وارد بازیابی سریع می‌شود:</p>
+
+        <div class="formula">
+          <div class="label">در هر ACK تکراری (بازیابی سریع)</div>
+          <div class="expr">cwnd += 1 MSS</div>
+          <div class="desc">cwnd را باد می‌کند تا خط لوله را در حال انتظار برای ارسال مجدد پر نگه دارد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">در ACK جدید (خروج از بازیابی سریع)</div>
+          <div class="expr">cwnd = ssthresh</div>
+          <div class="desc">به اجتناب از ازدحام در نصف نرخ قبل از فقدان بازمی‌گردد.</div>
+        </div>
+
+        <h3>AIMD: افزایش افزایشی / کاهش ضربی</h3>
+        <p>الگوی دندانه اره‌ای: cwnd به میزان ۱ MSS در هر RTT افزایش می‌یابد (افزایشی)، در سه‌تایی dupACK نصف می‌شود (ضربی).</p>
+
+        <div class="formula">
+          <div class="label">میانگین توان عملیاتی (Reno)</div>
+          <div class="expr">Average Throughput = 0.75 × W / RTT</div>
+          <div class="desc">W = اندازه پنجره در رویداد فقدان. W/2 در پایین, W در بالا, میانگین = 0.75W.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های AIMD</h3>
+            <p>• انصاف: به سهم برابر همگرا می‌شود</p>
+            <p>• کارایی: پهنای باند موجود را کاوش می‌کند</p>
+            <p>• پایداری: نرخ را در ازدحام کاهش می‌دهد</p>
+            <p>• توزیع شده: بدون هماهنگ‌کننده مرکزی</p>
+          </div>
+          <div class="card">
+            <h3>الگوی دندانه اره‌ای</h3>
+            <p>cwnd: 10 → 11 → 12 → ... → 20 (فقدان)</p>
+            <p>↓</p>
+            <p>cwnd: 10 (پس از نصف کردن)</p>
+            <p>→ 11 → 12 → ... → 20 (دوباره فقدان)</p>
+            <p>میانگین ≈ ۱۵ سگمنت</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> بازیابی سریع در TCP Tahoe وجود ندارد. Tahoe همیشه به شروع آهسته می‌رود (cwnd=1). بازیابی سریع یک بهینه‌سازی مخصوص Reno است. بسیاری از سوالات امتحانی این تمایز را Test می‌کنند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>TCP CUBIC</h2>
+        <p>الگوریتم پیش‌فرض کنترل ازدحام در لینوکس. بر خلاف رشد خطی Reno، CUBIC از یک تابع مکعبی برای رشد cwnd استفاده می‌کند که امکان بازیابی سریع‌تر به نرخ قبل از فقدان را فراهم می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">رشد پنجره CUBIC</div>
+          <div class="expr">W(t) = C × (t − K)³ + W<sub>max</sub></div>
+          <div class="desc">C = ثابت مقیاس‌دهی, t = زمان از فقدان, K = زمان رسیدن به W<sub>max</sub>. وقتی t &lt; K, رشد نزدیک W<sub>max</sub> سریع است; وقتی t &gt; K, رشد برای یافتن پهنای باند جدید شتاب می‌گیرد.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>CUBIC در مقابل Reno</h3>
+            <p><span class="highlight">CUBIC</span> — به سرعت به W<sub>max</sub> می‌رسد</p>
+            <p>کاوش ملایم در نزدیکی W<sub>max</sub></p>
+            <p>اگر ازدحام تغییر نکند، نزدیک W<sub>max</sub> می‌ماند</p>
+            <p>اگر ازدحام تغییر کند، سریع کاوش می‌کند</p>
+          </div>
+          <div class="card">
+            <h3>استقرار</h3>
+            <p><span class="dim">~۵۰٪</span> از ۵۰۰۰ وب سرور برتر</p>
+            <p>پیش‌فرض در هسته لینوکس</p>
+            <p>به طور گسترده در مراکز داده مستقر شده است</p>
+            <p>RFC 8312</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>چرا CUBIC؟</strong> در مسیرهای با پهنای باند بالا و RTT طولانی، رشد خطی Reno خیلی طول می‌کشد تا به نرخ قبل از فقدان برسد. رشد مکعبی CUBIC سریع به آنجا می‌رسد، سپس در نزدیکی نقطه ازدحام شناخته شده با دقت کاوش می‌کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>مثال‌های عملی</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱ — تکامل cwnd در شروع آهسته</div>
+          <p><strong>تنظیمات:</strong> MSS = 1460 بایت, RTT = 200ms, ssthresh اولیه = 64 KB (≈ 44 MSS). در طول شروع آهسته هیچ فقدانی رخ نمی‌دهد.</p>
+          <table>
+            <tr><th>RTT</th><th>cwnd (MSS)</th><th>سگمنت‌های ارسالی</th><th>نرخ (Mbps)</th></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>0.058</td></tr>
+            <tr><td>1</td><td>2</td><td>2</td><td>0.117</td></tr>
+            <tr><td>2</td><td>4</td><td>4</td><td>0.234</td></tr>
+            <tr><td>3</td><td>8</td><td>8</td><td>0.467</td></tr>
+            <tr><td>4</td><td>16</td><td>16</td><td>0.934</td></tr>
+            <tr><td>5</td><td>32</td><td>32</td><td>1.869</td></tr>
+            <tr><td>6</td><td>44</td><td>44</td><td>2.570</td></tr>
+          </table>
+          <p>در RTT 6، cwnd (44) به ssthresh (44) می‌رسد. شروع آهسته پایان می‌یابد، اجتناب از ازدحام آغاز می‌شود.</p>
+          <p><span class="result">مشاهده:</span> در ۶ RTT (۱.۲ ثانیه)، نرخ از ۵۸ Kbps به ۲.۵۷ Mbps رشد می‌کند — رشد نمایی!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲ — تکامل cwnd در اجتناب از ازدحام</div>
+          <p><strong>تنظیمات:</strong> MSS = 1 KB, ssthresh = 32 KB, cwnd از ۳۲ KB در اجتناب از ازدحام شروع می‌شود. RTT = 100ms.</p>
+          <p>cwnd به میزان ۱ MSS (1 KB) در هر RTT رشد می‌کند:</p>
+          <table>
+            <tr><th>RTT</th><th>cwnd (KB)</th><th>نرخ (Mbps)</th></tr>
+            <tr><td>0</td><td>32</td><td>2.56</td></tr>
+            <tr><td>1</td><td>33</td><td>2.64</td></tr>
+            <tr><td>2</td><td>34</td><td>2.72</td></tr>
+            <tr><td>...</td><td>...</td><td>...</td></tr>
+            <tr><td>8</td><td>40</td><td>3.20</td></tr>
+          </table>
+          <p>در RTT 8، فقدان در cwnd = 40 KB رخ می‌دهد. در Reno: cwnd = 20 KB (نصف), ssthresh = 20 KB. در Tahoe: cwnd = 1 KB (بازنشانی), شروع آهسته دوباره آغاز می‌شود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳ — Tahoe در مقابل Reno در سه‌تایی DupACK</div>
+          <p><strong>تنظیمات:</strong> cwnd = 24 MSS, ssthresh = 12 MSS وقتی ۳ ACK تکراری می‌رسند.</p>
+          <table>
+            <tr><th>اقدام</th><th>Tahoe</th><th>Reno</th></tr>
+            <tr><td>ssthresh (هر دو)</td><td>24/2 = 12</td><td>24/2 = 12</td></tr>
+            <tr><td>cwnd جدید</td><td>1 MSS</td><td>12 + 3 = 15 MSS</td></tr>
+            <tr><td>فاز بعدی</td><td>شروع آهسته (نمایی)</td><td>بازیابی سریع (خطی از ۱۵)</td></tr>
+            <tr><td>زمان رسیدن به ۲۴ MSS مجدد</td><td>~۵ RTT (1→2→4→8→16→24)</td><td>~۹ RTT (15→16→...→24)</td></tr>
+          </table>
+          <p><span class="result">بینش کلیدی:</span> Tahoe از نظر تعداد RTT سریع‌تر بازیابی می‌کند اما به قیمت از دست دادن تمام پیشرفت پنجره. در عمل، بازنشانی cwnd=1 در Tahoe برای توان عملیاتی بسیار پرهزینه است.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴ — محاسبه میانگین توان عملیاتی</div>
+          <p><strong>تنظیمات:</strong> MSS = 1500 بایت, RTT = 200ms. فقدان وقتی cwnd = 60 KB (۴۰ سگمنت) رخ می‌دهد.</p>
+          <p>دندانه اره‌ای Reno: cwnd از W/2 = 30 KB تا W = 60 KB متغیر است.</p>
+          <p><strong>میانگین cwnd:</strong> (30 + 60) / 2 = 45 KB (0.75 × 60 KB = 45 KB ✓)</p>
+          <p><strong>میانگین توان عملیاتی:</strong> (45 KB × 8 bits/byte) / 0.200 sec = 360 Kb / 0.2 = 1.8 Mbps</p>
+          <p><span class="result">توان عملیاتی = 0.75 × 60 KB / 200ms = 1.8 Mbps</span></p>
+          <div class="formula">
+            <div class="label">نرخ فقدان در مقابل توان عملیاتی</div>
+            <div class="expr">Average Throughput = (1 / RTT) × √(1.5 × MSS / loss_rate)</div>
+            <div class="desc">برای مثال، برای دستیابی به ۱.۸ Mbps (1500 KB/s) با MSS=1500B, RTT=200ms: loss_rate ≈ 1.5 / (37.5²) ≈ 0.1%</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۵ — مقایسه افزایش CUBIC</div>
+          <p><strong>تنظیمات:</strong> W<sub>max</sub> = ۱۰۰ سگمنت. فقدان در t=0. RTT = 100ms.</p>
+          <p><strong>Reno:</strong> cwnd به ۵۰ کاهش می‌یابد. به میزان ۱ MSS/RTT رشد می‌کند. ۵۰ RTT (۵ ثانیه) طول می‌کشد تا به ۱۰۰ برگردد.</p>
+          <p><strong>CUBIC:</strong> K را طوری محاسبه می‌کند که cwnd به سرعت به W<sub>max</sub> برسد. برای C معمولی, K ≈ ۵ RTT. CUBIC در ابتدا سریع رشد می‌کند (مکعبی)، سپس به آرامی در نزدیکی ۱۰۰ کاوش می‌کند. در ~۵ RTT (۰.۵ ثانیه) به ۱۰۰ بازمی‌گردد.</p>
+          <table>
+            <tr><th>زمان پس از فقدان</th><th>cwnd Reno</th><th>cwnd CUBIC</th></tr>
+            <tr><td>0 RTT</td><td>50</td><td>50</td></tr>
+            <tr><td>1 RTT</td><td>51</td><td>~62</td></tr>
+            <tr><td>2 RTT</td><td>52</td><td>~78</td></tr>
+            <tr><td>3 RTT</td><td>53</td><td>~92</td></tr>
+            <tr><td>4 RTT</td><td>54</td><td>~99</td></tr>
+            <tr><td>5 RTT</td><td>55</td><td>100</td></tr>
+            <tr><td>10 RTT</td><td>60</td><td>~101 (کاوش ملایم)</td></tr>
+          </table>
+          <p><span class="result">نتیجه:</span> CUBIC تقریباً ۱۰ برابر سریع‌تر از Reno به توان عملیاتی نزدیک W<sub>max</sub> می‌رسد. در شبکه‌های با BDP بالا، این به CUBIC میانگین توان عملیاتی显著 بالاتری می‌دهد.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

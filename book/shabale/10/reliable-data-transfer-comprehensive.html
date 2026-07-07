@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اصول انتقال داده قابل اعتماد - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>اصول انتقال داده قابل اعتماد</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای کامل برای امتحان ۲۰/۲۰</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">rdt1.0 و rdt2.x</button>
+      <button class="tab" onclick="showSection('tab2')">rdt3.0</button>
+      <button class="tab" onclick="showSection('tab3')">پایپلاینینگ و GBN</button>
+      <button class="tab" onclick="showSection('tab4')">انتخابی (Selective Repeat)</button>
+      <button class="tab" onclick="showSection('tab5')">مثال‌ها و مقایسه</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>rdt1.0 — کانال کاملاً قابل اعتماد</h2>
+        <p>ساده‌ترین حالت: کانال زیرین <strong>کاملاً قابل اعتماد</strong> است. بدون خطای بیتی، بدون فقدان، بدون تغییر ترتیب. هم فرستنده و هم گیرنده فقط یک حالت دارند.</p>
+
+        <div class="code">
+          rdt1.0 Sender (FSM):<br>
+          State: Wait for call from above<br>
+          Event: rdt_send(data)<br>
+          Action: packet = make_pkt(data); udt_send(packet)<br>
+          <br>
+          rdt1.0 Receiver (FSM):<br>
+          State: Wait for call from below<br>
+          Event: rdt_rcv(packet)<br>
+          Action: extract(packet, data); deliver_data(data)
+        </div>
+
+        <div class="warning">rdt1.0 کانال کامل را فرض می‌کند — بدون بررسی خطا، بدون ACK، بدون NAK، بدون شماره ترتیب. این کاملاً نظری است; کانال‌های واقعی خطاهای بیتی و فقدان دارند.</div>
+
+        <h2>rdt2.0 — کانال با خطاهای بیتی</h2>
+        <p>سه قابلیت اضافه می‌کند (ARQ — درخواست تکرار خودکار):</p>
+        <div class="grid">
+          <div class="card">
+            <h3>تشخیص خطا</h3>
+            <p>بیت‌های checksum به بسته اضافه می‌شوند. گیرنده بیت‌های خراب را تشخیص می‌دهد.</p>
+          </div>
+          <div class="card">
+            <h3>بازخورد گیرنده</h3>
+            <p>بسته‌های ACK (تأیید مثبت) و NAK (تأیید منفی) از گیرنده به فرستنده ارسال می‌شوند.</p>
+          </div>
+          <div class="card">
+            <h3>ارسال مجدد</h3>
+            <p>فرستنده بسته‌های دریافت شده با خطا را مجدداً ارسال می‌کند. این یک پروتکل <strong>stop-and-wait</strong> است — فرستنده قبل از ارسال بسته بعدی منتظر ACK/NAK می‌ماند.</p>
+          </div>
+        </div>
+
+        <p><strong>نقص مهلک:</strong> بسته‌های ACK/NAK خودشان می‌توانند خراب شوند! فرستنده نمی‌تواند بداند آیا گیرنده آخرین بسته را به درستی دریافت کرده است یا خیر.</p>
+
+        <h3>سه رویکرد برای ACK/NAK خراب</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>۱. "چه گفتی؟"</h3>
+            <p>اضافه کردن یک بسته جدید از فرستنده به گیرنده که از گیرنده می‌خواهد پاسخ خود را تکرار کند. اما آن بسته جدید نیز می‌تواند خراب شود — منجر به یک حلقه بی‌نهایت از سؤالات فراعلاقه.</p>
+          </div>
+          <div class="card">
+            <h3>۲. بیت‌های checksum کافی</h3>
+            <p>اضافه کردن بیت‌های checksum کافی به فرستنده اجازه می‌دهد <strong>نه تنها تشخیص دهد بلکه بازیابی</strong> از خطاهای بیتی را بدون ارسال مجدد انجام دهد. برای خرابی کار می‌کند اما برای فقدان بسته نه.</p>
+          </div>
+          <div class="card">
+            <h3>۳. ارسال مجدد + شماره ترتیب</h3>
+            <p>به سادگی بسته داده فعلی را وقتی یک ACK/NAK خراب دریافت می‌شود دوباره ارسال کنید. این <strong>بسته‌های تکراری</strong> را معرفی می‌کند که شماره‌های ترتیب آنها را مدیریت می‌کنند. این رویکرد تقریباً در همه پروتکل‌های موجود از جمله TCP اتخاذ شده است.</p>
+          </div>
+        </div>
+
+        <h2>rdt2.1 — شماره ترتیب به کمک می‌آید</h2>
+        <p>یک <strong>شماره ترتیب ۱-بیتی</strong> (۰ یا ۱) به بسته‌های داده اضافه می‌کند. اکنون گیرنده می‌تواند داده جدید را از ارسال‌های مجدد تشخیص دهد. فرستنده ۴ حالت دارد (منتظر فراخوانی ۰/۱، منتظر ACK/NAK ۰/۱).</p>
+
+        <div class="code">
+          rdt2.1 Sender (key additions):<br>
+          - Packet numbered: make_pkt(seq#, data, checksum)<br>
+          - On corrupted ACK/NAK: retransmit current packet (doesn't advance seq#)<br>
+          - On valid ACK: advance to next seq# (flip 0↔1)<br>
+          <br>
+          rdt2.1 Receiver (key additions):<br>
+          - Tracks expected sequence number (0 or 1)<br>
+          - If out-of-order seq# received: send ACK for expected packet (duplicate)<br>
+          - If corrupted: send NAK
+        </div>
+
+        <h2>rdt2.2 — پروتکل بدون NAK</h2>
+        <p>بسته‌های NAK را کاملاً حذف می‌کند. در عوض، گیرنده یک <strong>ACK برای آخرین بسته به درستی دریافت شده</strong> ارسال می‌کند. یک فرستنده که <strong>ACKهای تکراری</strong> دریافت می‌کند می‌فهمد که بسته بعدی به درستی دریافت نشده است.</p>
+
+        <div class="formula">
+          <div class="label">نوآوری کلیدی rdt2.2:</div>
+          <div class="expr">ACKهای تکراری جایگزین NAK می‌شوند</div>
+          <div class="desc">گیرنده ACK با شماره ترتیب آخرین بسته به درستی دریافت شده درون‌ترتیبی را ارسال می‌کند.<br>دو ACK برای یک seq# → فرستنده می‌داند که باید بسته بعدی را مجدداً ارسال کند.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>rdt3.0 — کانال با فقدان و خطاهای بیتی</h2>
+        <p>اکنون کانال می‌تواند <strong>بسته‌ها را نیز گم کند</strong> (نه فقط آنها را خراب کند). این نیاز به یک <strong>زمان‌سنج شمارش معکوس</strong> برای تشخیص و بازیابی از بسته‌های گمشده دارد.</p>
+
+        <h3>مکانیسم‌های کلیدی</h3>
+        <ul style="margin-left: 20px; color: #ccc;">
+          <li><strong>زمان‌سنج:</strong> وقتی بسته‌ای ارسال می‌شود شروع می‌شود. اگر قبل از دریافت ACK زمانش تمام شود ← ارسال مجدد</li>
+          <li><strong>مدت زمان:</strong> حداقل RTT + زمان پردازش تنظیم می‌شود. در عمل، از یک تخمین محافظه‌کارانه استفاده می‌شود</li>
+          <li><strong>شماره ترتیب:</strong> ۱-بیت متناوب (۰, ۱, ۰, ۱...) — به عنوان <strong>پروتکل بیت متناوب</strong> شناخته می‌شود</li>
+        </ul>
+
+        <div class="code">
+          rdt3.0 Sender FSM (simplified):<br>
+          State: Wait for call 0 from above<br>
+          ├─ rdt_send(data) → make_pkt(0,data,chk), start_timer<br>
+          └─ goto: Wait for ACK 0<br>
+          <br>
+          State: Wait for ACK 0<br>
+          ├─ rcv ACK(0) → stop_timer, goto: Wait for call 1<br>
+          ├─ timeout → resend pkt0, start_timer<br>
+          └─ rcv corrupt/ACK(1) → do nothing (wait)
+        </div>
+
+        <h3>عملکرد Stop-and-Wait</h3>
+        <div class="formula">
+          <div class="label">استفاده از فرستنده:</div>
+          <div class="expr">U<sub>sender</sub> = (L/R) / (RTT + L/R)</div>
+          <div class="desc">L = اندازه بسته (بیت), R = نرخ انتقال (bps), RTT = زمان رفت و برگشت (ثانیه)</div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال: مشکل عملکرد Stop-and-Wait</div>
+          <p><strong>داده شده:</strong> R = 1 Gbps, L = 1000 بایت (8000 بیت), RTT = 30 ms</p>
+          <p>d<sub>trans</sub> = L/R = 8000 / 10<sup>9</sup> = <strong>۸ میکروثانیه</strong></p>
+          <p>U<sub>sender</sub> = 0.008 / (30 + 0.008) = <strong>0.00027</strong> = 0.027%</p>
+          <p><span class="result">توان عملیاتی مؤثر = 0.00027 × 1 Gbps = 267 kbps</span> — برای یک لینک ۱ Gbps وحشتناک است!</p>
+          <p class="note">فرستنده فقط ۲.۷ صدم درصد از زمان مشغول بود. این انگیزه‌ای برای پایپلاینینگ است.</p>
+
+        <div class="formula">
+          <div class="label">حاصلضرب پهنای باند-تأخیر (BDP)</div>
+          <div class="expr">BDP = پهنای باند × RTT</div>
+          <div class="desc">با R = 1 Gbps, RTT = 30 ms: BDP = 10⁹ × 0.03 = 30,000,000 بیت = 3.75 MB<br>این تعداد بایت‌هایی است که می‌توانند قبل از بازگشت اولین ACK "در پرواز" باشند.<br>برای استفاده کامل از لینک، پنجره باید حداقل BDP / MSS ≈ 3750 بسته ۱۰۰۰ بایتی باشد.</div>
+        </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>چهار سناریو (شکل ۳.۱۶)</h3>
+            <p>(a) بدون فقدان — عملکرد عادی</p>
+            <p>(b) بسته داده گم شد → وقفه → ارسال مجدد</p>
+            <p>(c) ACK گم شد → وقفه → ارسال مجدد (تکراری در گیرنده)</p>
+            <p>(d) وقفه زودهنگام → ACK تکراری دریافت شد</p>
+          </div>
+          <div class="card">
+            <h3>ارسال مجدد = نوش‌درمان</h3>
+            <p>فرستنده نمی‌داند آیا DATA گم شده، ACK گم شده یا فقط تأخیر داشته است. در همه موارد: <span class="highlight">ارسال مجدد</span>. شماره‌های ترتیب موارد تکراری را مدیریت می‌کنند.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>پایپلاینینگ و Go-Back-N (GBN)</h2>
+        <p>پروتکل‌های stop-and-wait خیلی کند هستند. <strong>پایپلاینینگ</strong> به فرستنده اجازه می‌دهد بدون انتظار برای تأیید، چندین بسته را ارسال کند. این "خط لوله" را پر می‌کند و استفاده را به طور چشمگیری بهبود می‌بخشد.</p>
+
+        <div class="formula">
+          <div class="label">استفاده پایپلاین شده:</div>
+          <div class="expr">U<sub>pipelined</sub> ≈ N × (L/R) / (RTT + L/R)</div>
+          <div class="desc">N = تعداد بسته‌های در پرواز. با N به اندازه کافی بزرگ، U → 1 (استفاده کامل).</div>
+        </div>
+
+        <h3>Go-Back-N (GBN)</h3>
+        <p>فرستنده مجاز است تا <strong>N بسته تأیید نشده</strong> در خط لوله داشته باشد. فضای شماره ترتیب: [0, 2<sup>k</sup> - 1].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>متغیرهای فرستنده</h3>
+            <p><strong>base:</strong> شماره ترتیب قدیمی‌ترین بسته تأیید نشده</p>
+            <p><strong>nextseqnum:</strong> کوچکترین شماره ترتیب استفاده نشده</p>
+            <p><strong>پنجره:</strong> [base, base+N-1] برای بسته‌های در حال انتقال</p>
+          </div>
+          <div class="card">
+            <h3>رویدادهای فرستنده</h3>
+            <p>1. <strong>از بالا:</strong> اگر پنجره پر نیست، ارسال کن; در غیر این صورت رد کن</p>
+            <p>2. <strong>دریافت ACK:</strong> ACK تجمعی; پنجره را بلغزان</p>
+            <p>3. <strong>وقفه:</strong> همه بسته‌ها از base تا nextseqnum-1 را مجدداً ارسال کن</p>
+          </div>
+        </div>
+
+        <div class="code">
+          GBN Sender Pseudocode:<br>
+          rdt_send(data):<br>
+          &nbsp;&nbsp;if nextseqnum &lt; base + N:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;sndpkt[nextseqnum] = make_pkt(nextseqnum, data, checksum)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;udt_send(sndpkt[nextseqnum])<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;if base == nextseqnum: start_timer<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;nextseqnum++<br>
+          &nbsp;&nbsp;else: refuse_data(data)<br>
+          <br>
+          rdt_rcv(rcvpkt) && notcorrupt:<br>
+          &nbsp;&nbsp;base = getacknum(rcvpkt) + 1<br>
+          &nbsp;&nbsp;if base == nextseqnum: stop_timer else: start_timer<br>
+          <br>
+          timeout:<br>
+          &nbsp;&nbsp;start_timer<br>
+          &nbsp;&nbsp;for i in [base, nextseqnum-1]: udt_send(sndpkt[i])
+        </div>
+
+        <h3>گیرنده GBN</h3>
+        <p>گیرنده فقط <strong>expectedseqnum</strong> را نگه می‌دارد. این:</p>
+        <ul style="margin-left: 20px; color: #ccc;">
+          <li>✓ فقط بسته‌های درون‌ترتیبی را می‌پذیرد (شماره ترتیب == expectedseqnum)</li>
+          <li>✗ <strong>همه بسته‌های خارج از ترتیب را دور می‌ریزد</strong> (به درستی دریافت شده اما خارج از ترتیب دور ریخته می‌شوند!)</li>
+          <li>✓ <strong>ACK تجمعی</strong> برای بالاترین بسته متوالی دریافت شده ارسال می‌کند</li>
+        </ul>
+
+        <div class="warning">GBN بسته‌های خارج از ترتیب که به درستی دریافت شده‌اند را دور می‌ریزد! این به نظر اسراف می‌رسد، اما گیرنده بافری برای آنها ندارد — آنها به هر حال وقتی بسته گمشده زمانش تمام شود مجدداً ارسال می‌شوند. این ضعف اصلی عملکرد GBN است.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>انتخابی (Selective Repeat - SR)</h2>
+        <p>Selective Repeat با ارسال مجدد <strong>فقط بسته‌های گمشده/خراب</strong> به جای کل پنجره، GBN را بهبود می‌بخشد. این از مشکل "ارسال‌های مجدد غیرضروری" GBN وقتی بسته‌های زیادی در خط لوله هستند جلوگیری می‌کند.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>فرستنده SR</h3>
+            <p>• پنجره‌ای از N شماره ترتیب</p>
+            <p>• <strong>زمان‌سنج‌های جداگانه</strong> برای هر بسته (زمان‌سنج منطقی)</p>
+            <p>• فقط بسته زمان‌سنج شده را مجدداً ارسال کنید</p>
+            <p>• ACK دریافت شد → بسته را به عنوان دریافت شده علامت بزن</p>
+            <p>• پنجره زمانی جلو می‌رود که send_base تأیید شود</p>
+          </div>
+          <div class="card">
+            <h3>گیرنده SR</h3>
+            <p>• <strong>هر</strong> بسته به درستی دریافت شده را تأیید می‌کند (ACKهای جداگانه)</p>
+            <p>• بسته‌های خارج از ترتیب را <strong>بافر</strong> می‌کند</p>
+            <p>• دسته‌ای از بسته‌های متوالی را به ترتیب وقتی شکاف پر شد تحویل می‌دهد</p>
+            <p>• ACK مجدد برای بسته‌های در محدوده [rcv_base-N, rcv_base-1]</p>
+          </div>
+        </div>
+
+        <div class="code">
+          SR Receiver Events:<br>
+          <br>
+          1. Packet seq in [rcv_base, rcv_base+N-1] received correctly:<br>
+          &nbsp;&nbsp;→ Send selective ACK; buffer if not already received<br>
+          &nbsp;&nbsp;→ If seq == rcv_base: deliver consecutive run, advance window<br>
+          <br>
+          2. Packet seq in [rcv_base-N, rcv_base-1] received correctly:<br>
+          &nbsp;&nbsp;→ Send ACK (re-acknowledge — critical!)<br>
+          <br>
+          3. Otherwise: ignore
+        </div>
+
+        <h3>محدودیت حیاتی: اندازه پنجره</h3>
+        <div class="formula">
+          <div class="label">محدودیت اندازه پنجره SR:</div>
+          <div class="expr">اندازه پنجره ≤ (حداکثر شماره ترتیب + 1) / 2</div>
+          <div class="desc">با شماره ترتیب k-بیتی: N ≤ 2<sup>k-1</sup>. در غیر این صورت فرستنده و گیرنده ممکن است در مورد اینکه بسته جدید است یا ارسال مجدد اختلاف داشته باشند.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال: چرا اندازه پنجره باید ≤ نصف فضای شماره ترتیب باشد</div>
+          <p><strong>داده شده:</strong> شماره ترتیب ۰,۱,۲,۳ (فیلد ۲-بیتی، حداکثر=۴). اندازه پنجره N=3.</p>
+          <p><strong>سناریوی A:</strong> بسته‌های ۰,۱,۲ ارسال شدند. ACKها گم شدند. فرستنده ۰,۱,۲ را مجدداً ارسال می‌کند. گیرنده فکر می‌کند ۰ یک ارسال مجدد از داده قدیمی است.</p>
+          <p><strong>سناریوی B:</strong> همان بسته‌ها، ACKها دریافت شدند. فرستنده بسته‌های جدید ۳,۰,۱ را ارسال می‌کند. بسته ۰ می‌رسد — گیرنده seq=0 را می‌بیند.</p>
+          <p><strong>مسئله:</strong> گیرنده نمی‌تواند سناریوی A (ارسال مجدد) را از سناریوی B (داده جدید با seq=0) تشخیص دهد!</p>
+          <p><span class="result">راه حل: N ≤ 4/2 = 2. با اندازه پنجره ۲، ابهام از بین می‌رود.</span></p>
+        </div>
+
+        <div class="warning">SR پیچیده است زیرا پنجره‌های فرستنده و گیرنده <strong>همگام نیستند</strong>. فرستنده نمی‌داند گیرنده کدام بسته‌ها را بافر کرده است. به همین دلیل ارسال مجدد ACK برای بسته‌های در [rcv_base-N, rcv_base-1] ضروری است — از توقف پنجره فرستنده جلوگیری می‌کند.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>مثال‌های عملی: مکانیسم‌های RDT</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱: لغزش پنجره GBN</div>
+          <p><strong>داده شده:</strong> N=4, base=2, nextseqnum=5. بسته‌های ۲,۳,۴ در پرواز هستند.</p>
+          <p>ACK برای بسته ۲ می‌رسد.</p>
+          <p><strong>اقدام:</strong> base = 2+1 = 3. پنجره اکنون [3, 6] را پوشش می‌دهد. فرستنده می‌تواند بسته ۵ را ارسال کند (اگر داده موجود باشد).</p>
+          <p><span class="result">قبل: پنجره [2,3,4,5]. بعد: پنجره [3,4,5,6]. به اندازه ۱ به جلو لغزید.</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: وقفه GBN — "Go-Back-N" در عمل</div>
+          <p><strong>داده شده:</strong> N=5, فرستنده بسته‌های ۰ تا ۴ را ارسال کرده است. بسته ۲ گم شده است.</p>
+          <p>گیرنده دریافت می‌کند: pkt0 ✓ (ACK0 ارسال شد), pkt1 ✓ (ACK1 ارسال شد).</p>
+          <p>گیرنده دریافت می‌کند: pkt3 ✗ (خارج از ترتیب — <strong>دور ریخته شد</strong>), pkt4 ✗ (<strong>دور ریخته شد</strong>).</p>
+          <p>فرستنده ACK0, ACK1 را دریافت می‌کند. زمان‌سنج برای قدیمی‌ترین تأیید نشده (pkt2) در نهایت منقضی می‌شود.</p>
+          <p><span class="result">فرستنده مجدداً ارسال می‌کند: بسته‌های ۲, ۳, ۴ (همه از base تا nextseqnum-1).</span></p>
+          <p class="note">بسته‌های ۳ و ۴ به درستی دریافت شده بودند اما دور ریخته شدند و مجدداً ارسال شدند — این ضعف GBN است!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: بازیابی SR — ارسال مجدد فردی</div>
+          <p><strong>داده شده:</strong> N=4, فضای شماره ترتیب [0..7]. فرستنده pkts 0,1,2,3 را ارسال می‌کند. pkt2 گم می‌شود.</p>
+          <p>گیرنده: pkt0 ✓ → ACK0; pkt1 ✓ → ACK1; pkt3 ✓ → ACK3 <strong>(بافر شده)</strong>.</p>
+          <p>فرستنده ACK0, ACK1, ACK3 را دریافت می‌کند. فقط زمان‌سنج pkt2 فعال می‌ماند.</p>
+          <p>زمان pkt2 تمام می‌شود. <span class="result">فرستنده فقط pkt2 را مجدداً ارسال می‌کند.</span></p>
+          <p>گیرنده pkt2 ✓ را دریافت می‌کند → pkt2 و pkt3 بافر شده را به لایه بالایی تحویل می‌دهد. هر دو پنجره جلو می‌روند.</p>
+          <p class="note">SR در مقایسه با GBN N-1 = 3 ارسال مجدد غیرضروری را ذخیره می‌کند!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴: rdt3.0 — وقفه زودهنگام</div>
+          <p><strong>سناریو:</strong> فرستنده pkt0 را ارسال می‌کند. بسته و ACK <strong>هر دو</strong> سالم هستند (بدون فقدان)، اما ACK تأخیر دارد (ازدحام).</p>
+          <p>زمان‌سنج قبل از رسیدن ACK منقضی می‌شود → فرستنده pkt0 را مجدداً ارسال می‌کند (تکراری).</p>
+          <p>گیرنده دوباره seq=0 را می‌بیند → تکراری را از طریق seq# تشخیص می‌دهد → دوباره ACK0 ارسال می‌کند (ACK تکراری).</p>
+          <p>ACK0 اصلی (تأخیری) می‌رسد → فرستنده نادیده می‌گیرد (آیا قبلاً جلو رفته؟ خیر, rdt3.0 stop-and-wait است).</p>
+          <p><span class="result">رفتار صحیح: هر دو ACK یکسان هستند (seq#0). فرستنده اولین ACK را دریافت می‌کند، به seq#1 می‌رود. ACK0 دوم تکراری است و نادیده گرفته می‌شود (فرستنده rdt3.0 ACK با seq# اشتباه را دور می‌ریزد).</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۵: محاسبه استفاده از فرستنده</div>
+          <p><strong>داده شده:</strong> R = 10 Mbps, L = 2000 بایت (16000 بیت), RTT = 100 ms.</p>
+          <p>d<sub>trans</sub> = L/R = 16000 / 10<sup>7</sup> = 0.0016 s = 1.6 ms</p>
+          <p><strong>Stop-and-wait:</strong> U = 1.6 / (100 + 1.6) = <span class="result">0.0157 → 1.57%</span></p>
+          <p><strong>پایپلاین شده با N=10:</strong> U ≈ 10 × 0.0157 = <span class="result">0.157 → 15.7%</span></p>
+          <p><strong>N مورد نیاز برای استفاده ۱۰۰٪:</strong> N ≥ (RTT + L/R) / (L/R) = 101.6 / 1.6 ≈ <span class="result">۶۴ بسته</span></p>
+        </div>
+
+        <h3>جدول خلاصه: مکانیسم‌های RDT</h3>
+        <table>
+          <tr>
+            <th>مکانیسم</th>
+            <th>هدف</th>
+            <th>مورد استفاده در</th>
+          </tr>
+          <tr>
+            <td>Checksum</td>
+            <td>تشخیص خطاهای بیتی در بسته ارسالی</td>
+            <td>rdt2.0, rdt2.1, rdt2.2, rdt3.0, GBN, SR, TCP</td>
+          </tr>
+          <tr>
+            <td>زمان‌سنج</td>
+            <td>وقفه/ارسال مجدد وقتی بسته یا ACK گم می‌شود</td>
+            <td>rdt3.0, GBN (تک زمان‌سنج), SR (زمان‌سنج هر بسته), TCP</td>
+          </tr>
+          <tr>
+            <td>شماره ترتیب</td>
+            <td>تشخیص بسته‌های گمشده (شکاف‌ها)، تشخیص موارد تکراری</td>
+            <td>rdt2.1, rdt2.2, rdt3.0, GBN, SR, TCP</td>
+          </tr>
+          <tr>
+            <td>ACK</td>
+            <td>به فرستنده بگو بسته(ها) به درستی دریافت شده‌اند</td>
+            <td>rdt2.0+, GBN (تجمعی), SR (فردی), TCP (تجمعی)</td>
+          </tr>
+          <tr>
+            <td>NAK</td>
+            <td>به فرستنده بگو بسته به اشتباه دریافت شده است</td>
+            <td>rdt2.0, rdt2.1 (در rdt2.2+ با ACKهای تکراری حذف شد)</td>
+          </tr>
+          <tr>
+            <td>پنجره / پایپلاینینگ</td>
+            <td>اجازه دادن به چندین بسته تأیید نشده; بهبود استفاده</td>
+            <td>GBN (اندازه N), SR (اندازه N), TCP (تطبیقی)</td>
+          </tr>
+        </table>
+
+        <h3>مقایسه: GBN در مقابل SR</h3>
+        <table>
+          <tr>
+            <th>ویژگی</th>
+            <th>Go-Back-N</th>
+            <th>Selective Repeat</th>
+          </tr>
+          <tr>
+            <td>ارسال مجدد در فقدان</td>
+            <td>همه بسته‌های تأیید نشده را مجدداً ارسال می‌کند</td>
+            <td>فقط بسته گمشده را مجدداً ارسال می‌کند</td>
+          </tr>
+          <tr>
+            <td>بافر گیرنده</td>
+            <td>هیچ (بسته‌های خارج از ترتیب را دور می‌ریزد)</td>
+            <td>بسته‌های خارج از ترتیب را بافر می‌کند</td>
+          </tr>
+          <tr>
+            <td>نوع ACK</td>
+            <td>تجمعی</td>
+            <td>فردی (انتخابی)</td>
+          </tr>
+          <tr>
+            <td>زمان‌سنج</td>
+            <td>تک زمان‌سنج برای قدیمی‌ترین بسته</td>
+            <td>زمان‌سنج منطقی هر بسته</td>
+          </tr>
+          <tr>
+            <td>محدودیت اندازه پنجره</td>
+            <td>N ≤ 2<sup>k</sup> - 1</td>
+            <td>N ≤ 2<sup>k-1</sup> (نصف فضای شماره ترتیب)</td>
+          </tr>
+          <tr>
+            <td>حافظه در فرستنده</td>
+            <td>بافر N بسته</td>
+            <td>بافر N بسته</td>
+          </tr>
+          <tr>
+            <td>حافظه در گیرنده</td>
+            <td>هیچ (فقط expectedseqnum)</td>
+            <td>بافر تا N بسته</td>
+          </tr>
+          <tr>
+            <td>مناسب برای</td>
+            <td>نرخ خطای کم، پیاده‌سازی ساده</td>
+            <td>نرخ خطای بالا، حاصلضرب پهنای باند-تأخیر بزرگ</td>
+          </tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>خلاصه تکامل RDT</h3>
+            <p>rdt1.0: کانال کامل (بدون خطا)</p>
+            <p>rdt2.0: +ACK/NAK (خطاهای بیتی)</p>
+            <p>rdt2.1: +شماره ترتیب (ACK/NAK خراب)</p>
+            <p>rdt2.2: -NAK (ACKهای تکراری)</p>
+            <p>rdt3.0: +زمان‌سنج (فقدان بسته)</p>
+            <p>GBN: +پایپلاینینگ, ACK تجمعی</p>
+            <p>SR: +ارسال مجدد انتخابی</p>
+          </div>
+          <div class="card">
+            <h3>اشتباهات رایج امتحان</h3>
+            <p>• اشتباه گرفتن رفتار ارسال مجدد GBN و SR</p>
+            <p>• فراموش کردن محدودیت اندازه پنجره SR (≤ نصف)</p>
+            <p>• سوءتفاهم ACK تجمعی در مقابل فردی</p>
+            <p>• فکر کردن rdt2.2 از NAK استفاده می‌کند (نمی‌کند!)</p>
+            <p>• پیچیدن نکردن سرریز در محاسبه checksum</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

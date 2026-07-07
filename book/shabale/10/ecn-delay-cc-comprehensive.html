@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECN و کنترل ازدحام مبتنی بر تأخیر - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>ECN و کنترل ازدحام مبتنی بر تأخیر</h1>
+  <p class="subtitle">لایه حمل — بخش ۳.۷.۲ | رویکردهای کمک شبکه و پیش‌فعال</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">مرور ECN</button>
+      <button class="tab" onclick="showSection('tab2')">ECN در TCP</button>
+      <button class="tab" onclick="showSection('tab3')">کنترل ازدحام مبتنی بر تأخیر</button>
+      <button class="tab" onclick="showSection('tab4')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>مرور ECN</h2>
+        <p>اعلان صریح ازدحام (ECN) یک مکانیسم کنترل ازدحام با کمک شبکه است که در RFC 3168 تعریف شده است. از دو بیت در فیلد Type of Service (ToS) IP برای علامت‌دهی ازدحام قبل از وقوع فقدان بسته استفاده می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">کدپوینت‌های ECN (۲ بیت در فیلد ToS IP)</div>
+          <div class="expr">00 = غیر قابل ECN (Non-ECT)</div>
+          <div class="expr">01 یا 10 = حمل و نقل قابل ECN (ECT)</div>
+          <div class="expr">11 = ازدحام تجربه شده (CE)</div>
+          <div class="desc">مسیریاب‌ها کدپوینت CE (00→11) را زمانی تنظیم می‌کنند که یک بسته با ازدحام مواجه شود. گیرنده مطلع شده و سیگنال را به فرستنده بازتاب می‌دهد.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>چرا ECN؟</h3>
+            <p>• TCP کلاسیک ازدحام را فقط <em>پس از</em> فقدان بسته تشخیص می‌دهد</p>
+            <p>• ECN ازدحام <em>قریب‌الوقوع</em> را قبل از سرریز بافرها تشخیص می‌دهد</p>
+            <p>• از ارسال‌های مجدد پرهزینه جلوگیری می‌کند</p>
+            <p>• تأخیر را برای ترافیک تعاملی کاهش می‌دهد</p>
+            <p>• به ویژه در مراکز داده مفید است</p>
+          </div>
+          <div class="card">
+            <h3>علامت‌گذاری مسیریاب</h3>
+            <p>مسیریاب طول صف را مانیتور می‌کند</p>
+            <p>وقتی صف از آستانه عبور می‌کند:</p>
+            <p>• اگر ECT(0) یا ECT(1): به CE(11) تغییر می‌دهد</p>
+            <p>• اگر Not-ECT: بسته را رها می‌کند (بدون پشتیبانی ECN)</p>
+            <p>آستانه توسط اپراتور قابل تنظیم است</p>
+          </div>
+        </div>
+
+        <h3>تعامل پشته پروتکل ECN</h3>
+        <table>
+          <tr>
+            <th>لایه</th>
+            <th>جزء</th>
+            <th>نقش</th>
+          </tr>
+          <tr>
+            <td>شبکه (IP)</td>
+            <td>فیلد ToS (۲ بیت ECN)</td>
+            <td>مسیریاب‌ها CE را برای علامت‌دهی ازدحام تنظیم می‌کنند</td>
+          </tr>
+          <tr>
+            <td>حمل (TCP)</td>
+            <td>بیت ECE در ACK</td>
+            <td>گیرنده ازدحام را به فرستنده بازتاب می‌دهد</td>
+          </tr>
+          <tr>
+            <td>حمل (TCP)</td>
+            <td>بیت CWR در داده</td>
+            <td>فرستنده کاهش پنجره را تأیید می‌کند</td>
+          </tr>
+          <tr>
+            <td>حمل (TCP)</td>
+            <td>نصف کردن cwnd</td>
+            <td>فرستنده نرخ را کاهش می‌دهد (مشابه واکنش به فقدان)</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> ECN تشخیص ازدحام مبتنی بر فقدان را جایگزین نمی‌کند. این مکانیسم اعلان <em>زودهنگام‌تری</em> ارائه می‌دهد. TCP همچنان از تشخیص فقدان به عنوانfallback زمانی که ECN در مسیر پشتیبانی نمی‌شود استفاده می‌کند.
+        </div>
+
+        <div class="card">
+          <h3>DCCP — پروتکل کنترل ازدحام دیتاگرام</h3>
+          <p><span class="dim">RFC 4340</span> DCCP را تعریف می‌کند، یک پروتکل حمل غیرقابل اعتماد که از ECN برای کنترل ازدحام استفاده می‌کند. بر خلاف UDP، جریان‌های DCCP با کاهش نرخ خود به ازدحام پاسخ می‌دهند. DCCP برای برنامه‌هایی طراحی شده است که به موقع بودن را بر قابلیت اطمینان ترجیح می‌دهند (مانند رسانه‌های جریانی).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>ECN در TCP</h2>
+        <p>حلقه بازخورد ECN شامل بازتاب نشانه ازدحام توسط گیرنده به فرستنده از طریق بیت‌های هدر TCP است.</p>
+
+        <div class="formula">
+          <div class="label">حلقه بازخورد ECN</div>
+          <div class="expr">IP CE(11) → گیرنده → ACK[ECE=1] → فرستنده → نصف کردن cwnd → ACK[CWR=1]</div>
+          <div class="desc">حلقه کامل ۱ RTT زمان می‌برد. فرستنده cwnd را نصف می‌کند (مشابه واکنش به triple dupACK) و بیت CWR را برای تأیید کاهش تنظیم می‌کند.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>بیت‌های هدر TCP برای ECN</h3>
+            <p><span class="highlight">ECE</span> (ECN Echo)</p>
+            <p>گیرنده→فرستنده: "یک بسته علامت‌گذاری شده با CE دریافت کردم"</p>
+            <p><span class="highlight">CWR</span> (Congestion Window Reduced)</p>
+            <p>فرستنده→گیرنده: "cwnd خود را نصف کردم"</p>
+            <p>هر دو بیت در پرچم‌های هدر TCP (شکل ۳.۲۹)</p>
+          </div>
+          <div class="card">
+            <h3>افزونه‌های ECN</h3>
+            <p><span class="dim">DCTCP</span> — Data Center TCP</p>
+            <p>از کسر علامت‌گذاری ECN برای تنظیم دقیق cwnd استفاده می‌کند</p>
+            <p><span class="dim">DCQCN</span> — Data Center QCN</p>
+            <p>برای RDMA روی Ethernet همگرا</p>
+            <p>هر دو به طور گسترده در مراکز داده مدرناستفاده می‌شوند</p>
+          </div>
+        </div>
+
+        <h3>الگوریتم DCTCP</h3>
+        <div class="code">
+On each ACK:
+  if ACK has ECE=1:
+    mark_count++
+  alpha = (1 - g) * alpha + g * (mark_count / total_ACKs)
+  cwnd = cwnd * (1 - alpha/2)
+        </div>
+        <p>DCTCP از <em>کسر</em> بسته‌های علامت‌گذاری شده (α) به جای یک سیگنال دودویی استفاده می‌کند. این امکان کنترل دقیق‌تر ازدحام را فراهم می‌کند و صف‌ها را در شبکه‌های مرکز داده کوتاه نگه می‌دارد.</p>
+
+        <div class="note">
+          <strong>وضعیت استقرار:</strong> اندازه‌گیری‌های اخیر نشان‌دهنده افزایش استقرار ECN در سرورهای محبوب و مسیریاب‌های میانی است. با این حال، همه مسیرها قابلیت ECN را ندارند، بنابراین TCP باید همیشه به تشخیص مبتنی بر فقدان بازگردد.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>کنترل ازدحام مبتنی بر تأخیر</h2>
+        <p>رویکردهای مبتنی بر تأخیر ازدحام را قبل از فقدان با اندازه‌گیری تغییرات در RTT تشخیص می‌دهند. ایده اصلی: افزایش تأخیر صف نشان‌دهنده ازدحام در حال شکل‌گیری است.</p>
+
+        <h3>TCP Vegas</h3>
+        <div class="formula">
+          <div class="label">تشخیص ازدحام Vegas</div>
+          <div class="expr">Throughput_expected = cwnd / RTT<sub>min</sub></div>
+          <div class="expr">Throughput_actual = cwnd / RTT<sub>current</sub></div>
+          <div class="expr">اگر Throughput_expected − Throughput_actual &gt; آستانه ← ازدحام</div>
+          <div class="desc">RTT<sub>min</sub> = حداقل RTT مشاهده شده (مسیر بدون ازدحام). وقتی توان عملیاتی واقعی به طور قابل توجهی کمتر از حد انتظار است، مسیر دچار ازدحام است.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تنظیم cwnd در Vegas</div>
+          <div class="expr">اگر diff &lt; α: cwnd += 1 &nbsp;(کم استفاده)</div>
+          <div class="expr">اگر diff &gt; β: cwnd -= 1 &nbsp;(ازدحام)</div>
+          <div class="expr">در غیر این صورت: cwnd بدون تغییر &nbsp;(مناسب)</div>
+          <div class="desc">diff = تفاوت توان عملیاتی مورد انتظار − واقعی. α و β آستانه‌هایی هستند (معمولاً ۱ و ۳ بسته).</div>
+        </div>
+
+        <h3>BBR (پهنای باند گلوگاه و زمان رفت و برگشت)</h3>
+        <p>BBR که در Google توسعه یافته است، مسیر را به عنوان یک لوله با ظرفیت پهنای باند × RTT مدل‌سازی می‌کند. اصل کلیدی — "لوله را دقیقاً پر نگه دار، اما نه بیشتر" — از قانون توان Kleinrock نشأت می‌گیرد و همچنین برای TCP Vegas مرکزی است.</p>
+
+        <div class="formula">
+          <div class="label">بینش کلیدی BBR</div>
+          <div class="expr">BDP = پهنای باند گلوگاه × RTT<sub>min</sub></div>
+          <div class="desc">حاصلضرب پهنای باند-تأخیر. ارسال با این نرخ لوله را بدون ایجاد صف پر نگه می‌دارد.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCP Vegas</h3>
+            <p>• پیش‌فعال: نرخ را قبل از فقدان کاهش می‌دهد</p>
+            <p>• از RTT<sub>min</sub> به عنوان خط پایه بدون ازدحام استفاده می‌کند</p>
+            <p>• انحراف توان عملیاتی را اندازه‌گیری می‌کند</p>
+            <p>• می‌تواند در برابر Reno غیرمنصفانه باشد (که بافرها را پر می‌کند)</p>
+          </div>
+          <div class="card">
+            <h3>BBR</h3>
+            <p>• مدل حاصلضرب پهنای باند-تأخیر</p>
+            <p>• استفاده شده در شبکه B4 گوگل</p>
+            <p>• مستقر در سرورهای YouTube</p>
+            <p>• مکانیسم‌های انصاف برای همزیستی با Reno</p>
+            <p>• RFC 8312</p>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>ویژگی</th>
+            <th>TCP Reno</th>
+            <th>TCP Vegas</th>
+            <th>BBR</th>
+          </tr>
+          <tr>
+            <td>سیگنال</td>
+            <td>فقدان بسته</td>
+            <td>افزایش RTT</td>
+            <td>پهنای باند + RTT</td>
+          </tr>
+          <tr>
+            <td>پیش‌فعال؟</td>
+            <td>خیر (پس از فقدان واکنش نشان می‌دهد)</td>
+            <td>بله (قبل از فقدان کاهش می‌دهد)</td>
+            <td>بله (ظرفیت مسیر را مدل می‌کند)</td>
+          </tr>
+          <tr>
+            <td>انباشت صف</td>
+            <td>زیاد (بافرها را پر می‌کند)</td>
+            <td>کم (از صف جلوگیری می‌کند)</td>
+            <td>حداقل (هدف BDP)</td>
+          </tr>
+          <tr>
+            <td>استقرار</td>
+            <td>قدیمی/fallback</td>
+            <td>محدود</td>
+            <td>Google, YouTube</td>
+          </tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TIMELY</h3>
+            <p><span class="highlight">کنترل ازدحام مبتنی بر تأخیر برای مراکز داده</span></p>
+            <p>از گرادیان RTT (نه RTT مطلق) برای تشخیص ازدحام قبل از تشکیل صف استفاده می‌کند. طراحی شده برای شبکه‌های مرکز داده پرسرعت با نیازمندی‌های تأخیر سخت.</p>
+          </div>
+          <div class="card">
+            <h3>Compound TCP (CTCP)</h3>
+            <p><span class="highlight">مبتنی بر فقدان + مبتنی بر تأخیر</span></p>
+            <p>پیش‌فرض در ویندوز. AIMD مبتنی بر فقدان Reno را با یک جزء مبتنی بر تأخیر برای شبکه‌های پرسرعت دوربرد ترکیب می‌کند. بدون تهاجمی بودن بیش از حد مقیاس‌پذیر است.</p>
+          </div>
+          <div class="card">
+            <h3>FAST TCP</h3>
+            <p><span class="highlight">پرسرعت دوربرد</span></p>
+            <p>از تأخیر صف به عنوان سیگنال اصلی ازدحام استفاده می‌کند. هدف دستیابی به توان عملیاتی بالا در مسیرهای با BDP بالا با تثبیت در نقطه تعادل است که در آن تأخیر صف کم است.</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> رویکردهای مبتنی بر تأخیر (Vegas, BBR) کنترل ازدحام مبتنی بر فقدان را کاملاً جایگزین نمی‌کنند. آنها زمانی بهترین عملکرد را دارند که با جریان‌های مشابه رقابت کنند. وقتی یک جریان Vegas یک لینک را با یک جریان Reno به اشتراک می‌گذارد، Vegas ممکن است پهنای باند کمتری دریافت کند زیرا Reno بافرها را تهاجمی پر می‌کند در حالی که Vegas عقب‌نشینی می‌کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>مثال‌های عملی</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱ — مرور کامل علامت‌دهی ECN</div>
+          <p><strong>تنظیمات:</strong> میزبان A (فرستنده) ← مسیریاب R ← میزبان B (گیرنده). A با نرخ 100 Mbps داده ارسال می‌کند. لینک R 80 Mbps است. ECN فعال است.</p>
+          <p><strong>مرحله ۱:</strong> A ECT(1) را در هدر IP تنظیم می‌کند (هر دو میزبان قابل ECN هستند).</p>
+          <p><strong>مرحله ۲:</strong> صف R از آستانه عبور می‌کند. R ECT(1) را می‌بیند، آن را به CE(11) تغییر می‌دهد. بسته را ارسال می‌کند.</p>
+          <p><strong>مرحله ۳:</strong> B بسته را با CE=11 دریافت می‌کند. TCP B در ACK بعدی به A، ECE=1 را تنظیم می‌کند.</p>
+          <p><strong>مرحله ۴:</strong> A ACK[ECE=1] را دریافت می‌کند. A cwnd را نصف می‌کند (مثلاً از 100 به 50 سگمنت). A CWR=1 را در سگمنت داده بعدی تنظیم می‌کند.</p>
+          <p><strong>مرحله ۵:</strong> B CWR=1 را دریافت می‌کند، تنظیم بیت ECE را متوقف می‌کند.</p>
+          <p><span class="result">زمان:</span> حلقه بازخورد کامل حدود ~۱ RTT طول می‌کشد. هیچ بسته‌ای رها نشد، نیازی به ارسال مجدد نبود.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲ — محاسبه توان عملیاتی TCP Vegas</div>
+          <p><strong>تنظیمات:</strong> cwnd = 24 KB, RTT<sub>min</sub> = 100ms (بدون ازدحام). RTT فعلی = 120ms. MSS = 1 KB.</p>
+          <p><strong>توان عملیاتی مورد انتظار:</strong> 24 KB / 0.100s = 240 KB/s</p>
+          <p><strong>توان عملیاتی واقعی:</strong> 24 KB / 0.120s = 200 KB/s</p>
+          <p><strong>diff:</strong> 240 − 200 = 40 KB/s = 40 بسته/ثانیه</p>
+          <p><span class="result">تحلیل:</span> diff بزرگ است ← مسیر دچار ازدحام است (تأخیر صف = 20ms). Vegas cwnd را به میزان ۱ MSS کاهش می‌دهد تا انباشت صف کاهش یابد.</p>
+          <p>پس از کاهش: cwnd = 23 KB. نرخ مورد انتظار جدید = 23/0.1 = 230 KB/s. نرخ واقعی جدید ≈ 23/0.115 = 200 KB/s (با فرض کاهش صف). Vegas همگرا می‌شود تا diff را در محدوده [α, β] نگه دارد جایی که بافرها کوچک می‌مانند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳ — کنترل دقیق cwnd در DCTCP</div>
+          <p><strong>تنظیمات:</strong> جریان مرکز داده، RTT = 200µs. در یک پنجره ۱۰۰ بسته‌ای، ۳۰ تای آنها علامت CE دارند.</p>
+          <p><strong>محاسبه α</strong> (با g = 0.0625):</p>
+          <p>کسر علامت‌گذاری شده = 30/100 = 0.3</p>
+          <p>α<sub>جدید</sub> = (1−0.0625) × α<sub>قدیم</sub> + 0.0625 × 0.3</p>
+          <p>اگر α<sub>قدیم</sub> = 0.1: α<sub>جدید</sub> = 0.9 × 0.1 + 0.0625 × 0.3 = 0.09 + 0.01875 = 0.10875</p>
+          <p><strong>تنظیم cwnd:</strong> cwnd = cwnd × (1 − 0.10875/2) = cwnd × 0.9456</p>
+          <p><span class="result">نتیجه:</span> فقط ۵.۴٪ کاهش. در ECN کلاسیک، cwnd نصف می‌شد (۵۰٪ کاهش). واکنش ملایم‌تر DCTCP صف‌ها را کوتاه نگه می‌دارد در حالی که توان عملیاتی بالا را حفظ می‌کند.</p>
+        </div>
+
+        <h3>خلاصه مقایسه</h3>
+        <table>
+          <tr>
+            <th>پروتکل</th>
+            <th>سیگنال ازدحام</th>
+            <th>واکنش</th>
+            <th>کاربرد اصلی</th>
+            <th>نیاز به فقدان؟</th>
+          </tr>
+          <tr>
+            <td>TCP Reno</td>
+            <td>فقدان بسته</td>
+            <td>نصف کردن cwnd</td>
+            <td>اینترنت عمومی</td>
+            <td>بله</td>
+          </tr>
+          <tr>
+            <td>ECN (RFC 3168)</td>
+            <td>علامت CE در IP</td>
+            <td>نصف کردن cwnd (مشابه فقدان)</td>
+            <td>مسیرهای قابلیت ECN</td>
+            <td>خیر (پیش‌فعال)</td>
+          </tr>
+          <tr>
+            <td>DCTCP</td>
+            <td>کسر علامت ECN</td>
+            <td>مقیاس‌دهی با (1−α/2)</td>
+            <td>مراکز داده</td>
+            <td>خیر</td>
+          </tr>
+          <tr>
+            <td>TCP Vegas</td>
+            <td>افزایش RTT</td>
+            <td>cwnd ± 1 در هر RTT</td>
+            <td>تحقیقات/محدود</td>
+            <td>خیر</td>
+          </tr>
+          <tr>
+            <td>BBR</td>
+            <td>تخمین BW و RTT</td>
+            <td>تنظیم نرخ در BDP</td>
+            <td>Google B4, YouTube</td>
+            <td>خیر</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

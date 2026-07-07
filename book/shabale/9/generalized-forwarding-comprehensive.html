@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generalized Forwarding &amp; OpenFlow - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { color: #00ccff; font-size: 0.85em; margin: 5px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .card .green { color: #00ff88; }
+    .card .orange { color: #ff6600; }
+    .card .blue { color: #00ccff; }
+    .card .yellow { color: #ffcc00; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 4px; color: #ffcc66; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    td.highlight-cell { background: #002a1a; color: #00ff88; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .refcard { background: linear-gradient(135deg, #0a0a2e, #1a1a0a); border: 2px solid #00ff88; border-radius: 12px; padding: 15px; margin: 15px 0; }
+    .refcard h3 { color: #00ff88; font-size: 0.95em; margin-bottom: 10px; text-align: center; }
+    .refcard p { color: #ccc; font-size: 0.85em; margin: 4px 0; }
+    @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+    ul, ol { margin: 8px 0; padding-left: 20px; color: #ccc; font-size: 0.85em; }
+    li { margin: 4px 0; }
+    p { font-size: 0.88em; color: #ccc; margin: 8px 0; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Generalized Forwarding &amp; OpenFlow</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross) — Chapter 4: Network Layer: Data Plane</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Match-Plus-Action</button>
+      <button class="tab" onclick="showSection('tab2')">OpenFlow Match Fields</button>
+      <button class="tab" onclick="showSection('tab3')">OpenFlow Actions</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: Match-Plus-Action                                      -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The Match-Plus-Action Paradigm</h2>
+        <p>Traditional routers forward based on a single field (destination IP). Generalized forwarding matches over <strong>multiple header fields spanning multiple protocol layers</strong> and executes one or more <strong>actions</strong>. This decouples the control plane from the data plane and is the foundation of Software-Defined Networking (SDN). The OpenFlow protocol [McKeown 2008, ONF 2020, Casado 2014, Tourrilhes 2014] is the canonical implementation of generalized forwarding, and emerged from the broader SDN revolution [Feamster 2013].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Traditional Forwarding</h3>
+            <p>• Match: destination IP only</p>
+            <p>• Action: forward to next hop</p>
+            <p>• Fixed function per device</p>
+            <p class="dim">Rigid, vendor-specific</p>
+          </div>
+          <div class="card">
+            <h3>Generalized Forwarding</h3>
+            <p>• Match: 12+ header fields</p>
+            <p>• Action: forward, drop, modify, etc.</p>
+            <p>• Programmable per flow table</p>
+            <p class="green">Flexible, open API</p>
+          </div>
+        </div>
+
+        <h3>Flow Table Structure</h3>
+        <p>A flow table entry consists of three components:</p>
+        <div class="formula">
+          <div class="label">Flow Table Entry = (Header Fields, Counters, Actions)</div>
+          <div class="desc"><strong>Header Fields</strong> — match pattern with wildcards; <strong>Counters</strong> — packets/bytes matched; <strong>Actions</strong> — what to do on match</div>
+        </div>
+
+        <h3>Match-Plus-Action Algorithm (OpenFlow)</h3>
+        <div class="code">for each packet received:
+  for each flow table entry (in priority order):
+    if match(packet.headerFields, entry.pattern):
+      entry.counters.packets++
+      entry.counters.bytes += packet.size
+      execute(entry.actions)
+      break
+  if no match found:
+    send packet to controller (or drop)</div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Assuming flow entries are checked in any order. Entries have <strong>explicit priority values</strong> — higher priority entries are matched first. When priorities are equal, the most specific (fewest wildcards) entry wins.
+        </div>
+
+        <h3>Worked Examples &mdash; Match-Plus-Action</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Simple IP Forwarding via Flow Table</div>
+          <p>A switch has a flow table with two entries. A packet with <span class="highlight">IP dst = 10.1.2.3</span> arrives on <span class="highlight">port 2</span>.</p>
+          <div class="step">Entry 1: match(IP dst = 10.1.1.*, priority=10) → forward(port 3)</div>
+          <div class="step">Entry 2: match(IP dst = 10.1.2.*, priority=10) → forward(port 4)</div>
+          <p class="result">Result: Packet matches Entry 2 (10.1.2.* covers 10.1.2.3). Forwarded out port 4.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Priority Disambiguation</div>
+          <p>A packet has <span class="highlight">IP src = 192.168.1.5, IP dst = 10.0.0.1, TCP dst port = 80</span>.</p>
+          <div class="step">Entry A: match(IP dst = 10.0.0.*, priority=5) → forward(port 1)</div>
+          <div class="step">Entry B: match(IP src = 192.168.1.*, IP dst = 10.0.0.1, TCP dst=80, priority=20) → drop</div>
+          <p class="result">Result: Entry B has higher priority (20 &gt; 5). Packet is dropped even though both match.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Multi-Action Processing</div>
+          <p>A packet with <span class="highlight">VLAN ID = 100</span> arrives. The matched entry specifies <strong>two actions</strong>.</p>
+          <div class="step">Entry: match(VLAN ID = 100) → [strip_vlan, forward(port 5)]</div>
+          <div class="step">Action 1: Strip the VLAN tag from the packet header.</div>
+          <div class="step">Action 2: Forward the modified packet out port 5.</div>
+          <p class="result">Result: The VLAN tag is removed, and the plain Ethernet frame exits port 5.</p>
+        </div>
+
+        <h3>Comparison: Traditional vs. Generalized Forwarding</h3>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Traditional Router</th>
+            <th>OpenFlow Switch</th>
+          </tr>
+          <tr><td>Match fields</td><td>Dest IP only</td><td>12+ fields (L2-L4)</td></tr>
+          <tr><td>Actions</td><td>Forward to next hop</td><td>Forward, drop, modify, send-to-controller</td></tr>
+          <tr><td>Programmability</td><td>Fixed ASIC</td><td>Flow table API</td></tr>
+          <tr><td>Control plane</td><td>Integrated</td><td>Separate (remote controller)</td></tr>
+          <tr><td>Table updates</td><td>Routing protocol only</td><td>Controller pushes entries anytime</td></tr>
+        </table>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <p><span class="green">Match-Plus-Action:</span> Match across L2-L4 fields; execute actions</p>
+          <p><span class="orange">Flow table:</span> (pattern, counters, actions) per entry</p>
+          <p><span class="blue">Priority:</span> Higher number = higher priority; exact matches preferred</p>
+          <p><span class="yellow">Wildcard:</span> '*' matches any value in that field</p>
+          <p><span class="green">No match:</span> Default action — typically send to controller</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: OpenFlow Match Fields                                  -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>OpenFlow 1.0 Match Fields</h2>
+        <p>OpenFlow 1.0 defines <strong>12 match fields</strong> that span the physical layer (port), the link layer (Ethernet), the network layer (IP), and the transport layer (TCP/UDP). Each field can be set to an exact value or a wildcard.</p>
+
+        <div class="code">OpenFlow 1.0 Flow Match Structure (12 fields):
+  ┌─────────────────────────────────────────────┐
+  │ Ingress Port    │  Physical port of arrival │
+  │ Ethernet src    │  48-bit MAC address       │
+  │ Ethernet dst    │  48-bit MAC address       │
+  │ Ethernet Type   │  0x0800 (IPv4), 0x0806...│
+  │ VLAN ID         │  12-bit VLAN identifier   │
+  │ VLAN Priority   │  3-bit 802.1p priority    │
+  │ IP src          │  32-bit IPv4 address+mask │
+  │ IP dst          │  32-bit IPv4 address+mask │
+  │ IP Protocol     │  TCP=6, UDP=17, ICMP=1    │
+  │ IP ToS          │  8-bit Type of Service    │
+  │ TCP/UDP src port│  16-bit transport src     │
+  │ TCP/UDP dst port│  16-bit transport dst     │
+  └─────────────────────────────────────────────┘</div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Confusing wildcard matching with CIDR subnet matching. In OpenFlow, IP source and destination fields use a <strong>bitmask</strong> (not CIDR prefix length). For example, 10.1.0.0/255.255.0.0 is equivalent to a 16-bit prefix length.
+        </div>
+
+        <h3>Layer-by-Layer Breakdown</h3>
+        <table>
+          <tr><th>Layer</th><th>Fields</th><th>Bits</th><th>Typical Use</th></tr>
+          <tr><td>Physical</td><td>Ingress Port</td><td>32</td><td>Identify arrival interface</td></tr>
+          <tr><td>L2 (Ethernet)</td><td>Eth src, Eth dst, Eth type</td><td>48+48+16</td><td>MAC-level forwarding, filtering</td></tr>
+          <tr><td>L2.5 (VLAN)</td><td>VLAN ID, VLAN priority</td><td>12+3</td><td>Virtual LAN segmentation</td></tr>
+          <tr><td>L3 (IPv4)</td><td>IP src, IP dst, IP proto, IP ToS</td><td>32+32+8+8</td><td>IP routing, QoS</td></tr>
+          <tr><td>L4 (TCP/UDP)</td><td>TCP/UDP src port, dst port</td><td>16+16</td><td>Firewall, load balancing</td></tr>
+        </table>
+
+        <h3>Wildcards and Bitmasks</h3>
+        <p>Each field in a flow entry can be either an <strong>exact value</strong> or a <strong>wildcarded value</strong>. For IP fields, a bitmask specifies which bits must match. The <strong>priority</strong> field resolves conflicts when multiple entries match.</p>
+
+        <div class="formula">
+          <div class="label">Wildcard Semantics:</div>
+          <div class="expr">match(header, pattern) = (header &amp; mask) == (value &amp; mask)</div>
+          <div class="desc">A field matches if the header bits (masked) equal the pattern bits (masked). A mask of 0 means "wildcard" (match anything).</div>
+        </div>
+
+        <h3>Evolution of OpenFlow Match Fields</h3>
+        <p>While OpenFlow 1.0 defined <strong>12 match fields</strong>, more recent versions of the OpenFlow specification have grown this set to <strong>41 match fields</strong> [Bosshart 2014]. This expansion reflects the demand for finer-grained control over network traffic as SDN deployments matured.</p>
+
+        <h3>Design Constraints: Why Some Fields Cannot Be Matched</h3>
+        <p>You may wonder why certain header fields — such as the <strong>TTL (Time-to-Live)</strong> field or the <strong>datagram length</strong> — are not included among the matchable fields. The answer lies in the fundamental tradeoff between <strong>functionality</strong> and <strong>complexity</strong>. The "art" in choosing an abstraction for generalized forwarding is to provide enough functionality to be useful without over-burdening the abstraction with too much detail that would compromise performance or complicate the interface.</p>
+
+        <p>This design philosophy is captured well by computer architect Butler Lampson:</p>
+
+        <div class="formula">
+          <div class="label">Lampson's Principle of Abstraction [Lampson 1983]:</div>
+          <div class="expr">"Do one thing at a time, and do it well. An interface should capture the minimum essentials of an abstraction. Don't generalize; generalizations are generally wrong."</div>
+        </div>
+
+        <p>In the context of OpenFlow, the designers deliberately limited the match fields to the most commonly useful set — those spanning L2 through L4 — rather than attempting to expose every possible header field. Adding TTL or datagram length matching would add complexity to the switch hardware and the controller interface with limited practical benefit, as those fields rarely appear in forwarding policies.</p>
+
+        <h3>Worked Examples &mdash; Match Fields</h3>
+
+        <div class="example">
+          <div class="title">Example 1: MAC-Layer Filtering</div>
+          <p>Configure a flow entry that matches all ARP packets (EtherType = 0x0806) from a specific source MAC.</p>
+          <div class="step">Eth Type = 0x0806, Eth src = AA:BB:CC:DD:EE:FF, all other fields = wildcard</div>
+          <div class="step">Action: forward to controller</div>
+          <p class="result">Result: Only ARP packets from AA:BB:CC:DD:EE:FF are intercepted; all other traffic continues normally.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Subnet Traffic Matching</div>
+          <p>Match all traffic <strong>to or from</strong> subnet 10.10.0.0/16 with TCP destination port 443 (HTTPS).</p>
+          <div class="step">IP src = 10.10.0.0/255.255.0.0, IP dst = 10.10.0.0/255.255.0.0</div>
+          <div class="step">IP proto = 6 (TCP), TCP dst port = 443</div>
+          <p class="result">Result: Any HTTPS session involving the 10.10.x.x subnet is matched.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: VLAN-Aware Forwarding</div>
+          <p>Match all packets with VLAN ID = 200 and priority = 5 (highest) from a specific ingress port.</p>
+          <div class="step">Ingress port = 3, VLAN ID = 200, VLAN priority = 5</div>
+          <div class="step">All other fields = wildcard</div>
+          <p class="result">Result: High-priority VLAN 200 traffic arriving on port 3 is isolated for special processing.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <p><span class="green">12 fields:</span> Ingress port, Eth src/dst/type, VLAN ID/priority, IP src/dst/proto/ToS, TCP/UDP src/dst</p>
+          <p><span class="orange">Wildcard:</span> Bitmask per field; all zeros = match anything</p>
+          <p><span class="blue">Priority:</span> Integer; higher value = checked first</p>
+          <p><span class="yellow">Default:</span> Table-miss entry with lowest priority catches unmatched packets</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: OpenFlow Actions                                       -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>OpenFlow Actions</h2>
+        <p>When a packet matches a flow entry, the switch executes the associated <strong>action set</strong>. Actions determine what happens to the packet — it may be forwarded, dropped, modified, or sent to the controller.</p>
+
+        <h3>Action Types</h3>
+        <table>
+          <tr><th>Action</th><th>Description</th><th>Use Case</th></tr>
+          <tr><td>Forward(port)</td><td>Send packet out a specific physical port</td><td>Normal routing/switching</td></tr>
+          <tr><td>Flood</td><td>Send on all ports except ingress</td><td>Broadcast, learning switch</td></tr>
+          <tr><td>Drop</td><td>Silently discard the packet</td><td>Firewall, access control</td></tr>
+          <tr><td>Modify-Field</td><td>Rewrite a header field (e.g., MAC, IP, VLAN)</td><td>NAT, tunneling, tagging</td></tr>
+          <tr><td>Send-to-Controller</td><td>Encapsulate and forward to SDN controller</td><td>First-packet handling, policy</td></tr>
+          <tr><td>Enqueue(port, queue)</td><td>Place on specific QoS queue</td><td>Traffic shaping, QoS</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Assuming forward and flood are the same. <strong>Forward(port)</strong> sends to exactly one port. <strong>Flood</strong> sends to <em>all</em> ports except the one the packet arrived on. Flooding without loop prevention can cause broadcast storms.
+        </div>
+
+        <h3>Action Set Execution</h3>
+        <p>A flow entry can specify a <strong>list of actions</strong> that execute sequentially. The order matters — a modify-field action followed by forward changes the packet before forwarding.</p>
+
+        <div class="code">Action Set Processing:
+  for each action in entry.actions:
+    switch action.type:
+      case FORWARD:
+        output packet to specified port
+      case DROP:
+        discard packet (stop processing)
+      case MODIFY_FIELD:
+        packet.header[field] = newValue
+      case SEND_TO_CONTROLLER:
+        encapsulate and send via OpenFlow protocol
+      case FLOOD:
+        output to all ports except ingress
+      case ENQUEUE:
+        place packet on QoS queue</div>
+
+        <h3>Counters</h3>
+        <p>Each flow entry maintains counters that track how many packets and bytes have matched. These counters enable statistics collection, traffic engineering, and monitoring.</p>
+        <table>
+          <tr><th>Counter</th><th>Per Entry</th><th>Per Table</th><th>Per Port</th></tr>
+          <tr><td>Packets matched</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td>Bytes matched</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td>Duration (seconds)</td><td>Yes</td><td>—</td><td>—</td></tr>
+          <tr><td>Errors</td><td>—</td><td>Yes</td><td>—</td></tr>
+        </table>
+
+        <h3>Worked Examples &mdash; Actions</h3>
+
+        <div class="example">
+          <div class="title">Example 1: DNAT via Modify-Field</div>
+          <p>Rewrite the destination MAC and IP for traffic arriving on port 2 destined to a virtual IP.</p>
+          <div class="step">Match: ingress=2, IP dst=10.0.0.100</div>
+          <div class="step">Action list: [modify_field(IP dst → 10.0.0.50), modify_field(Eth dst → 00:11:22:33:44:55), forward(port 5)]</div>
+          <p class="result">Result: The packet's IP destination is rewritten to 10.0.0.50, its MAC is rewritten, and it is sent out port 5.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Traffic Mirroring via Multiple Actions</div>
+          <p>Forward normal traffic while sending a copy to a monitoring port.</p>
+          <div class="step">Match: IP dst = 10.1.1.0/24, TCP dst = 80</div>
+          <div class="step">Action list: [forward(port 3), forward(port 10)]  // port 10 = monitoring</div>
+          <p class="result">Result: HTTP traffic to 10.1.1.x is forwarded normally (port 3) AND a copy goes to the monitor (port 10).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Drop Suspicious Traffic</div>
+          <p>All traffic from a known attack source IP is dropped before it reaches internal servers.</p>
+          <div class="step">Match: IP src = 198.51.100.5</div>
+          <div class="step">Action: drop</div>
+          <p class="result">Result: Every packet from 198.51.100.5 is silently discarded. No other entries are checked after the drop.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <p><span class="green">Forward:</span> Send to one or more physical ports</p>
+          <p><span class="orange">Drop:</span> Silently discard — acts as firewall rule</p>
+          <p><span class="blue">Modify-Field:</span> Rewrite any header field</p>
+          <p><span class="yellow">Send-to-Controller:</span> Escalate to SDN controller for policy decision</p>
+          <p><span class="green">Counters:</span> Track packets, bytes, and duration per entry</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: Examples                                               -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Network Application Examples</h2>
+        <p>These examples show how OpenFlow flow table entries combine match fields and actions to implement real network functions.</p>
+
+        <h3>Example A: Simple Layer-3 Forwarding</h3>
+        <p>Two switches (s1, s2) forward packets based on destination IP subnet. Hosts h1 and h2 are on different subnets behind s1 and s2 respectively.</p>
+
+        <div class="code">Network topology:
+  h1 (10.3.0.1) ── port 1 ─ [s1] ── port 4 ── [s2] ── port 2 ── h2 (10.2.0.1)
+
+Flow table for s1 (highest priority first):
+  Priority  Entry Pattern                                   Action
+  20        ingress=1, IP src=10.3.*.*, IP dst=10.2.*.*    forward(4)
+  15        IP dst=10.2.*.*                                 forward(4)
+  10        ingress=4, IP src=10.2.*.*, IP dst=10.3.*.*    forward(1)
+  5         (table-miss, all wildcards)                     send_to_controller</div>
+
+        <div class="example">
+          <div class="title">Example 1: h1 sends to h2</div>
+          <p>Packet: <span class="highlight">IP src=10.3.0.1, IP dst=10.2.0.1</span>, arrives on port 1 of s1.</p>
+          <div class="step">Entry with priority 20 matches (ingress=1, IP src=10.3.*.*, IP dst=10.2.*.*).</div>
+          <p class="result">Result: Forwarded out port 4 toward s2.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: h2 sends to h1</div>
+          <p>Packet: <span class="highlight">IP src=10.2.0.1, IP dst=10.3.0.1</span>, arrives on port 4 of s1.</p>
+          <div class="step">Entry with priority 10 matches (ingress=4, IP src=10.2.*.*, IP dst=10.3.*.*).</div>
+          <p class="result">Result: Forwarded out port 1 toward h1.</p>
+        </div>
+
+        <h3>Example B: Load Balancing</h3>
+        <p>An OpenFlow switch distributes incoming HTTP traffic across two server pools based on TCP port 80. The ingress port determines which server pool handles the request.</p>
+
+        <div class="code">Load balancer flow table on s1:
+  Priority  Entry Pattern                               Action
+  30        ingress=1, TCP dst=80                       forward(2)   → Server Pool A
+  30        ingress=2, TCP dst=80                       forward(3)   → Server Pool B
+  20        TCP dst=80                                  forward(2)   → default to Pool A
+  10        (table-miss)                                send_to_controller</div>
+
+        <div class="example">
+          <div class="title">Example 3: HTTP request from external link</div>
+          <p>Packet: <span class="highlight">TCP dst=80</span>, arrives on port 1 (external uplink).</p>
+          <div class="step">Entry priority 30 matches: ingress=1, TCP dst=80 → forward(2).</div>
+          <p class="result">Result: Sent to Server Pool A (port 2).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: HTTP request from internal network</div>
+          <p>Packet: <span class="highlight">TCP dst=80</span>, arrives on port 2.</p>
+          <div class="step">Entry priority 30 matches: ingress=2, TCP dst=80 → forward(3).</div>
+          <p class="result">Result: Sent to Server Pool B (port 3). Traffic is load-balanced by source.</p>
+        </div>
+
+        <h3>Example C: Stateful Firewall</h3>
+        <p>A firewall switch only permits traffic from specific trusted sources while dropping all other traffic. The controller installs rules dynamically.</p>
+
+        <div class="code">Firewall flow table on s1:
+  Priority  Entry Pattern                                    Action
+  100       IP src=203.0.113.0/24, TCP dst=443               forward(4)
+  100       IP src=203.0.113.0/24, TCP dst=80                forward(4)
+  50        IP dst=10.0.0.0/8                                drop
+  10        (table-miss)                                     send_to_controller</div>
+
+        <div class="example">
+          <div class="title">Example 5: Permitted traffic</div>
+          <p>Packet: <span class="highlight">IP src=203.0.113.5, TCP dst=443</span>.</p>
+          <div class="step">Priority 100 entry matches (IP src in 203.0.113.0/24, TCP dst=443).</div>
+          <p class="result">Result: Forwarded out port 4 to internal network.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 6: Blocked traffic</div>
+          <p>Packet: <span class="highlight">IP src=198.51.100.99, IP dst=10.0.0.5</span>.</p>
+          <div class="step">Priority 50 entry matches (IP dst in 10.0.0.0/8).</div>
+          <p class="result">Result: Packet is dropped. Note: The more specific forward rules don't match because IP src is not in 203.0.113.0/24.</p>
+        </div>
+
+        <h3>Example D: Virtual Networks with Flow Tables</h3>
+        <p>In homework problems, students explore how flow tables can be used to create <strong>virtual networks</strong> — two or more logically separate networks (each with their own independent and distinct forwarding behavior) that use the same physical set of packet switches and links. This is a direct application of the generalized forwarding abstraction: by installing different flow entries for different tenants, a single physical switch fabric can host multiple isolated virtual networks.</p>
+
+        <div class="example">
+          <div class="title">Example 7: Two Virtual Networks Sharing a Switch</div>
+          <p>Consider a physical switch s1 that must support two virtual networks, <strong>Red</strong> and <strong>Blue</strong>. Packets from each virtual network are identified by their ingress port and VLAN tag. Each virtual network must have independent forwarding behavior — meaning a packet in the Red network cannot leak into the Blue network.</p>
+          <div class="step">Virtual Red: ingress ports {1,2}, VLAN ID = 10 → forward according to Red's routing table</div>
+          <div class="step">Virtual Blue: ingress ports {3,4}, VLAN ID = 20 → forward according to Blue's routing table</div>
+          <div class="step">Cross-virtual-network traffic is implicitly dropped because no flow entry matches Red traffic destined for Blue's ports, and vice versa.</div>
+          <p class="result">Result: Two independent virtual networks operate on the same physical switch, each with its own forwarding semantics.</p>
+        </div>
+
+        <h3>Beyond OpenFlow: P4 — Richer Programmability</h3>
+        <p>The match-plus-action flow tables of OpenFlow represent a <strong>limited form of programmability</strong> — the controller can install arbitrary (match, action) pairs, but the set of matchable fields and the set of possible actions are fixed by the specification. P4 (Programming Protocol-independent Packet Processors) [P4 2020, Bosshart 2014] is a language that provides <strong>even richer programmability</strong> designed specifically for datagram processing at line rate:</p>
+
+        <ul>
+          <li><strong>Variables</strong> — maintain state across packets</li>
+          <li><strong>General-purpose arithmetic</strong> — compute header field values</li>
+          <li><strong>Boolean operations</strong> — complex conditional matching logic</li>
+          <li><strong>Functions</strong> — reusable processing blocks</li>
+          <li><strong>Conditional statements</strong> — if/else branching in the data plane</li>
+          <li><strong>Custom header formats</strong> — parse any protocol, not just Ethernet/IP/TCP</li>
+          <li><strong>Custom actions</strong> — programmer-defined processing primitives</li>
+        </ul>
+
+        <p>While OpenFlow fixes the match fields and predefined actions, P4 allows the programmer to define the entire packet-processing pipeline — including the parser, match tables, and action logic — all while maintaining line-rate performance on target hardware.</p>
+
+        <table>
+          <tr><th>Feature</th><th>OpenFlow</th><th>P4</th></tr>
+          <tr><td>Header definitions</td><td>Fixed (12 fields)</td><td>Programmer-defined</td></tr>
+          <tr><td>Match types</td><td>Exact + wildcard</td><td>Exact, ternary, LPM, range</td></tr>
+          <tr><td>Actions</td><td>8 predefined types</td><td>Custom actions in P4 code</td></tr>
+          <tr><td>Parser</td><td>Fixed parser</td><td>Programmable parser</td></tr>
+          <tr><td>Target</td><td>OpenFlow switches</td><td>ASICs, FPGAs, NPUs, software</td></tr>
+          <tr><td>Programmability</td><td>Limited (fixed fields + actions)</td><td>Full (custom headers + logic)</td></tr>
+        </table>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <p><span class="green">Simple forwarding:</span> Match IP dst subnet → forward to next-hop port</p>
+          <p><span class="orange">Load balancing:</span> Match ingress + TCP port → different server pools</p>
+          <p><span class="blue">Firewall:</span> Match trusted source IPs → forward; match internal dest → drop</p>
+          <p><span class="yellow">P4:</span> Fully programmable match-action pipeline; custom headers and actions</p>
+          <p><span class="green">Flow table = API:</span> The controller programs switch behavior remotely</p>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Thinking that OpenFlow and P4 are competing technologies. OpenFlow is a <strong>protocol</strong> for the control-data plane interface. P4 is a <strong>language</strong> for programming the data plane itself. They can be used together — P4 to implement an OpenFlow-compatible pipeline.
+        </div>
+      </div>
+    </div>
+    <!-- ============================================================ -->
+    <!-- References                                                    -->
+    <!-- ============================================================ -->
+    <div class="section">
+      <h2>References</h2>
+      <p style="font-size:0.85em; color:#888; line-height:1.8;">
+        [McKeown 2008] N. McKeown et al., "OpenFlow: Enabling Innovation in Campus Networks," ACM SIGCOMM CCR, 2008.<br>
+        [ONF 2020] Open Networking Foundation, "OpenFlow Switch Specification," Version 1.5.1, 2020.<br>
+        [Casado 2014] M. Casado et al., "Fabric: A Retrospective on Evolving SDN," ACM HotSDN, 2014.<br>
+        [Tourrilhes 2014] J. Tourrilhes et al., "OpenFlow: The Anatomy of a Switch," HP Labs Technical Report, 2014.<br>
+        [Feamster 2013] N. Feamster et al., "The Road to SDN: An Intellectual History of Programmable Networks," ACM SIGCOMM CCR, 2013.<br>
+        [Bosshart 2014] P. Bosshart et al., "P4: Programming Protocol-Independent Packet Processors," ACM SIGCOMM, 2014.<br>
+        [Lampson 1983] B. Lampson, "Hints for Computer System Design," ACM SOSP, 1983.<br>
+        [P4 2020] The P4 Language Consortium, "P4_16 Language Specification," Version 1.2.2, 2020.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById(id).classList.add('active');
+      document.querySelector('.tab.active')?.classList.remove('active');
+      var tabs = document.querySelectorAll('.tab');
+      var idx = {'tab1':0,'tab2':1,'tab3':2,'tab4':3}[id];
+      if (tabs[idx]) tabs[idx].classList.add('active');
+    }
+  </script>
+</body>
+</html>

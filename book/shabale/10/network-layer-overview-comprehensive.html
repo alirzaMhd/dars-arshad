@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بررسی لایه شبکه - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0f00; padding: 10px; border-radius: 4px; }
+    .warning .warn-title { color: #ff6600; font-weight: bold; }
+    .warning p { color: #e0e0e0; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .ref-card { background: linear-gradient(135deg, #0a1a0a, #111); border: 1px solid #00ff8844; border-radius: 8px; padding: 12px; }
+    .ref-card h4 { color: #00ff88; font-size: 0.9em; margin-bottom: 8px; }
+    .ref-card p { font-size: 0.82em; color: #ccc; }
+    .check { color: #00ff88; }
+    .cross { color: #ff4444; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } table { font-size: 0.8em; } }
+  </style>
+</head>
+<body>
+  <h1>بررسی لایه شبکه</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری (کوروز و راس) — فصل ۴</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">ارسال در مقابل مسیریابی</button>
+      <button class="tab" onclick="showSection('tab2')">صفحه داده و کنترل</button>
+      <button class="tab" onclick="showSection('tab3')">مدل‌های سرویس</button>
+    </div>
+
+    <!-- Tab 1: Forwarding vs Routing -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>ارسال در مقابل مسیریابی</h2>
+        <p>لایه شبکه دو عملکرد اصلی دارد: <strong>ارسال</strong> (صفحه داده) و <strong>مسیریابی</strong> (صفحه کنترل). اگرچه با هم کار می‌کنند، در مقیاس‌های زمانی متفاوت عمل می‌کنند و مکانیزم‌های متفاوتی دارند.</p>
+
+        <div class="formula">
+          <div class="label">تعریف ارسال:</div>
+          <div class="expr">بسته می‌رسد &rarr; جستجوی جدول ارسال &rarr; ارسال به پورت خروجی</div>
+          <div class="desc">عمل محلی مسیریاب: حرکت یک بسته از یک رابط لینک ورودی به رابط لینک خروجی مناسب بر اساس آدرس مقصد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تعریف مسیریابی:</div>
+          <div class="expr">گراف G(N,E) &rarr; محاسبه مسیرها &rarr; پر کردن جداول ارسال</div>
+          <div class="desc">منطق سراسری شبکه: تعیین مسیر طی شده توسط بسته‌ها از مبدأ به مقصد با استفاده از الگوریتم‌های مسیریابی.</div>
+        </div>
+
+        <h3>جدول مقایسه</h3>
+        <table>
+          <tr><th>جنبه</th><th>ارسال</th><th>مسیریابی</th></tr>
+          <tr><td>حوزه</td><td>محلی مسیریاب (یک گره)</td><td>سراسری شبکه (همه گره‌ها)</td></tr>
+          <tr><td>مقیاس زمانی</td><td>نانوثانیه (به‌ازای بسته)</td><td>ثانیه (تغییرات توپولوژی)</td></tr>
+          <tr><td>صفحه</td><td>صفحه داده</td><td>صفحه کنترل</td></tr>
+          <tr><td>مکانیزم</td><td>جستجوی جدول + سوئیچینگ</td><td>اجرای الگوریتم مسیریابی</td></tr>
+          <tr><td>خروجی</td><td>انتخاب پورت خروجی</td><td>ورودی‌های جدول ارسال</td></tr>
+          <tr><td>سخت‌افزار</td><td>اغلب سخت‌افزار (ASIC, TCAM)</td><td>نرم‌افزار (فرآیند مسیریابی)</td></tr>
+          <tr><td>مثال</td><td>مطابقت IP مقصد، ارسال به پورت ۲</td><td>OSPF, BGP, RIP</td></tr>
+        </table>
+
+        <div class="warning">
+          <p><span class="warn-title">یادداشت اصطلاحات:</span> در میان محققان و فعالان شبکه، <strong>ارسال</strong> و <strong>سوئیچینگ</strong> به جای یکدیگر استفاده می‌شوند.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">تعریف سوئیچ بسته:</div>
+          <div class="expr">سوئیچ بسته = مسیریاب (L3) ∪ سوئیچ لایه پیوند (L2)</div>
+          <div class="desc"><strong>سوئیچ بسته</strong> یک اصطلاح عمومی است که هم <strong>مسیریاب‌ها</strong> (دستگاه‌های لایه شبکه / لایه ۳) و هم <strong>سوئیچ‌های لایه پیوند</strong> (دستگاه‌های لایه ۲) را در بر می‌گیرد. مسیریاب‌ها تصمیمات ارسال را بر اساس فیلدهای هدر لایه شبکه (مانند آدرس IP مقصد) می‌گیرند؛ سوئیچ‌های لایه پیوند بر اساس فیلدهای فریم لایه پیوند (مانند آدرس MAC) ارسال می‌کنند.</div>
+        </div>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: جستجوی جدول</div>
+          <p>یک مسیریاب یک بسته با IP مقصد <strong>192.168.1.57</strong> دریافت می‌کند. جدول ارسال آن شامل:</p>
+<pre class="code">محدوده مقصد          پورت خروجی
+192.168.1.0/24             پورت ۳
+10.0.0.0/8                 پورت ۱
+0.0.0.0/0                  پورت ۲ (پیش‌فرض)</pre>
+          <p><strong>تصمیم ارسال:</strong> مسیریاب یک <strong>طولانی‌ترین تطابق پیشوند</strong> را انجام می‌دهد. مقصد 192.168.1.57 در محدوده 192.168.1.0/24 قرار می‌گیرد (پیشوند ۲۴ بیتی مطابقت دارد). مسیریاب بسته را به <span class="result">پورت ۳</span> ارسال می‌کند.</p>
+          <p class="note">توجه: پیشوند /24 خاص‌تر از /0 است، بنابراین اولویت دارد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: الگوریتم مسیریابی &mdash; بردار فاصله</div>
+          <p>سه مسیریاب A, B, C به صورت خطی متصل هستند: A—B—C. هزینه لینک: A→B = ۲, B→C = ۳. با استفاده از معادله Bellman-Ford:</p>
+          <div class="formula">
+            <div class="label">معادله Bellman-Ford:</div>
+            <div class="expr">dₓ(y) = minᵥ { c(x,v) + dᵥ(y) }</div>
+            <div class="desc">کم‌هزینه‌ترین مسیر از x به y حداقل روی همه همسایه‌های v از (هزینه به v + هزینه از v به y) است.</div>
+          </div>
+          <p><strong>محاسبه:</strong> d<sub>A</sub>(C) = min{ c(A,B) + d<sub>B</sub>(C) } = ۲ + ۳ = <span class="result">۵</span>. مسیر: A &rarr; B &rarr; C.</p>
+          <p><strong>جدول ارسال در A:</strong> مقصد C &rarr; پورت خروجی به سمت B.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: طولانی‌ترین تطابق پیشوند</div>
+          <p>ورودی‌های جدول ارسال:</p>
+<pre class="code">پیشوند            پورت خروجی
+200.10.0.0/16     پورت ۱
+200.10.1.0/24     پورت ۲
+200.10.1.128/25   پورت ۳</pre>
+          <p>بسته ورودی: مقصد <strong>200.10.1.130</strong></p>
+          <p><strong>بررسی باینری:</strong> 200.10.1.130 = 11001000.00001010.00000001.10000010</p>
+          <p>پیشوند /25 200.10.1.128 = ...10000000 &mdash; ۲۵ بیت اول مطابقت دارد. /24 و /16 هم مطابقت دارند، اما /25 طولانی‌ترین است.</p>
+          <p>ارسال به <span class="result">پورت ۳</span>. این نشان می‌دهد چرا از طولانی‌ترین تطابق پیشوند استفاده می‌شود &mdash; خاص‌ترین مسیر را می‌دهد.</p>
+          <div class="warning">
+            <p><span class="warn-title">اشتباه رایج:</span> دانشجویان اغلب فرض می‌کنند مسیریاب ورودی‌ها را به ترتیب بررسی کرده و اولین تطابق را انتخاب می‌کند. در عمل، مسیریاب‌ها همه پیشوندهای منطبق را ارزیابی کرده و <em>طولانی‌ترین</em> (خاص‌ترین) را انتخاب می‌کنند، نه اولین مورد فهرست شده.</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>نکات کلیدی</h3>
+            <p>• ارسال = به‌ازای بسته، محلی</p>
+            <p>• مسیریابی = محاسبه مسیر، جهانی</p>
+            <p>• جدول ارسال = ورودی برای ارسال</p>
+            <p>• الگوریتم مسیریابی = ورودی برای جدول مسیریابی</p>
+          </div>
+          <div class="card">
+            <h3>پیچیدگی</h3>
+            <p>ارسال: <span class="highlight">O(log n)</span> (جستجوی دودویی روی پیشوند)</p>
+            <p>ارسال (TCAM): <span class="highlight">O(1)</span></p>
+            <p>مسیریابی (LS): <span class="dim">O(n²)</span> (Dijkstra)</p>
+            <p>مسیریابی (DV): <span class="dim">O(n · k)</span> به ازای هر تکرار</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Data & Control Plane -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>صفحه داده و صفحه کنترل</h2>
+        <p>لایه شبکه به طور منطقی به دو صفحه تقسیم می‌شود. <strong>صفحه داده</strong> پردازش به‌ازای بسته (مسیر سریع) را انجام می‌دهد. <strong>صفحه کنترل</strong> منطق مسیریابی و پر کردن جدول ارسال (مسیر آهسته) را انجام می‌دهد.</p>
+
+        <div class="formula">
+          <div class="label">تابع صفحه داده:</div>
+          <div class="expr">پورت ورودی &rarr; جستجو و سوئیچینگ &rarr; پورت خروجی</div>
+          <div class="desc">هر مسیریاب وظایف صفحه داده را به صورت محلی روی هر بسته ورودی انجام می‌دهد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تابع صفحه کنترل:</div>
+          <div class="expr">پروتکل مسیریابی ←→ همسایه‌ها &rarr; محاسبه مسیرها &rarr; به‌روزرسانی جدول ارسال</div>
+          <div class="desc">تعیین می‌کند که جداول مسیریابی چگونه محاسبه و نگهداری می‌شوند.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">ارتباط الگوریتم مسیریابی:</div>
+          <div class="expr">مسیریابₐ ←[پیام‌های مسیریابی (پروتکل مسیریابی)]→ مسیریابᵦ</div>
+          <div class="desc">تابع الگوریتم مسیریابی در یک مسیریاب با تابع الگوریتم مسیریابی در مسیریاب‌های دیگر با تبادل <strong>پیام‌های مسیریابی</strong> حاوی اطلاعات مسیریابی مطابق با یک <strong>پروتکل مسیریابی</strong> ارتباط برقرار می‌کند. این تبادل توزیع‌شده نحوه ساخت جمعی یک نمای سازگار از توپولوژی شبکه و محاسبه جداول ارسال توسط مسیریاب‌ها است.</div>
+        </div>
+
+        <h3>رویکرد سنتی در مقابل SDN</h3>
+        <table>
+          <tr><th>جنبه</th><th>سنتی (به‌ازای مسیریاب)</th><th>SDN (متمرکز منطقی)</th></tr>
+          <tr><td>موقعیت صفحه کنترل</td><td>داخل هر مسیریاب</td><td>کنترل‌کننده راه دور</td></tr>
+          <tr><td>الگوریتم مسیریابی</td><td>روی هر مسیریاب اجرا می‌شود</td><td>روی کنترل‌کننده اجرا می‌شود</td></tr>
+          <tr><td>جدول ارسال</td><td>توسط مسیریابی محلی پر می‌شود</td><td>توسط کنترل‌کننده (OpenFlow) ارسال می‌شود</td></tr>
+          <tr><td>هماهنگی</td><td>پروتکل توزیع‌شده</td><td>منطق متمرکز</td></tr>
+          <tr><td>پروتکل‌های مثال</td><td>OSPF, BGP, RIP</td><td>OpenFlow, ONOS, Ryu</td></tr>
+          <tr><td>تحمل خطا</td><td>داخلی (توزیع‌شده)</td><td>نیاز به افزونگی کنترل‌کننده</td></tr>
+          <tr><td>انعطاف‌پذیری</td><td>محدود به قوانین پروتکل</td><td>قابل برنامه‌ریزی از طریق کنترل‌کننده</td></tr>
+        </table>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: مسیریاب سنتی &mdash; OSPF</div>
+          <p>مسیریاب‌های R1, R2, R3 OSPF (مسیریابی حالت لینک) را اجرا می‌کنند. هر مسیریاب:</p>
+          <ol style="margin-left: 20px; color: #ccc; font-size: 0.9em;">
+            <li>آگهی‌های حالت لینک (LSA) خود را به همه همسایه‌ها از طریق سیل‌سازی پخش می‌کند</li>
+            <li>یک نقشه توپولوژی کامل از شبکه (پایگاه داده حالت لینک) می‌سازد</li>
+            <li>الگوریتم Dijkstra را به صورت محلی برای محاسبه کوتاه‌ترین مسیرها اجرا می‌کند</li>
+            <li>جدول ارسال خود را بر اساس مسیرهای محاسبه شده پر می‌کند</li>
+          </ol>
+          <p><span class="result">هر مسیریاب به طور مستقل همان مسیرها را محاسبه می‌کند</span> &mdash; این رویکرد <em>کنترل به‌ازای مسیریاب</em> است.</p>
+          <div class="warning">
+            <p><span class="warn-title">اشتباه رایج:</span> بسیاری فکر می‌کنند صفحه کنترل «یک چیز» است. در رویکرد سنتی، صفحه کنترل <em>داخل هر مسیریاب</em> اجرا می‌شود، نه روی یک سرور جداگانه. هر مسیریاب هم یک دستگاه صفحه داده و هم صفحه کنترل است.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: SDN &mdash; کنترل‌کننده راه دور</div>
+          <p>در یک شبکه SDN با ۴ سوئیچ و یک کنترل‌کننده راه دور:</p>
+<pre class="code">کنترل‌کننده جداول ارسال را محاسبه می‌کند:
+  - اطلاعات توپولوژی را از سوئیچ‌ها دریافت می‌کند
+  - الگوریتم مسیریابی را به صورت متمرکز اجرا می‌کند
+  - ورودی‌های جریان را از طریق پروتکل OpenFlow نصب می‌کند
+
+رفتار سوئیچ:
+  - فیلدهای هدر بسته را با جدول جریان مطابقت می‌دهد
+  - اگر مطابقت داشت: عمل را اعمال می‌کند (ارسال، رها، تغییر)
+  - اگر مطابقت نداشت: از کنترل‌کننده می‌پرسد (یا رها می‌کند)</pre>
+          <p><span class="result">سوئیچ S1 بسته‌ها را بدون اجرای هیچ پروتکل مسیریابی ارسال می‌کند.</span> این به سادگی دستورالعمل‌های کنترل‌کننده را دنبال می‌کند. این کار صفحه کنترل (در کنترل‌کننده) را از صفحه داده (در سوئیچ‌ها) جدا می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: سناریوی ترکیبی &mdash; مدیریت خرابی</div>
+          <p>لینک بین R2 و R3 خراب می‌شود. مقایسه رفتار:</p>
+          <table>
+            <tr><th>مرحله</th><th>سنتی (OSPF)</th><th>SDN</th></tr>
+            <tr><td>۱. تشخیص</td><td>R2 و R3 از طریق زمان‌بندی hello تشخیص می‌دهند</td><td>سوئیچ خرابی لینک را تشخیص می‌دهد</td></tr>
+            <tr><td>۲. اعلان</td><td>سیل LSA به همه مسیریاب‌ها</td><td>ارسال وضعیت به کنترل‌کننده</td></tr>
+            <tr><td>۳. محاسبه مجدد</td><td>هر مسیریاب Dijkstra را اجرا می‌کند</td><td>کنترل‌کننده یک بار محاسبه مجدد می‌کند</td></tr>
+            <tr><td>۴. به‌روزرسانی</td><td>هر مسیریاب جدول خود را به‌روزرسانی می‌کند</td><td>کنترل‌کننده ورودی‌های جریان جدید را ارسال می‌کند</td></tr>
+            <tr><td>۵. همگرایی</td><td>تأخیر انتشار × N مسیریاب</td><td>تأخیر کنترل‌کننده + به‌روزرسانی سوئیچ</td></tr>
+          </table>
+          <p class="note">همگرایی SDN می‌تواند سریع‌تر باشد زیرا فقط یک گره (کنترل‌کننده) مسیرها را محاسبه مجدد می‌کند، اما خطر نقطه شکست واحد را معرفی می‌کند.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>نکات کلیدی</h3>
+            <p>• صفحه داده = مسیر سریع، شتاب سخت‌افزاری</p>
+            <p>• صفحه کنترل = مسیر آهسته، مبتنی بر نرم‌افزار</p>
+            <p>• سنتی = صفحه کنترل توزیع‌شده</p>
+            <p>• SDN = صفحه کنترل متمرکز</p>
+            <p>• OpenFlow: پروتکل استاندارد برای SDN</p>
+          </div>
+          <div class="card">
+            <h3>پیچیدگی</h3>
+            <p>همگرایی سنتی: <span class="highlight">O(n · d)</span> (تأخیر سیل‌سازی)</p>
+            <p>همگرایی SDN: <span class="highlight">O(c + n)</span></p>
+            <p>Dijkstra (به‌ازای مسیریاب): <span class="dim">O(n²)</span></p>
+            <p>Dijkstra (متمرکز): <span class="dim">O(n²)</span> یک بار</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Service Models -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>مدل‌های سرویس شبکه</h2>
+        <p>یک <strong>مدل سرویس شبکه</strong> ویژگی‌های تحویل سرتاسری را که شبکه برای بسته‌های ارسالی بین میزبان‌ها تضمین می‌کند، تعریف می‌کند. معماری‌های مختلف مدل‌های سرویس متفاوتی ارائه می‌دهند.</p>
+
+        <div class="formula">
+          <div class="label">سرویس Best-Effort (اینترنت):</div>
+          <div class="expr">P(تحویل) &lt; ۱, بدون محدودیت تأخیر, بدون تضمین پهنای باند, بدون تضمین ترتیب</div>
+          <div class="desc">لایه شبکه اینترنت هیچ تضمینی ارائه نمی‌دهد &mdash; بسته‌ها ممکن است گم شوند، به طور دلخواه تأخیر داشته باشند، خارج از نظم برسند یا تکراری شوند. هیچ رزرو یا کنترل پذیرشی وجود ندارد.</div>
+        </div>
+
+        <div class="warning">
+          <p><span class="warn-title">کوروز و راس:</span> «ممکن است به نظر برسد که سرویس best-effort یک تعبیر خوش‌بینانه برای بدون سرویس است.» با این حال، ترکیب سرویس best-effort پایه اینترنت با <strong>تأمین پهنای باند کافی</strong> و <strong>پروتکل‌های سطح کاربردی تطبیق‌پذیر با پهنای باند</strong> مانند <strong>DASH</strong> (پخش تطبیقی پویا از طریق HTTP، بخش ۲.۶.۲) برای برنامه‌های شگفت‌انگیز مانند Netflix، Skype و FaceTime «به اندازه کافی خوب» ثابت شده است.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">دسته‌های سرویس ATM:</div>
+          <div class="expr">CBR: نرخ بیت ثابت | VBR: نرخ بیت متغیر | ABR: نرخ بیت موجود | UBR: نرخ بیت نامشخص</div>
+          <div class="desc">ATM (حالت انتقال ناهمگام) کلاس‌های سرویس متعدد با سطوح تضمین مختلف ارائه می‌دهد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">تضمین‌های ATM [Black 1995]:</div>
+          <div class="expr">تحویل به ترتیب تضمین‌شده ∧ تأخیر محدود ∧ حداقل پهنای باند تضمین‌شده</div>
+          <div class="desc">معماری شبکه ATM [Black 1995, <em>ATM: Foundation for Broadband Networks</em>] تضمین‌های به‌ازای اتصال از جمله تحویل <strong>به ترتیب</strong> سلول‌ها، <strong>تأخیر سرتاسری محدود</strong> و <strong>حداقل پهنای باند تضمین‌شده</strong> را از طریق کنترل پذیرش اتصال و رزرو منابع فراهم می‌کند.</div>
+        </div>
+
+        <h3>مقایسه مدل‌های سرویس</h3>
+        <table>
+          <tr><th>معماری</th><th>مدل سرویس</th><th>پهنای باند</th><th>اتلاف</th><th>ترتیب</th><th>تأخیر</th><th>امنیت</th></tr>
+          <tr><td>اینترنت</td><td>Best-effort</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td></tr>
+          <tr><td>ATM</td><td>CBR</td><td class="check">تضمین‌شده</td><td class="check">کم</td><td class="check">به ترتیب</td><td class="check">محدود</td><td class="cross">هیچ</td></tr>
+          <tr><td>ATM</td><td>VBR</td><td class="check">میانگین تضمین‌شده</td><td class="check">کم</td><td class="check">به ترتیب</td><td class="check">محدود</td><td class="cross">هیچ</td></tr>
+          <tr><td>ATM</td><td>ABR</td><td class="dim">حداقل تضمین‌شده</td><td class="dim">حداقل</td><td class="check">به ترتیب</td><td class="cross">هیچ</td><td class="cross">هیچ</td></tr>
+          <tr><td>ATM</td><td>UBR</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td><td class="cross">هیچ</td></tr>
+          <tr><td>Intserv</td><td>تضمین‌شده</td><td class="check">تضمین‌شده</td><td class="check">کم</td><td class="check">به ترتیب</td><td class="check">محدود</td><td class="cross">هیچ</td></tr>
+          <tr><td>Intserv</td><td>بار کنترل‌شده</td><td class="check">معادل بار سبک</td><td class="dim">بسیار کم</td><td class="check">به ترتیب</td><td class="dim">کم</td><td class="cross">هیچ</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">سرویس تضمین‌شده (Intserv):</div>
+          <div class="expr">d_max = (b - M) / R * (p - R) / (p - r) + M / R</div>
+          <div class="desc">حد بالای تأخیر صف‌بندی برای یک جریان تضمین‌شده با پارامترهای سطل توکن (r, b) و نرخ رزرو شده R، با حداکثر اندازه بسته M و نرخ اوج p.</div>
+        </div>
+
+        <h3>مثال‌های عملی</h3>
+
+        <div class="example">
+          <div class="title">مثال ۱: تحویل بسته Best-Effort</div>
+          <p>یک برنامه پخش ویدیو ۱۰۰۰ بسته در ثانیه از طریق اینترنت می‌فرستد. شبکه سرویس best-effort ارائه می‌دهد.</p>
+          <p><strong>سناریو:</strong> در طول ازدحام در مسیریاب R، بافر سرریز می‌شود. ۳۰ بسته در یک ثانیه رها می‌شوند. ۹۷۰ بسته باقی‌مانده تأخیرهای متفاوتی را تجربه می‌کنند: برخی در ۱۰ میلی‌ثانیه، برخی در ۲۰۰ میلی‌ثانیه می‌رسند و ۵ بسته خارج از نظم می‌رسند.</p>
+          <p><strong>تحلیل:</strong> این رفتار تحت سرویس best-effort <em>کاملاً قابل قبول</em> است. شبکه هیچ قولی درباره تحویل، تأخیر، ترتیب یا پهنای باند نداده است. برنامه باید همه این موارد را در لایه حمل یا کاربردی مدیریت کند (مثلاً با استفاده از TCP برای قابلیت اطمینان، بافر کردن برای نوسان تأخیر).</p>
+          <div class="warning">
+            <p><span class="warn-title">اشتباه رایج:</span> دانشجویان اغلب فکر می‌کنند «best-effort» به معنای «شبکه سخت تلاش می‌کند تحویل دهد» است. در شبکه، best-effort به این معناست که شبکه <em>هیچ تضمینی</em> ارائه نمی‌دهد. یک شبکه best-effort مجاز است هر بسته را رها کند &mdash; این نام به عدم تعهد اشاره دارد، نه سطح تلاش.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: ATM CBR &mdash; شبیه‌سازی مدار</div>
+          <p>یک شرکت تلفن از ATM CBR برای حمل یک تنه صوتی T1 (۱.۵۴۴ مگابیت بر ثانیه) از طریق یک شبکه ATM استفاده می‌کند.</p>
+<pre class="code">پارامترها:
+  نرخ اوج سلول (PCR) = ۳۶۴۲ سلول/ثانیه (≈ ۱.۵۴۴ مگابیت بر ثانیه / ۴۲۴ بیت به ازای هر سلول)
+  تحمل تغییر تأخیر سلول (CDVT) = کوچک
+  کلاس سرویس: CBR
+
+تضمین‌ها:
+  - پهنای باند: ۱.۵۴۴ مگابیت بر ثانیه (سلول‌ها با نرخ ثابت می‌رسند)
+  - محدودیت تأخیر: تأخیر سرتاسری &lt; ۵ میلی‌ثانیه (برای کیفیت صدا)
+  - نسبت اتلاف سلول: &lt; ۱۰⁻⁶
+  - ترتیب: سلول‌ها به ترتیب تحویل داده می‌شوند
+
+نتیجه: شبکه ATM منابع را در طول مسیر برای اطمینان از این تضمین‌ها رزرو می‌کند. کنترل پذیرش جریان‌های جدید را در صورت ناکافی بودن منابع مسدود می‌کند.</pre>
+          <p><span class="result">CBR کیفیت مشابه مدار را از طریق یک شبکه سوئیچ بسته فراهم می‌کند.</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: سرویس تضمین‌شده Intserv &mdash; سطل توکن</div>
+          <p>یک جریان دارای سطل توکن با نرخ r = ۲ مگابیت بر ثانیه و اندازه سطل b = ۱۰ کیلوبایت است. این جریان R = ۴ مگابیت بر ثانیه را روی یک مسیریاب رزرو می‌کند. بسته‌ها حداکثر اندازه M = ۱۵۰۰ بایت دارند، نرخ اوج p = ۶ مگابیت بر ثانیه.</p>
+          <div class="formula">
+            <div class="label">محاسبه محدودیت تأخیر:</div>
+            <div class="expr">d_max = (b - M) / R * (p - R) / (p - r) + M / R</div>
+            <div class="desc">که در آن b = اندازه سطل، M = حداکثر بسته، R = نرخ رزرو شده، p = نرخ اوج، r = نرخ توکن.</div>
+          </div>
+          <p><strong>محاسبه:</strong></p>
+          <p>b - M = ۱۰۰۰۰ - ۱۵۰۰ = ۸۵۰۰ بایت = ۶۸۰۰۰ بیت</p>
+          <p>(p - R) / (p - r) = (۶ - ۴) / (۶ - ۲) = ۲ / ۴ = ۰.۵</p>
+          <p>جمله اول: ۶۸۰۰۰ / ۴Mbps × ۰.۵ = ۰.۰۱۷ × ۰.۵ = ۰.۰۰۸۵ ثانیه = ۸.۵ میلی‌ثانیه</p>
+          <p>جمله دوم: M / R = ۱۵۰۰ × ۸ / ۴Mbps = ۱۲۰۰۰ / ۴۰۰۰۰۰۰ = ۰.۰۰۳ ثانیه = ۳ میلی‌ثانیه</p>
+          <p><span class="result">d_max = ۸.۵ + ۳ = ۱۱.۵ میلی‌ثانیه</span> &mdash; این بدترین حالت تأخیر صف‌بندی تضمین شده توسط Intserv برای این جریان است.</p>
+        </div>
+
+        <h3>راهنمای انتخاب مدل سرویس</h3>
+        <div class="grid">
+          <div class="ref-card">
+            <h4>استفاده از Best-Effort (اینترنت)</h4>
+            <p>• مرور وب، ایمیل، انتقال فایل</p>
+            <p>• برنامه‌هایی که تأخیر/اتلاف را تحمل می‌کنند</p>
+            <p>• زمانی که سادگی و مقیاس‌پذیری مهم است</p>
+          </div>
+          <div class="ref-card">
+            <h4>استفاده از CBR (ATM) یا Intserv</h4>
+            <p>• صدا/ویدیوی بیدرنگ</p>
+            <p>• شبیه‌سازی مدار</p>
+            <p>• زمانی که محدودیت‌های تأخیر حیاتی هستند</p>
+          </div>
+          <div class="ref-card">
+            <h4>استفاده از ABR (ATM)</h4>
+            <p>• برنامه‌های داده نیازمند حداقل نرخ</p>
+            <p>• برنامه‌های تطبیقی</p>
+            <p>• زمانی که کنترل جریان مبتنی بر بازخورد کمک می‌کند</p>
+          </div>
+          <div class="ref-card">
+            <h4>استفاده از بار کنترل‌شده (Intserv)</h4>
+            <p>• برنامه‌های بیدرنگ تطبیقی</p>
+            <p>• زمانی که «به خوبی best-effort تحت بار سبک» کافی است</p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>نکات کلیدی</h3>
+            <p>• اینترنت = فقط best-effort</p>
+            <p>• ATM دارای ۴ دسته سرویس است</p>
+            <p>• Intserv تضمین‌شده + بار کنترل‌شده را اضافه می‌کند</p>
+            <p>• Best-effort: هیچ تضمینی وجود ندارد</p>
+            <p>• سرویس تضمین‌شده: ریاضیات محدودیت تأخیر</p>
+          </div>
+          <div class="card">
+            <h3>پیچیدگی</h3>
+            <p>Best-effort: <span class="highlight">O(1)</span> به ازای هر بسته</p>
+            <p>ATM به‌ازای جریان: <span class="dim">O(n)</span> جریان</p>
+            <p>Intserv RSVP: <span class="dim">O(f)</span> حالت به ازای هر مسیریاب</p>
+            <p>کنترل پذیرش: <span class="dim">O(k)</span> بررسی</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Reference Cards -->
+    <div class="section">
+      <h2>کارت‌های مرجع سریع</h2>
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+        <div class="ref-card">
+          <h4>ارسال در مقابل مسیریابی</h4>
+          <p><strong>ارسال:</strong> بسته &rarr; جستجوی پورت (صفحه داده، مقیاس ns)</p>
+          <p><strong>مسیریابی:</strong> محاسبه مسیر = جدول ارسال (صفحه کنترل، مقیاس s)</p>
+          <p><strong>نقل قول کلیدی:</strong> «ارسال مانند تغییر مسیر قطار است؛ مسیریابی مانند برنامه‌ریزی شبکه راه‌آهن است.»</p>
+        </div>
+        <div class="ref-card">
+          <h4>سنتی در مقابل SDN</h4>
+          <p><strong>سنتی:</strong> هر مسیریاب الگوریتم مسیریابی خود را اجرا می‌کند &rarr; جدول ارسال خود را پر می‌کند</p>
+          <p><strong>SDN:</strong> کنترل‌کننده راه دور مسیرها را محاسبه می‌کند &rarr; جداول ارسال را از طریق OpenFlow به سوئیچ‌ها ارسال می‌کند</p>
+        </div>
+        <div class="ref-card">
+          <h4>سرویس Best-Effort</h4>
+          <p>هیچ تضمینی در مورد: تحویل ✓ تأخیر ✓ پهنای باند ✓ ترتیب ✓</p>
+          <p>هر پنج بعد فقط best-effort هستند</p>
+          <p>مورد استفاده اینترنت جهانی</p>
+        </div>
+        <div class="ref-card">
+          <h4>مدل‌های سرویس ATM</h4>
+          <p><strong>CBR:</strong> نرخ ثابت، تضمین‌های دقیق (صدا)</p>
+          <p><strong>VBR:</strong> نرخ متغیر، تضمین‌های میانگین (ویدیو)</p>
+          <p><strong>ABR:</strong> حداقل نرخ تضمین‌شده، کنترل بازخورد</p>
+          <p><strong>UBR:</strong> بدون تضمین (مثل best-effort)</p>
+        </div>
+        <div class="ref-card">
+          <h4>مدل‌های سرویس Intserv</h4>
+          <p><strong>تضمین‌شده:</strong> تأخیر محدود، بدون اتلاف، رزرو محکم</p>
+          <p><strong>بار کنترل‌شده:</strong> شبیه‌سازی رفتار شبکه بدون بار، تضمین‌های نرم‌تر</p>
+        </div>
+        <div class="ref-card">
+          <h4>طولانی‌ترین تطابق پیشوند</h4>
+          <p>در میان همه ورودی‌های جدول ارسال منطبق، ورودی با <strong>طولانی‌ترین طول پیشوند</strong> برنده است.</p>
+          <p>مثال: /25 بر /24 بر /16 بر /0 (پیش‌فرض) اولویت دارد</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <h3>کارت خلاصه فرمول‌ها</h3>
+        <table>
+          <tr><th>مفهوم</th><th>فرمول / عبارت</th></tr>
+          <tr><td>ارسال</td><td>dest IP &rarr; طولانی‌ترین تطابق پیشوند &rarr; پورت خروجی</td></tr>
+          <tr><td>Bellman-Ford</td><td>dₓ(y) = minᵥ { c(x,v) + dᵥ(y) }</td></tr>
+          <tr><td>Best-effort</td><td>بدون تضمین روی {تحویل، تأخیر، پهنای باند، ترتیب، امنیت}</td></tr>
+          <tr><td>محدودیت تأخیر Intserv</td><td>d_max = ((b - M)/R) × ((p - R)/(p - r)) + M/R</td></tr>
+          <tr><td>جستجوی جدول ارسال</td><td>مطابقت + عمل (TCAM: O(1)، درخت دودویی: O(W))</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Connection and Segment Structure - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>TCP Connection &amp; Segment Structure</h1>
+  <p class="subtitle">Computer Networking — Comprehensive Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">TCP Connection</button>
+      <button class="tab" onclick="showSection('tab2')">Segment Header</button>
+      <button class="tab" onclick="showSection('tab3')">Sequence &amp; Ack Numbers</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>TCP Connection Overview</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Connection-Oriented</h3>
+            <p>Before data flows, sender and receiver exchange control segments (handshake) to initialize state variables.</p>
+          </div>
+          <div class="card">
+            <h3>Full-Duplex</h3>
+            <p>Data flows in <span class="highlight">both</span> directions simultaneously. Each side has its own send and receive buffer.</p>
+          </div>
+          <div class="card">
+            <h3>Point-to-Point</h3>
+            <p>Exactly <span class="highlight">one sender</span> and <span class="highlight">one receiver</span>. No multicasting — "two hosts are company, three is a crowd."</p>
+          </div>
+        </div>
+
+        <h3>Send and Receive Buffers</h3>
+        <p>Each side allocates a send buffer (for data from the application not yet sent/acknowledged) and a receive buffer (for data arrived from network not yet read by the application).</p>
+
+        <div class="formula">
+          <div class="label">Maximum Segment Size (MSS)</div>
+          <div class="expr">MSS = MTU - (TCP Header + IP Header)</div>
+          <div class="desc">Typical MTU = 1500 bytes (Ethernet); TCP/IP header ≈ 40 bytes → MSS ≈ 1460 bytes</div>
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Common Mistake:</span> MSS refers to the <em>application data</em> payload, not the total segment size. A segment with MSS=1460 bytes has total size ≈ 1500 bytes including headers.
+        </div>
+
+        <div class="note">MSS is negotiated during the SYN/SYNACK handshake via the TCP options field. Each end advertises its MSS; the minimum of the two values is used.</div>
+
+        <h3>Three-Way Handshake (Intro)</h3>
+        <table>
+          <tr>
+            <th>Step</th>
+            <th>Sender</th>
+            <th>Receiver</th>
+            <th>Purpose</th>
+          </tr>
+          <tr>
+            <td>1</td>
+            <td>Client → Server</td>
+            <td>SYN=1, seq=<span class="highlight">client_isn</span></td>
+            <td>Client requests connection, sends initial seq number</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Server → Client</td>
+            <td>SYN=1, seq=<span class="highlight">server_isn</span>, ack=client_isn+1</td>
+            <td>Server acknowledges, sends own ISN</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Client → Server</td>
+            <td>SYN=0, ack=server_isn+1 (may carry data)</td>
+            <td>Client acknowledges; connection established</td>
+          </tr>
+        </table>
+
+        <div class="card">
+          <h3>Key Properties</h3>
+          <p>• No connection state in intermediate routers (routers see IP datagrams, not TCP connections)</p>
+          <p>• Buffers and variables exist <span class="highlight">only at end systems</span></p>
+          <p>• TCP is logical, not a physical circuit</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>TCP Segment Header Structure</h2>
+        <p>The TCP segment header is typically <span class="highlight">20 bytes</span> (without options) and can be up to <span class="highlight">60 bytes</span> with options. Each header field has a specific role in reliable data transfer, flow control, and connection management.</p>
+
+        <table>
+          <tr><th>Field</th><th>Size</th><th>Purpose</th></tr>
+          <tr><td>Source Port</td><td>16 bits</td><td>Identifies sending application process</td></tr>
+          <tr><td>Destination Port</td><td>16 bits</td><td>Identifies receiving application process</td></tr>
+          <tr><td>Sequence Number</td><td>32 bits</td><td>Byte-stream number of first byte in segment's data</td></tr>
+          <tr><td>Acknowledgment Number</td><td>32 bits</td><td>Sequence number of next expected byte (valid when ACK flag set)</td></tr>
+          <tr><td>Header Length</td><td>4 bits</td><td>TCP header size in 32-bit words (typical: 5 → 20 bytes)</td></tr>
+          <tr><td>Reserved</td><td>6 bits</td><td>Unused; for future use</td></tr>
+          <tr><td>Flags (URG, ACK, PSH, RST, SYN, FIN)</td><td>6 bits</td><td>Control bits for connection state &amp; segment semantics</td></tr>
+          <tr><td>Receive Window (rwnd)</td><td>16 bits</td><td>Number of bytes receiver is willing to accept (flow control)</td></tr>
+          <tr><td>Checksum</td><td>16 bits</td><td>Error detection for header + data</td></tr>
+          <tr><td>Urgent Data Pointer</td><td>16 bits</td><td>Points to last byte of urgent data (valid when URG flag set)</td></tr>
+          <tr><td>Options</td><td>Variable</td><td>MSS negotiation, window scaling, timestamps</td></tr>
+          <tr><td>Data</td><td>Variable ≤ MSS</td><td>Application-layer payload</td></tr>
+        </table>
+
+        <h3>Flag Bits Detail</h3>
+        <div class="grid">
+          <div class="card">
+            <span class="highlight">ACK</span> — Acknowledgment field is valid
+          </div>
+          <div class="card">
+            <span class="highlight">SYN</span> — Synchronize sequence numbers (connection setup)
+          </div>
+          <div class="card">
+            <span class="highlight">FIN</span> — Sender finished sending (connection teardown)
+          </div>
+          <div class="card">
+            <span class="highlight">RST</span> — Reset connection (error/refuse)
+          </div>
+          <div class="card">
+            <span class="highlight">PSH</span> — Push data to application immediately
+          </div>
+          <div class="card">
+            <span class="highlight">URG</span> — Urgent data pointer is valid
+          </div>
+          <div class="card">
+            <span class="highlight">CWR</span> — Congestion window reduced
+          </div>
+          <div class="card">
+            <span class="highlight">ECE</span> — ECN-Echo (explicit congestion notification)
+          </div>
+        </div>
+
+        <div class="warning">
+          <span class="label">⚠ Common Mistake:</span> The header length field counts in <em>32-bit words</em>, not bytes. A value of 5 means 5 × 4 = 20 bytes. The minimum is 5 (no options).
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Sequence Numbers &amp; Acknowledgment Numbers</h2>
+
+        <p>TCP views data as an <span class="highlight">unstructured but ordered stream of bytes</span>. Sequence numbers are applied to bytes, not segments.</p>
+
+        <div class="formula">
+          <div class="label">Sequence Number of a Segment</div>
+          <div class="expr">seq = byte-stream number of the first data byte in the segment</div>
+          <div class="desc">If a file has 500,000 bytes and MSS = 1000, segment 1 has seq=0, segment 2 has seq=1000, etc.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Acknowledgment Number</div>
+          <div class="expr">ack = sequence number of the next expected byte (cumulative)</div>
+          <div class="desc">If Host A received bytes 0-535 and 900-1000 but not 536-899, ack = 536 (first missing byte)</div>
+        </div>
+
+        <h3>Key Properties</h3>
+        <div class="grid">
+          <div class="card">
+            <h4>Cumulative ACK</h4>
+            <p>ACK <span class="highlight">y</span> acknowledges <em>all</em> bytes up to but not including y.</p>
+          </div>
+          <div class="card">
+            <h4>Random ISN</h4>
+            <p>Initial sequence numbers are chosen <span class="highlight">randomly</span> to prevent confusion with old connections.</p>
+          </div>
+          <div class="card">
+            <h4>Out-of-Order Handling</h4>
+            <p>TCP RFCs leave it to implementers: discard or buffer. Modern TCP buffers out-of-order data.</p>
+          </div>
+          <div class="card">
+            <h4>32-bit Sequence Space</h4>
+            <p>Sequence number field is <span class="highlight">32 bits</span> (range 0 to 2<sup>32</sup>−1) and <span class="highlight">wraps around</span> back to 0 after reaching the maximum.</p>
+          </div>
+        </div>
+
+        <h3>Telnet Case Study</h3>
+        <p>User types 'C' at client. Client ISN = 42, Server ISN = 79.</p>
+        <table>
+          <tr><th>Segment</th><th>Direction</th><th>Seq #</th><th>ACK #</th><th>Data</th><th>Meaning</th></tr>
+          <tr><td>1</td><td>Client → Server</td><td>42</td><td>79</td><td>'C'</td><td>Client sends character, waiting for server byte 79</td></tr>
+          <tr><td>2</td><td>Server → Client</td><td>79</td><td>43</td><td>'C' (echo)</td><td>Server ACKs byte 42, echoes 'C', piggyback ACK</td></tr>
+          <tr><td>3</td><td>Client → Server</td><td>43</td><td>80</td><td>(empty)</td><td>Client ACKs echoed byte 79, now waiting for byte 80</td></tr>
+        </table>
+        <p class="note">Piggybacking: ACK for client data is carried inside a server data segment (segment 2).</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Telnet Scenario with Character 'Z'</div>
+          <p><strong>Setup:</strong> Client ISN = 100, Server ISN = 200. User types 'Z' (ASCII 90).</p>
+          <p><strong>Step 1:</strong> Client sends seq=100, ack=200, data='Z'. Expects byte 200 from server.</p>
+          <p><strong>Step 2:</strong> Server sends seq=200, ack=101, data='Z' (echo). ACKs receipt of bytes up to 100, now wants byte 101.</p>
+          <p><strong>Step 3:</strong> Client sends seq=101, ack=201, data empty. ACKs server byte 200, now wants byte 201.</p>
+          <p class="result">Each character traverses the network twice (echo).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: File Transfer Segment Numbering</div>
+          <p><strong>Setup:</strong> File size = 120,000 bytes, MSS = 1460 bytes, initial seq = 0.</p>
+          <p>Number of segments = ceil(120,000 / 1460) = 83 segments.</p>
+          <p>Segment boundaries:</p>
+          <p>Seg 1: seq = 0, bytes 0-1459</p>
+          <p>Seg 2: seq = 1460, bytes 1460-2919</p>
+          <p>Seg 10: seq = 13140, bytes 13140-14599</p>
+          <p>Seg 83: seq = 119720, bytes 119720-119999 (only 280 bytes)</p>
+          <p class="result">Last segment is smaller than MSS — typical for the final chunk of a file.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Out-of-Order Handling and Cumulative ACK</div>
+          <p><strong>Setup:</strong> Sender transmits segments with seq=1000 (200 bytes), seq=1200 (200 bytes), seq=1400 (200 bytes).</p>
+          <p><strong>Arrival at Receiver:</strong> Segment seq=1000 arrives, then seq=1400 arrives (seq=1200 lost).</p>
+          <p><strong>Receiver actions:</strong></p>
+          <p>• On receiving seq=1000: delivers bytes 1000-1199, ACK=1200</p>
+          <p>• On receiving seq=1400 (out of order): buffers bytes 1400-1599, sends <span class="highlight">duplicate ACK=1200</span></p>
+          <p><strong>Sender receives duplicate ACK:</strong> Knows receiver still waiting for byte 1200.</p>
+          <p class="result">The cumulative ACK of 1200 tells the sender that all bytes before 1200 are received, but nothing beyond.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: MSS Calculation with Different MTUs</div>
+          <p><strong>Case A — Ethernet:</strong> MTU = 1500 bytes. TCP header = 20 bytes, IP header = 20 bytes.</p>
+          <p class="result">MSS = 1500 - 40 = 1460 bytes.</p>
+          <p><strong>Case B — PPP:</strong> MTU = 1500 bytes. Same header overhead.</p>
+          <p class="result">MSS = 1500 - 40 = 1460 bytes.</p>
+          <p><strong>Case C — Jumbo Frames:</strong> MTU = 9000 bytes.</p>
+          <p class="result">MSS = 9000 - 40 = 8960 bytes.</p>
+          <p><strong>Case D — Path MTU Discovery:</strong> If the smallest MTU along the path is 576 bytes:</p>
+          <p class="result">MSS = 576 - 40 = 536 bytes.</p>
+          <div class="warning">
+            <span class="label">⚠ Important:</span> The MSS is negotiated during the TCP handshake via the options field. Both ends advertise their MSS; the minimum is used.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

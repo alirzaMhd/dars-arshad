@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تخمین RTT و Timeout در TCP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning .label { color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>تخمین RTT و Timeout در TCP</h1>
+  <p class="subtitle">شبکه‌های کامپیوتری — راهنمای جامع برای آزمون ۲۰/۲۰</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">تخمین RTT</button>
+      <button class="tab" onclick="showSection('tab2')">محاسبه Timeout</button>
+      <button class="tab" onclick="showSection('tab3')">مثال‌ها و نمودار</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>تخمین زمان رفت و برگشت (RTT)</h2>
+        <p>TCP از یک مکانیزم <span class="highlight">timeout/ارسال مجدد</span> برای بازیابی از سگمنت‌های گم‌شده استفاده می‌کند. فاصله timeout باید بزرگتر از RTT اتصال باشد، اما تخمین RTT به دلیل تغییرپذیری ازدحام شبکه چالش‌برانگیز است.</p>
+
+        <h3>SampleRTT</h3>
+        <div class="formula">
+          <div class="label">SampleRTT</div>
+          <div class="expr">SampleRTT = زمان از ارسال سگمنت → دریافت ACK</div>
+          <div class="desc">SampleRTT فقط برای یک سگمنت در یک زمان اندازه‌گیری می‌شود (نه همزمان برای چندین سگمنت برجسته). این به عنوان اندازه‌گیری "یک بار در هر RTT" شناخته می‌شود. هرگز برای سگمنت‌های دوباره ارسال شده محاسبه نمی‌شود.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h4>یک نمونه در هر بار</h4>
+            <p>در هر نقطه، فقط یک سگمنت در حال زمان‌بندی است. یک SampleRTT جدید تقریباً هر RTT یک بار به دست می‌آید.</p>
+          </div>
+          <div class="card">
+            <h4>الگوریتم Karn</h4>
+            <p>هرگز SampleRTT را برای سگمنت‌های دوباره ارسال شده محاسبه نکن — مبهم است که ACK برای نسخه اصلی است یا ارسال مجدد.</p>
+          </div>
+        </div>
+
+        <h3>EstimatedRTT (میانگین متحرک موزون نمایی)</h3>
+        <div class="formula">
+          <div class="label">فرمول EstimatedRTT (EWMA)</div>
+          <div class="expr">EstimatedRTT = (1 - α) × EstimatedRTT + α × SampleRTT</div>
+          <div class="desc">α = ۰.۱۲۵ (۱/۸). نمونه‌های اخیر وزن بیشتری می‌گیرند; نمونه‌های قدیمی به صورت نمایی تحلیل می‌روند.</div>
+        </div>
+
+        <div class="code">
+          // شبه‌کد بروزرسانی EstimatedRTT
+          // α = 0.125
+          EstimatedRTT = 0.875 * EstimatedRTT + 0.125 * SampleRTT;
+        </div>
+
+        <p>EWMA نوسانات کوتاه‌مدت را هموار می‌کند. α کوچک تخمین را نسبت به جهش‌های گذرا کمتر حساس می‌کند.</p>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>محاسبه Timeout</h2>
+
+        <h3>DevRTT — تغییرپذیری RTT</h3>
+        <div class="formula">
+          <div class="label">فرمول DevRTT</div>
+          <div class="expr">DevRTT = (1 - β) × DevRTT + β × |SampleRTT - EstimatedRTT|</div>
+          <div class="desc">β = ۰.۲۵. معیاری از میزان انحراف SampleRTT از EstimatedRTT.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h4>نوسان کم</h4>
+            <p>اگر SampleRTT به طور مداوم نزدیک EstimatedRTT باشد، DevRTT <span class="highlight">کوچک</span> است.</p>
+          </div>
+          <div class="card">
+            <h4>نوسان زیاد</h4>
+            <p>اگر SampleRTT به طور گسترده تغییر کند، DevRTT <span class="highlight">بزرگ</span> است و به حاشیه ایمنی بزرگتری نیاز دارد.</p>
+          </div>
+        </div>
+
+        <h3>TimeoutInterval</h3>
+        <div class="formula">
+          <div class="label">فرمول TimeoutInterval</div>
+          <div class="expr">TimeoutInterval = EstimatedRTT + 4 × DevRTT</div>
+          <div class="desc">۴ انحراف معیار از devRTT را به عنوان حاشیه ایمنی اضافه می‌کند.</div>
+        </div>
+
+        <h3>قوانین مدیریت Timeout</h3>
+        <table>
+          <tr><th>قانون</th><th>مقدار</th><th>دلیل</th></tr>
+          <tr><td>TimeoutInterval اولیه</td><td>۱ ثانیه (RFC 6298)</td><td>شروع محافظه‌کارانه قبل از هر نمونه RTT</td></tr>
+          <tr><td>بعد از timeout (عقب‌نشینی نمایی)</td><td>Timeout × 2</td><td>جلوگیری از طوفان ارسال مجدد در طول ازدحام</td></tr>
+          <tr><td>بعد از رسیدن ACK جدید</td><td>محاسبه مجدد از EstimatedRTT + ۴×DevRTT</td><td>بازنشانی به شرایط جاری شبکه</td></tr>
+        </table>
+
+        <div class="warning">
+          <span class="label">⚠ اشتباه رایج:</span> دوبرابر کردن TimeoutInterval در timeout <em>جدا</em> از فرمول بالاست. عقب‌نشینی نمایی توسط رویداد timeout فعال می‌شود، نه توسط پردازش معمولی ACK.
+        </div>
+
+        <h3>شبه‌کد الگوریتم</h3>
+        <div class="code">
+          // وقتی یک SampleRTT جدید به دست می‌آید:
+          EstimatedRTT = 0.875 * EstimatedRTT + 0.125 * SampleRTT;
+          DevRTT = 0.75 * DevRTT + 0.25 * |SampleRTT - EstimatedRTT|;
+          TimeoutInterval = EstimatedRTT + 4 * DevRTT;
+
+          // وقتی timeout رخ می‌دهد:
+          TimeoutInterval = TimeoutInterval * 2;
+          // (قدیمی‌ترین سگمنت تأییدنشده را دوباره ارسال کن، تایمر را مجدداً راه‌اندازی کن)
+
+          // در دریافت ACK (غیر تکراری):
+          // TimeoutInterval را از جدیدترین EstimatedRTT و DevRTT محاسبه مجدد کن
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>مثال‌های عملی</h2>
+
+        <div class="example">
+          <div class="title">مثال ۱: توالی تخمین RTT اولیه</div>
+          <p><strong>داده شده:</strong> EstimatedRTT اولیه = ۱۰۰ ms، DevRTT = ۱۰ ms.</p>
+          <p><strong>مقادیر SampleRTT:</strong> ۱۲۰ ms، ۹۰ ms، ۱۱۰ ms، ۱۳۰ ms.</p>
+          <p><strong>مرحله ۱ — SampleRTT = ۱۲۰ ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 100 + 0.125 × 120 = 87.5 + 15 = <span class="result">۱۰۲.۵ ms</span></p>
+          <p>DevRTT = 0.75 × 10 + 0.25 × |120 - 102.5| = 7.5 + 4.375 = <span class="result">۱۱.۸۷۵ ms</span></p>
+          <p>Timeout = 102.5 + 4 × 11.875 = 102.5 + 47.5 = <span class="result">۱۵۰ ms</span></p>
+          <p><strong>مرحله ۲ — SampleRTT = ۹۰ ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 102.5 + 0.125 × 90 = 89.6875 + 11.25 = <span class="result">۱۰۰.۹۳۷۵ ms</span></p>
+          <p>DevRTT = 0.75 × 11.875 + 0.25 × |90 - 100.9375| = 8.90625 + 2.734 = <span class="result">۱۱.۶۴ ms</span></p>
+          <p>Timeout = 100.9375 + 4 × 11.64 = 100.9375 + 46.56 = <span class="result">۱۴۷.۵ ms</span></p>
+          <p><strong>مرحله ۳ — SampleRTT = ۱۱۰ ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 100.9375 + 0.125 × 110 = 88.32 + 13.75 = <span class="result">۱۰۲.۰۷ ms</span></p>
+          <p>DevRTT = 0.75 × 11.64 + 0.25 × |110 - 102.07| = 8.73 + 1.98 = <span class="result">۱۰.۷۱ ms</span></p>
+          <p>Timeout = 102.07 + 4 × 10.71 = 102.07 + 42.84 = <span class="result">۱۴۴.۹۱ ms</span></p>
+          <p><strong>مرحله ۴ — SampleRTT = ۱۳۰ ms:</strong></p>
+          <p>EstimatedRTT = 0.875 × 102.07 + 0.125 × 130 = 89.31 + 16.25 = <span class="result">۱۰۵.۵۶ ms</span></p>
+          <p>DevRTT = 0.75 × 10.71 + 0.25 × |130 - 105.56| = 8.03 + 6.11 = <span class="result">۱۴.۱۴ ms</span></p>
+          <p>Timeout = 105.56 + 4 × 14.14 = 105.56 + 56.56 = <span class="result">۱۶۲.۱۲ ms</span></p>
+          <p class="note">توجه کنید timeout چگونه تطبیق می‌یابد: وقتی RTT افزایش می‌یابد، DevRTT رشد می‌کند و حاشیه timeout را بزرگتر می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲: عقب‌نشینی نمایی در Timeout</div>
+          <p><strong>داده شده:</strong> EstimatedRTT = ۸۰ ms، DevRTT = ۵ ms.</p>
+          <p>TimeoutInterval = 80 + 4 × 5 = <span class="result">۱۰۰ ms</span></p>
+          <p><strong>Timeout رخ می‌دهد:</strong> هیچ ACK در ۱۰۰ ms دریافت نشد.</p>
+          <p>TCP دوباره ارسال می‌کند و تنظیم می‌کند: TimeoutInterval = 100 × 2 = <span class="result">۲۰۰ ms</span></p>
+          <p><strong>دومین timeout رخ می‌دهد:</strong> ۲۰۰ ms بعد، هنوز ACK نیست.</p>
+          <p>TimeoutInterval = 200 × 2 = <span class="result">۴۰۰ ms</span></p>
+          <p><strong>سومین timeout:</strong> TimeoutInterval = 400 × 2 = <span class="result">۸۰۰ ms</span></p>
+          <p><strong>نهایتاً ACK می‌رسد:</strong> TimeoutInterval از جدیدترین EstimatedRTT و DevRTT محاسبه مجدد می‌شود (به مقدار مبتنی بر فرمول بازنشانی می‌شود).</p>
+          <p class="note">عقب‌نشینی از غرق شدن شبکه با ارسال‌های مجدد در طول ازدحام جلوگیری می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳: تأثیر یک جهش در RTT</div>
+          <p><strong>داده شده:</strong> EstimatedRTT = ۵۰ ms، DevRTT = ۸ ms، Timeout = 50 + 32 = ۸۲ ms.</p>
+          <p><strong>شبکه دچار ازدحام می‌شود:</strong> SampleRTT به ۲۰۰ ms می‌پرد.</p>
+          <p>EstimatedRTT جدید = 0.875 × 50 + 0.125 × 200 = 43.75 + 25 = <span class="result">۶۸.۷۵ ms</span></p>
+          <p>DevRTT جدید = 0.75 × 8 + 0.25 × |200 - 68.75| = 6 + 32.81 = <span class="result">۳۸.۸۱ ms</span></p>
+          <p>Timeout جدید = 68.75 + 4 × 38.81 = 68.75 + 155.24 = <span class="result">۲۲۴ ms</span></p>
+          <p>timeout به طور چشمگیری افزایش می‌یابد تا تغییرپذیری جدید را در خود جای دهد. بدون DevRTT، timeout فقط ~۶۸.۷۵ + حاشیه کوچک می‌بود و باعث timeoutهای زودرس می‌شد.</p>
+          <p class="result">DevRTT از ارسال مجدد غیرضروری وقتی RTT ناگهان افزایش می‌یابد جلوگیری می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴: نقاط داده شکل ۳.۳۲ (UMass → France)</div>
+          <p>نمودار از کتاب درسی SampleRTT در مقابل EstimatedRTT را در طی ~۱۰۰ ثانیه برای یک اتصال TCP از gaia.cs.umass.edu به fantasia.eurecom.fr نشان می‌دهد.</p>
+          <table>
+            <tr><th>زمان (ثانیه)</th><th>SampleRTT (ms)</th><th>EstimatedRTT (ms)</th></tr>
+            <tr><td>۱</td><td>۱۸۰</td><td>۱۸۰.۰</td></tr>
+            <tr><td>۵</td><td>۲۲۰</td><td>۰.۸۷۵×۱۸۰ + ۰.۱۲۵×۲۲۰ = ۱۸۵.۰</td></tr>
+            <tr><td>۱۰</td><td>۱۶۰</td><td>۰.۸۷۵×۱۸۵ + ۰.۱۲۵×۱۶۰ = ۱۸۱.۹</td></tr>
+            <tr><td>۲۰</td><td>۲۵۰</td><td>۰.۸۷۵×۱۸۱.۹ + ۰.۱۲۵×۲۵۰ = ۱۹۰.۴</td></tr>
+            <tr><td>۴۰</td><td>۳۰۰</td><td>۰.۸۷۵×۱۹۰.۴ + ۰.۱۲۵×۳۰۰ = ۲۰۴.۱</td></tr>
+            <tr><td>۶۰</td><td>۱۵۰</td><td>۰.۸۷۵×۲۰۴.۱ + ۰.۱۲۵×۱۵۰ = ۱۹۷.۳</td></tr>
+            <tr><td>۸۰</td><td>۲۰۰</td><td>۰.۸۷۵×۱۹۷.۳ + ۰.۱۲۵×۲۰۰ = ۱۹۷.۶</td></tr>
+            <tr><td>۱۰۰</td><td>۱۷۰</td><td>۰.۸۷۵×۱۹۷.۶ + ۰.۱۲۵×۱۷۰ = ۱۹۴.۲</td></tr>
+          </table>
+          <p>EstimatedRTT منحنی ناهموار SampleRTT را هموار می‌کند و یک پایه پایدار برای محاسبه timeout فراهم می‌آورد.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

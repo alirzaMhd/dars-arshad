@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدیریت اتصال TCP - جامع</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>مدیریت اتصال TCP</h1>
+  <p class="subtitle">لایه انتقال — بخش ۳.۵.۶ | راهنمای کامل</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">دست‌دهی سه‌طرفه</button>
+      <button class="tab" onclick="showSection('tab2')">قطع اتصال</button>
+      <button class="tab" onclick="showSection('tab3')">ماشین حالت TCP</button>
+      <button class="tab" onclick="showSection('tab4')">SYN Flood &amp; پویش پورت</button>
+      <button class="tab" onclick="showSection('tab5')">مثال‌ها</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>دست‌دهی سه‌طرفه</h2>
+        <p>قبل از اینکه دو فرایند کاربردی بتوانند داده مبادله کنند، باید دست‌دهی کرده و پارامترها را تعیین کنند. کلاینت شروع می‌کند، سرور پاسخ می‌دهد و کلاینت تأیید می‌کند — در مجموع سه سگمنت.</p>
+
+        <div class="formula">
+          <div class="label">مرحله ۱ دست‌دهی: SYN</div>
+          <div class="expr">SYN=1, seq=client_isn</div>
+          <div class="desc">کلاینت یک شماره توالی اولیه تصادفی (client_isn) انتخاب می‌کند، بیت SYN را تنظیم کرده و به سرور می‌فرستد. بدون داده کاربردی.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">مرحله ۲ دست‌دهی: SYNACK</div>
+          <div class="expr">SYN=1, seq=server_isn, ack=client_isn+1</div>
+          <div class="desc">سرور بافرها را تخصیص می‌دهد، شماره توالی اولیه خود (server_isn) را انتخاب کرده و SYN کلاینت را تأیید می‌کند.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">مرحله ۳ دست‌دهی: ACK</div>
+          <div class="expr">SYN=0, seq=client_isn+1, ack=server_isn+1</div>
+          <div class="desc">کلاینت SYNACK سرور را تأیید می‌کند. بیت SYN روی ۰ تنظیم می‌شود. این سگمنت ممکن است داده کاربردی حمل کند. کلاینت همچنین بافرها و متغیرها را برای اتصال در این مرحله تخصیص می‌دهد.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">قیاس سنگ‌نورد و مهارکننده</div>
+          <p>یک سنگ‌نورد و مهارکننده از یک <strong>دست‌دهی سه‌طرفه</strong> مشابه TCP استفاده می‌کنند تا مطمئن شوند هر دو طرف قبل از شروع صعود آماده هستند. سنگ‌نورد آمادگی خود را علامت می‌دهد (SYN)، مهارکننده تأیید کرده و آمادگی خود را علامت می‌دهد (SYNACK)، و سنگ‌نورد تأیید می‌کند (ACK) قبل از شروع به صعود (انتقال داده).</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ویژگی‌های کلیدی</h3>
+            <p>• تمام‌دوطرفه: هر دو طرف می‌توانند همزمان ارسال کنند</p>
+            <p>• نقطه‌به‌نقطه: دقیقاً دو میزبان</p>
+            <p>• حالت اولیه‌سازی: بافرها، شماره‌های توالی، اندازه پنجره</p>
+            <p>• MSS در طول دست‌دهی مذاکره می‌شود</p>
+          </div>
+          <div class="card">
+            <h3>چرا سه‌طرفه؟</h3>
+            <p>• از SYN قدیمی اتصال قبلی جلوگیری می‌کند</p>
+            <p>• اطمینان از توافق دو طرف بر شماره‌های توالی اولیه</p>
+            <p>• دست‌دهی دوطرفه در برابر SYNهای تکراری آسیب‌پذیر است</p>
+            <p>• سه‌طرفه همگام‌سازی با حالت محدود فراهم می‌کند</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> بیت SYN فقط در دو مرحله اول روی ۱ تنظیم است. پس از برقراری اتصال (مرحله ۳ به بعد)، بیت SYN همیشه ۰ است. SYN را با سگمنت‌های حامل داده اشتباه نگیرید.
+        </div>
+
+        <div class="note">
+          <strong>جزئیات پروتکل:</strong> شماره‌های توالی اولیه (client_isn، server_isn) به صورت تصادفی برای جلوگیری از حملات امنیتی انتخاب می‌شوند. یک ISN قابل پیش‌بینی به مهاجمان اجازه می‌دهد سگمنت‌های TCP را جعل کنند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>قطع اتصال</h2>
+        <p>هر یک از نقاط پایانی می‌توانند اتصال TCP را ببندند. قطع اتصال چهارطرفه استاندارد از سگمنت‌های FIN و ACK برای آزادسازی منابع استفاده می‌کند.</p>
+
+        <div class="formula">
+          <div class="label">مرحله ۱ قطع اتصال: FIN کلاینت</div>
+          <div class="expr">FIN=1, seq=x</div>
+          <div class="desc">برنامه کلاینت close() را فراخوانی می‌کند و سگمنت FIN به سرور می‌فرستد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">مرحله ۲ قطع اتصال: ACK سرور</div>
+          <div class="expr">ACK, seq=y, ack=x+1</div>
+          <div class="desc">سرور FIN را تأیید می‌کند. اتصال نیمه‌بسته: سرور همچنان می‌تواند داده بفرستد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">مرحله ۳ قطع اتصال: FIN سرور</div>
+          <div class="expr">FIN=1, seq=y, ack=x+1</div>
+          <div class="desc">سرور ارسال داده خود را تمام کرده و FIN خود را می‌فرستد.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">مرحله ۴ قطع اتصال: ACK کلاینت</div>
+          <div class="expr">ACK, seq=x+1, ack=y+1</div>
+          <div class="desc">کلاینت FIN سرور را تأیید می‌کند. کلاینت وارد TIME_WAIT می‌شود (۳۰ ثانیه تا ۲ دقیقه) قبل از بسته شدن کامل.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>حالت نیمه‌بسته</h3>
+            <p>بعد از مرحله ۲، اتصال نیمه‌بسته است:</p>
+            <p>• کلاینت → سرور: بسته</p>
+            <p>• سرور → کلاینت: همچنان باز</p>
+            <p>• سرور می‌تواند ارسال داده را تمام کند</p>
+          </div>
+          <div class="card">
+            <h3>هدف TIME_WAIT</h3>
+            <p>• اطمینان از رسیدن ACK نهایی به سرور</p>
+            <p>• اجازه ارسال مجدد ACK نهایی در صورت گم شدن</p>
+            <p>• جلوگیری از سگمنت‌های تأخیری از اتصال جدید</p>
+            <p>• مدت: ۳۰ ثانیه، ۱ دقیقه، یا ۲ دقیقه (وابسته به سیستم‌عامل)</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> قطع اتصال اغلب "دست‌دهی چهارطرفه" نامیده می‌شود اما در واقع ۴ سگمنت است، نه ۴ مرحله در یک تبادل واحد. سرور می‌تواند FIN خود را همراه با داده خود بفرستد و مراحل ۲ و ۳ را در برخی پیاده‌سازی‌ها ترکیب کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>ماشین حالت TCP</h2>
+        <p>اتصالات TCP از میان حالت‌های مشخصی عبور می‌کنند. کلاینت و سرور توالی‌های حالت متفاوتی دارند.</p>
+
+        <h3>حالت‌های کلاینت</h3>
+        <div class="code">
+CLOSED → [send SYN] → SYN_SENT → [recv SYN+ACK, send ACK] → ESTABLISHED
+  → [send FIN] → FIN_WAIT_1 → [recv ACK] → FIN_WAIT_2 → [recv FIN, send ACK]
+  → TIME_WAIT → (timeout) → CLOSED
+        </div>
+
+        <h3>حالت‌های سرور</h3>
+        <div class="code">
+CLOSED → [create listen socket] → LISTEN → [recv SYN, send SYN+ACK] → SYN_RCVD
+  → [recv ACK] → ESTABLISHED → [recv FIN, send ACK] → CLOSE_WAIT
+  → [send FIN] → LAST_ACK → [recv ACK] → CLOSED
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>حالت‌های کلاینت</h3>
+            <p><span class="highlight">CLOSED</span> — بدون اتصال</p>
+            <p><span class="highlight">SYN_SENT</span> — SYN ارسال شد، منتظر SYNACK</p>
+            <p><span class="highlight">ESTABLISHED</span> — انتقال داده</p>
+            <p><span class="highlight">FIN_WAIT_1</span> — FIN ارسال شد، منتظر ACK</p>
+            <p><span class="highlight">FIN_WAIT_2</span> — ACK دریافت شد، منتظر FIN</p>
+            <p><span class="highlight">TIME_WAIT</span> — منتظر سگمنت‌های تأخیری</p>
+          </div>
+          <div class="card">
+            <h3>حالت‌های سرور</h3>
+            <p><span class="highlight">CLOSED</span> — بدون اتصال</p>
+            <p><span class="highlight">LISTEN</span> — منتظر SYN</p>
+            <p><span class="highlight">SYN_RCVD</span> — SYN دریافت شد، SYNACK ارسال شد</p>
+            <p><span class="highlight">ESTABLISHED</span> — انتقال داده</p>
+            <p><span class="highlight">CLOSE_WAIT</span> — FIN دریافت شد، منتظر بسته شدن</p>
+            <p><span class="highlight">LAST_ACK</span> — FIN ارسال شد، منتظر ACK</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>اشتباه رایج:</strong> یک سرور هرگز وارد FIN_WAIT_1 یا FIN_WAIT_2 نمی‌شود. این‌ها منحصراً حالت‌های کلاینت هستند. مسیر قطع اتصال سرور به جای آن از CLOSE_WAIT و LAST_ACK عبور می‌کند.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>حمله SYN Flood &amp; پویش پورت</h2>
+
+        <h3>حمله SYN Flood</h3>
+        <p>مهاجمان سگمنت‌های SYN زیادی را بدون تکمیل دست‌دهی می‌فرستند. هر SYN باعث می‌شود سرور <strong>بافرها و متغیرها</strong> را برای یک اتصال نیمه‌باز تخصیص دهد و سپس یک SYNACK بفرستد. سرور منتظر ACK کلاینت برای تکمیل مرحله سوم دست‌دهی سه‌طرفه می‌ماند، اما هیچ‌گاه نمی‌رسد. نهایتاً (اغلب بعد از <strong>~۱ دقیقه</strong>)، سرور اتصال نیمه‌باز را خاتمه می‌دهد. با طغیان SYNهای سریع، مهاجم منابع سرور را تخلیه می‌کند — یک حمله کلاسیک رد سرویس (DoS).</p>
+
+        <div class="formula">
+          <div class="label">دفاع SYN Cookie</div>
+          <div class="expr">cookie = hash(src_IP, src_port, dst_IP, dst_port, secret)</div>
+          <div class="desc">سرور از cookie به عنوان شماره توالی اولیه به جای تخصیص حالت استفاده می‌کند. فقط زمانی که ACK معتبر بازگردد منابع را تخصیص می‌دهد.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>SYN Flood</h3>
+            <p>• مهاجم حجم عظیمی SYN می‌فرستد</p>
+            <p>• سرور به ازای هر SYN بافر تخصیص می‌دهد (قبل از تکمیل دست‌دهی!)</p>
+            <p>• اتصالات نیمه‌باز حافظه را تخلیه می‌کنند</p>
+            <p>• کلاینت‌های قانونی از سرویس محروم می‌شوند (DoS)</p>
+            <p>• اولین مستندسازی: CERT SYN 1996</p>
+            <p>• دفاع: SYN cookies [RFC 4987]</p>
+          </div>
+          <div class="card">
+            <h3>SYN Cookies</h3>
+            <p>• هیچ حالتی در دریافت SYN تخصیص نمی‌یابد</p>
+            <p>• ISN = hash(connection_id, secret)</p>
+            <p>• ACK معتبر شامل cookie + 1 است</p>
+            <p>• سرور hash را برای تأیید دوباره محاسبه می‌کند</p>
+            <p>• در تمام سیستم‌عامل‌های اصلی مستقر شده است</p>
+          </div>
+        </div>
+
+        <h3>سگمنت RST — رد سگمنت‌های ناخواسته</h3>
+        <p>چه اتفاقی می‌افتد وقتی یک میزبان یک سگمنت TCP دریافت می‌کند که شماره پورت یا IP مبدأ آن با هیچ سوکت فعالی مطابقت ندارد؟ به عنوان مثال، اگر یک میزبان یک بسته TCP SYN با پورت مقصد ۸۰ دریافت کند اما سرور وب در حال اجرا نباشد، میزبان یک <strong>سگمنت بازنشانی</strong> با <span class="highlight">پرچم RST</span> تنظیم شده روی ۱ می‌فرستد. این به منبع می‌گوید: "من برای آن سگمنت سوکتی ندارم. لطفاً دوباره ارسال نکن."</p>
+
+        <h3>پویش پورت Nmap</h3>
+        <p>nmap سگمنت‌های SYN را به پورت‌های هدف می‌فرستد و نتایج را طبقه‌بندی می‌کند:</p>
+
+        <table>
+          <tr>
+            <th>دریافتی</th>
+            <th>تفسیر</th>
+            <th>معنی</th>
+          </tr>
+          <tr>
+            <td>SYNACK</td>
+            <td>پورت <span class="highlight">باز</span> است</td>
+            <td>برنامه‌ای روی آن پورت در حال اجراست</td>
+          </tr>
+          <tr>
+            <td>RST</td>
+            <td>پورت <span class="dim">بسته</span> است</td>
+            <td>برنامه‌ای روی آن پورت نیست، اما فایروال مسدود نمی‌کند</td>
+          </tr>
+          <tr>
+            <td>هیچ</td>
+            <td>پورت <span style="color:#ff4444;">مسدود</span> است</td>
+            <td>فایروال سگمنت SYN را رها کرده است</td>
+          </tr>
+        </table>
+
+        <p>nmap همچنین می‌تواند پورت‌های <strong>UDP</strong> باز را پویش کند، <strong>فایروال‌ها و تنظیمات آن‌ها</strong> را بررسی کند، و حتی <strong>نسخه‌های سیستم‌عامل و برنامه</strong> را با دستکاری سگمنت‌های مدیریت اتصال TCP تشخیص دهد. به صورت رایگان در <strong>nmap.org</strong> در دسترس است.</p>
+
+        <div class="warning">
+          <strong>هشدار امنیتی:</strong> nmap یک ابزار دو‌منظوره است. مدیران سیستم از آن برای ممیزی شبکه استفاده می‌کنند، اما مهاجمان از آن برای شناسایی سرویس‌های آسیب‌پذیر استفاده می‌کنند. همیشه قبل از پویش یک میزبان مطمئن شوید مجوز دارید.
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>حالت‌های پاتولوژیک و مثال‌های عملی</h2>
+
+        <h3>باز شدن همزمان / بسته شدن همزمان</h3>
+        <p>در سناریوهای خاص، هر دو طرف ممکن است همزمان تلاش به باز یا بسته کردن کنند. به عنوان مثال، اگر دو میزبان همزمان SYN برای یکدیگر بفرستند، هر کدام یک SYN دریافت کرده و SYNACK می‌فرستند و وارد حالت ESTABLISHED می‌شوند. به طور مشابه، هر دو می‌توانند همزمان FIN بفرستند. این موارد پاتولوژیک توسط ماشین حالت TCP به درستی مدیریت می‌شوند اما به ندرت در عمل رخ می‌دهند [Stevens 1994].</p>
+
+        <div class="example">
+          <div class="title">مثال ۱ — مرور گام‌به‌گام دست‌دهی سه‌طرفه</div>
+          <p><strong>تنظیمات:</strong> کلاینت با ISN=1000، سرور با ISN=5000.</p>
+          <p><strong>مرحله ۱ (کلاینت→سرور):</strong> SYN=1, seq=1000</p>
+          <p><strong>مرحله ۲ (سرور→کلاینت):</strong> SYN=1, seq=5000, ack=1001</p>
+          <p><strong>مرحله ۳ (کلاینت→سرور):</strong> SYN=0, seq=1001, ack=5001</p>
+          <p><strong>سوال:</strong> چرا کلاینت در مرحله ۳ از seq=1001 استفاده می‌کند نه ۱۰۰۰؟</p>
+          <p><span class="result">پاسخ:</span> سگمنت SYN خود یک بایت از فضای شماره توالی را مصرف می‌کند، حتی اگر داده‌ای حمل نکند. بایت بعدی کلاینت بعد از SYN seq=1001 است. این تحویل قابل اطمینان خود SYN را تضمین می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۲ — قطع اتصال با ACK گم‌شده</div>
+          <p><strong>سناریو:</strong> در حین قطع اتصال، ACK نهایی کلاینت (مرحله ۴) گم می‌شود.</p>
+          <p><strong>توالی:</strong></p>
+          <p>۱. کلاینت FIN (seq=2000) → سرور می‌فرستد</p>
+          <p>۲. سرور ACK (ack=2001) → کلاینت</p>
+          <p>۳. سرور FIN (seq=7000, ack=2001) → کلاینت</p>
+          <p>۴. کلاینت ACK (ack=7001) → <span style="color:#ff4444;">(گم شده)</span></p>
+          <p><strong>بعد چه اتفاقی می‌افتد؟</strong> تایمر FIN سرور منقضی می‌شود، سرور FIN را دوباره ارسال می‌کند. کلاینت که هنوز در TIME_WAIT است، دوباره ACK می‌فرستد. پس از ACK موفق، هر دو می‌بندند.</p>
+          <p><span class="result">نکته کلیدی:</span> TIME_WAIT به طور خاص برای مدیریت این حالت وجود دارد. کلاینت ۳۰ ثانیه تا ۲ دقیقه قبل از بستن کامل صبر می‌کند.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۳ — محاسبه SYN Cookie</div>
+          <p><strong>تنظیمات:</strong> سرور SYN از IP=192.168.1.10، پورت=34567، پورت مقصد=80 دریافت می‌کند. Secret=42.</p>
+          <p><strong>محاسبه cookie:</strong></p>
+          <div class="code">cookie = hash(192.168.1.10, 34567, server_IP, 80, 42)
+     = 0x8A3F1B2C  (مثال ساده شده)</div>
+          <p>سرور SYNACK با seq=0x8A3F1B2C می‌فرستد. هیچ حالتی تخصیص نمی‌یابد.</p>
+          <p><strong>کلاینت پاسخ می‌دهد:</strong> ACK با ack=0x8A3F1B2C+1 = 0x8A3F1B2D</p>
+          <p><strong>سرور تأیید می‌کند:</strong> hash(192.168.1.10, 34567, server_IP, 80, 42) = 0x8A3F1B2C را دوباره محاسبه می‌کند. از آنجا که 0x8A3F1B2C+1 = مقدار ack است، ACK معتبر است. سرور حالت کامل اتصال را تخصیص می‌دهد.</p>
+          <p><span class="result">نتیجه:</span> کلاینت قانونی متصل شد. SYN جعلی مهاجم هیچ منبع سروری مصرف نکرد.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">مثال ۴ — نتایج پویش Nmap</div>
+          <p><strong>هدف:</strong> میزبان 10.0.0.1، پویش پورت‌های ۸۰، ۴۴۳، ۸۰۸۰، ۲۲.</p>
+          <table>
+            <tr><th>پورت</th><th>پاسخ</th><th>وضعیت</th><th>تفسیر</th></tr>
+            <tr><td>۸۰</td><td>SYNACK</td><td><span class="highlight">باز</span></td><td>سرور وب در حال اجرا</td></tr>
+            <tr><td>۴۴۳</td><td>SYNACK</td><td><span class="highlight">باز</span></td><td>سرور HTTPS در حال اجرا</td></tr>
+            <tr><td>۸۰۸۰</td><td>RST</td><td><span class="dim">بسته</span></td><td>برنامه‌ای روی پورت نیست، اما قابل دسترسی است</td></tr>
+            <tr><td>۲۲</td><td>هیچ</td><td><span style="color:#ff4444;">مسدود</span></td><td>فایروال پورت SSH را مسدود کرده است</td></tr>
+          </table>
+          <p><span class="result">تحلیل:</span> دو سرویس وب در معرض (پورت‌های ۸۰، ۴۴۳)، یک پورت بسته (۸۰۸۰)، و SSH عمداً توسط فایروال مسدود شده است (پورت ۲۲). قانون فایروال روی پورت ۲۲ از دسترسی SSH قانونی و مخرب جلوگیری می‌کند.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

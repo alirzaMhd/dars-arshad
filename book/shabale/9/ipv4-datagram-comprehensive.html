@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPv4 Datagram Format - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 4px solid #ff6600; padding: 12px; margin: 12px 0; border-radius: 6px; color: #ffcc88; font-size: 0.9em; }
+    .warning::before { content: "! WARNING: "; color: #ff6600; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.82em; color: #00ccff; overflow-x: auto; border-left: 3px solid #00ccff; margin: 10px 0; line-height: 1.5; }
+    .refcard { background: linear-gradient(135deg, #0d1a0d, #001a0d); border: 2px solid #00ff8844; border-radius: 10px; padding: 15px; margin: 15px 0; }
+    .refcard h3 { color: #00ff88; margin-bottom: 10px; text-align: center; }
+    .refcard table { margin: 5px 0; }
+    .refcard td:first-child { color: #ffcc00; text-align: left; font-weight: bold; }
+    .refcard td:last-child { color: #e0e0e0; text-align: left; }
+    .refcard td { border: none; padding: 4px 8px; background: transparent; }
+    .diagram { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center; border: 1px solid #333; overflow-x: auto; }
+    .diagram pre { color: #00ff88; font-size: 0.7em; line-height: 1.3; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
+    .tag-green { background: #00331a; color: #00ff88; border: 1px solid #00ff8844; }
+    .tag-orange { background: #331a00; color: #ff9944; border: 1px solid #ff994444; }
+    .tag-blue { background: #001a33; color: #00ccff; border: 1px solid #00ccff44; }
+    @media (max-width: 768px) { .tabs { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <h1>IPv4 Datagram Format</h1>
+  <p class="subtitle">Computer Networking: A Top-Down Approach — Kurose &amp; Ross, Ch.4</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('header-fields')">Header Fields</button>
+      <button class="tab" onclick="showSection('fragmentation')">Fragmentation</button>
+      <button class="tab" onclick="showSection('checksum-ttl')">Checksum &amp; TTL</button>
+      <button class="tab" onclick="showSection('encapsulation')">Encapsulation</button>
+    </div>
+
+    <!-- TAB 1: Header Fields -->
+    <div class="content active" id="header-fields">
+      <div class="section">
+        <h2>IPv4 Datagram Header Structure</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">The IPv4 datagram is the network-layer packet used by the Internet Protocol. The standard header is <strong style="color:#00ff88;">20 bytes</strong> (without options). Every field has a specific role in routing, fragmentation, and error detection.</p>
+
+        <div class="diagram">
+          <pre>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|Version|  HLEN |    TOS       |        Total Length (bytes)     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|         Identification        |Flags|   Fragment Offset        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   TTL  |  Protocol  |        Header Checksum                   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       Source IP Address                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                    Destination IP Address                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     Options (if any, variable)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              Data (payload)                     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</pre>
+        </div>
+
+        <div class="formula">
+          <div class="label">Standard Header Size (no options):</div>
+          <div class="expr">Header = 20 bytes</div>
+          <div class="desc">The IP datagram header has a fixed 20-byte portion when no options are present</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Datagram Size:</div>
+          <div class="expr">Max Size = 2<sup>16</sup> - 1 = 65,535 bytes</div>
+          <div class="desc">The 16-bit Total Length field limits datagrams to 65,535 bytes total (header + payload)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Header + TCP Overhead:</div>
+          <div class="expr">IP Header (20) + TCP Header (20) = 40 bytes</div>
+          <div class="desc">Every TCP segment incurs 40 bytes of network+transport layer overhead</div>
+        </div>
+
+        <h3>Header Fields Reference</h3>
+        <table>
+          <tr><th>Field</th><th>Bits</th><th>Purpose</th><th>Notes</th></tr>
+          <tr><td>Version</td><td>4</td><td>IP protocol version</td><td>IPv4 = 4</td></tr>
+          <tr><td>Header Length (HLEN)</td><td>4</td><td>Where payload begins</td><td>In 32-bit words; min=5 (20B)</td></tr>
+          <tr><td>Type of Service (TOS)</td><td>8</td><td>Differentiate traffic types</td><td>Includes ECN bits</td></tr>
+          <tr><td>Total Length</td><td>16</td><td>Total datagram bytes</td><td>Max 65,535</td></tr>
+          <tr><td>Identification</td><td>16</td><td>Fragment grouping</td><td>Same ID = same original datagram</td></tr>
+          <tr><td>Flags</td><td>3</td><td>Fragmentation control</td><td>DF=1 (don't fragment), MF=1 (more fragments)</td></tr>
+          <tr><td>Fragment Offset</td><td>13</td><td>Position in original</td><td>In 8-byte units</td></tr>
+          <tr><td>Time-to-Live (TTL)</td><td>8</td><td>Limit datagram lifetime</td><td>Decremented by each router; dropped at 0</td></tr>
+          <tr><td>Protocol</td><td>8</td><td>Upper-layer protocol</td><td>TCP=6, UDP=17, ICMP=1</td></tr>
+          <tr><td>Header Checksum</td><td>16</td><td>Error detection on header</td><td>Recomputed at each router</td></tr>
+          <tr><td>Source IP</td><td>32</td><td>Sender address</td><td>Dotted-decimal notation</td></tr>
+          <tr><td>Destination IP</td><td>32</td><td>Receiver address</td><td>Dotted-decimal notation</td></tr>
+          <tr><td>Options</td><td>variable</td><td>Extended header features</td><td>Rarely used; removed in IPv6</td></tr>
+          <tr><td>Data (Payload)</td><td>variable</td><td>Upper-layer segment</td><td>Typically TCP or UDP segment</td></tr>
+        </table>
+
+        <div class="warning">
+          The HLEN field counts in 32-bit words, NOT bytes. A value of 5 means 5 x 4 = 20 bytes. If HLEN=7, the header is 28 bytes long. Always multiply HLEN by 4 to get the byte count.
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Calculating Payload Size</div>
+          <p>An IPv4 datagram has Total Length = 1200 bytes and HLEN = 5. What is the payload size?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Step 1:</strong> HLEN = 5 means header = 5 &times; 4 = 20 bytes<br>
+            <strong>Step 2:</strong> Payload = Total Length - Header = 1200 - 20 = <span class="result">1180 bytes</span>
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Protocol Field Interpretation</div>
+          <p>A router receives an IPv4 datagram with Protocol field = 6. What transport-layer protocol should receive the payload at the destination?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            Protocol number 6 corresponds to <span class="result">TCP</span>. The destination host's IP layer will pass the datagram payload to the TCP module for processing. If Protocol = 17, it would be passed to UDP.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: TTL and Header Length</div>
+          <p>A captured datagram has the first 20 hex bytes: <code style="color:#00ccff;">45 00 00 3C 1C 46 40 00 40 06 B1 E6 C0 A8 00 01 C0 A8 00 02</code>. Determine the version, header length, and TTL.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Byte 1 (0x45):</strong><br>
+            &nbsp;&nbsp;High nibble = 4 &rarr; <span class="result">IPv4</span><br>
+            &nbsp;&nbsp;Low nibble = 5 &rarr; header = 5 &times; 4 = <span class="result">20 bytes</span><br>
+            <strong>Byte 9 (0x40):</strong> TTL = <span class="result">64</span> (decimal)<br>
+            <strong>Byte 10 (0x06):</strong> Protocol = <span class="result">6 (TCP)</span>
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <table>
+            <tr><td>IPv4 Header Size</td><td>20 bytes (no options)</td></tr>
+            <tr><td>Max Datagram</td><td>65,535 bytes</td></tr>
+            <tr><td>Max Payload</td><td>65,515 bytes (with 20B header)</td></tr>
+            <tr><td>Typical MTU</td><td>1500 bytes (Ethernet)</td></tr>
+            <tr><td>TCP = 6, UDP = 17</td><td>Protocol numbers</td></tr>
+            <tr><td>TTL Max</td><td>255</td></tr>
+            <tr><td>HLEN unit</td><td>32-bit words</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Fragmentation -->
+    <div class="content" id="fragmentation">
+      <div class="section">
+        <h2>IP Fragmentation</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">When an IP datagram is larger than the Maximum Transmission Unit (MTU) of the outgoing link, the router fragments it into smaller pieces. Fragments are reassembled at the <strong style="color:#00ff88;">destination host</strong>, not at intermediate routers.</p>
+
+        <div class="formula">
+          <div class="label">Fragment Offset Encoding:</div>
+          <div class="expr">Offset (bytes) = Fragment Offset field value &times; 8</div>
+          <div class="desc">The 13-bit offset field stores the position divided by 8 (since offset must be on 8-byte boundaries)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Number of Fragments:</div>
+          <div class="expr">N = ceil( (Payload Length) / (MTU - Header Length) )</div>
+          <div class="desc">Each fragment carries its own IP header (20 bytes typically)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Data per Fragment:</div>
+          <div class="expr">Max Data per Fragment = (MTU - Header) rounded down to nearest multiple of 8</div>
+          <div class="desc">Fragment payloads must be multiples of 8 bytes (except the last fragment)</div>
+        </div>
+
+        <h3>Fragmentation Fields</h3>
+        <table>
+          <tr><th>Field</th><th>Bits</th><th>Role in Fragmentation</th></tr>
+          <tr><td>Identification</td><td>16</td><td>All fragments of the same datagram share the same ID</td></tr>
+          <tr><td>Flag: Reserved (R)</td><td>1</td><td>Always 0</td></tr>
+          <tr><td>Flag: Don't Fragment (DF)</td><td>1</td><td>If set=1, router drops datagram instead of fragmenting</td></tr>
+          <tr><td>Flag: More Fragments (MF)</td><td>1</td><td>MF=1 means more fragments follow; MF=0 means last fragment</td></tr>
+          <tr><td>Fragment Offset</td><td>13</td><td>Position of this fragment's data in the original datagram (in 8-byte units)</td></tr>
+        </table>
+
+        <div class="warning">
+          Fragment payloads (except the last) MUST be multiples of 8 bytes. If your computed payload is not a multiple of 8, truncate it down to the nearest multiple. The last fragment can be any size.
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Basic Fragmentation</div>
+          <p>A 4000-byte IP datagram (20-byte header, 3980-byte payload) must traverse a link with MTU = 1500 bytes. How many fragments, and what are their offsets?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Max data per fragment:</strong> floor((1500 - 20) / 8) &times; 8 = floor(1480/8) &times; 8 = 185 &times; 8 = <span class="result">1480 bytes</span><br>
+            <strong>Fragment 1:</strong> offset = 0, data = 1480 bytes, MF=1<br>
+            <strong>Fragment 2:</strong> offset = 185 &times; 8 = 1480, data = 1480 bytes, MF=1<br>
+            <strong>Fragment 3:</strong> offset = 370 &times; 8 = 2960, data = 3980 - 2960 = <span class="result">1020 bytes</span>, MF=0<br>
+            3 fragments total. All use Identification = same value.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: DF Flag Set</div>
+          <p>A host sends a datagram of 2000 bytes (including header) with DF=1 over an Ethernet link (MTU=1500). What happens?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            The datagram (2000 bytes) exceeds the MTU (1500 bytes). Since DF=1 (Don't Fragment), the router <span class="result">drops the datagram</span> and sends an ICMP "Fragmentation Needed" error message back to the source.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Reassembling Offsets</div>
+          <p>Three fragments arrive at the destination with the following offset and MF values: (offset=0, MF=1), (offset=185, MF=1), (offset=370, MF=0). What is the total reassembled payload size?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Fragment 1:</strong> bytes 0-1479 (1480 bytes)<br>
+            <strong>Fragment 2:</strong> bytes 1480-2959 (1480 bytes)<br>
+            <strong>Fragment 3:</strong> starts at 370 &times; 8 = 2960. Since MF=0, this is the last.<br>
+            To find Fragment 3 payload size, we need the Total Length field. If Total Length = 1040, then payload = 1040 - 20 = 1020 bytes.<br>
+            Total reassembled payload = 1480 + 1480 + 1020 = <span class="result">3980 bytes</span>
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <table>
+            <tr><td>Ethernet MTU</td><td>1500 bytes</td></tr>
+            <tr><td>Min Fragment Data</td><td>8 bytes (except last)</td></tr>
+            <tr><td>Offset Unit</td><td>8 bytes</td></tr>
+            <tr><td>DF=1 means ...</td><td>Don't fragment; drop if too big</td></tr>
+            <tr><td>MF=1 means ...</td><td>More fragments follow</td></tr>
+            <tr><td>Reassembly location</td><td>Destination host only</td></tr>
+            <tr><td>ID field role</td><td>Groups fragments together</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Checksum & TTL -->
+    <div class="content" id="checksum-ttl">
+      <div class="section">
+        <h2>Header Checksum</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">The IPv4 header checksum protects only the <strong style="color:#00ff88;">header</strong> (not the payload). It must be recomputed at every hop because the TTL field changes. The algorithm is the Internet checksum: 1s complement sum of all 16-bit words in the header.</p>
+
+        <div class="formula">
+          <div class="label">Internet Checksum Algorithm:</div>
+          <div class="expr">Checksum = ~( &sum; (header 16-bit words in 1s complement) )</div>
+          <div class="desc">The checksum is the 1s complement of the 1s complement sum of all 16-bit words in the header (with the checksum field itself treated as zero during computation)</div>
+        </div>
+
+        <h3>Checksum Computation Pseudocode</h3>
+        <div class="code">
+// Input: array of 16-bit words representing IP header (checksum field = 0)
+// Output: 16-bit Internet checksum
+
+function computeInternetChecksum(words[]):
+    sum = 0
+    for each word in words:
+        sum = sum + word          // ordinary binary addition
+        if sum &gt; 0xFFFF:           // carry-out detected
+            sum = (sum &amp; 0xFFFF) + 1  // wrap-around (end-around carry)
+    checksum = ~sum &amp; 0xFFFF       // ones' complement
+    return checksum
+
+// Verification at receiver:
+// Compute checksum over entire header INCLUDING checksum field
+// If result == 0, no error detected
+        </div>
+
+        <div class="warning">
+          The IP checksum only covers the HEADER, not the payload. TCP and UDP have their own checksums covering the entire segment. The IP checksum must be recomputed at every router because TTL changes. This is a significant processing cost — which is why IPv6 removed the header checksum entirely.
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Simple Checksum Calculation</div>
+          <p>Given three 16-bit header words: 0x4500, 0x003C, 0x1C46. Compute the checksum.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Sum:</strong> 0x4500 + 0x003C = 0x453C<br>
+            <strong>Add next:</strong> 0x453C + 0x1C46 = 0x6182 (no carry)<br>
+            <strong>1s complement:</strong> ~0x6182 = <span class="result">0x9E7D</span><br>
+            (For a full header, all 10 words of the 20-byte header would be summed)
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: End-Around Carry</div>
+          <p>Sum two 16-bit words: 0xFFFF + 0x0001.</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>Ordinary sum:</strong> 0xFFFF + 0x0001 = <span class="result">0x10000</span> (this is 17 bits)<br>
+            <strong>End-around carry:</strong> 0x0000 + 1 = <span class="result">0x0001</span><br>
+            This is the 1s complement sum. The 1s complement (~0x0001) = <span class="result">0xFFFE</span> would be the stored checksum.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Verification at Receiver</div>
+          <p>At the destination, the full header (including checksum field) is processed. The computed 1s complement sum of all words = 0xFFFF. What does this mean?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            If the full header sum (including checksum) = 0xFFFF, then after taking 1s complement we get ~0xFFFF = 0x0000. A result of <span class="result">0 indicates no errors detected</span>. Any non-zero result means a bit error was detected, and the datagram is typically discarded.
+          </p>
+        </div>
+
+        <div class="section" style="margin-top:20px;">
+          <h2>Time-to-Live (TTL) Field</h2>
+          <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">The 8-bit TTL field prevents datagrams from looping forever in the network. Each router decrements TTL by 1. When TTL reaches 0, the router drops the datagram and sends an ICMP Time Exceeded message to the source.</p>
+
+          <div class="formula">
+            <div class="label">TTL Behavior:</div>
+            <div class="expr">TTL<sub>new</sub> = TTL<sub>old</sub> - 1 &nbsp; (if TTL<sub>old</sub> &gt; 0 &rarr; forward; if TTL<sub>old</sub> = 0 &rarr; drop)</div>
+            <div class="desc">Decremented exactly once per router hop</div>
+          </div>
+
+          <div class="warning">
+            Some operating systems set initial TTL to 64 (Linux), 128 (Windows), or 255 (Solaris). When analyzing network traces, the initial TTL minus the current TTL equals the number of router hops traversed.
+          </div>
+
+          <h3>Worked Examples</h3>
+
+          <div class="example">
+            <div class="title">Example 1: Hop Count from TTL</div>
+            <p>A Linux host sends a packet with initial TTL=64. The packet arrives at the destination with TTL=51. How many routers did it traverse?</p>
+            <p style="color:#aaa;margin:5px 0;">
+              Hops = Initial TTL - Arrival TTL = 64 - 51 = <span class="result">13 routers</span>
+            </p>
+          </div>
+
+          <div class="example">
+            <div class="title">Example 2: TTL Expiration</div>
+            <p>A datagram with TTL=1 arrives at Router A. After decrement, what happens?</p>
+            <p style="color:#aaa;margin:5px 0;">
+              Router A decrements TTL from 1 to <span class="result">0</span>. The router <span class="result">drops the datagram</span> and sends an ICMP "Time Exceeded" (Type 11) message back to the source IP address.
+            </p>
+          </div>
+
+          <div class="example">
+            <div class="title">Example 3: Traceroute Mechanism</div>
+            <p>Traceroute sends packets with TTL=1, then TTL=2, then TTL=3, etc. What happens at each step?</p>
+            <p style="color:#aaa;margin:5px 0;">
+              <strong>TTL=1:</strong> First router decrements to 0, drops it, sends ICMP Time Exceeded. Source records RTT and Router A's IP.<br>
+              <strong>TTL=2:</strong> First router forwards (TTL 2&rarr;1), second router decrements to 0, drops, sends ICMP. Source records Router B's IP.<br>
+              <strong>TTL=N:</strong> Eventually reaches destination. Destination sends ICMP Port Unreachable (or the application response). Source now knows the <span class="result">entire path and per-hop RTTs</span>.
+            </p>
+          </div>
+
+          <div class="refcard">
+            <h3>Quick Reference Card</h3>
+            <table>
+              <tr><td>Checksum covers</td><td>IP header only (20 bytes typical)</td></tr>
+              <tr><td>Checksum algorithm</td><td>1s complement sum of 16-bit words</td></tr>
+              <tr><td>Recomputed at</td><td>Every router (TTL changes)</td></tr>
+              <tr><td>Verification result</td><td>0 = no error detected</td></tr>
+              <tr><td>TTL max value</td><td>255</td></tr>
+              <tr><td>TTL common starts</td><td>64 (Linux), 128 (Windows), 255 (Solaris)</td></tr>
+              <tr><td>TTL purpose</td><td>Prevent infinite loops</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Encapsulation -->
+    <div class="content" id="encapsulation">
+      <div class="section">
+        <h2>Encapsulation in IPv4</h2>
+        <p style="margin-bottom:12px;color:#aaa;font-size:0.9em;">The IP datagram's payload field typically carries a transport-layer segment (TCP or UDP). The 8-bit Protocol field tells the destination host which upper-layer protocol should receive the de-encapsulated data.</p>
+
+        <div class="formula">
+          <div class="label">Protocol Number Mapping:</div>
+          <div class="expr">Protocol Number = 6 &rarr; TCP &nbsp;|&nbsp; Protocol Number = 17 &rarr; UDP</div>
+          <div class="desc">The protocol number in IP plays a role analogous to port numbers in transport layer — it binds the network layer to the transport layer above it</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">IPv4 + TCP Overhead Ratio:</div>
+          <div class="expr">Overhead % = 40 / (40 + Application Data) &times; 100%</div>
+          <div class="desc">For small application messages (e.g., 40 bytes), overhead = 40/(40+40) = 50%</div>
+        </div>
+
+        <h3>IPv4 vs IPv6 Header Comparison</h3>
+        <table>
+          <tr><th>Field</th><th>IPv4</th><th>IPv6</th><th>Notes</th></tr>
+          <tr><td>Version</td><td>4 bits (value = 4)</td><td>4 bits (value = 6)</td><td>Same field, different value</td></tr>
+          <tr><td>Header Length</td><td>4 bits</td><td>Removed</td><td>IPv6 has fixed 40-byte header</td></tr>
+          <tr><td>TOS / Traffic Class</td><td>TOS (8 bits)</td><td>Traffic Class (8 bits)</td><td>Similar function</td></tr>
+          <tr><td>Total Length / Payload Length</td><td>Total Length (16 bits)</td><td>Payload Length (16 bits)</td><td>IPv6 excludes header length</td></tr>
+          <tr><td>Identification</td><td>16 bits</td><td>Removed</td><td>IPv6 does not fragment at routers</td></tr>
+          <tr><td>Flags</td><td>3 bits</td><td>Removed</td><td>—</td></tr>
+          <tr><td>Fragment Offset</td><td>13 bits</td><td>Removed</td><td>—</td></tr>
+          <tr><td>TTL / Hop Limit</td><td>TTL (8 bits)</td><td>Hop Limit (8 bits)</td><td>Same function, different name</td></tr>
+          <tr><td>Protocol / Next Header</td><td>Protocol (8 bits)</td><td>Next Header (8 bits)</td><td>Same values, extended with extension headers</td></tr>
+          <tr><td>Header Checksum</td><td>16 bits</td><td>Removed</td><td>Relies on link-layer + transport-layer checksums</td></tr>
+          <tr><td>Source Address</td><td>32 bits</td><td>128 bits</td><td>Major expansion</td></tr>
+          <tr><td>Destination Address</td><td>32 bits</td><td>128 bits</td><td>Major expansion</td></tr>
+          <tr><td>Options</td><td>Variable</td><td>Extension Headers</td><td>Separate optional headers chained via Next Header</td></tr>
+          <tr><td>Flow Label</td><td>Not present</td><td>20 bits</td><td>New in IPv6 for flow identification</td></tr>
+        </table>
+
+        <div class="warning">
+          Protocol number (IP header) and port number (TCP/UDP header) serve different purposes. Protocol number identifies which transport protocol is used (TCP=6, UDP=17). Port number identifies which application process (e.g., HTTP=80, DNS=53). They operate at different layers — do not confuse them!
+        </div>
+
+        <h3>Protocol Number vs Port Number — The Analogy</h3>
+        <table>
+          <tr><th>Layer</th><th>Field</th><th>Location</th><th>Purpose</th><th>Example</th></tr>
+          <tr><td>Network</td><td>Protocol #</td><td>IP header</td><td>Binds network &rarr; transport</td><td>6 &rarr; TCP</td></tr>
+          <tr><td>Transport</td><td>Port #</td><td>TCP/UDP header</td><td>Binds transport &rarr; application</td><td>80 &rarr; HTTP</td></tr>
+          <tr><td>Link</td><td>EtherType</td><td>Ethernet frame</td><td>Binds link &rarr; network</td><td>0x0800 &rarr; IP</td></tr>
+        </table>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Overhead Calculation</div>
+          <p>An application generates 100 bytes of data every 10ms, encapsulated in TCP then IP. What is the percentage of header overhead?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>IP header:</strong> 20 bytes<br>
+            <strong>TCP header:</strong> 20 bytes<br>
+            <strong>Total header:</strong> 40 bytes<br>
+            <strong>Total datagram:</strong> 40 + 100 = 140 bytes<br>
+            <strong>Overhead %:</strong> 40/140 &times; 100 = <span class="result">28.57%</span>
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Identifying the Protocol</div>
+          <p>A captured IP datagram shows header byte 10 (1-indexed) = 0x11. What transport protocol is being carried?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            The Protocol field is at byte 10 in the IP header. 0x11 = 17 decimal. Protocol number 17 = <span class="result">UDP</span>. So the payload is a UDP segment.
+          </p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: IPv6 Transition — Tunneling</div>
+          <p>Two IPv6 routers communicate through an IPv4-only network. An IPv6 datagram (40B header + 100B payload) must be tunneled. What is the total size of the IPv4 datagram carrying it?</p>
+          <p style="color:#aaa;margin:5px 0;">
+            <strong>IPv4 header:</strong> 20 bytes<br>
+            <strong>IPv4 payload (the entire IPv6 datagram):</strong> 40 + 100 = 140 bytes<br>
+            <strong>Total IPv4 datagram:</strong> 20 + 140 = <span class="result">160 bytes</span><br>
+            The IPv4 Protocol field would be 41, indicating the payload is an IPv6 datagram.
+          </p>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference Card</h3>
+          <table>
+            <tr><td>Encapsulation stack</td><td>Application &rarr; TCP/UDP &rarr; IP &rarr; Link</td></tr>
+            <tr><td>Protocol # TCP</td><td>6</td></tr>
+            <tr><td>Protocol # UDP</td><td>17</td></tr>
+            <tr><td>Protocol # ICMP</td><td>1</td></tr>
+            <tr><td>Protocol # IPv6-in-IP</td><td>41</td></tr>
+            <tr><td>IPv6 header size</td><td>40 bytes (fixed)</td></tr>
+            <tr><td>IPv6 address size</td><td>128 bits</td></tr>
+            <tr><td>IPv6 fragmentation</td><td>Source-only (via extension headers)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
