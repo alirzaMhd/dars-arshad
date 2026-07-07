@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Router Architecture - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0a00; padding: 10px; border-radius: 4px; border-left: 3px solid #ff6600; }
+    .info { color: #00ccff; border-left: 3px solid #00ccff; padding-left: 10px; margin: 10px 0; background: #00101a; padding: 10px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .refcard { background: linear-gradient(135deg, #0a1a0a, #1a1a2e); border: 2px solid #00ff8844; border-radius: 10px; padding: 15px; margin: 15px 0; }
+    .refcard h3 { color: #00ff88; }
+    .badge { display: inline-block; background: #00ff8822; color: #00ff88; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; border: 1px solid #00ff8844; margin-right: 5px; }
+    .diagram { background: #0a0a18; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0; border: 1px solid #333; overflow-x: auto; }
+    .diagram pre { display: inline-block; text-align: left; color: #00ccff; }
+  </style>
+</head>
+<body>
+  <h1>Router Architecture</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross) — Chapter 4: The Network Layer</p>
+
+  <div class="container">
+
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Input Ports</button>
+      <button class="tab" onclick="showSection('tab2')">Switching Fabric</button>
+      <button class="tab" onclick="showSection('tab3')">Output Ports</button>
+      <button class="tab" onclick="showSection('tab4')">Routing Processor</button>
+    </div>
+
+    <!-- ==================== TAB 1: INPUT PORTS ==================== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Input Ports — Functions and Architecture</h2>
+
+        <p>An input port performs the physical and data-link layer termination of an incoming link. It also executes the <strong>lookup function</strong>, consulting the forwarding table to decide which output port a datagram should be sent to. Input ports are typically implemented on <strong>line cards</strong> — hardware boards that plug into the router chassis.</p>
+
+        <div class="diagram">
+          <pre>
+  Incoming Link
+       |
+  [Physical Layer Termination]   →  Optical/electrical signal decoding
+       |
+  [Link-Layer Processing]       →  Ethernet / PPP frame extraction
+       |
+  [Lookup / Forwarding Table]   →  Longest prefix match on destination IP
+       |
+  [Queuing / Switching Fabric]  →  Datagram sent into the switching fabric
+          </pre>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference: Input Port</h3>
+          <p><span class="badge">Key</span> <strong>Lookup function</strong> uses destination IP address to search forwarding table via <strong>longest prefix matching</strong>.</p>
+          <p><span class="badge">HW</span> Implemented in hardware (TCAM — Ternary Content-Addressable Memory) for nanosecond-speed lookups.</p>
+          <p><span class="badge">Perf</span> At 100 Gbps with 64-byte datagrams: <strong>5.12 ns</strong> per datagram processing budget.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Confusing <em>forwarding table</em> with <em>routing table</em>. The routing table is built by the routing processor; the forwarding table is a compact, hardware-optimized copy used by input ports for per-datagram lookup. They are NOT the same structure.
+        </div>
+
+        <div class="warning">
+          <strong>Terminology Warning:</strong> The term <em>port</em> in router architecture (input/output ports) refers to <strong>physical network interfaces</strong> — the hardware connectors where links are attached. These are completely different from the <em>software ports</em> (TCP/UDP port numbers) used by network applications and socket APIs, as discussed in Chapters 2 and 3. A single router input port handles traffic for thousands of application-layer ports simultaneously; the "port" concept at these layers operates at entirely different levels of the protocol stack.
+        </div>
+
+        <div class="info">
+          <strong>Local Forwarding via Table Distribution:</strong> The forwarding table is computed by the routing processor and then <strong>copied to each line card</strong> over a separate control bus (e.g., a PCI bus). This allows each input port to make forwarding decisions <strong>locally</strong> without consulting the centralized routing processor for every datagram. The line card stores its own copy of the forwarding table (often in TCAM or SRAM) and performs lookups entirely in hardware at line rate. The routing processor is only involved when routes change — it updates the copies on the line cards via the bus.
+        </div>
+
+        <h3>Forwarding Table Lookup</h3>
+        <p>The forwarding table maps destination IP prefixes to output port numbers. Lookups must occur at line rate — every 5–50 nanoseconds depending on link speed. TCAM hardware can compare an IP against all prefixes in a single clock cycle.</p>
+
+        <div class="formula">
+          <div class="label">Processing Budget Formula:</div>
+          <div class="expr">T<sub>budget</sub> = (L + H) &times; 8 &divide; R</div>
+          <div class="desc">Where L = payload size (bytes), H = header size (bytes), R = link rate (bps)<br>For 64 B datagram on 100 Gbps link: (64+0) &times; 8 &divide; 100 &times; 10<sup>9</sup> = <strong>5.12 ns</strong></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Input Port Components</h3>
+            <p>• Physical layer termination (fiber/copper)</p>
+            <p>• Link-layer processing (framing, CRC)</p>
+            <p>• Forwarding table lookup (TCAM)</p>
+            <p>• Switching fabric interface</p>
+          </div>
+          <div class="card">
+            <h3>Key Metrics</h3>
+            <p>Lookup speed: <span class="highlight">&lt;10 ns</span></p>
+            <p>Forwarding table size: <span class="dim">up to 1M+ entries</span></p>
+            <p>Line rate: <span class="dim">10–800 Gbps per port</span></p>
+          </div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Processing Budget Calculation</div>
+          <p>A router receives 1500-byte datagrams on a 40 Gbps link. What is the per-datagram processing budget?</p>
+          <p><strong>Solution:</strong></p>
+          <p>T<sub>budget</sub> = 1500 &times; 8 &divide; (40 &times; 10<sup>9</sup>) = 12000 &divide; 4&times;10<sup>10</sup> = <span class="result">300 ns</span></p>
+          <p>This means the input port must complete physical reception, link-layer validation, lookup, and forwarding within 300 ns per packet.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: TCAM Lookup Efficiency</div>
+          <p>A TCAM has 524,288 entries. It performs lookups in 5 ns regardless of table size. Compare this to a binary search on a sorted table that takes log<sub>2</sub>(N) &times; 2 ns per comparison.</p>
+          <p><strong>Solution:</strong></p>
+          <p>TCAM lookup: <span class="result">5 ns</span> (constant time)</p>
+          <p>Binary search: log<sub>2</sub>(524288) &times; 2 = 19 &times; 2 = <span class="result">38 ns</span></p>
+          <p>TCAM is <strong>7.6x faster</strong>, essential for high-speed links.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Head-of-Line (HOL) Blocking</div>
+          <p>Input port 1 has two datagrams: first destined for output port 2, second for output port 3. The switching fabric is busy transferring a datagram from input port 2 to output port 2. Explain HOL blocking.</p>
+          <p><strong>Solution:</strong></p>
+          <p>The first datagram (to port 2) waits because the fabric is busy with port 2. The second datagram (to port 3, which is free) is <strong>blocked behind</strong> the first. This is HOL blocking — a queued datagram cannot bypass an earlier one even if its destination output is available. This motivates <strong>input port queuing</strong> architectures like Virtual Output Queuing (VOQ).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Longest Prefix Match</div>
+          <p>Given forwarding table entries: 128.0.0.0/8 → Port 0, 128.10.0.0/16 → Port 1, 128.10.4.0/24 → Port 2. Where is destination 128.10.4.15 forwarded?</p>
+          <p><strong>Solution:</strong></p>
+          <p>128.10.4.15 matches all three prefixes. The <strong>longest prefix</strong> is /24 (128.10.4.0/24), so the datagram goes to <span class="result">Port 2</span>. If only /8 matched, it would go to Port 0.</p>
+        </div>
+
+        <h3>Comparison: Input Port Technologies</h3>
+        <table>
+          <tr><th>Feature</th><th>Software (Linux router)</th><th>Hardware (TCAM/ASIC)</th><th>NPU (Network Processor)</th></tr>
+          <tr><td>Lookup speed</td><td>~1–10 &mu;s</td><td>~5–10 ns</td><td>~100–500 ns</td></tr>
+          <tr><td>Flexibility</td><td>High (any protocol)</td><td>Low (fixed function)</td><td>Medium (programmable)</td></tr>
+          <tr><td>Power consumption</td><td>Moderate</td><td>Low per lookup</td><td>Moderate</td></tr>
+          <tr><td>Table size</td><td>Unlimited (DRAM)</td><td>Limited (on-chip SRAM)</td><td>Large (SRAM + DRAM)</td></tr>
+          <tr><td>Typical use</td><td>Edge / home routers</td><td>Core / high-speed routers</td><td>Mid-range routers</td></tr>
+        </table>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: SWITCHING FABRIC ==================== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Switching Fabric — Moving Datagrams Between Ports</h2>
+
+        <p>The switching fabric connects input ports to output ports. It is completely contained within the router and is responsible for transferring datagrams from ingress to egress at line rate. The fabric is the router's <strong>internal network</strong> — its capacity determines the router's aggregate throughput.</p>
+
+        <div class="diagram">
+          <pre>
+  +----------+          +-----------+
+  | Input 1  |--------->| Output 1  |
+  +----------+          +-----------+
+       |                      ^
+       |   [Switching Fabric]  |
+       v                      |
+  +----------+          +-----------+
+  | Input 2  |--------->| Output 2  |
+  +----------+          +-----------+
+       |                      ^
+       |    (Crossbar / Bus    |
+       v     / Interconnect)   |
+  +----------+          +-----------+
+  | Input N  |--------->| Output N  |
+  +----------+          +-----------+
+          </pre>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference: Switching Fabric</h3>
+          <p><span class="badge">Types</span> Three major types: <strong>Memory-based</strong>, <strong>Bus-based</strong>, <strong>Crossbar / Interconnection Network</strong>.</p>
+          <p><span class="badge">Perf</span> Switching capacity must equal or exceed sum of all line rates to avoid internal blocking.</p>
+          <p><span class="badge">Example</span> Juniper MX2020: <strong>800 Tbps</strong> switching capacity across 800 &times; 100 Gbps ports.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Thinking switching fabric speed only needs to match a single port's line rate. In reality, the fabric must support <strong>all ports simultaneously</strong>. If N ports each run at R, the fabric needs N &times; R / 2 (bidirectional) capacity.
+        </div>
+
+        <div class="info">
+          <strong>Implementation Options:</strong> Forwarding hardware can be built using either <strong>custom designs</strong> developed by the router vendor (e.g., Cisco's Silicon One, Juniper's Trio chipset), or constructed using <strong>merchant-silicon chips</strong> purchased from commercial suppliers (e.g., Intel, Broadcom). The merchant-silicon approach is common in white-box and open networking switches, where vendors like Broadcom provide off-the-shelf switching ASICs (e.g., Tomahawk, Trident series) that implement the entire switching fabric and forwarding pipeline. Custom designs offer differentiation and optimization for a vendor's specific architecture, while merchant silicon provides faster time-to-market and lower development costs.
+        </div>
+
+        <h3>Three Switching Fabric Types</h3>
+
+        <div class="grid">
+          <div class="card">
+            <h3>1. Memory-Based</h3>
+            <p>Early routers used a CPU with shared memory. Input port copies datagram to system memory; CPU looks up forwarding info and copies to output. <span class="dim">Limited to ~2 Gbps due to memory bandwidth bottleneck.</span></p>
+          </div>
+          <div class="card">
+            <h3>2. Bus-Based</h3>
+            <p>A shared bus connects all ports. Only one transfer at a time. <span class="dim">Limited to ~32 Gbps (e.g., 32-bit PCI at 33 MHz = 1 Gbps aggregate; modern busses up to ~100 Gbps).</span></p>
+          </div>
+          <div class="card">
+            <h3>3. Crossbar / Interconnection</h3>
+            <p>Multiple simultaneous transfers between non-conflicting input-output pairs. Full crossbar allows any input to reach any output simultaneously. <span class="dim">Used in all high-end routers (Cisco CRS, Juniper MX/T Series).</span></p>
+          </div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Memory-Based Switching Bottleneck</div>
+          <p>A router has 4 input ports at 1 Gbps each. The shared memory bus runs at 800 MB/s. Can this router support line-rate forwarding?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Total input rate: 4 &times; 1 Gbps = 4 Gbps = 500 MB/s<br>
+          Memory bus: 800 MB/s &times; 2 (read + write) = 1600 MB/s theoretical<br>
+          But each datagram requires <strong>two</strong> memory transfers (input→memory, memory→output).<br>
+          Effective capacity: 800 MB/s &divide; 2 = 400 MB/s = 3.2 Gbps.<br>
+          Needed: 4 Gbps. <span class="result">Line rate NOT supported</span> - the memory bus is the bottleneck.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Crossbar Scheduling — Matching Inputs to Outputs</div>
+          <p>At a given time, input ports 1, 2, 3 have datagrams for outputs 3, 1, 2 respectively. Show a valid crossbar configuration.</p>
+          <p><strong>Solution:</strong></p>
+          <p>This is a <strong>permutation matching</strong>: Input 1 → Output 3, Input 2 → Output 1, Input 3 → Output 2. All inputs and outputs are distinct, so the crossbar can establish <span class="result">3 simultaneous connections</span> — full throughput.</p>
+          <p>If two inputs both wanted the same output, only one would be served; the other would be queued (contention).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Scaling to Large Systems</div>
+          <p>The Juniper MX2020 supports 800 ports of 100 Gbps. What switching capacity is required if each port operates at full duplex?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Unidirectional: 800 &times; 100 Gbps = 80,000 Gbps = <strong>80 Tbps</strong><br>
+          Bidirectional (full duplex): 2 &times; 80 Tbps = <strong>160 Tbps</strong> of fabric capacity needed.<br>
+          Juniper MX2020 delivers <span class="result">800 Tbps</span> — a 5x overspeed factor to accommodate bursty traffic and internal overhead.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Knockout Switch Principle</div>
+          <p>In a large crossbar switch with N inputs, all sending to the same output, only one can succeed per time slot. If the fabric runs S times faster than line rate, how many packets reach the output per slot?</p>
+          <p><strong>Solution:</strong></p>
+          <p>With an N&times;N crossbar running at speed S &times; line rate, at most <strong>S</strong> packets can be delivered to the same output per time slot. The remaining N−S packets must be buffered or dropped. This is why switches use <strong>speedup</strong> (fabric running faster than line rate) to reduce contention.</p>
+        </div>
+
+        <h3>Comparison: Switching Fabric Types</h3>
+        <table>
+          <tr><th>Feature</th><th>Memory-Based</th><th>Shared Bus</th><th>Crossbar / Interconnection</th></tr>
+          <tr><td>Max capacity</td><td>~2 Gbps</td><td>~32–100 Gbps</td><td>800+ Tbps</td></tr>
+          <tr><td>Simultaneous transfers</td><td>1 (CPU serialized)</td><td>1 (bus is shared)</td><td>N/2 to N (non-conflicting pairs)</td></tr>
+          <tr><td>Blocking</td><td>Always (single resource)</td><td>Always (single bus)</td><td>Only on output contention</td></tr>
+          <tr><td>Cost</td><td>Low</td><td>Medium</td><td>High</td></tr>
+          <tr><td>Used in</td><td>Legacy / embedded</td><td>Mid-range 2000s routers</td><td>Modern core routers</td></tr>
+          <tr><td>Scalability</td><td>Poor</td><td>Limited by bus speed</td><td>Excellent (Clos networks, multistage)</td></tr>
+        </table>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: OUTPUT PORTS ==================== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Output Ports — Buffering and Transmission</h2>
+
+        <p>Output ports receive datagrams from the switching fabric and transmit them on the outgoing link. They perform the inverse operations of input ports: link-layer framing, physical layer encoding, and signal transmission. Output ports must buffer datagrams when the switching fabric delivers them faster than the link can transmit.</p>
+
+        <div class="diagram">
+          <pre>
+  From Switching Fabric
+       |
+  [Output Port Buffer]   →  FIFO / priority queue of datagrams
+       |
+  [Link-Layer Encoding]  →  Add frame header, CRC
+       |
+  [Physical Layer]       →  Signal encoding, modulation
+       |
+  Outgoing Link
+          </pre>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference: Output Port</h3>
+          <p><span class="badge">Queuing</span> Output buffering required when arrival rate &gt; transmission rate. Buffer size follows the <strong>B &times; RTT</strong> rule-of-thumb.</p>
+          <p><span class="badge">Scheduling</span> FIFO is simplest; WFQ (Weighted Fair Queuing) provides QoS.</p>
+          <p><span class="badge">Drop Policy</span> Tail-drop, RED (Random Early Detection), or WRED.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Assuming larger buffers are always better. Large buffers cause <strong>bufferbloat</strong> — increased latency without improved throughput. The recommended buffer size is B = RTT &times; C / &radic;N (for N TCP flows), not blindly large memory.
+        </div>
+
+        <h3>Buffer Sizing Formulas</h3>
+
+        <div class="formula">
+          <div class="label">Rule-of-Thumb Buffer Size:</div>
+          <div class="expr">B = RTT &times; C</div>
+          <div class="desc">C = link capacity, RTT = average round-trip time of TCP flows<br>For a 10 Gbps link with 250 ms RTT: B = 0.25 &times; 10&times;10<sup>9</sup> = 2.5 Gb = <strong>~312 MB</strong></div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Modern Rule (Stanford Router Buffering):</div>
+          <div class="expr">B = (RTT &times; C) &divide; &radic;N</div>
+          <div class="desc">N = number of active TCP flows (typically 1000s). With N=1000, &radic;N&asymp;32, so B is reduced by ~32x</div>
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Output Buffer Occupancy</div>
+          <p>An output port has a 10 Gbps link. Packets arrive from the fabric at 12 Gbps for 100 ms. How much buffer is needed to avoid drops?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Excess rate = 12 − 10 = 2 Gbps<br>
+          Burst duration = 0.1 s<br>
+          Buffer needed = 2 &times; 10<sup>9</sup> &times; 0.1 = <span class="result">200 Mb = 25 MB</span></p>
+          <p>If the output port buffer is smaller than 25 MB, packets will be dropped during this burst.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: RED Drop Probability</div>
+          <p>A router uses RED with min<sub>th</sub> = 40 KB, max<sub>th</sub> = 80 KB, and max<sub>p</sub> = 0.1. Current average queue length is 60 KB. What is the drop probability?</p>
+          <p><strong>Solution:</strong></p>
+          <p>RED drop probability P = max<sub>p</sub> &times; (avg<sub>len</sub> − min<sub>th</sub>) &divide; (max<sub>th</sub> − min<sub>th</sub>)<br>
+          P = 0.1 &times; (60 − 40) &divide; (80 − 40) = 0.1 &times; 20 &divide; 40 = 0.1 &times; 0.5 = <span class="result">0.05 (5%)</span></p>
+          <p>Each arriving packet has a 5% chance of being marked/dropped, providing early congestion notification.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Weighted Fair Queuing (WFQ)</div>
+          <p>Three flows share a 1 Gbps output link with weights 2:1:1 (flows A:B:C). Flow A sends at 600 Mbps, B at 300 Mbps, C at 400 Mbps. What bandwidth does each receive?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Total weight = 2 + 1 + 1 = 4<br>
+          Guaranteed rates: A = 2/4 &times; 1 Gbps = 500 Mbps, B = 250 Mbps, C = 250 Mbps<br>
+          Since A sends 600 Mbps but is guaranteed 500 Mbps: A gets <span class="result">500 Mbps</span><br>
+          B sends 300 Mbps but is guaranteed 250 Mbps: B gets <span class="result">250 Mbps</span> (bottleneck)<br>
+          C sends 400 Mbps but is guaranteed 250 Mbps: C gets <span class="result">250 Mbps</span> (bottleneck)<br>
+          Excess bandwidth (remaining) is redistributed proportionally.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Bufferbloat Calculation</div>
+          <p>A home router has a 64 MB buffer on a 20 Mbps link with 100 ms base RTT. How much does bufferbloat increase latency under full load?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Time to drain full buffer: 64 MB &times; 8 &divide; 20 Mbps = 512 Mb &divide; 20 Mbps = <span class="result">25.6 seconds</span><br>
+          RTT under load = base RTT + buffer drain time = 100 ms + 25.6 s = <strong>25.7 seconds</strong><br>
+          Latency increased by <strong>256x</strong> due to bufferbloat.</p>
+        </div>
+
+        <h3>Output Port Scheduling Comparison</h3>
+        <table>
+          <tr><th>Scheduler</th><th>Isolation</th><th>Complexity</th><th>QoS</th><th>Fairness</th></tr>
+          <tr><td>FIFO (First-In-First-Out)</td><td>None</td><td>O(1)</td><td>None</td><td>None</td></tr>
+          <tr><td>Priority Queuing</td><td>Strict (high priority always wins)</td><td>O(1)</td><td>Good for real-time</td><td>Poor (low priority starves)</td></tr>
+          <tr><td>WFQ (Weighted Fair Queuing)</td><td>Good</td><td>O(log N)</td><td>Good</td><td>Excellent</td></tr>
+          <tr><td>DRR (Deficit Round Robin)</td><td>Good</td><td>O(1)</td><td>Moderate</td><td>Good</td></tr>
+          <tr><td>WRR (Weighted Round Robin)</td><td>Moderate</td><td>O(1)</td><td>Moderate</td><td>Good</td></tr>
+        </table>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: ROUTING PROCESSOR ==================== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Routing Processor — The Control Plane Brain</h2>
+
+        <p>The routing processor handles all <strong>control-plane</strong> functions: it executes routing protocols (OSPF, BGP, RIP), computes forwarding tables, manages router configuration, and handles network management (SNMP, ICMP error messages). Unlike the data plane (hardware, nanosecond scale), the control plane runs in software at millisecond-to-second timescales.</p>
+
+        <div class="diagram">
+          <pre>
+  [Routing Processor]  ← Software, general-purpose CPU
+       |
+       ├── OSPF (link-state routing)     →  Builds LSDB → Dijkstra → forwarding table
+       ├── BGP (path-vector / inter-AS)   →  Builds AS-path table → policies → forwarding table
+       ├── ICMP (error / control messages) →  TTL expired, destination unreachable
+       ├── SNMP (network management)       →  Statistics, configuration
+       └── Router CLI / Management         →  Human operator interface
+       |
+  [Forwarding Table]  →  Downloaded to line cards (data plane)
+          </pre>
+        </div>
+
+        <div class="refcard">
+          <h3>Quick Reference: Routing Processor</h3>
+          <p><span class="badge">Data Plane</span> Hardware-based, nanosecond processing, per-datagram forwarding.</p>
+          <p><span class="badge">Control Plane</span> Software-based, millisecond-to-second processing, topology discovery and route computation.</p>
+          <p><span class="badge">Line Card</span> A line card typically hosts both the <strong>input port</strong> and <strong>output port</strong> for one or more links. The routing processor is a separate card or integrated into the supervisor module.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Thinking the routing processor is involved in every datagram forwarding decision. In hardware-based routers, the routing processor only updates the forwarding table when routes change. Per-datagram forwarding is done <strong>entirely in hardware</strong> on the line cards.
+        </div>
+
+        <div class="info">
+          <strong>Roundabout Analogy:</strong> A router is like a traffic roundabout. The <strong>routing processor</strong> is the city planning office that decides which routes to build (control plane). The <strong>input ports</strong> are the entrance ramps where cars look at signs to decide their exit. The <strong>switching fabric</strong> is the roundabout itself — moving cars from entrances to exits. The <strong>output ports</strong> are the exit ramps onto the outgoing roads. The planning office doesn't direct each individual car; it just updates the signs when road conditions change.
+        </div>
+
+        <div class="info">
+          <strong>SDN Routers — Remote Controller:</strong> In Software-Defined Networking (SDN) architectures, the routing processor's role changes significantly. Instead of running distributed routing protocols locally, the routing processor is responsible for <strong>communicating with a remote SDN controller</strong> (e.g., via OpenFlow or similar protocol). The remote controller computes all forwarding table entries based on global network view and policies. The routing processor on each router receives these entries from the controller and <strong>installs them into the input ports' forwarding tables</strong>. This decouples control logic from the forwarding hardware, enabling centralized network management and programmatic traffic engineering.
+        </div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: OSPF Convergence Time</div>
+          <p>An OSPF domain has 200 routers. Each router floods a new LSA upon detecting a link failure. LSAs propagate in 10 ms per hop. A reconverged Dijkstra computation takes 50 ms per router. What is the total convergence time assuming a diameter of 6 hops?</p>
+          <p><strong>Solution:</strong></p>
+          <p>LSA propagation: 6 &times; 10 ms = 60 ms<br>
+          Dijkstra computation (can start as LSA propagates, but worst-case): 50 ms<br>
+          Total convergence: propagation + computation = <span class="result">110 ms</span> (≈ 0.1 seconds)</p>
+          <p>During this 110 ms, routers may have stale forwarding tables, causing temporary black holes or loops.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: BGP Route Processing Scalability</div>
+          <p>A core router receives 900,000 BGP routes, each costing 1 &mu;s to process during initialization. The routing processor has 4 cores at 2 GHz. How long does initial BGP table processing take?</p>
+          <p><strong>Solution:</strong></p>
+          <p>Single-core time: 900,000 &times; 1 &mu;s = 900 ms<br>
+          With 4 cores (ideal parallelism): 900 ms &divide; 4 = <span class="result">225 ms</span></p>
+          <p>In practice, BGP processing involves more than table insertion — policy checks, best-path selection, and adjacency maintenance add significant overhead (seconds to minutes).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: CPU Utilization During Route Instability</div>
+          <p>A router's routing processor handles 500 route updates per second, each taking 200 &mu;s. What is the CPU utilization? How many updates per second would saturate the CPU?</p>
+          <p><strong>Solution:</strong></p>
+          <p>CPU time per second: 500 &times; 200 &mu;s = 100,000 &mu;s = <span class="result">100 ms</span><br>
+          Utilization: 100 ms / 1000 ms = <span class="result">10%</span></p>
+          <p>Saturation point: 1 second / 200 &mu;s = <span class="result">5000 updates/second</span></p>
+          <p>During route flapping, update rates can spike to 10,000+/s, causing 200%+ CPU demand and rendering the router unable to converge. This is why route flap dampening is critical.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Forwarding Table Update Latency</div>
+          <p>A routing processor computes a new forwarding table entry and needs to update 16 line cards. Each line card takes 100 &mu;s to acknowledge the update. What is the total update latency for all 16 line cards if updates are sent in parallel? Sequentially?</p>
+          <p><strong>Solution:</strong></p>
+          <p><strong>Parallel:</strong> All without simultaneous. Max latency = <span class="result">100 &mu;s</span><br>
+          <strong>Sequential:</strong> 16 &times; 100 &mu;s = <span class="result">1.6 ms</span></p>
+          <p>Modern routers use parallel updates to minimize the window where forwarding tables are inconsistent across line cards.</p>
+        </div>
+
+        <h3>Comparison: Control Plane vs Data Plane</h3>
+        <table>
+          <tr><th>Feature</th><th>Data Plane (Input/Switch/Output)</th><th>Control Plane (Routing Processor)</th></tr>
+          <tr><td>Implementation</td><td>ASIC / TCAM / NPU (hardware)</td><td>General-purpose CPU (software)</td></tr>
+          <tr><td>Timescale</td><td>Nanoseconds (5–500 ns)</td><td>Milliseconds to seconds</td></tr>
+          <tr><td>Function</td><td>Per-datagram lookup, forwarding</td><td>Route computation, protocol exchange</td></tr>
+          <tr><td>Memory</td><td>SRAM / TCAM (small, fast)</td><td>DRAM (large, slower)</td></tr>
+          <tr><td>Table type</td><td>Forwarding table (compressed)</td><td>Routing table / RIB (full)</td></tr>
+          <tr><td>Reaction to failure</td><td>No reaction (uses cached table)</td><td>Detects failure, recomputes routes</td></tr>
+          <tr><td>Parallelism</td><td>Massively parallel (per-port HW)</td><td>Limited (few CPU cores)</td></tr>
+        </table>
+
+        <h3>Comparison: Router Platforms</h3>
+        <table>
+          <tr><th>Router</th><th>Type</th><th>Switching Capacity</th><th>Max Ports</th><th>Routing Processor</th></tr>
+          <tr><td>Juniper MX2020</td><td>Core / Edge</td><td>800 Tbps</td><td>800 &times; 100 GbE</td><td>Intel Xeon (multi-core)</td></tr>
+          <tr><td>Cisco CRS-1</td><td>Core</td><td>92 Tbps</td><td>1152 &times; 40 Gbps</td><td>PRP (Route Processor)</td></tr>
+          <tr><td>Cisco ASR 1000</td><td>Edge / Aggregation</td><td>20 Tbps</td><td>&asymp;200 &times; 100 GbE</td><td>ESP + RP (integrated)</td></tr>
+          <tr><td>Linux server (DPDK)</td><td>Software router</td><td>&asymp;200 Gbps</td><td>4–8 &times; 25/100 GbE</td><td>Linux kernel + CPU</td></tr>
+        </table>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

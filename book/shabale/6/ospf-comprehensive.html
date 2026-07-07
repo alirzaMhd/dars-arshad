@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSPF Protocol - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>OSPF — Open Shortest Path First</h1>
+  <p class="subtitle">Computer Networks — Link-State Routing Protocol & Autonomous Systems</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">AS & OSPF Overview</button>
+      <button class="tab" onclick="showSection('tab2')">OSPF Features</button>
+      <button class="tab" onclick="showSection('tab3')">Hierarchy & Areas</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <!-- Tab 1: AS & OSPF Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Autonomous Systems Concept</h2>
+        <p>An <strong>Autonomous System (AS)</strong> is a collection of routers and networks under a single administrative domain with a unified routing policy. Each AS is identified by a globally unique 16-bit or 32-bit <strong>AS Number (ASN)</strong>. AS numbers, like IP addresses, are assigned by ICANN regional registries [ICANN 2020].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>AS Numbers</h3>
+            <p>• <strong>Public ASNs</strong>: 1–64511 (globally routable)</p>
+            <p>• <strong>Private ASNs</strong>: 64512–65535 (internal use)</p>
+            <p>• <strong>32-bit ASNs</strong>: 65536–4294967295 (newer format)</p>
+          </div>
+          <div class="card">
+            <h3>AS Types</h3>
+            <p>• <span class="highlight">Stub AS</span>: Single connection to one ISP</p>
+            <p>• <span class="highlight">Multihomed AS</span>: Connected to multiple ISPs</p>
+            <p>• <span class="highlight">Transit AS</span>: Carries traffic between other ASs</p>
+          </div>
+        </div>
+
+        <div class="warning">The Internet is a network of ASs. Intra-AS routing (e.g., OSPF) operates inside an AS, while inter-AS routing (e.g., BGP) connects ASs together.</div>
+
+        <h2>OSPF Protocol Overview</h2>
+        <p><strong>OSPF (Open Shortest Path First)</strong> is a <span class="highlight">link-state routing protocol</span> used for intra-AS routing. It uses <strong>Dijkstra's algorithm</strong> to compute the shortest path tree from every router to every other router.</p>
+        <p>"Open" in OSPF indicates the routing protocol specification is <strong>publicly available</strong> (as opposed to Cisco's proprietary EIGRP protocol, which remained closed for ~20 years). OSPF version 2 is defined in <strong>RFC 2328</strong> [RFC 2328].</p>
+
+        <div class="formula">
+          <div class="label">Dijkstra's Algorithm</div>
+          <div class="expr">SPT(v) = { v } with dist(v) = 0<br>while unvisited nodes remain:<br>&nbsp;&nbsp;pick u with smallest dist(u)<br>&nbsp;&nbsp;for each neighbor w of u:<br>&nbsp;&nbsp;&nbsp;&nbsp;dist(w) = min(dist(w), dist(u) + cost(u,w))</div>
+          <div class="desc">Each router builds a complete topology map and computes shortest paths independently.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>• <span class="highlight">Link-State</span>: Each router knows full topology</p>
+            <p>• <span class="highlight">Fast Convergence</span>: Changes detected via HELLO</p>
+            <p>• <span class="highlight">Classless</span>: Supports VLSM and CIDR</p>
+            <p>• <span class="highlight">Loop-Free</span>: Always computes loop-free paths</p>
+          </div>
+          <div class="card">
+            <h3>OSPF vs RIP</h3>
+            <p>Metric: <span class="highlight">Cost</span> (configurable) vs Hop Count</p>
+            <p>Convergence: <span class="highlight">Fast</span> vs Slow (30s updates)</p>
+            <p>Scalability: <span class="highlight">Very Large</span> vs Small networks</p>
+            <p>Algorithm: <span class="highlight">Dijkstra</span> vs Bellman-Ford</p>
+          </div>
+        </div>
+
+        <h3>How OSPF Works</h3>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li>Each router sends <strong>HELLO messages</strong> (every 10s) to discover neighbors.</li>
+          <li>Routers construct <strong>Link State Advertisements (LSAs)</strong> describing their interfaces, neighbors, and link costs.</li>
+          <li>LSAs are <strong>flooded</strong> to all routers in the area.</li>
+          <li>Each router builds a complete <strong>Link State Database (LSDB)</strong>.</li>
+          <li>Dijkstra's algorithm computes the <strong>Shortest Path Tree (SPT)</strong>.</li>
+          <li>The routing table is populated with the best paths.</li>
+        </ol>
+
+        <div class="warning">OSPF sends <strong>periodic link-state updates every 30 minutes</strong> even when no changes occur. This ensures database reliability through refresh mechanisms.</div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <table>
+          <tr><th>Property</th><th>Value</th></tr>
+          <tr><td>Protocol Type</td><td>Link-State</td></tr>
+          <tr><td>Algorithm</td><td>Dijkstra's SPF</td></tr>
+          <tr><td>Port Number</td><td>89 (IP protocol)</td></tr>
+          <tr><td>Metric</td><td>Cost (default = 10^8 / bandwidth)</td></tr>
+          <tr><td>Update Frequency</td><td>Triggered + every 30 min</td></tr>
+          <tr><td>HELLO Interval</td><td>10s (default)</td></tr>
+          <tr><td>Authentication</td><td>MD5, Simple Password</td></tr>
+          <tr><td>Multicast Support</td><td>MOSPF</td></tr>
+          <tr><td>Hierarchical</td><td>Yes (Areas)</td></tr>
+          <tr><td>IPv6 Support</td><td>OSPFv3</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: OSPF Features -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>OSPF Core Features</h2>
+
+        <h3>Flooding of Link-State Information</h3>
+        <p>When a router detects a change (link up/down, cost change), it immediately generates a new LSA and <strong>floods</strong> it to all neighbors. Each neighbor forwards it to all other neighbors except the incoming interface. The flooding is <strong>reliable</strong> — routers must acknowledge LSAs. This ensures all routers converge to the same topology view.</p>
+
+        <div class="formula">
+          <div class="label">Flooding Behavior</div>
+          <div class="expr">LSA received → Check LSDB → Newer? → Flood out all interfaces (except incoming) → Send ACK</div>
+          <div class="desc">Flooding stops when all routers have identical LSDBs.</div>
+        </div>
+
+        <h3>OSPF Transport: Direct over IP (Protocol 89)</h3>
+        <p>OSPF messages are carried directly over IP, using <strong>upper-layer protocol 89</strong> (not TCP or UDP). Because OSPF does not rely on TCP, the OSPF protocol must itself implement <strong>reliable message transfer</strong> and link-state broadcast functionality, including acknowledgment mechanisms for LSAs.</p>
+        <p>By default, OSPF packets between routers are <strong>not authenticated</strong> and could be forged. Authentication must be explicitly configured.</p>
+
+        <h3>Security: Authentication</h3>
+        <p>OSPF supports two authentication methods to prevent routing attacks:</p>
+        <table>
+          <tr><th>Method</th><th>Type</th><th>Security Level</th></tr>
+          <tr><td>Null</td><td>Type 0</td><td>No authentication (default)</td></tr>
+          <tr><td>Simple Password</td><td>Type 1</td><td>Weak — same password configured on each router, included in OSPF packet in plaintext</td></tr>
+          <tr><td>MD5 Cryptographic</td><td>Type 2</td><td>Strong — router computes MD5 hash of packet content + shared secret key; receiver recomputes and compares</td></tr>
+        </table>
+        <div class="warning">Simple password authentication is vulnerable to sniffing. MD5 authentication is strongly recommended for production networks.</div>
+
+        <h4>Replay Attack Protection</h4>
+        <p>When using MD5 authentication, OSPF includes <strong>sequence numbers</strong> in each packet to protect against <strong>replay attacks</strong>. A captured OSPF packet cannot be replayed later because the sequence number will be stale and rejected by the receiving router.</p>
+
+        <h3>Multiple Same-Cost Paths</h3>
+        <p>OSPF supports <strong>Equal-Cost Multi-Path (ECMP)</strong> routing. When multiple paths have identical cost, OSPF can load-balance traffic across up to 16 (or more) equal-cost paths simultaneously. This improves throughput and redundancy.</p>
+
+        <div class="example">
+          <div class="title">ECMP Example</div>
+          <p>Router R1 has three paths to 10.0.0.0/16, each with cost 20. With ECMP enabled, traffic is distributed across all three paths using per-packet or per-flow load balancing.</p>
+        </div>
+
+        <h3>MOSPF — Multicast Extensions</h3>
+        <p><strong>MOSPF (Multicast OSPF)</strong> extends OSPF to support IP multicast routing. It uses the existing LSDB to compute multicast distribution trees. When a router receives a multicast packet, it uses the link-state database to determine which downstream routers have group members.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>MOSPF Features</h3>
+            <p>• Uses OSPF LSDB for multicast tree computation</p>
+            <p>• Computes source-based trees (Shortest Path Trees per source)</p>
+            <p>• Efficient for <span class="highlight">dense</span> multicast groups</p>
+            <p>• Periodic flooding of group membership LSAs</p>
+          </div>
+          <div class="card">
+            <h3>MOSPF Limitations</h3>
+            <p>• <span class="dim">Scalability</span>: CPU-intensive for many groups</p>
+            <p>• <span class="dim">Intermittent traffic</span>: Periodic flooding wastes bandwidth if groups are sparse</p>
+            <p>• Largely superseded by PIM (Protocol Independent Multicast)</p>
+          </div>
+        </div>
+
+        <h3>Link Weight Configuration</h3>
+        <p>OSPF allows <strong>manual link weight (cost) configuration</strong>. The default cost = 10⁸ / bandwidth (bps). Network operators can adjust costs to:</p>
+        <ul>
+          <li><strong>Inverse capacity</strong>: Higher-bandwidth links get lower costs (e.g., 10 Gbps → cost 10, 1 Gbps → cost 100).</li>
+          <li><strong>Traffic engineering</strong>: Manually set costs to influence path selection, avoid congestion, or implement traffic steering policies.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">Link Weight Configuration</div>
+          <p>An operator wants traffic to prefer a 10 Gbps link over a 1 Gbps link:</p>
+          <div class="code">
+interface GigabitEthernet0/1<br>
+&nbsp;ip ospf cost 10<br>
+!<br>
+interface GigabitEthernet0/2<br>
+&nbsp;ip ospf cost 100
+          </div>
+          <p>Result: Dijkstra's algorithm will route traffic via the lower-cost (higher-bandwidth) path.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Setting OSPF Weights — Cause & Effect Reversal.</strong> In theory, link weights are given first and Dijkstra's algorithm produces routing paths as a result. In practice, the cause-and-effect relationship is often reversed: network operators first determine the desired routing of flows (e.g., minimizing the maximum link utilization across the network) and then must <strong>find the set of link weights</strong> that causes OSPF to produce that desired routing [Fortz 2000, Fortz 2002]. This is a key traffic engineering insight — the operator's main "knob" for tuning flows is the link weight configuration.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>OSPF Comparison Table</h2>
+        <table>
+          <tr><th>Feature</th><th>OSPF</th><th>RIP</th><th>EIGRP</th></tr>
+          <tr><td>Algorithm</td><td>Dijkstra (Link-State)</td><td>Bellman-Ford (Distance Vector)</td><td>DUAL (Hybrid)</td></tr>
+          <tr><td>Metric</td><td>Cost</td><td>Hop Count</td><td>Composite (BW, Delay, Load, Reliability)</td></tr>
+          <tr><td>Max Hop Count</td><td>Unlimited</td><td>15</td><td>Unlimited</td></tr>
+          <tr><td>Convergence</td><td>Fast (&lt;1s)</td><td>Slow (up to 2 min)</td><td>Very Fast</td></tr>
+          <tr><td>Hierarchical</td><td>Yes (Areas)</td><td>No (Flat)</td><td>No (Flat)</td></tr>
+          <tr><td>Authentication</td><td>MD5, Simple</td><td>Simple</td><td>MD5</td></tr>
+          <tr><td>Multicast</td><td>224.0.0.5, 224.0.0.6</td><td>Broadcast</td><td>224.0.0.10</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Hierarchy & Areas -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>OSPF Hierarchy and Areas</h2>
+        <p>OSPF supports <strong>two-level hierarchy</strong> to improve scalability. Large networks are divided into <strong>areas</strong> to reduce LSDB size, CPU overhead, and flooding traffic.</p>
+
+        <div class="formula">
+          <div class="label">Area Structure</div>
+          <div class="expr">Backbone Area (Area 0) — connects all other areas<br>&nbsp;&nbsp;├── Area 1 (Standard Area)<br>&nbsp;&nbsp;├── Area 2 (Standard Area)<br>&nbsp;&nbsp;└── Area 3 (Standard Area)</div>
+          <div class="desc">All traffic between areas must traverse Area 0.</div>
+        </div>
+
+        <h3>Inter-Area Routing (3-Step Path)</h3>
+        <p>When a packet must travel between two different areas within an AS, the routing follows a precise three-step sequence:</p>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li><strong>Step 1 — Intra-area routing</strong>: Packet is routed from the source router to an <strong>area border router (ABR)</strong> within the source area.</li>
+          <li><strong>Step 2 — Backbone transit</strong>: The ABR forwards the packet through the <strong>backbone area (Area 0)</strong> to the ABR in the destination area.</li>
+          <li><strong>Step 3 — Intra-area routing</strong>: The destination ABR routes the packet within its area to the final destination.</li>
+        </ol>
+        <p>The backbone area's primary role is to route traffic between all other areas in the AS. The backbone always contains all area border routers in the AS.</p>
+
+        <h3>Area Types</h3>
+        <table>
+          <tr><th>Area Type</th><th>Description</th><th>LSAs</th></tr>
+          <tr><td>Backbone (Area 0)</td><td>Central area connecting all others</td><td>All types</td></tr>
+          <tr><td>Standard Area</td><td>Regular OSPF area</td><td>All types</td></tr>
+          <tr><td>Stub Area</td><td>Blocks external LSAs (Type 5)</td><td>No Type 5</td></tr>
+          <tr><td>Totally Stubby</td><td>Blocks external + inter-area LSAs</td><td>Only Type 1, 2, 3 (default route)</td></tr>
+          <tr><td>NSSA</td><td>Allows limited external routes</td><td>Type 7 instead of Type 5</td></tr>
+        </table>
+
+        <h3>Router Types</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Backbone Router</h3>
+            <p>Router with at least one interface in Area 0.</p>
+          </div>
+          <div class="card">
+            <h3>Area Border Router (ABR)</h3>
+            <p>Router with interfaces in <span class="highlight">multiple areas</span>, including Area 0. Summarizes routes between areas.</p>
+          </div>
+          <div class="card">
+            <h3>Internal Router</h3>
+            <p>Router with all interfaces in a single area.</p>
+          </div>
+          <div class="card">
+            <h3>AS Boundary Router (ASBR)</h3>
+            <p>Router that injects <span class="highlight">external routes</span> into OSPF (e.g., from BGP or static routes).</p>
+          </div>
+        </div>
+
+        <h3>Benefits of Hierarchical OSPF</h3>
+        <ul>
+          <li><strong>Smaller LSDBs</strong>: Each area only knows its own topology.</li>
+          <li><strong>Faster SPF computations</strong>: Dijkstra runs only on the area's topology.</li>
+          <li><strong>Reduced LSA flooding</strong>: LSAs stay within area boundaries.</li>
+          <li><strong>Route summarization</strong>: ABRs can summarize multiple routes into a single advertisement.</li>
+          <li><strong>Fault isolation</strong>: A problem in one area does not affect other areas.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">Hierarchical OSPF in a Large Enterprise</div>
+          <p>An enterprise with 500 routers divides the network into:</p>
+          <ul>
+            <li><strong>Area 0 (Backbone)</strong>: 10 core routers in the data center.</li>
+            <li><strong>Area 1</strong>: 100 routers in North America.</li>
+            <li><strong>Area 2</strong>: 150 routers in Europe.</li>
+            <li><strong>Area 3</strong>: 120 routers in Asia-Pacific.</li>
+            <li><strong>Area 4</strong>: 120 routers in South America.</li>
+          </ul>
+          <p>Each area has ~100–150 routers with manageable LSDB sizes. Each ABR connects its area to Area 0 and summarizes area routes.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>OSPF Message Format</h2>
+        <p>OSPF messages are encapsulated directly in IP (protocol 89). The fixed 24-byte OSPF header is followed by type-specific data.</p>
+        <table>
+          <tr><th>Byte Offset</th><th>Field</th><th>Size</th><th>Description</th></tr>
+          <tr><td>0–1</td><td>Version</td><td>2</td><td>OSPF version (2 for IPv4, 3 for IPv6)</td></tr>
+          <tr><td>2–3</td><td>Type</td><td>2</td><td>1=HELLO, 2=DD, 3=LSR, 4=LSU, 5=LSAck</td></tr>
+          <tr><td>4–7</td><td>Packet Length</td><td>4</td><td>Total packet length in bytes</td></tr>
+          <tr><td>8–11</td><td>Router ID</td><td>4</td><td>Originating router's ID</td></tr>
+          <tr><td>12–15</td><td>Area ID</td><td>4</td><td>Area to which the packet belongs</td></tr>
+          <tr><td>16–17</td><td>Checksum</td><td>2</td><td>IP-like checksum</td></tr>
+          <tr><td>18–19</td><td>AuType</td><td>2</td><td>Authentication type (0, 1, 2)</td></tr>
+          <tr><td>20–23</td><td>Authentication</td><td>8</td><td>Authentication data</td></tr>
+        </table>
+
+        <h3>HELLO Messages</h3>
+        <p>HELLO messages (Type 1) are sent periodically (every 10s by default) on all interfaces to:</p>
+        <ul>
+          <li>Discover OSPF neighbors</li>
+          <li>Verify bidirectional communication (2-way state)</li>
+          <li>Elect Designated Router (DR) and Backup DR (BDR) on broadcast networks</li>
+          <li>Maintain neighbor adjacency (Dead Interval = 4 × HELLO Interval = 40s)</li>
+        </ul>
+
+        <div class="warning">If a router does not receive a HELLO from a neighbor within the Dead Interval, it declares the neighbor as dead and floods updated LSAs.</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Basic OSPF Configuration</div>
+          <p>Configure OSPF on a simple 3-router network (R1, R2, R3) with all routers in Area 0.</p>
+          <div class="code">
+! Router R1<br>
+router ospf 1<br>
+&nbsp;network 192.168.1.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.0 0.0.0.3 area 0<br>
+!<br>
+! Router R2<br>
+router ospf 1<br>
+&nbsp;network 192.168.2.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.0 0.0.0.3 area 0<br>
+!<br>
+! Router R3<br>
+router ospf 1<br>
+&nbsp;network 192.168.3.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.0.4 0.0.0.3 area 0
+          </div>
+          <p><strong>Result:</strong> R1, R2, and R3 form adjacencies, exchange LSAs, and learn routes to all networks. Each router computes the shortest path to 192.168.1.0/24, 192.168.2.0/24, and 192.168.3.0/24.</p>
+          <p>R1's routing table after convergence:</p>
+          <div class="code">
+O 192.168.2.0/24 [110/2] via 10.0.0.2<br>
+O 192.168.3.0/24 [110/3] via 10.0.0.2
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Multi-Area OSPF with ABR</div>
+          <p>Four routers across two areas. R1 and R2 are in Area 0. R3 and R4 are in Area 1. R2 is the ABR connecting both areas.</p>
+          <div class="code">
+! R2 (ABR)<br>
+router ospf 1<br>
+&nbsp;network 10.0.0.0 0.0.0.255 area 0<br>
+&nbsp;network 10.0.1.0 0.0.0.255 area 1<br>
+!<br>
+! R3 (Area 1 Internal)<br>
+router ospf 1<br>
+&nbsp;network 10.0.1.0 0.0.0.255 area 1<br>
+&nbsp;network 192.168.10.0 0.0.0.255 area 1
+          </div>
+          <p><strong>Route propagation:</strong></p>
+          <ul>
+            <li>R4 advertises 192.168.20.0/24 via an LSA in Area 1.</li>
+            <li>R2 (ABR) receives the LSA, installs the route, and creates a <strong>Type 3 Summary LSA</strong> for Area 0.</li>
+            <li>R1 learns 192.168.20.0/24 as an inter-area route (O IA) with cost = cost_to_ABR + cost_in_Area_1.</li>
+          </ul>
+          <p>R1's routing table:</p>
+          <div class="code">
+O IA 192.168.20.0/24 [110/5] via 10.0.0.2
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: OSPF Cost Calculation with Traffic Engineering</div>
+          <p>An OSPF network has three paths between router A and router B:</p>
+          <ul>
+            <li>Path 1: A → R1 → B (10 Gbps link, default cost = 10)</li>
+            <li>Path 2: A → R2 → B (1 Gbps link, default cost = 100)</li>
+            <li>Path 3: A → R3 → R4 → B (10 Gbps + 10 Gbps, cost = 10 + 10 = 20)</li>
+          </ul>
+          <p><strong>Question:</strong> Which path does OSPF choose?</p>
+          <p><strong>Calculation:</strong> Path 1 has cost 10, Path 2 has cost 100, Path 3 has cost 20. Dijkstra selects <span class="result">Path 1</span> (lowest total cost = 10).</p>
+          <p><strong>Traffic Engineering:</strong> If Path 1 is congested, the operator can increase its cost:</p>
+          <div class="code">
+interface TenGigE0/1<br>
+&nbsp;ip ospf cost 50
+          </div>
+          <p>Now Path 3 (cost 20) becomes the preferred route. This demonstrates how OSPF cost manipulation enables <strong>traffic engineering</strong> without changing physical topology.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: OSPF Authentication Configuration</div>
+          <p>Configure MD5 authentication between two OSPF neighbors.</p>
+          <div class="code">
+! R1<br>
+interface GigabitEthernet0/0<br>
+&nbsp;ip ospf authentication message-digest<br>
+&nbsp;ip ospf message-digest-key 1 md5 MySecretKey<br>
+!<br>
+! R2<br>
+interface GigabitEthernet0/0<br>
+&nbsp;ip ospf authentication message-digest<br>
+&nbsp;ip ospf message-digest-key 1 md5 MySecretKey
+          </div>
+          <p><strong>Key points:</strong></p>
+          <ul>
+            <li>Both routers must use the same <strong>key ID</strong> and <strong>password</strong>.</li>
+            <li>MD5 authentication adds a cryptographic hash to each OSPF packet.</li>
+            <li>Without matching authentication, routers will not form adjacencies.</li>
+          </ul>
+          <div class="warning">Change MD5 passwords regularly. Use <strong>key chains</strong> for zero-downtime password transitions.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: ECMP Load Balancing with OSPF</div>
+          <p>Router R1 has four equal-cost paths to destination 172.16.0.0/16 (cost = 30 each). With OSPF ECMP, traffic is distributed:</p>
+          <ul>
+            <li><strong>Per-packet</strong>: Packets are round-robined across paths. May cause out-of-order delivery.</li>
+            <li><strong>Per-flow</strong>: Flows (identified by 5-tuple) are hashed to a specific path. Preserves packet ordering.</li>
+          </ul>
+          <p>Configuration:</p>
+          <div class="code">
+router ospf 1<br>
+&nbsp;maximum-paths 4
+          </div>
+          <p>With maximum-paths set to 4, OSPF installs up to 4 equal-cost next hops in the routing table for 172.16.0.0/16:</p>
+          <div class="code">
+O 172.16.0.0/16 [110/30] via 10.0.1.1, via 10.0.2.1, via 10.0.3.1, via 10.0.4.1
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

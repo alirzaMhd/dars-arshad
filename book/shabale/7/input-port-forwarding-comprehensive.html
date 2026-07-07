@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Input Port Processing & Destination-Based Forwarding - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; word-break: break-all; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1000; border-left: 3px solid #ff6600; padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .warning strong { color: #ff6600; }
+    .warning p { color: #e0c080; font-size: 0.9em; margin-top: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; font-size: 0.85em; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .binary { font-family: monospace; letter-spacing: 2px; color: #00ff88; }
+    .refcard { background: linear-gradient(135deg, #0a0a18, #002a1a); border: 1px solid #00ff8844; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .refcard h3 { color: #00ff88; margin-bottom: 8px; }
+    .refcard p { font-size: 0.85em; color: #ccc; }
+    .match { color: #00ff88; }
+    .mismatch { color: #ff4444; }
+    @media (max-width: 768px) {
+      h1 { font-size: 1.2em; }
+      .section { padding: 12px; }
+      th, td { font-size: 0.75em; padding: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Input Port Processing &amp; Destination-Based Forwarding</h1>
+  <p class="subtitle">Computer Networking: A Top-Down Approach (Kurose &amp; Ross) — Chapter 4</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Input Processing</button>
+      <button class="tab" onclick="showSection('tab2')">Longest Prefix Matching</button>
+      <button class="tab" onclick="showSection('tab3')">Match-Plus-Action</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: INPUT PORT PROCESSING                                  -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Input Port Processing Overview</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">When a packet arrives at a router's input port, three sequential functions execute at the physical, link, and network layers before the packet can be forwarded.</p>
+
+        <div class="formula">
+          <div class="label">Input Port Pipeline:</div>
+          <div class="expr">Line Termination &#8594; Link-Layer Processing &#8594; Lookup (Forwarding)</div>
+          <div class="desc">Each stage must complete before the next begins; lookup is the bottleneck.</div>
+        </div>
+
+        <h3>Stage-by-Stage Breakdown</h3>
+        <table>
+          <tr><th>Stage</th><th>Function</th><th>Key Detail</th></tr>
+          <tr><td>1. Line Termination</td><td>Receive bits from physical medium</td><td>Clock recovery, signal decoding</td></tr>
+          <tr><td>2. Link-Layer Processing</td><td>Verify frame integrity, extract IP datagram</td><td>CRC check, remove Ethernet header</td></tr>
+          <tr><td>3. Lookup (Forwarding)</td><td>Query forwarding table using dest IP</td><td>Uses longest prefix match; outputs port</td></tr>
+        </table>
+
+        <h3>Shadow Copy Mechanism</h3>
+        <p style="font-size:0.9em;">The routing processor computes the forwarding table in software. A <strong style="color:#ff6600;">shadow copy</strong> is pushed to each line card so lookups occur at line rate without involving the central processor.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Routing Processor</h3>
+            <p>Computes forwarding table via routing protocols (OSPF, BGP) interacting with other routers</p>
+            <p>Or receives forwarding rules from a remote SDN controller</p>
+            <p class="dim">Pushes shadow copy to line cards</p>
+          </div>
+          <div class="card">
+            <h3>Line Card (Input Port)</h3>
+            <p>Stores local forwarding table</p>
+            <p>Hardware lookup (TCAM/SRAM)</p>
+            <p class="highlight">&#8810; 1 &#956;s per lookup</p>
+          </div>
+        </div>
+
+        <h3>Fast Lookup Memory Considerations</h3>
+        <div class="warning">
+          <strong>&#9889; Memory Access Times:</strong>
+          <p>Forwarding lookups must complete within nanoseconds to keep pace with line rates. Routers use <strong>on-chip DRAM</strong> and faster <strong>SRAM</strong> (employed as a DRAM cache) to store forwarding tables and enable rapid lookups. Special attention must be paid to memory access times — a single DRAM access (~50 ns) can consume most of the lookup budget at high line rates. SRAM caches mitigate this by caching frequently matched prefixes. For a survey of fast lookup algorithms, see <strong>[Gupta 2001, Ruiz-Sanchez 2001]</strong>.</p>
+        </div>
+
+        <h3>Example 1: Basic Input Port Walkthrough</h3>
+        <div class="example">
+          <div class="title">Example 1: Arriving Packet at Router R1</div>
+          <p>A 1500-byte IP datagram arrives at input port 2 of router R1 over a 1 Gbps link.</p>
+          <p><strong style="color:#00ccff;">Step 1 (Line Termination):</strong> ~12 &mu;s to receive all bits.</p>
+          <p><strong style="color:#00ccff;">Step 2 (Link-Layer):</strong> CRC verified; Ethernet header stripped. No errors found.</p>
+          <p><strong style="color:#00ccff;">Step 3 (Lookup):</strong> Dest IP = <span class="binary">11001000.00010111.00010110.10100001</span> &#8594; matched to prefix 200.23.16.0/20 &#8594; output port 1.</p>
+          <p><span class="result">Result:</span> Packet forwarded out port 1 in under 1 &mu;s lookup time.</p>
+        </div>
+
+        <h3>Example 2: Shadow Copy Update</h3>
+        <div class="example">
+          <div class="title">Example 2: Routing Table Update Propagation</div>
+          <p>A BGP update arrives at the routing processor, changing the next-hop for prefix 200.23.18.0/23.</p>
+          <p><strong style="color:#00ccff;">Time t=0:</strong> Routing processor recomputes forwarding table.</p>
+          <p><strong style="color:#00ccff;">Time t=2 ms:</strong> New shadow copy pushed to all 8 line cards.</p>
+          <p><strong style="color:#00ccff;">Time t=2.5 ms:</strong> Line card begins using updated table. In-flight lookups finish with old table.</p>
+          <p><span class="result">Result:</span> Zero forwarding downtime; seamless transition via shadow copy.</p>
+        </div>
+
+        <h3>Example 3: Brute-Force Impracticality</h3>
+        <div class="example">
+          <div class="title">Example 3: Why 2<sup>32</sup> Entries Fails</div>
+          <p>A naive forwarding table listing one entry per IP address would contain <strong>4,294,967,296</strong> entries.</p>
+          <p>At 1 Gbps line rate with 64-byte packets (~1.49 Mpps), the lookup budget is <strong>672 ns</strong> per packet.</p>
+          <p>A linear scan of 4 billion entries at 10 ns per entry would take <strong>~43 seconds</strong> — 64 million times too slow.</p>
+          <p><span class="result">Solution:</span> Prefix-based aggregation reduces the table to ~900K entries (BGP full table).</p>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong>
+          <p>Students often think the routing processor performs per-packet lookups. In practice, the routing processor only computes the table; lookups happen on line cards via shadow copies.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; Quick Reference: Input Port Processing</h3>
+          <p><strong>Pipeline:</strong> Line Termination &#8594; Link-Layer &#8594; Lookup</p>
+          <p><strong>Shadow Copy:</strong> Forwarding table replicated to line cards; central CPU not in data path</p>
+          <p><strong>Lookup Budget:</strong> ~1 &mu;s per packet at 10 Gbps line rate</p>
+          <p><strong>Prefix Table Size:</strong> ~900K–1M entries (vs. 4B brute-force)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: LONGEST PREFIX MATCHING                                -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Longest Prefix Matching (LPM)</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">When multiple forwarding table prefixes match a destination address, the router selects the entry with the <strong>longest subnet mask</strong> (most specific match).</p>
+
+        <div class="formula">
+          <div class="label">Longest Prefix Matching Rule:</div>
+          <div class="expr">output = argmax ( mask_len<sub>i</sub> ) over i where addr &amp; mask<sub>i</sub> = prefix<sub>i</sub></div>
+          <div class="desc">Among all matching entries, pick the one with the greatest prefix length.</div>
+        </div>
+
+        <h3>Forwarding Table Example (4 Entries)</h3>
+        <table>
+          <tr><th>Prefix</th><th>Binary Prefix</th><th>Mask Length</th><th>Output Port</th></tr>
+          <tr><td>200.23.16.0/20</td><td>11001000.00010111.0001</td><td>20</td><td>1</td></tr>
+          <tr><td>200.23.18.0/23</td><td>11001000.00010111.00010010</td><td>23</td><td>2</td></tr>
+          <tr><td>200.23.18.0/24</td><td>11001000.00010111.00010010.0</td><td>24</td><td>3</td></tr>
+          <tr><td>0.0.0.0/0</td><td>(no bits)</td><td>0</td><td>4 (default)</td></tr>
+        </table>
+
+        <h3>LPM Algorithm Pseudocode</h3>
+        <div class="code">Algorithm LongestPrefixMatch(FIB table T, IP address D):
+  best_len = -1
+  best_port = null
+
+  for each entry E = (prefix, mask_len, port) in T:
+    // Apply mask: keep only first mask_len bits
+    if (D AND generate_mask(mask_len)) == prefix:
+      if mask_len > best_len:
+        best_len = mask_len
+        best_port = port
+
+  if best_len == -1:
+    return default_port
+  return best_port
+
+Function generate_mask(len):
+  if len == 0: return 0
+  return (~0) << (32 - len)</div>
+
+        <h3>Example 1: Matching with 200.23.18.1</h3>
+        <div class="example">
+          <div class="title">Example 1: Destination 200.23.18.1 (11001000.00010111.00010010.00000001)</div>
+          <table>
+            <tr><th>Prefix</th><th>Match?</th><th>Length</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="match">&#10003; First 20 bits match</td><td>20</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="match">&#10003; First 23 bits match</td><td>23</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="match">&#10003; First 24 bits match</td><td>24</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; Always matches</td><td>0</td></tr>
+          </table>
+          <p><span class="result">Winner:</span> /24 (length 24) — most specific match &#8594; <strong>output port 3</strong></p>
+        </div>
+
+        <h3>Example 2: Matching with 200.23.20.1</h3>
+        <div class="example">
+          <div class="title">Example 2: Destination 200.23.20.1 (11001000.00010111.00010100.00000001)</div>
+          <table>
+            <tr><th>Prefix</th><th>Match?</th><th>Length</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="match">&#10003; First 20 bits match</td><td>20</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="mismatch">&#10007; Bit 22 differs (bit 22: 1 vs 0)</td><td>—</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="mismatch">&#10007; Bit 22 differs</td><td>—</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; Always matches</td><td>0</td></tr>
+          </table>
+          <p>Bit 22 check: 200.23.20.1 has <span class="binary">00010100</span> (byte 3); 200.23.18.0 requires <span class="binary">00010010</span>. Bits 22–23 differ.</p>
+          <p><span class="result">Winner:</span> /20 (length 20) &#8594; <strong>output port 1</strong></p>
+        </div>
+
+        <h3>Example 3: Role of Default Route</h3>
+        <div class="example">
+          <div class="title">Example 3: Destination 10.0.0.1</div>
+          <table>
+            <tr><th>Prefix</th><th>Match?</th><th>Length</th></tr>
+            <tr><td>200.23.16.0/20</td><td class="mismatch">&#10007; Bit 4 of byte 1 differs (10 vs 200)</td><td>—</td></tr>
+            <tr><td>200.23.18.0/23</td><td class="mismatch">&#10007; No match</td><td>—</td></tr>
+            <tr><td>200.23.18.0/24</td><td class="mismatch">&#10007; No match</td><td>—</td></tr>
+            <tr><td>0.0.0.0/0</td><td class="match">&#10003; Default route (length 0)</td><td>0</td></tr>
+          </table>
+          <p><span class="result">Winner:</span> /0 (default) &#8594; <strong>output port 4</strong></p>
+          <p class="note">The default route 0.0.0.0/0 matches every address. It is only selected when no other entry matches.</p>
+        </div>
+
+        <h3>TCAM — Constant-Time Lookup</h3>
+        <p style="font-size:0.9em;">Ternary Content-Addressable Memories (TCAMs) compare a search key against all entries in parallel. Each TCAM cell stores 0, 1, or X (don't care). Longest prefix is resolved by ordering entries by prefix length.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>TCAM vs. SRAM</h3>
+            <p><strong>TCAM:</strong> O(1) lookup, higher power, ~$350/Mb</p>
+            <p><strong>SRAM + Algorithm:</strong> O(log N), lower power</p>
+            <p><span class="dim">Cisco Catalyst: up to 1M TCAM entries</span></p>
+          </div>
+          <div class="card">
+            <h3>TCAM Ordering Constraint</h3>
+            <p>Entries must be stored longest-prefix-first</p>
+            <p>First match = longest prefix</p>
+            <p class="highlight">No mask computation needed</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong>
+          <p>LPM does NOT pick the numerically "largest" matching address; it picks the entry with the longest mask. A /24 always wins over a /20, even if the /20's address range includes more addresses.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; Quick Reference: Longest Prefix Matching</h3>
+          <p><strong>Rule:</strong> Among matches, longest mask wins</p>
+          <p><strong>Implementations:</strong> Binary trie (O(32)), TCAM (O(1))</p>
+          <p><strong>TCAM capacity:</strong> up to 1M entries (Cisco Catalyst)</p>
+          <p><strong>Default route:</strong> 0.0.0.0/0 matches all (length 0 — lowest priority)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: MATCH-PLUS-ACTION                                      -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Match-Plus-Action Abstraction</h2>
+        <p style="margin-bottom:12px;font-size:0.9em;">Modern routers generalize forwarding beyond simple destination-based lookups. The <strong>match-plus-action</strong> paradigm decouples pattern matching from the operations performed on matching packets.</p>
+
+        <div class="formula">
+          <div class="label">Match-Plus-Action Model:</div>
+          <div class="expr">&#8704; packet p : (match<sub>i</sub>(p)) &#8658; action<sub>i</sub>(p)</div>
+          <div class="desc">If packet p satisfies match condition i, execute the associated action set.</div>
+        </div>
+
+        <h3>Generalized Forwarding Table</h3>
+        <table>
+          <tr><th>Match Condition</th><th>Actions</th><th>Use Case</th></tr>
+          <tr><td>Dest IP = 200.23.18.0/24</td><td>Forward(port 3), DecTTL</td><td>Standard forwarding</td></tr>
+          <tr><td>Src IP = 10.0.0.0/8</td><td>Drop</td><td>ACL / Firewall</td></tr>
+          <tr><td>Dest Port = 80</td><td>NAT(translate addr), Forward(port 2)</td><td>NAT gateway</td></tr>
+          <tr><td>Protocol = TCP &amp; Flags = SYN</td><td>Count++, Forward(port 1)</td><td>Traffic monitoring</td></tr>
+        </table>
+
+        <h3>Additional Actions (Beyond Forwarding)</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Checksum Check</h3>
+            <p>Verify IP header checksum; if invalid, drop packet</p>
+            <p class="dim">Header checksum recomputed at each hop</p>
+          </div>
+          <div class="card">
+            <h3>TTL Decrement</h3>
+            <p>Time-to-Live field reduced by 1</p>
+            <p>If TTL = 0 after decrement, send ICMP TTL exceeded</p>
+            <p class="highlight">Prevents infinite loops</p>
+          </div>
+          <div class="card">
+            <h3>Counter Updates</h3>
+            <p>Byte counters, packet counters per flow</p>
+            <p>Used for accounting, SNMP, NetFlow</p>
+            <p class="dim">Critical for network monitoring</p>
+          </div>
+        </div>
+
+        <h3>Additional Input Processing Actions</h3>
+        <p style="font-size:0.9em;">Beyond forwarding decisions, input processing encompasses several mandatory actions applied to every arriving packet:</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Physical &amp; Link-Layer Processing</h3>
+            <p>Line termination, clock recovery, signal decoding</p>
+            <p class="dim">Frame integrity verification (CRC), header extraction</p>
+          </div>
+          <div class="card">
+            <h3>Version, Checksum &amp; TTL Checks</h3>
+            <p>Packet's IP version number and checksum are verified</p>
+            <p>TTL field is checked (decrement to 0 &#8594; drop)</p>
+            <p class="highlight">Checksum and TTL are rewritten before forwarding</p>
+          </div>
+          <div class="card">
+            <h3>Network Management Counters</h3>
+            <p>Counters such as number of IP datagrams received must be updated</p>
+            <p>Used for SNMP, NetFlow, accounting</p>
+            <p class="dim">Essential for monitoring and debugging</p>
+          </div>
+        </div>
+
+        <h3>Example 1: Firewall ACL (Drop Rule)</h3>
+        <div class="example">
+          <div class="title">Example 1: Blocking Outbound SSH</div>
+          <p><strong>Match:</strong> Dest Port = 22 (SSH) AND Src Subnet = 10.1.0.0/16</p>
+          <p><strong>Action:</strong> Drop packet, increment blocked counter</p>
+          <p><strong>Packet:</strong> Src=10.1.5.100, Dest=192.168.1.1:22</p>
+          <p><span class="result">Result:</span> Match found &#8594; Packet dropped. Counter incremented.</p>
+        </div>
+
+        <h3>Example 2: NAT Gateway</h3>
+        <div class="example">
+          <div class="title">Example 2: Source NAT for Web Traffic</div>
+          <p><strong>Match:</strong> Src IP = 192.168.0.0/16 AND Dest Port = 80</p>
+          <p><strong>Actions:</strong> Translate Src to public IP 203.0.113.1, Forward(port 0)</p>
+          <p><strong>Packet:</strong> Src=192.168.1.10:4000 &#8594; Dest=93.184.216.34:80</p>
+          <p><span class="result">Result:</span> Src rewritten to 203.0.113.1:4000, forwarded to WAN port 0.</p>
+          <p class="note">Return traffic matches a reverse entry that translates back to 192.168.1.10.</p>
+        </div>
+
+        <h3>Example 3: Traffic Mirroring for Monitoring</h3>
+        <div class="example">
+          <div class="title">Example 3: Mirror DNS Traffic</div>
+          <p><strong>Match:</strong> Dest Port = 53 (DNS) OR Src Port = 53</p>
+          <p><strong>Actions:</strong> Forward(port 2), Copy-to(port 10), Count++</p>
+          <p><strong>Packet:</strong> Dest=8.8.8.8:53, length 64 bytes</p>
+          <p><span class="result">Result:</span> Original forwarded to port 2; copy sent to monitoring port 10; DNS packet counter incremented.</p>
+        </div>
+
+        <h3>Comparison: Destination-Only vs. Match-Plus-Action</h3>
+        <table>
+          <tr><th>Feature</th><th>Destination-Only Forwarding</th><th>Match-Plus-Action</th></tr>
+          <tr><td>Match fields</td><td>Dest IP only</td><td>Any header field(s)</td></tr>
+          <tr><td>Actions</td><td>Forward to port</td><td>Forward, Drop, Modify, Count, Mirror, NAT, ...</td></tr>
+          <tr><td>Implementation</td><td>TCAM / trie (longest prefix)</td><td>TCAM + action memory</td></tr>
+          <tr><td>Protocol support</td><td>Standard IP routing</td><td>OpenFlow, P4, SDN</td></tr>
+          <tr><td>Use cases</td><td>Traditional routers</td><td>Firewalls, switches, NAT, load balancers</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>&#9888; Common Mistake:</strong>
+          <p>Match-plus-action is <em>not</em> limited to destination IP. The match condition can inspect L2 (MAC), L3 (IP, protocol), L4 (ports, flags), or even L7 fields. Thinking "match = dest IP only" misses the generality of the abstraction.</p>
+        </div>
+
+        <div class="refcard">
+          <h3>&#9889; Quick Reference: Match-Plus-Action</h3>
+          <p><strong>Match:</strong> Any combination of header fields (IP, TCP/UDP ports, protocol, flags)</p>
+          <p><strong>Action:</strong> Forward, Drop, TTL-decrement, Checksum-recalc, Count, NAT, Mirror</p>
+          <p><strong>Applications:</strong> Firewalls, NAT, load balancers, SDN (OpenFlow), traffic engineering</p>
+          <p><strong>Key advantage:</strong> Single unified pipeline for all packet processing</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Distance-Vector Routing (Bellman-Ford) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .dv-table td { font-size: 0.82em; padding: 6px 4px; }
+    .dv-table .from-label { color: #ffcc00; font-weight: bold; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Distance-Vector (DV) Routing — Bellman-Ford Algorithm</h1>
+  <p class="subtitle">Computer Networks — Complete Guide for Exam Preparation</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview &amp; BF Equation</button>
+      <button class="tab" onclick="showSection('tab2')">DV Algorithm</button>
+      <button class="tab" onclick="showSection('tab3')">Link Changes &amp; Loops</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Overview & BF Equation -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Distance-Vector Routing Overview</h2>
+        <p>The Distance-Vector (DV) routing algorithm is <strong>distributed, iterative, and asynchronous</strong>. Unlike LS which requires global knowledge, each node in DV only knows the costs to its directly attached neighbors and exchanges information only with those neighbors.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>• <span class="highlight">Distributed</span> — no central authority</p>
+            <p>• <span class="highlight">Iterative</span> — repeats until convergence</p>
+            <p>• <span class="highlight">Asynchronous</span> — nodes operate independently</p>
+            <p>• <span class="dim">Self-terminating</span> — stops when no changes</p>
+          </div>
+          <div class="card">
+            <h3>Information Stored</h3>
+            <p>• Own distance vector D<sub>x</sub></p>
+            <p>• Neighbors' distance vectors D<sub>v</sub></p>
+            <p>• Cost to each neighbor c(x,v)</p>
+            <p>• Forwarding table entries</p>
+          </div>
+          <div class="card">
+            <h3>Real-World Usage</h3>
+            <p>• <span class="highlight">RIP</span> (Routing Information Protocol)</p>
+            <p>• <span class="highlight">BGP</span> (Border Gateway Protocol)</p>
+            <p>• Original ARPAnet routing</p>
+            <p>• Novell IPX, ISO IDRP</p>
+          </div>
+        </div>
+
+        <h3>The Bellman-Ford Equation</h3>
+        <p>The fundamental relationship that governs DV routing is the <strong>Bellman-Ford equation</strong>. Let d<sub>x</sub>(y) be the cost of the least-cost path from node x to node y. Then:</p>
+
+        <div class="formula">
+          <div class="label">Bellman-Ford Equation (Equation 5.1):</div>
+          <div class="expr">d<sub>x</sub>(y) = min<sub>v</sub> { c(x, v) + d<sub>v</sub>(y) }</div>
+          <div class="desc">The least cost from x to y = minimum over all neighbors v of (cost to neighbor v + least cost from v to y)</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Verification of Bellman-Ford</div>
+          <p>Consider the network in Figure 5.3 with nodes u, v, w, x, y, z.</p>
+          <p>For source u and destination z: d<sub>v</sub>(z)=5, d<sub>x</sub>(z)=3, d<sub>w</sub>(z)=3.</p>
+          <p>Edge costs: c(u,v)=2, c(u,x)=1, c(u,w)=5.</p>
+          <div class="formula">
+            <div class="expr">d<sub>u</sub>(z) = min{2+5, 1+3, 5+3} = min{7, 4, 8} = 4</div>
+            <div class="desc">This matches Dijkstra's result! The minimum is achieved through neighbor x.</div>
+          </div>
+          <p class="result">Therefore, the next-hop for u to reach z is node x.</p>
+        </div>
+
+        <h3>Distance Vector Definition</h3>
+        <p>Each node x maintains:</p>
+        <div class="formula">
+          <div class="label">Distance Vector:</div>
+          <div class="expr">D<sub>x</sub> = [ D<sub>x</sub>(y) : y ∈ N ]</div>
+          <div class="desc">A vector of cost estimates from node x to all destinations y in the network</div>
+        </div>
+
+        <p>The update rule when a node receives a new distance vector from a neighbor:</p>
+        <div class="formula">
+          <div class="label">DV Update Rule:</div>
+          <div class="expr">D<sub>x</sub>(y) = min<sub>v</sub> { c(x, v) + D<sub>v</sub>(y) } &nbsp; for each node y ∈ N</div>
+          <div class="desc">After updating, if D<sub>x</sub> changed, send copy to all neighbors</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Convergence Guarantee:</div>
+          <div class="expr">As long as all nodes continue to exchange their distance vectors asynchronously, D<sub>x</sub>(y) → d<sub>x</sub>(y)</div>
+          <div class="desc">Each cost estimate D<sub>x</sub>(y) converges to d<sub>x</sub>(y), the actual least cost [Bertsekas 1991]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: DV Algorithm -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Distance-Vector Algorithm — Pseudocode</h2>
+
+        <div class="code">DV Algorithm (at each node x):
+
+1  Initialization:
+2    for all destinations y in N:
+3      Dx(y) = c(x,y)    /* if y not neighbor: c(x,y)=∞ */
+4    for each neighbor w:
+5      Dw(y) = ? for all y in N   /* unknown */
+6    for each neighbor w:
+7      send distance vector Dx = [Dx(y): y in N] to w
+8
+9  loop (forever):
+10    wait (until link cost change to neighbor w OR
+11          until receive DV from neighbor w)
+12
+13    for each y in N:
+14      Dx(y) = min_v { c(x,v) + Dv(y) }
+15
+16    if Dx(y) changed for any destination y:
+17      send distance vector Dx = [Dx(y): y in N]
+18        to all neighbors
+19  forever</div>
+
+        <div class="warning">
+          <strong>Important:</strong> The algorithm is <strong>self-terminating</strong> — there is no explicit signal to stop. It simply reaches a quiescent state where no node sends updates because no distances have changed. It remains in the "wait" state (Lines 10-11) until a link cost change or topology event occurs.
+        </div>
+
+        <h3>Forwarding Table Update</h3>
+        <p>When updating D<sub>x</sub>(y), node x also determines the next-hop router v*(y) — the neighbor v that achieves the minimum in Line 14. This next-hop is stored in the forwarding table for destination y.</p>
+
+        <h2>3-Node Network Example</h2>
+        <p>Consider a simple 3-node network: x—2—y—1—z and x—7—z.</p>
+        <div class="formula">
+          <div class="expr">c(x,y)=2, c(y,z)=1, c(x,z)=7</div>
+        </div>
+
+        <h3>Initialization Phase</h3>
+        <p>Each node's initial routing table contains its own distance vector (D<sub>x</sub>, D<sub>y</sub>, D<sub>z</sub>) and the most recently received vectors from neighbors (initialized to ∞).</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Node x's Initial Table</h3>
+            <table class="dv-table">
+              <tr><th>From</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td><span class="from-label">x</span></td><td>Dx</td><td>0</td><td>2</td><td>7</td></tr>
+              <tr><td>y</td><td>Dy</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td>z</td><td>Dz</td><td>∞</td><td>∞</td><td>∞</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Node y's Initial Table</h3>
+            <table class="dv-table">
+              <tr><th>From</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td>x</td><td>Dx</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td><span class="from-label">y</span></td><td>Dy</td><td>2</td><td>0</td><td>1</td></tr>
+              <tr><td>z</td><td>Dz</td><td>∞</td><td>∞</td><td>∞</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Node z's Initial Table</h3>
+            <table class="dv-table">
+              <tr><th>From</th><th>D(·)</th><th>D(x)</th><th>D(y)</th><th>D(z)</th></tr>
+              <tr><td>x</td><td>Dx</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td>y</td><td>Dy</td><td>∞</td><td>∞</td><td>∞</td></tr>
+              <tr><td><span class="from-label">z</span></td><td>Dz</td><td>7</td><td>1</td><td>0</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 1 — Exchange and Update</div>
+          <p>Each node sends its distance vector to neighbors. After receiving updates:</p>
+          <p><strong>Node x computes:</strong></p>
+          <p>Dx(x) = 0</p>
+          <p>Dx(y) = min{ c(x,y)+Dy(y), c(x,z)+Dz(y) } = min{2+0, 7+1} = 2</p>
+          <p>Dx(z) = min{ c(x,y)+Dy(z), c(x,z)+Dz(z) } = min{2+1, 7+0} = 3</p>
+          <p class="result">Node x's Dx changed: [0, 2, 3]. Neighbor y achieves the minima: v*(y) = y and v*(z) = y. x sends update to y and z.</p>
+
+          <p><strong>Node y computes:</strong></p>
+          <p>Dy(x) = min{ c(y,x)+Dx(x), c(y,z)+Dz(x) } = min{2+0, 1+7} = 2</p>
+          <p>Dy(z) = min{ c(y,x)+Dx(z), c(y,z)+Dz(z) } = min{2+7, 1+0} = 1</p>
+          <p class="result">Node y's Dy unchanged: [2, 0, 1]. No update sent.</p>
+
+          <p><strong>Node z computes:</strong></p>
+          <p>Dz(x) = min{ c(z,y)+Dy(x), c(z,x)+Dx(x) } = min{1+2, 7+0} = 3</p>
+          <p>Dz(y) = min{ c(z,y)+Dy(y), c(z,x)+Dx(y) } = min{1+0, 7+2} = 1</p>
+          <p class="result">Node z's Dz changed: [3, 1, 0]. It sends update to x and y.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 2 — Final Convergence</div>
+          <p>After receiving z's update, x recomputes (no change). After receiving x's update, z recomputes (no change). Algorithm reaches quiescent state.</p>
+
+          <p><strong>Final Distance Vectors:</strong></p>
+          <div class="grid">
+            <div class="card">
+              <h3>Dx</h3>
+              <p>[0, 2, 3]</p>
+              <p>Next-hop for y: y</p>
+              <p>Next-hop for z: y</p>
+            </div>
+            <div class="card">
+              <h3>Dy</h3>
+              <p>[2, 0, 1]</p>
+              <p>Next-hop for x: x</p>
+              <p>Next-hop for z: z</p>
+            </div>
+            <div class="card">
+              <h3>Dz</h3>
+              <p>[3, 1, 0]</p>
+              <p>Next-hop for x: y</p>
+              <p>Next-hop for y: y</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Link Changes & Loops -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Link-Cost Changes: Decrease (Fast!)</h2>
+        <p>Consider the network x—y—z where c(y,x) changes from 4 to 1 (decrease).</p>
+
+        <div class="example">
+          <div class="title">Scenario: c(y,x): 4 → 1</div>
+          <p><strong>At t₀:</strong> y detects cost decrease. Dy(x) = min{1+0, 1+5} = 1. Dy changed, so y sends update to z.</p>
+          <p><strong>At t₁:</strong> z receives update. Dz(x) = min{50+0, 1+1} = 2. Dz changed, so z sends update to y.</p>
+          <p><strong>At t₂:</strong> y receives update. Dy(x) = min{1+0, 1+2} = 1. No change, algorithm quiesces.</p>
+          <p class="result">Good news travels fast! Only 2 iterations needed.</p>
+        </div>
+
+        <h2>Link-Cost Changes: Increase (Slow!)</h2>
+        <p>Now consider c(y,x) changing from 4 to 60 (increase). This reveals the <strong>count-to-infinity</strong> problem.</p>
+
+        <div class="example">
+          <div class="title">Scenario: c(y,x): 4 → 60</div>
+          <p><strong>Before change:</strong> Dy(x)=4, Dy(z)=1, Dz(y)=1, Dz(x)=5.</p>
+          <p><strong>At t₀:</strong> y detects increase. y computes: Dy(x) = min{60+0, 1+5} = 6.</p>
+          <div class="warning">
+            <strong>Problem!</strong> y thinks z can reach x with cost 5, but z's path to x goes through y! This creates a <strong>routing loop</strong>: y→z→y→z→... Packets destined for x bounce back and forth forever.
+          </div>
+          <p>y sends Dz=[60,0,1,...], Dy(x)=6 to z.</p>
+          <p><strong>At t₁:</strong> z receives y's update. Dz(x) = min{50+0, 1+6} = 7. z sends to y.</p>
+          <p><strong>At t₂:</strong> y receives. Dy(x) = min{60+0, 1+7} = 8. y sends to z.</p>
+          <p>... This continues for <strong>44 iterations</strong> before Dy(x) exceeds 50 (the direct cost z→x).</p>
+          <p class="result">Bad news travels slowly! The count-to-infinity problem causes slow convergence.</p>
+          <p><strong>Thought experiment:</strong> What if c(y,x) changed from 4 to 10,000 and c(z,x) had been 9,999? The same count-to-infinity loop would persist for <strong>thousands of iterations</strong> — the cost would increment from 10,000 up past 9,999 before z finally uses its direct link. This extreme case shows why count-to-infinity is so problematic in practice.</p>
+        </div>
+
+        <h2>Poisoned Reverse</h2>
+        <p>A technique to prevent routing loops between two neighboring nodes:</p>
+
+        <div class="formula">
+          <div class="label">Poisoned Reverse Rule:</div>
+          <div class="expr">If z routes to x via y, then z advertises D<sub>z</sub>(x) = ∞ to y</div>
+          <div class="desc">z tells y a <strong>"little white lie"</strong> — that it has no path to x — to prevent y from routing through z. z continues telling this lie as long as it routes to x via y [Kurose 2021].</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Poisoned Reverse in Action</div>
+          <p>Before the cost change, z routes to x via y (Dz(x)=5 via y). With poisoned reverse, z tells y: Dz(x)=∞.</p>
+          <p>When c(y,x) changes to 60:</p>
+          <p>• y computes: Dy(x) = min{60+0, 1+∞} = 60 (cannot use z since Dz(x)=∞)</p>
+          <p>• y sends Dy(x)=60 to z.</p>
+          <p>• z computes: Dz(x) = min{50+0, 1+60} = 50 (direct link is now cheaper)</p>
+          <p>• z switches to direct path, sends Dz(x)=50 to y.</p>
+          <p>• y computes: Dy(x) = min{60+0, 1+50} = 51.</p>
+          <p class="result">Only a few iterations needed! No routing loop.</p>
+        </div>
+
+        <div class="warning">
+          <strong>Limitation:</strong> Poisoned reverse does NOT solve the count-to-infinity problem for loops involving THREE or more nodes. It only prevents loops between two directly neighboring nodes. More complex loops (e.g., triangular loops through 3 nodes) are not detected.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples &amp; Practice Problems</h2>
+
+        <div class="example">
+          <div class="title">Example 1: 4-Node DV Convergence</div>
+          <p>Network: A—1—B—1—C—1—D, with A—4—D.</p>
+          <p><strong>Initial vectors:</strong> D<sub>A</sub>=[0,1,∞,4], D<sub>B</sub>=[1,0,1,∞], D<sub>C</sub>=[∞,1,0,1], D<sub>D</sub>=[4,∞,1,0]</p>
+          <p><strong>After first exchange:</strong></p>
+          <p>D<sub>A</sub>(C) = min{A→B+ D<sub>B</sub>(C), A→D+ D<sub>D</sub>(C)} = min{1+1, 4+1} = 2 → via B</p>
+          <p>D<sub>A</sub>(D) = min{1+∞, 4+0} = 4 → via D (direct)</p>
+          <p>D<sub>B</sub>(D) = min{1+4, 1+1} = 2 → via C</p>
+          <p>D<sub>C</sub>(A) = min{1+1, 1+4} = 2 → via B</p>
+          <p>D<sub>D</sub>(B) = min{4+1, 1+1} = 2 → via C</p>
+          <p>D<sub>D</sub>(A) = min{4+0, 1+2} = 3 → via C</p>
+
+          <p><strong>After second exchange (final):</strong></p>
+          <p>D<sub>A</sub>(D) = min{1+2, 4+0} = 3 → via B-C-D (better!)</p>
+          <p class="result">Final vectors: D<sub>A</sub>=[0,1,2,3], D<sub>B</sub>=[1,0,1,2], D<sub>C</sub>=[2,1,0,1], D<sub>D</sub>=[3,2,1,0]</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Link Cost Decrease Propagation</div>
+          <p>Network: P—5—Q—3—R—2—S. Initially all use direct links.</p>
+          <p>Suppose c(Q,R) drops from 3 to 1.</p>
+          <p><strong>Step 1:</strong> Q detects change. D<sub>Q</sub>(S) = min{3+2, 1+2} = 3 → unchanged (was 3+2=5 via direct wait — initially D<sub>Q</sub>(S) = ∞? Let me compute properly.</p>
+          <p>Initial: D<sub>P</sub>=[0,5,∞,∞], D<sub>Q</sub>=[5,0,3,∞], D<sub>R</sub>=[∞,3,0,2], D<sub>S</sub>=[∞,∞,2,0]</p>
+          <p>After 1st exchange: D<sub>Q</sub>(S) = min{3+2, ∞} = 5 via R. D<sub>R</sub>(P) = min{3+5, ∞} = 8 via Q.</p>
+          <p>After 2nd exchange: D<sub>P</sub>(S) = min{5+5, ∞} = 10 via Q. D<sub>R</sub>(S) = 2 (direct).</p>
+          <p>Now c(Q,R) = 1: Q recomputes: D<sub>Q</sub>(S) = min{1+2, 5+0} → wait, D<sub>Q</sub>(S) = min(1+R's cost to S, 5+0) = min(1+2, 5) = 3. D<sub>Q</sub> changed, sends to P and R.</p>
+          <p>P receives: D<sub>P</sub>(S) = min(5+3, ∞) = 8 via Q.</p>
+          <p class="result">Cost decrease propagates quickly (2 iterations).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Count-to-Infinity Scenario (3-Node Triangle)</div>
+          <p>Network: A—1—B—1—C—10—A. Initial: D<sub>A</sub>(C)=2 via B.</p>
+          <p>Suppose c(A,B) increases from 1 to 20.</p>
+          <p><strong>Without poisoned reverse:</strong></p>
+          <p>t₀: D<sub>A</sub>(B) becomes 20. D<sub>A</sub>(C) = min{20+1, 10+0} = 10 (direct). A sends.</p>
+          <p>But wait — initially D<sub>A</sub>(C)=2 via B. After cost increase: D<sub>A</sub>(B)=20, so D<sub>A</sub>(C)=min(20+1,10+0)=10. A sends D<sub>A</sub>(C)=10 to B.</p>
+          <p>B receives: D<sub>B</sub>(C) = min{1+10, 1+∞} = 11. B sends to A.</p>
+          <p>A receives: D<sub>A</sub>(C) = min{20+11, 10+0} = 10. No change.</p>
+          <p class="result">Converges directly to D<sub>A</sub>(C)=10 (via direct A→C). No loop in this case because A has a direct alternative.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Poisoned Reverse with Triangle Loop</div>
+          <p>Network: X—1—Y—1—Z—1—X. All link costs = 1.</p>
+          <p>Initially: D<sub>X</sub>=[0,1,2], D<sub>Y</sub>=[1,0,1], D<sub>Z</sub>=[2,1,0] (X→Z via Y).</p>
+          <p>With poisoned reverse: Z advertises D<sub>Z</sub>(X)=∞ to Y (since Z reaches X via Y).</p>
+          <p>Now c(Y,X) changes from 1 to 20.</p>
+          <p>Y computes: D<sub>Y</sub>(X) = min{20+0, 1+∞} = 20. Sends to Z.</p>
+          <p>Z computes: D<sub>Z</sub>(X) = min{1+20, 1+0} = 1 (direct). Z switches. Now Z no longer routes via Y, so Z sends D<sub>Z</sub>(X)=1 to Y (truthful now).</p>
+          <p>Y receives: D<sub>Y</sub>(X) = min{20+0, 1+1} = 2 (via Z). Y converges.</p>
+          <p class="result">Poisoned reverse prevented the loop! Only 3 iterations.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Building Forwarding Table with DV</div>
+          <p>For the network: A—3—B—2—C—4—D—1—A, find forwarding table for node A.</p>
+          <p><strong>Solution by DV convergence:</strong></p>
+          <table>
+            <tr><th>Destination</th><th>Cost from A</th><th>Next-Hop</th><th>Path</th></tr>
+            <tr><td>A</td><td>0</td><td>—</td><td>—</td></tr>
+            <tr><td>B</td><td>3</td><td>B</td><td>A→B</td></tr>
+            <tr><td>C</td><td>5</td><td>B</td><td>A→B→C</td></tr>
+            <tr><td>D</td><td>1</td><td>D</td><td>A→D</td></tr>
+          </table>
+          <p>Note: A→C costs 5 via B (3+2) rather than via D (1+4=5 — equal cost, could use either).</p>
+          <p>A→D costs 1 directly, but what about the loop? A→D→C→B→A? D<sub>A</sub>(C) = min(3+2, 1+4) = 5. D<sub>A</sub>(B) = min(3+0, 1+4+2) = 3. Direct is best.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Bellman-Ford Algorithm</h3>
+            <p><span class="highlight">Type:</span> Distance-Vector (Decentralized)</p>
+            <p><span class="dim">Properties:</span> Distributed, iterative, async</p>
+            <p><span class="dim">Convergence:</span> Variable, can be slow</p>
+          </div>
+          <div class="card">
+            <h3>Key Equation</h3>
+            <p>d<sub>x</sub>(y) = min<sub>v</sub>{c(x,v) + d<sub>v</sub>(y)}</p>
+            <p class="note">Each node only talks to neighbors</p>
+          </div>
+          <div class="card">
+            <h3>Problems</h3>
+            <p>• Count-to-infinity</p>
+            <p>• Routing loops</p>
+            <p>• Slow convergence on bad news</p>
+          </div>
+          <div class="card">
+            <h3>Protocols Using DV</h3>
+            <p>• <span class="highlight">RIP</span> (hop count metric)</p>
+            <p>• <span class="highlight">BGP</span> (path-vector variant)</p>
+            <p>• Original ARPAnet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

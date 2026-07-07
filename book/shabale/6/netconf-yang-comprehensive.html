@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETCONF &amp; YANG - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>NETCONF &amp; YANG</h1>
+  <p class="subtitle">Network Configuration Protocol &amp; Data Modeling Language</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">NETCONF Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Operations &amp; Messages</button>
+      <button class="tab" onclick="showSection('tab3')">YANG Data Modeling</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <!-- Tab 1: NETCONF Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>NETCONF Overview</h2>
+        <p>NETCONF (Network Configuration Protocol) is an IETF-standardized protocol for installing, manipulating, and deleting the configuration of network devices. It uses an RPC paradigm with XML-encoded messages over a secure, connection-oriented session such as TLS (Transport Layer Security) over TCP.</p>
+
+        <div class="formula">
+          <div class="label">NETCONF Stack:</div>
+          <div class="expr">Transport: TCP/TLS/SSH &bull; Encoding: XML &bull; Paradigm: RPC</div>
+          <div class="desc">IETF RFC 6241 — replaces SNMP for configuration management</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Transport Layer</h3>
+            <p><span class="highlight">SSH</span> (RFC 6242) — most common</p>
+            <p><span class="highlight">TLS</span> (RFC 7589) — Transport Layer Security over TCP</p>
+            <p><span class="dim">TCP</span> (raw, RFC 5539)</p>
+            <p>Connection-oriented &amp; <span class="result">reliable</span></p>
+          </div>
+          <div class="card">
+            <h3>Key Features</h3>
+            <p><span class="highlight">Transactional</span> — commit/rollback</p>
+            <p><span class="highlight">Candidate config</span> — edit without impact</p>
+            <p><span class="dim">Filtering</span> — subtree, XPath</p>
+            <p><span class="dim">Notifications</span> — event streaming</p>
+            <p><span class="highlight">Multi-device atomic transactions</span> [RFC 3535] — operations that complete atomically across a set of devices or are fully reversed</p>
+          </div>
+          <div class="card">
+            <h3>vs SNMP</h3>
+            <p>TCP vs <span class="dim">UDP</span></p>
+            <p>XML vs <span class="dim">BER/DER</span></p>
+            <p>RPC vs <span class="dim">Get/Set</span></p>
+            <p><span class="highlight">Transactional</span> vs atomic</p>
+          </div>
+        </div>
+
+        <h3>NETCONF Session Flow (Figure 5.22)</h3>
+        <div class="code">
+Client (NMS)                          Server (Device)<br>
+    |                                      |<br>
+    |--- &lt;hello&gt; (capabilities) -----------&gt; |<br>
+    |&lt;--- &lt;hello&gt; (capabilities) ------------| <span class="result">Session Establishment</span><br>
+    |                                      |<br>
+    |--- &lt;rpc&gt; (&lt;get-config/&gt;) ------------&gt; |<br>
+    |&lt;--- &lt;rpc-reply&gt; (data) ---------------| <span class="result">RPC Exchange</span><br>
+    |                                      |<br>
+    |--- &lt;rpc&gt; (&lt;edit-config&gt;) -----------&gt; |<br>
+    |&lt;--- &lt;rpc-reply&gt; (&lt;ok/&gt;) -------------| <span class="result">Configuration Change</span><br>
+    |                                      |<br>
+    |&lt;--- &lt;notification&gt; (event) -----------| <span class="result">Async Notification</span><br>
+    |                                      |<br>
+    |--- &lt;rpc&gt; (&lt;close-session/&gt;) --------&gt; |<br>
+    |&lt;--- &lt;rpc-reply&gt; (&lt;ok/&gt;) -------------| <span class="result">Session Close</span>
+        </div>
+
+        <table>
+          <tr><th>Phase</th><th>Direction</th><th>Message</th><th>Purpose</th></tr>
+          <tr><td>1. Hello</td><td>Both</td><td>&lt;hello&gt;</td><td>Exchange capabilities (YANG modules, NETCONF versions)</td></tr>
+          <tr><td>2. RPC</td><td>Client → Server</td><td>&lt;rpc&gt;</td><td>Invoke operation with parameters</td></tr>
+          <tr><td>3. Reply</td><td>Server → Client</td><td>&lt;rpc-reply&gt;</td><td>Return data or &lt;ok/&gt; on success, &lt;rpc-error&gt; on failure</td></tr>
+          <tr><td>4. Notification</td><td>Server → Client</td><td>&lt;notification&gt;</td><td>Asynchronous event (requires create-subscription)</td></tr>
+          <tr><td>5. Close</td><td>Client → Server</td><td>&lt;close-session&gt;</td><td>Terminate the NETCONF session</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Key Point:</strong> NETCONF uses a <span class="highlight">capability exchange</span> during the &lt;hello&gt; phase. The client and server each advertise which YANG modules and protocol capabilities they support. Operations not supported by both sides cannot be used.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Transport</h3>
+            <p><span class="highlight">SSH port 830</span> (default)</p>
+            <p>TLS port 6513</p>
+            <p>XML over <span class="dim">TCP</span></p>
+          </div>
+          <div class="card">
+            <h3>Configuration Stores</h3>
+            <p><span class="highlight">&lt;candidate&gt;</span> — working copy</p>
+            <p><span class="highlight">&lt;running&gt;</span> — active config</p>
+            <p><span class="dim">&lt;startup&gt;</span> — boot config</p>
+          </div>
+          <div class="card">
+            <h3>Key RFCs</h3>
+            <p>NETCONF: <span class="dim">RFC 6241</span></p>
+            <p>YANG: <span class="dim">RFC 7950</span></p>
+            <p>NETCONF over SSH: <span class="dim">RFC 6242</span></p>
+            <p>RESTCONF: <span class="dim">RFC 8040</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Operations & Messages -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>NETCONF Operations (Table 5.3)</h2>
+        <p>NETCONF defines a set of base operations that form the foundation of device management. These operations can be composed into sophisticated multi-device transactions that either complete atomically and successfully, or are fully reversed — leaving devices in their pre-transaction state. This "network as a whole" approach was an important operator requirement from [RFC 3535].</p>
+
+        <table>
+          <tr><th>Operation</th><th>Description</th><th>Input</th><th>Output</th></tr>
+          <tr><td><span class="highlight">get-config</span></td><td>Retrieve all or part of a configuration datastore</td><td>source, filter</td><td>XML config data</td></tr>
+          <tr><td><span class="highlight">get</span></td><td>Retrieve both configuration and state data</td><td>filter</td><td>XML config + state data</td></tr>
+          <tr><td><span class="highlight">edit-config</span></td><td>Modify a configuration datastore</td><td>target, config, operation</td><td>&lt;ok/&gt; or &lt;rpc-error&gt;; on error, config can be rolled back to previous state</td></tr>
+          <tr><td><span class="highlight">lock</span></td><td>Lock a configuration datastore (prevent concurrent edits)</td><td>target</td><td>&lt;ok/&gt; or lock-denied error</td></tr>
+          <tr><td><span class="highlight">unlock</span></td><td>Release a previously acquired lock</td><td>target</td><td>&lt;ok/&gt;</td></tr>
+          <tr><td><span class="highlight">create-subscription</span></td><td>Subscribe to event notifications</td><td>stream, filter</td><td>Notification stream starts</td></tr>
+          <tr><td><span class="highlight">notification</span></td><td>(Server side) Send an event notification</td><td>event data</td><td>N/A (async)</td></tr>
+          <tr><td><span class="highlight">close-session</span></td><td>Gracefully close the NETCONF session</td><td>None</td><td>&lt;ok/&gt;</td></tr>
+          <tr><td><span class="highlight">kill-session</span></td><td>Forcefully terminate another session</td><td>session-id</td><td>&lt;ok/&gt;</td></tr>
+        </table>
+
+        <h3>XML Message Examples from the Textbook</h3>
+
+        <div class="example">
+          <div class="title">&lt;get/&gt; Command — Retrieve Full Device State</div>
+          <div class="code">
+&lt;rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;get/&gt;<br>
+&lt;/rpc&gt;
+          </div>
+          <p class="note">The &lt;get/&gt; operation returns both configuration and operational state data from the device.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">&lt;edit-config&gt; — Setting MTU on an Interface</div>
+          <div class="code">
+&lt;rpc message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;edit-config&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;target&gt;&lt;running/&gt;&lt;/target&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;config&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;top xmlns="http://example.com/ns/example"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/top&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/config&gt;<br>
+  &nbsp;&nbsp;&lt;/edit-config&gt;<br>
+&lt;/rpc&gt;
+          </div>
+          <p class="note">The default operation is <span class="highlight">merge</span> (creates if not exist, updates if exists). Other operations: <span class="dim">replace, create, delete, remove</span>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">&lt;rpc-reply&gt; — Successful Response</div>
+          <div class="code">
+&lt;rpc-reply message-id="102" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;ok/&gt;<br>
+&lt;/rpc-reply&gt;
+          </div>
+          <p class="note">An &lt;ok/&gt; element indicates the operation completed successfully. Error responses include &lt;rpc-error&gt; with error-type, error-tag, and error-message.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">Edit Operations:</div>
+          <div class="expr">merge &bull; replace &bull; create &bull; delete &bull; remove</div>
+          <div class="desc">Specified via the 'operation' attribute on configuration elements</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Operation Semantics</h3>
+            <p><span class="highlight">merge</span> — create or update</p>
+            <p><span class="highlight">replace</span> — replace existing</p>
+            <p><span class="dim">create</span> — fail if exists</p>
+            <p><span class="dim">delete</span> — fail if missing</p>
+            <p><span class="dim">remove</span> — delete if exists</p>
+          </div>
+          <div class="card">
+            <h3>Configuration Stores</h3>
+            <p><span class="highlight">&lt;candidate&gt;</span> — edit without affecting running config</p>
+            <p><span class="highlight">&lt;running&gt;</span> — currently active config</p>
+            <p>&lt;commit&gt; — copy candidate → running</p>
+            <p>&lt;discard-changes&gt; — revert candidate</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: YANG Data Modeling -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>YANG Data Modeling Language</h2>
+        <p>YANG (Yet Another Next Generation) is the data modeling language for NETCONF. It defines the structure, constraints, and semantics of configuration and state data. Similar to SMI for SNMP, but built for NETCONF's XML-based world.</p>
+
+        <div class="formula">
+          <div class="label">YANG Purpose:</div>
+          <div class="expr">Define data models for NETCONF configuration and operational state</div>
+          <div class="desc">YANG modules define the structure, types, and constraints of data exchanged via NETCONF</div>
+        </div>
+
+        <h3>YANG Module Structure</h3>
+        <div class="code">
+module example-interface {<br>
+  &nbsp;&nbsp;yang-version 1.1;<br>
+  &nbsp;&nbsp;namespace "http://example.com/ns/example-interface";<br>
+  &nbsp;&nbsp;prefix exif;<br>
+<br>
+  &nbsp;&nbsp;import ietf-yang-types { prefix yang; }<br>
+  &nbsp;&nbsp;import ietf-inet-types { prefix inet; }<br>
+<br>
+  &nbsp;&nbsp;container interfaces {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;list interface {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key "name";<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf name {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type string;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf description {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type string;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf mtu {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type uint16 {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;range "68..9216";<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default 1500;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leaf enabled {<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;type boolean;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;default true;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+  &nbsp;&nbsp;}<br>
+}
+        </div>
+
+        <h3>YANG Built-in Types</h3>
+        <table>
+          <tr><th>Category</th><th>Types</th><th>Description</th></tr>
+          <tr><td><span class="highlight">Numeric</span></td><td>uint8, uint16, uint32, uint64<br>int8, int16, int32, int64</td><td>Unsigned and signed integers</td></tr>
+          <tr><td><span class="highlight">String</span></td><td>string</td><td>Text string</td></tr>
+          <tr><td><span class="highlight">Boolean</span></td><td>boolean</td><td>true/false</td></tr>
+          <tr><td><span class="highlight">Enumeration</span></td><td>enumeration</td><td>Named values</td></tr>
+          <tr><td><span class="highlight">Binary</span></td><td>binary</td><td>Arbitrary data</td></tr>
+          <tr><td><span class="highlight">Union</span></td><td>union</td><td>One of multiple types</td></tr>
+          <tr><td><span class="highlight">Date/Time</span></td><td>yang:date-and-time</td><td>RFC 3339 timestamp</td></tr>
+          <tr><td><span class="highlight">IP Address</span></td><td>inet:ipv4-address, inet:ipv6-address</td><td>IP address types</td></tr>
+        </table>
+
+        <h3>YANG Constraints</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Range</h3>
+            <div class="code">type uint16 { range "68..9216"; }</div>
+            <p>Valid values: 68 through 9216</p>
+          </div>
+          <div class="card">
+            <h3>Length</h3>
+            <div class="code">type string { length "1..255"; }</div>
+            <p>String length: 1 to 255 chars</p>
+          </div>
+          <div class="card">
+            <h3>Pattern</h3>
+            <div class="code">type string { pattern "[0-9a-fA-F]*"; }</div>
+            <p>Regex constraint on string</p>
+          </div>
+          <div class="card">
+            <h3>Mandatory</h3>
+            <div class="code">leaf name { mandatory true; }</div>
+            <p>Must be present in data</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Key Point:</strong> YANG allows data modelers to express <span class="highlight">constraints</span> that configurations must satisfy (range, length, pattern, mandatory). This is a powerful aid in ensuring NETCONF configurations satisfy specified correctness and consistency constraints. YANG is also used to specify NETCONF notifications.
+        </div>
+
+        <h3>YANG to XML Conversion</h3>
+        <div class="formula">
+          <div class="label">Mapping:</div>
+          <div class="expr">YANG container → XML element &bull; YANG leaf → XML leaf element &bull; YANG list → XML repeated element</div>
+        </div>
+
+        <div class="code">
+&lt;!-- YANG module 'example-interface' serialized as XML --&gt;<br>
+&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;<br>
+  &nbsp;&nbsp;&lt;interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;WAN Link to ISP&lt;/description&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;enabled&gt;true&lt;/enabled&gt;<br>
+  &nbsp;&nbsp;&lt;/interface&gt;<br>
+&lt;/interfaces&gt;
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Configuration Retrieval with &lt;get-config&gt;</div>
+          <p><strong>Scenario:</strong> An NMS wants to retrieve the current interface configuration from a device to build an inventory.</p>
+
+          <div class="code">
+&lt;rpc message-id="201" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;get-config&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;source&gt;&lt;running/&gt;&lt;/source&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;filter type="subtree"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name/&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu/&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/filter&gt;<br>
+  &nbsp;&nbsp;&lt;/get-config&gt;<br>
+&lt;/rpc&gt;
+          </div>
+
+          <p><strong>Response:</strong></p>
+          <div class="code">
+&lt;rpc-reply message-id="201" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;data&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/0&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;9000&lt;/mtu&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;<br>
+  &nbsp;&nbsp;&lt;/data&gt;<br>
+&lt;/rpc-reply&gt;
+          </div>
+
+          <p><strong>Analysis:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>The <span class="highlight">subtree filter</span> limits the response to only the &lt;name&gt; and &lt;mtu&gt; of each interface</li>
+            <li>Interface GigabitEthernet0/1 has MTU 9000 (<span class="dim">jumbo frames enabled</span>) — the NMS flags this for the inventory</li>
+            <li>The response is wrapped in &lt;data&gt; to distinguish configuration from operational state</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Interface Configuration with &lt;edit-config&gt;</div>
+          <p><strong>Scenario:</strong> An administrator configures a new VLAN interface on a switch. The configuration must be applied atomically.</p>
+
+          <div class="code">
+&lt;rpc message-id="202" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;edit-config&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;config&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interfaces xmlns="http://example.com/ns/example-interface"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;interface operation="create"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;Vlan100&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;Management VLAN&lt;/description&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;mtu&gt;1500&lt;/mtu&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ipv4 xmlns="http://example.com/ns/example-ip"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;address&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;ip&gt;192.168.100.1&lt;/ip&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;prefix-length&gt;24&lt;/prefix-length&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/address&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/ipv4&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interface&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/interfaces&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/config&gt;<br>
+  &nbsp;&nbsp;&lt;/edit-config&gt;<br>
+&lt;/rpc&gt;
+<br>
+# Commit the candidate configuration<br>
+&lt;rpc message-id="203" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;commit/&gt;<br>
+&lt;/rpc&gt;
+<br>
+&lt;rpc-reply message-id="203" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;ok/&gt;<br>
+&lt;/rpc-reply&gt;
+          </div>
+
+          <p><strong>Analysis:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>The edit is performed on the <span class="highlight">&lt;candidate&gt;</span> config — no impact on the running device</li>
+            <li>The <span class="dim">operation="create"</span> ensures the interface doesn't already exist (fail if duplicate)</li>
+            <li><span class="result">&lt;commit/&gt;</span> atomically applies all changes — if any validation fails, the entire transaction is rolled back</li>
+            <li>If the configuration has errors, the device returns &lt;rpc-error&gt; and the candidate config is unchanged</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Device Capability Discovery via &lt;hello&gt;</div>
+          <p><strong>Scenario:</strong> An NMS connects to a new device and discovers its capabilities through the NETCONF &lt;hello&gt; exchange.</p>
+
+          <div class="code">
+# NMS sends its capabilities<br>
+&lt;hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;capabilities&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:base:1.1&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:writable-running:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:candidate:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:validate:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-interface?module=example-interface&amp;amp;revision=2024-01-01&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&lt;/capabilities&gt;<br>
+&lt;/hello&gt;
+<br>
+# Device responds with its capabilities<br>
+&lt;hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;capabilities&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:base:1.1&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:candidate:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:rollback-on-error:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;urn:ietf:params:netconf:capability:notification:1.0&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-interface?module=example-interface&amp;amp;revision=2024-01-01&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;capability&gt;http://example.com/ns/example-routing?module=example-routing&amp;amp;revision=2024-03-01&lt;/capability&gt;<br>
+  &nbsp;&nbsp;&lt;/capabilities&gt;<br>
+&lt;/hello&gt;
+          </div>
+
+          <p><strong>Analysis:</strong></p>
+          <ul style="margin:5px 0 0 20px; color:#ccc;">
+            <li>Both sides support <span class="highlight">NETCONF 1.1</span> (base:1.1) — enables interleaved RPCs and chunked framing</li>
+            <li>The device supports <span class="dim">candidate</span> but not <span class="dim">writable-running</span> — the NMS should use candidate/commit pattern</li>
+            <li>The device supports <span class="result">rollback-on-error</span> — if a configuration change fails, the device automatically rolls back</li>
+            <li>The device supports <span class="result">notification</span> — the NMS can subscribe to event streams</li>
+            <li>YANG modules advertised: <span class="dim">example-interface</span> + <span class="dim">example-routing</span> — the NMS knows exactly which data models the device supports</li>
+          </ul>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Transactional Commit with Validation</div>
+          <p><strong>Scenario:</strong> An administrator applies multiple changes to the candidate config, validates them, then commits. One change fails validation, causing the transaction to abort.</p>
+
+          <div class="code">
+# Step 1: Lock the candidate datastore<br>
+&lt;rpc message-id="301"&gt;&lt;lock&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;&lt;/lock&gt;&lt;/rpc&gt;<br>
+&lt;rpc-reply message-id="301"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;<br>
+<br>
+# Step 2: Apply config changes to candidate<br>
+&lt;rpc message-id="302"&gt;&lt;edit-config&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;...&lt;/edit-config&gt;&lt;/rpc&gt;<br>
+&lt;rpc-reply message-id="302"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;<br>
+<br>
+# Step 3: Validate the candidate configuration<br>
+&lt;rpc message-id="303"&gt;&lt;validate&gt;&lt;source&gt;&lt;candidate/&gt;&lt;/source&gt;&lt;/validate&gt;&lt;/rpc&gt;<br>
+&lt;rpc-reply message-id="303"&gt;<br>
+  &nbsp;&nbsp;&lt;rpc-error&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-type&gt;application&lt;/error-type&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-tag&gt;bad-element&lt;/error-tag&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-severity&gt;error&lt;/error-severity&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-message&gt;MTU value 10000 exceeds maximum 9216&lt;/error-message&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;error-info&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;bad-element&gt;mtu&lt;/bad-element&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;/error-info&gt;<br>
+  &nbsp;&nbsp;&lt;/rpc-error&gt;<br>
+&lt;/rpc-reply&gt;<br>
+<br>
+# Step 4: Discard the failed changes and unlock<br>
+&lt;rpc message-id="304"&gt;&lt;discard-changes/&gt;&lt;/rpc&gt;<br>
+&lt;rpc-reply message-id="304"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;<br>
+&lt;rpc message-id="305"&gt;&lt;unlock&gt;&lt;target&gt;&lt;candidate/&gt;&lt;/target&gt;&lt;/unlock&gt;&lt;/rpc&gt;<br>
+&lt;rpc-reply message-id="305"&gt;&lt;ok/&gt;&lt;/rpc-reply&gt;
+          </div>
+
+          <p><span class="result">Key takeaway:</span> NETCONF's transactional model (candidate → validate → commit) prevents misconfigurations from ever reaching the running device. This is a fundamental advantage over SNMP, where a Set operation can immediately damage connectivity.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Event Notification — Link State Change</div>
+          <p><strong>Scenario:</strong> The NMS subscribes to interface state change notifications. When a link goes down, the device sends a notification.</p>
+
+          <div class="code">
+# Step 1: Subscribe to notifications<br>
+&lt;rpc message-id="401" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;create-subscription xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;stream&gt;interface-state&lt;/stream&gt;<br>
+  &nbsp;&nbsp;&lt;/create-subscription&gt;<br>
+&lt;/rpc&gt;
+<br>
+# Step 2: Device sends notification asynchronously<br>
+&lt;notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0"&gt;<br>
+  &nbsp;&nbsp;&lt;eventTime&gt;2024-10-15T14:30:00Z&lt;/eventTime&gt;<br>
+  &nbsp;&nbsp;&lt;interface-state-change xmlns="http://example.com/ns/example-interface"&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;GigabitEthernet0/1&lt;/name&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;admin-status&gt;up&lt;/admin-status&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;oper-status&gt;down&lt;/oper-status&gt;<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&lt;reason&gt;link-failure&lt;/reason&gt;<br>
+  &nbsp;&nbsp;&lt;/interface-state-change&gt;<br>
+&lt;/notification&gt;
+          </div>
+
+          <p class="note">NETCONF notifications are <span class="highlight">asynchronous</span> — the NMS receives them in real time after subscribing. Unlike SNMP traps, notifications are delivered over the same TCP session, providing reliable, in-order delivery.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: SNMP vs NETCONF/YANG</h2>
+        <table>
+          <tr><th>Feature</th><th>SNMP</th><th>NETCONF/YANG</th></tr>
+          <tr><td>Transport</td><td><span class="dim">UDP (unreliable)</span></td><td><span class="highlight">TCP/SSH/TLS (reliable)</span></td></tr>
+          <tr><td>Encoding</td><td><span class="dim">BER/DER (binary)</span></td><td><span class="highlight">XML (human-readable)</span></td></tr>
+          <tr><td>Paradigm</td><td>Get/Set/Trap</td><td><span class="highlight">RPC-based</span></td></tr>
+          <tr><td>Data Model</td><td>SMI (MIB modules)</td><td><span class="highlight">YANG modules</span></td></tr>
+          <tr><td>Configuration</td><td><span class="dim">No transactional support</span></td><td><span class="highlight">Candidate/Commit/Rollback</span></td></tr>
+          <tr><td>Security</td><td>v3: OK (v1/v2c: weak)</td><td><span class="highlight">SSH/TLS by default</span></td></tr>
+          <tr><td>Error Reporting</td><td>Error status + index</td><td><span class="highlight">Detailed &lt;rpc-error&gt;</span></td></tr>
+          <tr><td>State vs Config</td><td><span class="dim">Mixed (hard to separate)</span></td><td><span class="highlight">&lt;get&gt; vs &lt;get-config&gt;</span></td></tr>
+          <tr><td>Best For</td><td>Monitoring, polling</td><td><span class="highlight">Configuration management</span></td></tr>
+          <tr><td>Standard</td><td>RFC 1157/3416/3418</td><td><span class="highlight">RFC 6241/7950</span></td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Modern Practice:</strong> Production networks often use <span class="highlight">both</span> SNMP (for monitoring, performance data, traps) and NETCONF/YANG (for configuration management, compliance, automation). They are complementary, not mutually exclusive.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

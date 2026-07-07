@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BGP Basics & Route Advertisement - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>BGP — Border Gateway Protocol (Basics & Route Advertisement)</h1>
+  <p class="subtitle">Computer Networks — Inter-AS Routing & Path Vector Protocol</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">BGP Role</button>
+      <button class="tab" onclick="showSection('tab2')">eBGP vs iBGP</button>
+      <button class="tab" onclick="showSection('tab3')">Attributes</button>
+      <button class="tab" onclick="showSection('tab4')">Advertisement Process</button>
+    </div>
+
+    <!-- Tab 1: BGP Role -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The Role of BGP in the Internet</h2>
+        <p><strong>Border Gateway Protocol (BGP)</strong> is the <span class="highlight">de facto inter-AS routing protocol</span> that glues the Internet together. While intra-AS protocols (OSPF, RIP) handle routing within an organization, BGP handles routing <em>between</em> Autonomous Systems.</p>
+        <p>BGP is a <strong>decentralized and asynchronous</strong> protocol in the vein of distance-vector routing (Section 5.2.2). It is arguably the most important Internet protocol after IP itself — the protocol that glues the thousands of ISPs together [RFC 4271].</p>
+
+        <div class="formula">
+          <div class="label">BGP: Path Vector Protocol</div>
+          <div class="expr">Route = Prefix + Path Attributes<br>Path = Sequence of AS Numbers (AS-PATH)<br>Decision = Based on policies, not just shortest path</div>
+          <div class="desc">BGP is a path-vector protocol — it advertises not just destinations, but the complete path of ASs to reach them.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Characteristics</h3>
+            <p>• <span class="highlight">Inter-AS</span>: Connects different organizations</p>
+            <p>• <span class="highlight">Policy-Driven</span>: Operators control route selection</p>
+            <p>• <span class="highlight">CIDR Support</span>: Advertises prefixes with subnet masks</p>
+            <p>• <span class="highlight">Loop-Free</span>: AS-PATH prevents loops by design</p>
+          </div>
+          <div class="card">
+            <h3>BGP vs OSPF</h3>
+            <p>Scope: <span class="highlight">Inter-AS</span> vs Intra-AS</p>
+            <p>Metric: <span class="highlight">Policy + Path</span> vs Cost</p>
+            <p>Convergence: <span class="highlight">Slower</span> vs Fast</p>
+            <p>Transport: <span class="highlight">TCP (179)</span> vs IP (89)</p>
+            <p>Scale: <span class="highlight">Global Internet</span> vs Enterprise</p>
+          </div>
+        </div>
+
+        <h3>CIDRized Prefixes as Destinations</h3>
+        <p>In BGP, packets are not routed to a specific destination address but to <strong>CIDRized prefixes</strong>. A router's forwarding table contains entries of the form <strong>(x, I)</strong>, where <span class="highlight">x</span> is a prefix (e.g., 138.16.68/22 covering 1024 addresses) and <span class="highlight">I</span> is the outgoing interface number.</p>
+        <p>BGP advertises <strong>CIDRized IP prefixes</strong> (e.g., 128.119.0.0/16) rather than individual IP addresses or classful networks. This enables:</p>
+        <ul>
+          <li><strong>Route aggregation</strong>: A single prefix can represent millions of hosts.</li>
+          <li><strong>Classless addressing</strong>: Variable-length subnet masks allow efficient address space usage.</li>
+          <li><strong>Supernetting</strong>: Multiple smaller networks can be summarized into one larger prefix.</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">CIDR Advertisement Example</div>
+          <p>A university with IP blocks 128.119.0.0/24 through 128.119.255.0/24 can advertise a single aggregate route 128.119.0.0/16. This reduces the global routing table size.</p>
+        </div>
+
+        <div class="warning">BGP is often called the "glue of the Internet." Without BGP, the ~100,000+ ASs would have no way to exchange routing information, and inter-network communication would be impossible.</div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card: BGP Fundamentals</h2>
+        <table>
+          <tr><th>Property</th><th>Value</th></tr>
+          <tr><td>Protocol Type</td><td>Path Vector</td></tr>
+          <tr><td>Port Number</td><td>179 (TCP)</td></tr>
+          <tr><td>Scope</td><td>Inter-AS (between organizations)</td></tr>
+          <tr><td>Route Unit</td><td>CIDR prefix (e.g., 192.0.2.0/24)</td></tr>
+          <tr><td>Loop Prevention</td><td>AS-PATH attribute (if AS in path, reject)</td></tr>
+          <tr><td>Transport</td><td>TCP (reliable, connection-oriented)</td></tr>
+          <tr><td>Messages</td><td>OPEN, UPDATE, KEEPALIVE, NOTIFICATION</td></tr>
+          <tr><td>Path Selection</td><td>Policy-based (local pref, AS-PATH, MED, etc.)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: eBGP vs iBGP -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>eBGP vs iBGP</h2>
+        <p>BGP operates in two distinct modes depending on where the peers are located:</p>
+
+        <table>
+          <tr><th>Property</th><th>eBGP (External BGP)</th><th>iBGP (Internal BGP)</th></tr>
+          <tr><td>Peers</td><td>Between different ASs</td><td>Within the same AS</td></tr>
+          <tr><td>AS-PATH Handling</td><td>Prepends own AS number</td><td>Does not modify AS-PATH</td></tr>
+          <tr><td>Default Next-Hop</td><td>IP of external interface</td><td>Unchanged (eBGP next-hop preserved)</td></tr>
+          <tr><td>TTL (default)</td><td>1 (directly connected peers)</td><td>255 (may be multiple hops away)</td></tr>
+          <tr><td>Topology</td><td>Non-meshed (usually)</td><td>Full mesh required (or route reflectors)</td></tr>
+        </table>
+
+        <h3>eBGP Connections</h3>
+        <p>eBGP operates between routers in <strong>different ASs</strong>. Key characteristics:</p>
+        <ul>
+          <li>Typically runs between <strong>directly connected</strong> border routers.</li>
+          <li>Uses <strong>TCP port 179</strong> for reliable session establishment.</li>
+          <li>When advertising a route, the router <strong>prepends its own AS number</strong> to the AS-PATH.</li>
+          <li>TTL is set to 1 by default (prevents spoofed BGP sessions from non-adjacent routers).</li>
+        </ul>
+
+        <h3>iBGP Connections</h3>
+        <p>iBGP operates between routers <strong>within the same AS</strong>. Key characteristics:</p>
+        <ul>
+          <li>Used to <strong>distribute external routes</strong> learned via eBGP to internal routers.</li>
+          <li>iBGP connections create a <strong>mesh of TCP connections</strong> within each AS — every iBGP speaker peers with every other iBGP speaker. This is because iBGP does not re-advertise routes learned from other iBGP peers (loop prevention rule).</li>
+          <li>Does <strong>not modify</strong> the AS-PATH attribute.</li>
+          <li>May be multiple hops away within the AS (TTL = 255).</li>
+          <li>Note that iBGP connections do <strong>not always correspond to physical links</strong> — they are logical TCP sessions.</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">iBGP Full Mesh Rule</div>
+          <div class="expr">If a route is learned via iBGP, do NOT advertise it to another iBGP peer.</div>
+          <div class="desc">This prevents routing loops within the AS but requires all N routers to have N(N-1)/2 peerings. Route reflectors or confederations can reduce this complexity.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">eBGP+iBGP Peering Setup</div>
+          <p>Consider AS 100 with two border routers (R1, R2) and one internal router (R3). AS 200 has one border router (R4).</p>
+          <ul>
+            <li><strong>eBGP</strong>: R1 ↔ R4 (AS 100 ↔ AS 200)</li>
+            <li><strong>iBGP</strong>: R1 ↔ R2, R1 ↔ R3, R2 ↔ R3 (full mesh within AS 100)</li>
+          </ul>
+          <p>R4 (AS 200) advertises prefix 10.1.0.0/16 to R1 via eBGP. R1 then advertises this to R2 and R3 via iBGP. R2 and R3 can now reach 10.1.0.0/16 through R1.</p>
+        </div>
+
+        <div class="warning">iBGP full mesh scales poorly. In an AS with 1000 iBGP speakers, you would need 499,500 TCP sessions. Route reflectors or BGP confederations are used to solve this.</div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: eBGP vs iBGP at a Glance</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>eBGP</h3>
+            <p>• <span class="highlight">Inter-AS</span> peering</p>
+            <p>• <span class="dim">AS-PATH</span>: Appends AS number</p>
+            <p>• <span class="dim">Next-Hop</span>: Set to eBGP peer IP</p>
+            <p>• Directly connected (usually)</p>
+            <p>• Advertises routes to all peers</p>
+          </div>
+          <div class="card">
+            <h3>iBGP</h3>
+            <p>• <span class="highlight">Intra-AS</span> peering</p>
+            <p>• <span class="dim">AS-PATH</span>: Unchanged</p>
+            <p>• <span class="dim">Next-Hop</span>: Preserved from eBGP</p>
+            <p>• May be multiple hops away</p>
+            <p>• Full mesh or route reflectors</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Attributes -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>BGP Path Attributes</h2>
+        <p>BGP routes carry <strong>attributes</strong> that influence path selection and enforce routing policies. The two most fundamental attributes for inter-AS loop prevention and path selection are <strong>AS-PATH</strong> and <strong>NEXT-HOP</strong>.</p>
+
+        <h3>AS-PATH Attribute</h3>
+        <p>The AS-PATH is a <strong>sequence of AS numbers</strong> that a route has traversed. When a BGP router advertises a route via eBGP, it prepends its own AS number to the AS-PATH.</p>
+
+        <div class="formula">
+          <div class="label">AS-PATH Format</div>
+          <div class="expr">AS_PATH = { AS1, AS2, AS3, ... }<br>Example: AS_PATH = "701 1239 3549"</div>
+          <div class="desc">The path is read left-to-right: the most recent AS prepends to the beginning.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>AS-PATH: Loop Prevention</h3>
+            <p>When a BGP router receives an UPDATE, it checks if its own AS number is already in the AS-PATH. If it is, the route is <span class="highlight">rejected</span> (loop detected). This is BGP's primary loop prevention mechanism.</p>
+          </div>
+          <div class="card">
+            <h3>AS-PATH: Path Selection</h3>
+            <p>Among routes with the same local preference, BGP prefers the <span class="highlight">shorter AS-PATH</span> (fewer AS hops). This is not the same as router hops — it counts ASs traversed.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">AS-PATH in Action</div>
+          <p>AS 100 advertises prefix 10.1.0.0/16 to AS 200. AS 200's border router receives the UPDATE with AS-PATH = [100]. AS 200 then advertises to AS 300 with AS-PATH = [200, 100].</p>
+          <p>Now AS 300 advertises to AS 100. AS 100 sees AS-PATH = [300, 200, 100]. Since AS 100's own AS number is in the path, the route is <span class="result">rejected</span> — loop prevented.</p>
+        </div>
+
+        <h3>NEXT-HOP Attribute</h3>
+        <p>The NEXT-HOP attribute is the <strong>IP address of the router interface</strong> that should be used as the next hop to reach the advertised prefix. For eBGP, the NEXT-HOP is set to the IP address of the eBGP peer's interface.</p>
+
+        <div class="formula">
+          <div class="label">NEXT-HOP Behavior</div>
+          <div class="expr">eBGP advertisement: NEXT-HOP = eBGP peer's interface IP<br>iBGP advertisement: NEXT-HOP = unchanged (preserved from eBGP)</div>
+          <div class="desc">If the NEXT-HOP is not reachable via the IGP, the route is considered invalid and not installed.</div>
+        </div>
+
+        <div class="warning">A common BGP troubleshooting scenario: a route is learned via iBGP but not installed because the NEXT-HOP is not in the routing table. This happens when the IGP does not have a route to the NEXT-HOP address.</div>
+
+        <h3>Additional BGP Attributes</h3>
+        <table>
+          <tr><th>Attribute</th><th>Type</th><th>Purpose</th></tr>
+          <tr><td>LOCAL_PREF</td><td>Well-known (mandatory)</td><td>Local preference within AS (higher = preferred)</td></tr>
+          <tr><td>MULTI_EXIT_DISC (MED)</td><td>Optional (non-transitive)</td><td>Suggest to neighbor AS which entry point to use (lower = preferred)</td></tr>
+          <tr><td>COMMUNITY</td><td>Optional (transitive)</td><td>Tag routes for policy actions (e.g., NO_EXPORT)</td></tr>
+          <tr><td>ORIGIN</td><td>Well-known (mandatory)</td><td>How route was learned (IGP, EGP, or INCOMPLETE)</td></tr>
+          <tr><td>Atomic Aggregate</td><td>Well-known (discretionary)</td><td>Indicates that route aggregation caused information loss</td></tr>
+          <tr><td>Aggregator</td><td>Optional (transitive)</td><td>AS and router that aggregated the route</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card: BGP Attributes</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>AS-PATH</h3>
+            <p>Purpose: <span class="highlight">Loop prevention + path length</span></p>
+            <p>Scope: Well-known mandatory</p>
+            <p>Modified by: eBGP only (prepend)</p>
+          </div>
+          <div class="card">
+            <h3>NEXT-HOP</h3>
+            <p>Purpose: <span class="highlight">Next-hop IP for destination</span></p>
+            <p>Scope: Well-known mandatory</p>
+            <p>Modified by: eBGP (set to peer IP)</p>
+          </div>
+          <div class="card">
+            <h3>LOCAL_PREF</h3>
+            <p>Purpose: <span class="highlight">Local route preference</span></p>
+            <p>Scope: Well-known mandatory</p>
+            <p>Range: 0–4294967295 (default = 100)</p>
+          </div>
+          <div class="card">
+            <h3>MED</h3>
+            <p>Purpose: <span class="highlight">Inter-AS metric hint</span></p>
+            <p>Scope: Optional non-transitive</p>
+            <p>Lower value = more preferred</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Advertisement Process -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Route Advertisement Flow</h2>
+        <p>The flow of BGP route advertisements follows a <strong>3-AS topology</strong> where each AS runs both iBGP (internally) and eBGP (between ASs). Understanding how routes propagate through this topology is essential for the exam.</p>
+
+        <h3>Gateway Router vs Internal Router</h3>
+        <p>In each AS, routers are classified into two roles:</p>
+        <ul>
+          <li><strong>Gateway router</strong>: A router on the edge of an AS that <span class="highlight">directly connects</span> to one or more routers in other ASs (e.g., 1c, 1d in AS1; 2a, 2c in AS2; 3a in AS3).</li>
+          <li><strong>Internal router</strong>: A router that connects only to hosts and routers <span class="highlight">within its own AS</span> (e.g., 1a, 1b in AS1).</li>
+        </ul>
+
+        <h3>Figure 5.8 / 5.9 Classic 3-AS Topology</h3>
+        <p>Consider three ASs: AS1, AS2, AS3. Each has multiple routers:</p>
+        <ul>
+          <li><strong>AS1</strong>: Routers 1a, 1b, 1c, 1d (1c = gateway to AS2, 1d = gateway to AS3)</li>
+          <li><strong>AS2</strong>: Routers 2a, 2b, 2c (2c = gateway to AS1, 2a = gateway to AS3)</li>
+          <li><strong>AS3</strong>: Routers 3a, 3b (3a = gateway to AS2)</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Route Advertisement Sequence (AS3 advertises a prefix)</div>
+          <div class="expr">
+Step 1: 3a (eBGP) → 2c "AS3 x" [AS-PATH: 3]<br>
+Step 2: 2c (iBGP) → 2a, 2b "AS3 x" [AS-PATH: 3]<br>
+Step 3: 2a (eBGP) → 1c "AS2 AS3 x" [AS-PATH: 2, 3]<br>
+Step 4: 2b (eBGP) → 1d "AS2 AS3 x" [AS-PATH: 2, 3]<br>
+Step 5: 1c,1d (iBGP) → 1a,1b "AS2 AS3 x" [AS-PATH: 2, 3]
+          </div>
+          <div class="desc">Each eBGP hop prepends the AS number to the message notation. iBGP does not modify AS-PATH. In BGP notation, "AS3 x" means "prefix x is in AS3"; "AS2 AS3 x" means "reach x by passing through AS2 then AS3."</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1: Route Propagation Across 3 ASs</div>
+          <p><strong>Initial setup:</strong> AS3 originates prefix 10.3.0.0/16 on router 3a.</p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li><strong>3a → 2c (eBGP)</strong>: 3a sends UPDATE to 2c with prefix 10.3.0.0/16 and AS-PATH = [3]. NEXT-HOP = 3a's interface IP.</li>
+            <li><strong>2c → 2a, 2b (iBGP)</strong>: 2c floods the route internally. AS-PATH stays [3]. NEXT-HOP stays as 3a's IP.</li>
+            <li><strong>2a → 1c (eBGP)</strong>: 2a prepends AS 2. AS-PATH = [2, 3]. NEXT-HOP = 2a's interface IP to AS1.</li>
+            <li><strong>2b → 1d (eBGP)</strong>: Same prefix, same AS-PATH [2, 3]. NEXT-HOP = 2b's interface IP.</li>
+            <li><strong>1c,1d → 1a,1b (iBGP)</strong>: Internal distribution within AS1. AS-PATH stays [2, 3].</li>
+          </ol>
+          <p><strong>Result:</strong> All routers in AS1 know that 10.3.0.0/16 is reachable via AS2 → AS3. Router 1a has two potential next-hops: 1c (via AS2) or 1d (via AS2 as well — actually via AS3 passing through AS2 depending on eBGP peer). The BGP decision process (including hot potato routing) will select one.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Two Paths to the Same Destination</div>
+          <p>AS1 learns about prefix 10.3.0.0/16 from two different entry points:</p>
+          <ul>
+            <li><strong>Entry via 1c</strong>: AS-PATH = [2, 3], learned from AS2's 2a</li>
+            <li><strong>Entry via 1d</strong>: AS-PATH = [2, 3], learned from AS2's 2b</li>
+          </ul>
+          <p>Since both paths have the same AS-PATH length (2), router 1b applies <strong>hot potato routing</strong>: it picks the entry point closest to itself (lowest IGP cost to NEXT-HOP).</p>
+          <p>If 1b is closer to 1c (cost 2) than to 1d (cost 10), the route via 1c → 2a → 3a is selected.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: AS-PATH Loop Prevention in Multi-AS Topology</div>
+          <p>Four ASs: AS100, AS200, AS300, AS400. AS100 advertises 172.16.0.0/16.</p>
+          <ul>
+            <li>AS200 learns from AS100: AS-PATH = [100]</li>
+            <li>AS300 learns from AS200: AS-PATH = [200, 100]</li>
+            <li>AS400 learns from AS300: AS-PATH = [300, 200, 100]</li>
+          </ul>
+          <p>Now, if AS200 also peers with AS400, AS400 advertises the route back to AS200. AS200 receives UPDATE with AS-PATH = [400, 300, 200, 100]. Since AS200 = 200 is in the AS-PATH, the route is <span class="result">rejected</span>.</p>
+          <p><strong>Without this check</strong>, AS200 would re-learn its own route through AS400 → AS300 → AS200, creating a cycle.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>BGP Advertisement Comparison</h2>
+        <table>
+          <tr><th>Step</th><th>From</th><th>To</th><th>Type</th><th>AS-PATH</th><th>NEXT-HOP</th></tr>
+          <tr><td>1</td><td>3a</td><td>2c</td><td>eBGP</td><td>[3]</td><td>3a's IP</td></tr>
+          <tr><td>2</td><td>2c</td><td>2a, 2b</td><td>iBGP</td><td>[3]</td><td>3a's IP (unchanged)</td></tr>
+          <tr><td>3</td><td>2a</td><td>1c</td><td>eBGP</td><td>[2, 3]</td><td>2a's IP</td></tr>
+          <tr><td>4</td><td>2b</td><td>1d</td><td>eBGP</td><td>[2, 3]</td><td>2b's IP</td></tr>
+          <tr><td>5</td><td>1c, 1d</td><td>1a, 1b</td><td>iBGP</td><td>[2, 3]</td><td>2a/2b's IP (unchanged)</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>BGP UPDATE Message Format</h2>
+        <p>The BGP UPDATE message is used to advertise or withdraw routes. It contains:</p>
+        <ul>
+          <li><strong>Withdrawn Routes</strong>: Prefixes being removed.</li>
+          <li><strong>Path Attributes</strong>: AS-PATH, NEXT-HOP, ORIGIN, LOCAL_PREF, etc.</li>
+          <li><strong>Network Layer Reachability Information (NLRI)</strong>: The prefixes being advertised.</li>
+        </ul>
+        <div class="code">
+UPDATE message:<br>
+&nbsp;Withdrawn Routes Length: 0<br>
+&nbsp;Withdrawn Routes: (none)<br>
+&nbsp;Path Attributes:<br>
+&nbsp;&nbsp;ORIGIN: IGP<br>
+&nbsp;&nbsp;AS_PATH: [100, 200]<br>
+&nbsp;&nbsp;NEXT_HOP: 192.0.2.1<br>
+&nbsp;NLRI: 10.1.0.0/16
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

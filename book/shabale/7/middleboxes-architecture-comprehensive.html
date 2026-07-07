@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Middleboxes & Internet Architecture - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #221100; padding: 10px; border-radius: 4px; }
+    .refcard { background: #002a1a; border: 1px solid #00ff88; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .refcard h4 { color: #00ff88; font-size: 0.9em; margin-bottom: 8px; }
+    .refcard p { color: #ccc; font-size: 0.85em; margin: 3px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; margin: 0 4px; }
+    .tag-green { background: #003a1a; color: #00ff88; border: 1px solid #00ff88; }
+    .tag-orange { background: #3a1a00; color: #ff6600; border: 1px solid #ff6600; }
+    .tag-blue { background: #001a3a; color: #00ccff; border: 1px solid #00ccff; }
+  </style>
+</head>
+<body>
+  <h1>Middleboxes &amp; Internet Architecture</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross) &mdash; Chapter 4 &bull; Complete Guide</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Middlebox Types</button>
+      <button class="tab" onclick="showSection('tab2')">NFV</button>
+      <button class="tab" onclick="showSection('tab3')">IP Hourglass</button>
+      <button class="tab" onclick="showSection('tab4')">End-to-End Argument</button>
+    </div>
+
+    <!-- ====== TAB 1: Middlebox Types ====== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What Are Middleboxes?</h2>
+        <p>Any intermediary box performing functions apart from normal, standard functions of an IP router on the data path between a source host and destination host.</p>
+        <p>Defined by RFC 3234: "A middlebox is any intermediary device that performs functions other than the normal, standard functions of an IP router on the datagram path between a source host and destination host."</p>
+        <p><em>"While there are those who have considered such middleboxes as a bit of an architectural abomination [Garfinkel 2003], others have adopted the philosophy that such middleboxes 'exist for important and permanent reasons' — that they fill an important need — and that we will have more, not fewer, middleboxes in the future [Walfish 2004]."</em></p>
+        <p>Middleboxes <strong>violate layer separation</strong> &mdash; a NAT rewrites both IP addresses (Layer 3) and port numbers (Layer 4), breaking the clean layering model of the Internet.</p>
+
+        <h3>Three Categories of Middleboxes</h3>
+
+        <div class="grid">
+          <div class="card">
+            <h4><span class="tag tag-orange">NAT</span> Translation</h4>
+            <p>• Maps private IP:port to public IP:port</p>
+            <p>• Conserves IPv4 address space</p>
+            <p>• Hides internal network topology</p>
+          </div>
+            <div class="card">
+                <h4><span class="tag tag-blue">Security</span> Services</h4>
+                <p>• Firewalls (stateless/stateful)</p>
+                <p>• Intrusion Detection Systems (IDS)</p>
+                <p>• Intrusion Prevention Systems (IPS)</p>
+                <p>• Application-level e-mail filters (block junk, phishing, security threats)</p>
+            </div>
+          <div class="card">
+            <h4><span class="tag tag-green">Performance</span> Enhancement</h4>
+            <p>• Compression proxies</p>
+            <p>• Web caches (CDN nodes)</p>
+            <p>• Load balancers</p>
+          </div>
+        </div>
+
+        <h3>NAT Translation &mdash; Detailed View</h3>
+        <p>A Network Address Translation (NAT) box sits at the border of a private network. It maintains a <strong>NAT translation table</strong> mapping (Private IP, Private Port) to (Public IP, Public Port).</p>
+
+        <div class="formula">
+          <div class="label">NAT Translation Table Entry:</div>
+          <div class="expr">(SrcIP_Priv, SrcPort_Priv) &rarr; (NAT_Public_IP, NAT_Public_Port)</div>
+          <div class="desc">Each entry maps one internal flow to an external (IP, port) pair</div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> NAT is not a security feature. While it hides internal IPs, it was designed for address conservation &mdash; not as a firewall. Stateful firewalls inspect connection state; NAT merely rewrites headers.
+        </div>
+
+        <h3>Worked Examples &mdash; NAT</h3>
+
+        <div class="example">
+          <div class="title">Example 1.1: Simple NAT Translation</div>
+          <p><strong>Setup:</strong> Internal host 10.0.0.5:3345 sends an HTTP request to 93.184.216.34:80. The NAT gateway has public IP 203.0.113.10.</p>
+          <p><strong>Step 1:</strong> NAT creates entry: (10.0.0.5, 3345) &rarr; (203.0.113.10, 50001)</p>
+          <p><strong>Step 2:</strong> Outgoing packet rewritten: SrcIP=203.0.113.10, SrcPort=50001</p>
+          <p><strong>Step 3:</strong> Response arrives at 203.0.113.10:50001 &mdash; NAT looks up table</p>
+          <p><strong>Step 4:</strong> Packet rewritten back: DstIP=10.0.0.5, DstPort=3345</p>
+          <p class="result">Internal host receives the response transparently. The external server never knows the private IP.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.2: Multiple Hosts Behind Same NAT</div>
+          <p><strong>Setup:</strong> Two internal hosts both connect to the same external server (8.8.8.8:53, DNS).</p>
+          <p>Host A: 10.0.0.5:12345 &bull; Host B: 10.0.0.6:12345</p>
+          <p><strong>Problem:</strong> Both use the same private port 12345. The NAT must disambiguate.</p>
+          <p><strong>Solution:</strong> NAT assigns unique public ports:</p>
+          <p>&bull; (10.0.0.5, 12345) &rarr; (203.0.113.10, 50001)</p>
+          <p>&bull; (10.0.0.6, 12345) &rarr; (203.0.113.10, 50002)</p>
+          <p class="result">The translation table uses <strong>both IP and port</strong> from the internal side to uniquely identify each flow.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.3: NAT Traversal Problem</div>
+          <p><strong>Setup:</strong> A web server runs on 10.0.0.5:80 behind a NAT. An external client wants to connect.</p>
+          <p><strong>Problem:</strong> The NAT has no entry for incoming connections to port 80. The packet is dropped.</p>
+          <p><strong>Solutions:</strong></p>
+          <p>1. <strong>Static NAT/Port Forwarding:</strong> Admin manually configures (PublicIP:80 &rarr; 10.0.0.5:80)</p>
+          <p>2. <strong>UPnP/IGD:</strong> Host automatically requests port mapping from NAT</p>
+          <p>3. <strong>Hole Punching (STUN/TURN):</strong> Used by VoIP/P2P applications</p>
+          <p class="result">Without explicit configuration, external hosts cannot initiate connections to internal hosts &mdash; a side-effect often mistaken for security.</p>
+        </div>
+
+        <h3>Worked Examples &mdash; Security Middleboxes</h3>
+
+        <div class="example">
+          <div class="title">Example 1.4: Stateful Firewall &mdash; Connection Tracking</div>
+          <p><strong>Setup:</strong> Firewall with rule "Allow internal hosts to establish outbound TCP connections; drop unsolicited inbound SYN."</p>
+          <p><strong>Host A (10.0.0.5) connects to Server S (93.184.216.34:80):</strong></p>
+          <p>&bull; SYN from 10.0.0.5:4000 to 93.184.216.34:80 &rarr; <span class="tag tag-green">ALLOW</span> (internal origin)</p>
+          <p>&bull; Firewall adds state: [10.0.0.5:4000 &harr; 93.184.216.34:80, SYN_SENT]</p>
+          <p>&bull; SYN-ACK from server arrives &rarr; <span class="tag tag-green">ALLOW</span> (matches tracked state)</p>
+          <p>&bull; Unsolicited SYN from 5.5.5.5:8888 to 10.0.0.5:80 &rarr; <span class="tag tag-orange">DROP</span> (no matching state)</p>
+          <p class="result">Stateful firewalls track connection state in a <strong>state table</strong>, not just static rules.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.5: IDS vs IPS &mdash; Threat Detection</div>
+          <p><strong>Scenario:</strong> An attacker sends a packet containing a known SQL injection pattern: <code>DROP TABLE users; --</code></p>
+          <p><strong>IDS (passive):</strong></p>
+          <p>&bull; Inspects packet payload against signature database</p>
+          <p>&bull; Matches pattern &rarr; <span class="tag tag-orange">ALERT</span> logged to security console</p>
+          <p>&bull; Packet continues to destination (detection only)</p>
+          <p><strong>IPS (inline):</strong></p>
+          <p>&bull; Inspects packet payload against signature database</p>
+          <p>&bull; Matches pattern &rarr; <span class="tag tag-orange">DROP</span> packet immediately</p>
+          <p class="result">IPS prevents the attack; IDS only detects it. IPS can introduce false-positive blocking (dropping legitimate traffic).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.6: Deep Packet Inspection (DPI)</div>
+          <p><strong>Setup:</strong> An enterprise firewall uses DPI to detect and block BitTorrent traffic while allowing HTTP.</p>
+          <p><strong>Technique:</strong> The firewall inspects beyond headers &mdash; it looks at application-layer payload patterns:</p>
+          <p>&bull; HTTP: "GET /index.html HTTP/1.1" &rarr; <span class="tag tag-green">ALLOW</span></p>
+          <p>&bull; BitTorrent handshake: "\x13BitTorrent protocol" &rarr; <span class="tag tag-orange">BLOCK</span></p>
+          <p><strong>Evasion:</strong> Encrypted traffic (HTTPS/VPN) bypasses simple DPI since payload is encrypted.</p>
+          <p class="result">DPI breaks the end-to-end principle by inspecting payload content, raising privacy concerns.</p>
+        </div>
+
+        <h3>Worked Examples &mdash; Performance Middleboxes</h3>
+
+        <div class="example">
+          <div class="title">Example 1.7: Web Cache (Reverse Proxy)</div>
+          <p><strong>Setup:</strong> A reverse proxy caches popular content from a backend origin server.</p>
+          <p><strong>Client requests /popular.jpg:</strong></p>
+          <p>&bull; Proxy checks cache: <strong>MISS</strong> &rarr; fetches from origin, stores copy, returns to client</p>
+          <p>&bull; Client 2 requests same file: <strong>HIT</strong> &rarr; proxy returns cached copy (zero origin load)</p>
+          <p><strong>Performance gain:</strong> 10,000 clients requesting the same 1 MB file: origin server sends it only once.</p>
+          <p class="result">Bandwidth savings: 10,000 &times; 1 MB = 10 GB saved on the origin-to-proxy link.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.8: Load Balancer</div>
+          <p><strong>Setup:</strong> A load balancer distributes incoming requests across 3 backend servers (S1, S2, S3).</p>
+          <p><strong>Request stream:</strong></p>
+          <p>&bull; Client A request &rarr; S1 (round-robin)</p>
+          <p>&bull; Client B request &rarr; S2</p>
+          <p>&bull; Client C request &rarr; S3</p>
+          <p>&bull; Client D request &rarr; S1 (cycle repeats)</p>
+          <p><strong>Health checks:</strong> If S2 fails health check, load balancer removes it from pool.</p>
+          <p class="result">Clients see a single virtual IP; load balancer provides fault tolerance and horizontal scaling.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1.9: WAN Optimization (Compression Proxy)</div>
+          <p><strong>Setup:</strong> Two sites connected by a low-bandwidth WAN link (1.5 Mbps T1). A compression proxy at each end.</p>
+          <p><strong>Before compression:</strong> Sending a 10 MB uncompressed file takes:</p>
+          <p>&bull; Time = (10 &times; 10<sup>6</sup> &times; 8) / (1.5 &times; 10<sup>6</sup>) = 53.3 seconds</p>
+          <p><strong>After compression:</strong> Proxy compresses file to 2 MB (5:1 ratio):</p>
+          <p>&bull; Time = (2 &times; 10<sup>6</sup> &times; 8) / (1.5 &times; 10<sup>6</sup>) = 10.7 seconds</p>
+          <p><strong>Deduplication:</strong> Repeated transfers of similar files use cached chunks, reducing further.</p>
+          <p class="result">Compression proxies reduce WAN bandwidth usage by 60&ndash;80% for compressible traffic.</p>
+        </div>
+
+        <h3>Comparison: Middlebox Categories</h3>
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>NAT</th>
+            <th>Security (Firewall)</th>
+            <th>Performance (Cache)</th>
+          </tr>
+          <tr>
+            <td>Layer(s) Inspected</td>
+            <td>L3 (IP) + L4 (TCP/UDP)</td>
+            <td>L3&ndash;L7</td>
+            <td>L4&ndash;L7</td>
+          </tr>
+          <tr>
+            <td>Modifies Headers?</td>
+            <td>Yes (rewrites IP:port)</td>
+            <td>No (drops/passes)</td>
+            <td>Tunneling possible</td>
+          </tr>
+          <tr>
+            <td>Stateful?</td>
+            <td>Yes (translation table)</td>
+            <td>Optional (stateful/stateless)</td>
+            <td>Yes (cache state)</td>
+          </tr>
+          <tr>
+            <td>Violates E2E?</td>
+            <td>Severely</td>
+            <td>Moderately</td>
+            <td>Moderately</td>
+          </tr>
+          <tr>
+            <td>Primary Purpose</td>
+            <td>Address conservation</td>
+            <td>Access control</td>
+            <td>Latency/bandwidth</td>
+          </tr>
+        </table>
+
+        <div class="refcard">
+          <h4>Quick Reference &mdash; Middlebox Types</h4>
+          <p><strong>NAT:</strong> Transparent address/port translation &bull; RFC 3022 &bull; Conservation of IPv4</p>
+          <p><strong>Firewall:</strong> Packet filtering by rules/signatures &bull; Stateless (per-pkt) vs Stateful (connection)</p>
+          <p><strong>IDS/IPS:</strong> Signature/anomaly-based detection &bull; Passive (alert) vs Inline (block)</p>
+          <p><strong>Load Balancer:</strong> Distributes traffic &bull; Algorithms: round-robin, least-connections, IP hash</p>
+          <p><strong>Cache/Proxy:</strong> Stores local copies &bull; Forward (client-side) vs Reverse (server-side)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 2: NFV ====== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Network Function Virtualization (NFV)</h2>
+        <p>NFV decouples network functions from proprietary hardware appliances and runs them as software on commodity servers, storage, and switches.</p>
+        <p>Traditional approach: each network function (firewall, NAT, load balancer, IDS) required dedicated, proprietary hardware. NFV consolidates these onto standard x86 servers using virtualization.</p>
+        <p>NFV was explored as an approach due to the proliferation of middleboxes requiring separate specialized hardware boxes, separate software stacks, and separate management skills — translating to significant operational and capital costs. An alternate approach explored is outsourcing middlebox functionality to the cloud [Sherry 2012]. See [Mijumbi 2016] for a comprehensive survey of NFV.</p>
+
+        <div class="formula">
+          <div class="label">NFV Equation (Cost Savings):</div>
+          <div class="expr">Cost<sub>NFV</sub> = N &times; (C<sub>server</sub> + V<sub>license</sub>) &lt; &Sigma; C<sub>appliance</sub></div>
+          <div class="desc">For N functions on shared hardware, NFV is cheaper than buying N dedicated appliances</div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> NFV is NOT the same as SDN (Software-Defined Networking). SDN separates the control plane from the data plane. NFV virtualizes network functions. They are complementary &mdash; NFV can run SDN controllers as virtual functions.
+        </div>
+
+        <h3>Worked Examples &mdash; NFV</h3>
+
+        <div class="example">
+          <div class="title">Example 2.1: Service Function Chaining</div>
+          <p><strong>Setup:</strong> An enterprise requires all traffic to pass through: Firewall &rarr; IDS &rarr; WAN Optimizer &rarr; Load Balancer.</p>
+          <p><strong>Traditional:</strong> Four physical appliances in series &mdash; each costs $10,000+ and requires rack space, power, cooling.</p>
+          <p><strong>NFV:</strong> One commodity server running four VMs/containers:</p>
+          <p>1. VM1: Virtual Firewall (pfSense)</p>
+          <p>2. VM2: Virtual IDS (Snort/Suricata)</p>
+          <p>3. VM3: Virtual WAN Optimizer</p>
+          <p>4. VM4: Virtual Load Balancer (HAProxy)</p>
+          <p><strong>Traffic flow:</strong> Ingress &rarr; VM1 &rarr; VM2 &rarr; VM3 &rarr; VM4 &rarr; Egress</p>
+          <p class="result">Hardware cost reduced ~75%; provisioning time from weeks to minutes. The chain is defined in software and can be reconfigured instantly.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2.2: Elastic Scaling Under Load</div>
+          <p><strong>Setup:</strong> A flash sale generates 100x normal traffic. The NFV infrastructure runs a virtual firewall.</p>
+          <p><strong>Normal load:</strong> 1 Gbps &rarr; 1 vFW instance handles it</p>
+          <p><strong>Flash sale:</strong> 100 Gbps &rarr; Orchestrator automatically spawns 15 additional vFW instances</p>
+          <p><strong>Scale-in:</strong> After sale, traffic drops &rarr; excess vFW instances terminated automatically</p>
+          <p><strong>Traditional appliance:</strong> Must be provisioned for peak (100 Gbps) &rarr; expensive and idle 99% of time</p>
+          <p class="result">NFV allows pay-as-you-grow elastic scaling. The orchestrator (e.g., OpenStack MANO, Kubernetes) manages the lifecycle.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2.3: NFV Outsourcing to the Cloud (vCPE)</div>
+          <p><strong>Setup:</strong> A branch office needs NAT, firewall, VPN, and WAN optimization. Instead of buying hardware, the enterprise outsources these to a cloud provider.</p>
+          <p><strong>Architecture:</strong></p>
+          <p>&bull; Branch: simple L2 switch + internet connection</p>
+          <p>&bull; Cloud: virtual CPE (vCPE) running NFV instances</p>
+          <p>&bull; Tunnel: branch encrypts traffic to cloud data center</p>
+          <p><strong>Provider benefits:</strong> Multi-tenant NFV infrastructure shared across hundreds of customers</p>
+          <p class="result">Enterprises eliminate on-premise middlebox hardware. Cloud providers achieve economies of scale (typical: 40&ndash;60% TCO reduction).</p>
+        </div>
+
+        <h3>Comparison: Traditional vs NFV</h3>
+        <table>
+          <tr>
+            <th>Dimension</th>
+            <th>Traditional Appliances</th>
+            <th>NFV</th>
+          </tr>
+          <tr>
+            <td>Hardware</td>
+            <td>Proprietary, purpose-built</td>
+            <td>Commodity (x86 servers)</td>
+          </tr>
+          <tr>
+            <td>Deployment</td>
+            <td>Weeks&ndash;months (procurement)</td>
+            <td>Minutes (software instantiation)</td>
+          </tr>
+          <tr>
+            <td>Scaling</td>
+            <td>Over-provision for peak</td>
+            <td>Elastic (scale up/down)</td>
+          </tr>
+          <tr>
+            <td>Upgrades</td>
+            <td>Hardware replacement</td>
+            <td>Software update (rolling)</td>
+          </tr>
+          <tr>
+            <td>CAPEX/OPEX</td>
+            <td>High CAPEX</td>
+            <td>Shift to OPEX</td>
+          </tr>
+          <tr>
+            <td>Vendor lock-in</td>
+            <td>High</td>
+            <td>Low (open standards)</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> NFV does NOT eliminate performance concerns. Virtualized network functions have overhead from hypervisor/OS (10&ndash;30% throughput loss vs bare metal). Techniques like SR-IOV, DPDK, and CPU pinning are often needed to reach line rate.
+        </div>
+
+        <div class="refcard">
+          <h4>Quick Reference &mdash; NFV</h4>
+          <p><strong>Definition:</strong> Running network functions as software on commodity hardware</p>
+          <p><strong>Key enablers:</strong> Virtualization (KVM/VMware), Containers (Docker), Orchestration (Kubernetes/OpenStack)</p>
+          <p><strong>Standards body:</strong> ETSI NFV ISG (Industry Specification Group)</p>
+          <p><strong>NFV MANO:</strong> Management and Orchestration &mdash; VNF Manager, NFV Orchestrator, Virtual Infrastructure Manager</p>
+          <p><strong>Examples:</strong> vFW, vRouter, vLB, vIDS/IPS, vCPE, vEPC (4G/5G core)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 3: IP Hourglass ====== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>The IP Hourglass Model</h2>
+        <p>The Internet protocol stack is often visualized as an <strong>hourglass</strong>. The "narrow waist" is IP &mdash; the single universal network-layer protocol that every host and router implements.</p>
+        <p>Above the waist: TCP, UDP, and higher-layer applications. Below the waist: diverse link-layer technologies (Ethernet, Wi-Fi, Fiber, Satellite, DSL, LTE).</p>
+        <p>This design embodies the <strong>"spanning layer"</strong> concept [Clark 1997]: "the narrow waist, which he refers to as a 'spanning layer,' is to hide the detailed differences among these various [underlying] technologies and present a uniform service interface to the applications above." [Beck 2019; Akhshabi 2011]</p>
+        <p>As the Internet enters middle age, its narrow waist "may indeed be widening a bit (as often happens in middle age!)" via the rise of middleboxes.</p>
+
+        <div class="formula">
+          <div class="label">IP Hourglass Principle:</div>
+          <div class="expr">Any upper-layer protocol X &rarr; IP &rarr; Any lower-layer protocol Y</div>
+          <div class="desc">IP is the "glue" that enables interoperability across heterogeneous networks</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h4>Above the Waist</h4>
+            <p>• HTTP, FTP, SMTP</p>
+            <p>• TCP, UDP</p>
+            <p class="dim">(many protocols)</p>
+          </div>
+          <div class="card">
+            <h4>The Waist (IP)</h4>
+            <p>• IPv4 / IPv6</p>
+            <p>• Universal</p>
+            <p class="highlight">Single protocol</p>
+          </div>
+          <div class="card">
+            <h4>Below the Waist</h4>
+            <p>• Ethernet, Wi-Fi</p>
+            <p>• Fiber, DSL, LTE</p>
+            <p class="dim">(many technologies)</p>
+          </div>
+        </div>
+
+        <h3>Worked Examples &mdash; IP Hourglass</h3>
+
+        <div class="example">
+          <div class="title">Example 3.1: Heterogeneous Path Traversal</div>
+          <p><strong>Setup:</strong> A user in a coffee shop sends an HTTP request to a server in a data center.</p>
+          <p><strong>Path:</strong> Laptop (Wi-Fi) &rarr; Access Point &rarr; DSL Modem &rarr; ISP Core (Fiber) &rarr; Data Center (Ethernet)</p>
+          <p><strong>Packets traverse 4 different link-layer technologies:</strong></p>
+          <p>1. Wi-Fi (802.11): link layer = 802.11 frames</p>
+          <p>2. DSL: link layer = ATM/PPP frames</p>
+          <p>3. Fiber (SONET): link layer = SONET frames</p>
+          <p>4. Ethernet: link layer = Ethernet frames</p>
+          <p><strong>Key insight:</strong> The IP packet is <strong>encapsulated</strong> inside each link-layer frame. Each link-layer technology treats IP packets as opaque payload. No link-layer changes needed for IP to work.</p>
+          <p class="result">IP's narrow waist allows seamless communication across completely different link-layer technologies, as long as each supports IP encapsulation.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3.2: New Link-Layer Technology &mdash; 5G NR</div>
+          <p><strong>Setup:</strong> 5G New Radio (NR) is introduced in 2018, decades after IP was designed.</p>
+          <p><strong>Question:</strong> Does the Internet need to change to support 5G?</p>
+          <p><strong>Answer (IP Hourglass):</strong> No. 5G NR defines how IP packets are carried over 5G radio frames. The IP layer remains unchanged. Applications (HTTP, video streaming) don't need to know about 5G.</p>
+          <p><strong>Adaptation:</strong> 5G RAN (Radio Access Network) &rarr; Encapsulates IP in NR PDUs &rarr; Connects to the same Internet.</p>
+          <p class="result">The hourglass model enabled 5G adoption without modifying transport or application protocols. TCP and UDP see the same IP packets regardless of underlying radio technology.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3.3: The Narrow Waist is Widening</div>
+          <p><strong>Setup:</strong> Middleboxes increasingly inspect and modify L4&ndash;L7 information, breaking the assumption that only the waist is visible to intermediary devices.</p>
+          <p><strong>Evidence:</strong></p>
+          <p>&bull; RFC 1958 (Architectural Principles): "The network layer should be as simple as possible."</p>
+          <p>&bull; Real-world: NATs, firewalls, DPI, load balancers all know about TCP ports, HTTP headers, even application content.</p>
+          <p>&bull; QUIC (HTTP/3): Encrypts more transport-layer information to prevent middlebox interference.</p>
+          <p class="result">The "widening waist" debate: middleboxes add functionality but erode the clean separation that made the Internet scalable and evolvable. QUIC's encryption is a reaction to this widening.</p>
+        </div>
+
+        <h3>Comparison: Alternative Internet Architectures</h3>
+        <table>
+          <tr>
+            <th>Architecture</th>
+            <th>Waist Protocol(s)</th>
+            <th>Status</th>
+          </tr>
+          <tr>
+            <td>IP Hourglass (Current)</td>
+            <td>IP (single)</td>
+            <td>Deployed globally</td>
+          </tr>
+          <tr>
+            <td>ATM (Asynchronous Transfer Mode)</td>
+            <td>53-byte cells, multiple layers</td>
+            <td>Failed (too complex)</td>
+          </tr>
+          <tr>
+            <td>OSI Model</td>
+            <td>Network Layer (CLNP)</td>
+            <td>Never widely deployed</td>
+          </tr>
+          <tr>
+            <td>Recursive Internet Architecture (RINA)</td>
+            <td>Distributed IPC Facilities</td>
+            <td>Research only</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> The hourglass is NOT the OSI model's 7-layer stack. The hourglass is a <em>shape</em> describing the protocol ecosystem &mdash; many protocols above, one protocol (IP) in the middle, many technologies below. OSI's 7 layers are a different abstraction.
+        </div>
+
+        <div class="refcard">
+          <h4>Quick Reference &mdash; IP Hourglass</h4>
+          <p><strong>Key idea:</strong> IP is the single protocol that every Internet-connected device must implement</p>
+          <p><strong>Enables:</strong> Innovation at edges (new apps, new link technologies) without changing the core</p>
+          <p><strong>RFC 1958:</strong> "The network should be simple, with intelligence at the edges"</p>
+          <p><strong>Threat:</strong> Middleboxes widen the waist by adding per-flow state and application awareness</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 4: End-to-End Argument ====== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>The End-to-End Argument</h2>
+        <p>First articulated by <strong>Saltzer, Reed, and Clark (1984)</strong>: "Functions placed at lower levels may be redundant or of little value compared to the cost of providing them at the lower level."</p>
+        <p><strong>Core principle:</strong> A function can only be completely and correctly implemented with the knowledge and help of the application endpoints. Therefore, placing that function in the network core (as a middlebox) is at best an optimization, not a guarantee.</p>
+
+        <p>As stated in RFC 1958: "Many members of the Internet community would argue that there is no architecture, but only a tradition, which was not written down for the first 25 years (or at least not by the IAB). However, in very general terms, the community believes that the goal is connectivity, the tool is the Internet Protocol, and the intelligence is end to end rather than hidden in the network."</p>
+
+        <div class="formula">
+          <div class="label">Saltzer et al. (1984) &mdash; End-to-End Principle:</div>
+          <div class="expr">"The function in question can completely and correctly be implemented only with the knowledge and help of the application standing at the endpoints of the communication system."</div>
+          <div class="desc">If endpoints must implement the function anyway for correctness, the lower layer's implementation is redundant</div>
+        </div>
+
+        <h3>Worked Examples &mdash; End-to-End Argument</h3>
+
+        <div class="example">
+          <div class="title">Example 4.1: Reliable Data Transfer &mdash; TCP vs Link Layer</div>
+          <p><strong>Question:</strong> Should the network guarantee reliable delivery, or should endpoints handle it?</p>
+          <p><strong>Link-layer approach:</strong> Each hop provides reliable delivery (ARQ, retransmission).</p>
+          <p><strong>Problem:</strong> Even if every link is 100% reliable individually, the receiving host's OS may drop a packet due to buffer overflow &mdash; the link layer can't know this.</p>
+          <p><strong>End-to-end approach (TCP):</strong></p>
+          <p>&bull; Source sends data, starts timer</p>
+          <p>&bull; Destination sends ACK only when data reaches the application buffer</p>
+          <p>&bull; If ACK not received before timeout &rarr; retransmit</p>
+          <p><strong>Result:</strong> Only the endpoint knows whether data was fully received AND processed. Per-hop reliability is redundant &mdash; TCP must check anyway.</p>
+          <p class="result">"Hop-by-hop reliability is optimization; end-to-end reliability is correctness."</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.2: Encryption &mdash; Why Link-Level is Insufficient</div>
+          <p><strong>Setup:</strong> User sends sensitive data across the Internet. The network offers link-layer encryption on each hop (e.g., WPA2 on Wi-Fi, MACsec on Ethernet).</p>
+          <p><strong>Why link-layer encryption alone fails:</strong></p>
+          <p>1. Data is decrypted at each intermediate router &rarr; visible to the router operator</p>
+          <p>2. The final hop may not be encrypted (e.g., server-side Ethernet)</p>
+          <p>3. The receiver's OS might expose data to other processes</p>
+          <p><strong>End-to-end solution:</strong> TLS encrypts between the client application and server application:</p>
+          <p>&bull; Underlying links can be completely untrusted</p>
+          <p>&bull; Only the endpoints have the decryption keys</p>
+          <p class="result">Link encryption protects against layer-2 wiretapping; only end-to-end encryption (TLS/HTTPS) protects the application's data. The argument proves that encryption belongs at endpoints.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.3: Data Deduplication &mdash; Middlebox vs Endpoint</div>
+          <p><strong>Setup:</strong> Two clients send the same 1 GB file to the same server through a WAN optimizer.</p>
+          <p><strong>Middlebox approach (dedup):</strong></p>
+          <p>&bull; WAN optimizer detects duplicate chunks, sends only references to server-side optimizer</p>
+          <p>&bull; Server receives reconstructed file</p>
+          <p><strong>But:</strong> The application (file system) may still perform its own deduplication. The middlebox dedup doesn't know if the application needs the original byte stream or if it performs transforms.</p>
+          <p><strong>End-to-end insight:</strong> The middlebox dedup is an optimization &mdash; it reduces WAN bandwidth. But it cannot guarantee correctness because only the application knows what constitutes a "duplicate" in its context.</p>
+          <p class="result">Middlebox dedup helps performance but the application must still handle duplicates correctly. The end-to-end argument says: don't rely on the middlebox for correctness.</p>
+        </div>
+
+        <h3>Worked Examples &mdash; E2E Violations &amp; Middlebox Impact</h3>
+
+        <div class="example">
+          <div class="title">Example 4.4: NAT Violates End-to-End Connectivity</div>
+          <p><strong>Setup:</strong> Host A (private) wants to act as a server. Host B (external) tries to connect.</p>
+          <p><strong>End-to-end principle (Clark 1988):</strong> "The network should provide only best-effort datagram delivery. Any host should be able to send a packet to any other host."</p>
+          <p><strong>NAT violation:</strong> Host B cannot initiate a connection to Host A because the NAT has no translation entry.</p>
+          <p><strong>Consequences:</strong></p>
+          <p>&bull; P2P applications (Skype, BitTorrent) need workarounds (STUN/TURN/ICE)</p>
+          <p>&bull; IoT devices behind NAT cannot be directly reached</p>
+          <p>&bull; Violates RFC 1958: "The network should be transparent"</p>
+          <p class="result">NAT breaks the universal connectivity that the end-to-end argument assumed. This is perhaps the most significant architectural compromise in the modern Internet.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.5: Firewall and the E2E Innovation Argument</div>
+          <p><strong>Setup:</strong> A new application protocol (e.g., a novel video streaming protocol on UDP port 12345) is developed.</p>
+          <p><strong>Clark 1988 argument:</strong> A simple network enables innovation at the edges. New applications can be deployed without network changes.</p>
+          <p><strong>Firewall problem:</strong></p>
+          <p>&bull; Enterprise firewalls block unknown ports by default</p>
+          <p>&bull; The new protocol can't reach users behind the firewall</p>
+          <p>&bull; Developer must either: use HTTP (bottleneck), request IT to open port (bureaucracy), or use VPN tunneling</p>
+          <p class="result">Firewalls inhibit edge innovation by controlling which application traffic traverses the network &mdash; directly contradicting the "dumb network, smart endpoints" philosophy.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4.6: QUIC &mdash; E2E Encryption to Protect Against Middleboxes</div>
+          <p><strong>Setup:</strong> HTTP/2 runs over TCP. Middleboxes inspect TCP headers (sequence numbers, window sizes) to optimize or interfere with connections.</p>
+          <p><strong>Middlebox interference with TCP:</strong></p>
+          <p>&bull; Some firewalls rewrite TCP window sizes</p>
+          <p>&bull; Some NATs fail with TCP options (timestamps, SACK)</p>
+          <p>&bull; Performance-enhancing proxies may inject incorrect ACKs</p>
+          <p><strong>QUIC (HTTP/3):</strong> Encrypts most transport-layer headers, leaving only minimal information visible.</p>
+          <p>&bull; Protects the E2E contract between client and server</p>
+          <p>&bull; Middleboxes cannot modify encrypted transport fields</p>
+          <p class="result">QUIC is a modern application of the end-to-end argument: encrypt transport metadata to prevent middlebox interference, restoring the clean E2E model.</p>
+        </div>
+
+        <h3>Comparison: E2E Argument Timeline</h3>
+        <table>
+          <tr>
+            <th>Year</th>
+            <th>Author(s)</th>
+            <th>Contribution</th>
+          </tr>
+          <tr>
+            <td>1984</td>
+            <td>Saltzer, Reed, Clark</td>
+            <td>Original end-to-end argument: functions belong at endpoints</td>
+          </tr>
+          <tr>
+            <td>1988</td>
+            <td>David Clark</td>
+            <td>"The design philosophy of the DARPA Internet protocols" &mdash; placed E2E as a core design principle</td>
+          </tr>
+          <tr>
+            <td>1998</td>
+            <td>RFC 1958 (Carpenter)</td>
+            <td>"Architectural Principles of the Internet" &mdash; connectivity, IP, edge intelligence</td>
+          </tr>
+            <tr>
+                <td>2000s</td>
+                <td>Various</td>
+                <td>NAT/firewall proliferation &mdash; practical erosion of E2E</td>
+            </tr>
+            <tr>
+                <td>2001, 2005</td>
+                <td>Blumenthal; Clark et al.</td>
+                <td>Reconsidered Internet architecture in light of more complex environment [Blumenthal 2001; Clark 2005]</td>
+            </tr>
+          <tr>
+            <td>2021</td>
+            <td>QUIC (RFC 9000)</td>
+            <td>Encrypted transport restores E2E by preventing middlebox interference</td>
+          </tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> The end-to-end argument does NOT say "no functions in the network." It says: if an endpoint must implement a function for correctness anyway, adding it in the network is redundant. Network-level optimizations (caching, firewalling) can still provide value &mdash; but they should not be <em>relied upon</em> for correctness.
+        </div>
+
+        <div class="refcard">
+          <h4>Quick Reference &mdash; End-to-End Argument</h4>
+          <p><strong>Saltzer, Reed, Clark (1984):</strong> Correct implementation of communication functions requires endpoint knowledge</p>
+          <p><strong>Clark (1988):</strong> "We should allow the network to be simple and move complexity to the edges"</p>
+          <p><strong>RFC 1958:</strong> Connectivity, IP as universal service, intelligence at endpoints</p>
+          <p><strong>NAT violation:</strong> Breaks universal host-to-host connectivity</p>
+          <p><strong>QUIC (2021):</strong> Encrypts transport headers to restore E2E model</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

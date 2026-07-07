@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Principles of Reliable Data Transfer - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Principles of Reliable Data Transfer</h1>
+  <p class="subtitle">Computer Networking — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">rdt1.0 &amp; rdt2.x</button>
+      <button class="tab" onclick="showSection('tab2')">rdt3.0</button>
+      <button class="tab" onclick="showSection('tab3')">Pipelining &amp; GBN</button>
+      <button class="tab" onclick="showSection('tab4')">Selective Repeat</button>
+      <button class="tab" onclick="showSection('tab5')">Examples &amp; Comparison</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>rdt1.0 — Perfectly Reliable Channel</h2>
+        <p>The simplest case: underlying channel is <strong>completely reliable</strong>. No bit errors, no loss, no reordering. Both sender and receiver have just one state.</p>
+
+        <div class="code">
+          rdt1.0 Sender (FSM):<br>
+          State: Wait for call from above<br>
+          Event: rdt_send(data)<br>
+          Action: packet = make_pkt(data); udt_send(packet)<br>
+          <br>
+          rdt1.0 Receiver (FSM):<br>
+          State: Wait for call from below<br>
+          Event: rdt_rcv(packet)<br>
+          Action: extract(packet, data); deliver_data(data)
+        </div>
+
+        <div class="warning">rdt1.0 assumes perfect channel — no error checking, no ACKs, no NAKs, no sequence numbers. This is purely theoretical; real channels have bit errors and loss.</div>
+
+        <h2>rdt2.0 — Channel with Bit Errors</h2>
+        <p>Adds three capabilities (ARQ — Automatic Repeat reQuest):</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Error Detection</h3>
+            <p>Checksum bits added to the packet. Receiver detects corrupted bits.</p>
+          </div>
+          <div class="card">
+            <h3>Receiver Feedback</h3>
+            <p>ACK (positive acknowledgment) and NAK (negative acknowledgment) packets sent from receiver to sender.</p>
+          </div>
+          <div class="card">
+            <h3>Retransmission</h3>
+            <p>Sender retransmits packets received in error. This is a <strong>stop-and-wait</strong> protocol — sender waits for ACK/NAK before sending next packet.</p>
+          </div>
+        </div>
+
+        <p><strong>Fatal flaw:</strong> ACK/NAK packets can themselves be corrupted! The sender cannot know whether the receiver got the last packet correctly.</p>
+
+        <h3>Three Approaches for Corrupted ACK/NAK</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>1. "What did you say?"</h3>
+            <p>Add a new sender-to-receiver packet asking the receiver to repeat its reply. But that new packet could also be corrupted — leading to an infinite loop of meta-questions.</p>
+          </div>
+          <div class="card">
+            <h3>2. Enough Checksum Bits</h3>
+            <p>Add enough checksum bits to allow the sender <strong>not only to detect but also to recover</strong> from bit errors without retransmission. Works for corruption but not for packet loss.</p>
+          </div>
+          <div class="card">
+            <h3>3. Resend + Sequence Numbers</h3>
+            <p>Simply resend the current data packet when a garbled ACK/NAK is received. This introduces <strong>duplicate packets</strong>, which sequence numbers handle. This approach is adopted in almost all existing protocols including TCP.</p>
+          </div>
+        </div>
+
+        <h2>rdt2.1 — Sequence Numbers to the Rescue</h2>
+        <p>Adds a <strong>1-bit sequence number</strong> (0 or 1) to data packets. Now the receiver can distinguish new data from retransmissions. The sender has 4 states (wait for call 0/1, wait for ACK/NAK 0/1).</p>
+
+        <div class="code">
+          rdt2.1 Sender (key additions):<br>
+          - Packet numbered: make_pkt(seq#, data, checksum)<br>
+          - On corrupted ACK/NAK: retransmit current packet (doesn't advance seq#)<br>
+          - On valid ACK: advance to next seq# (flip 0↔1)<br>
+          <br>
+          rdt2.1 Receiver (key additions):<br>
+          - Tracks expected sequence number (0 or 1)<br>
+          - If out-of-order seq# received: send ACK for expected packet (duplicate)<br>
+          - If corrupted: send NAK
+        </div>
+
+        <h2>rdt2.2 — NAK-Free Protocol</h2>
+        <p>Eliminates NAK packets entirely. Instead, the receiver sends an <strong>ACK for the last correctly received packet</strong>. A sender receiving <strong>duplicate ACKs</strong> knows the next packet was not received correctly.</p>
+
+        <div class="formula">
+          <div class="label">rdt2.2 Key Innovation:</div>
+          <div class="expr">Duplicate ACKs Replace NAKs</div>
+          <div class="desc">Receiver sends ACK with seq# of last correctly received in-order packet.<br>Two ACKs for the same seq# → sender knows to retransmit the next packet.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>rdt3.0 — Lossy Channel with Bit Errors</h2>
+        <p>Now the channel can <strong>lose packets</strong> too (not just corrupt them). This requires a <strong>countdown timer</strong> to detect and recover from lost packets.</p>
+
+        <h3>Key Mechanisms</h3>
+        <ul style="margin-left: 20px; color: #ccc;">
+          <li><strong>Timer:</strong> Started when a packet is sent. If timeout fires before ACK received → retransmit</li>
+          <li><strong>Timeout period:</strong> Set to at least RTT + processing time. In practice, a conservative estimate is used</li>
+          <li><strong>Sequence numbers:</strong> 1-bit alternating (0, 1, 0, 1...) — known as the <strong>alternating-bit protocol</strong></li>
+        </ul>
+
+        <div class="code">
+          rdt3.0 Sender FSM (simplified):<br>
+          State: Wait for call 0 from above<br>
+          ├─ rdt_send(data) → make_pkt(0,data,chk), start_timer<br>
+          └─ goto: Wait for ACK 0<br>
+          <br>
+          State: Wait for ACK 0<br>
+          ├─ rcv ACK(0) → stop_timer, goto: Wait for call 1<br>
+          ├─ timeout → resend pkt0, start_timer<br>
+          └─ rcv corrupt/ACK(1) → do nothing (wait)
+        </div>
+
+        <h3>Stop-and-Wait Performance</h3>
+        <div class="formula">
+          <div class="label">Sender Utilization:</div>
+          <div class="expr">U<sub>sender</sub> = (L/R) / (RTT + L/R)</div>
+          <div class="desc">L = packet size (bits), R = transmission rate (bps), RTT = round-trip time (sec)</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Stop-and-Wait Performance Problem</div>
+          <p><strong>Given:</strong> R = 1 Gbps, L = 1000 bytes (8000 bits), RTT = 30 ms</p>
+          <p>d<sub>trans</sub> = L/R = 8000 / 10<sup>9</sup> = <strong>8 microseconds</strong></p>
+          <p>U<sub>sender</sub> = 0.008 / (30 + 0.008) = <strong>0.00027</strong> = 0.027%</p>
+          <p><span class="result">Effective throughput = 0.00027 × 1 Gbps = 267 kbps</span> — terrible for a 1 Gbps link!</p>
+          <p class="note">The sender was busy only 2.7 hundredths of one percent of the time. This motivates pipelining.</p>
+
+        <div class="formula">
+          <div class="label">Bandwidth-Delay Product (BDP)</div>
+          <div class="expr">BDP = Bandwidth × RTT</div>
+          <div class="desc">With R = 1 Gbps, RTT = 30 ms: BDP = 10⁹ × 0.03 = 30,000,000 bits = 3.75 MB<br>This is the number of bytes that can be "in flight" before the first ACK returns.<br>To fully utilize the link, the window must be at least BDP / MSS ≈ 3750 packets of 1000 bytes each.</div>
+        </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Four Scenarios (Fig 3.16)</h3>
+            <p>(a) No loss — normal operation</p>
+            <p>(b) Data packet lost → timeout → retransmit</p>
+            <p>(c) ACK lost → timeout → retransmit (duplicate at receiver)</p>
+            <p>(d) Premature timeout → duplicate ACK received</p>
+          </div>
+          <div class="card">
+            <h3>Retransmission = Panacea</h3>
+            <p>Sender doesn't know if DATA was lost, ACK was lost, or just delayed. In all cases: <span class="highlight">retransmit</span>. Sequence numbers handle duplicates.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Pipelining and Go-Back-N (GBN)</h2>
+        <p>Stop-and-wait protocols are too slow. <strong>Pipelining</strong> allows the sender to transmit multiple packets without waiting for acknowledgments. This fills the "pipeline" and dramatically improves utilization.</p>
+
+        <div class="formula">
+          <div class="label">Pipelined Utilization:</div>
+          <div class="expr">U<sub>pipelined</sub> ≈ N × (L/R) / (RTT + L/R)</div>
+          <div class="desc">N = number of packets in flight. With N large enough, U → 1 (full utilization).</div>
+        </div>
+
+        <h3>Go-Back-N (GBN)</h3>
+        <p>The sender is allowed to have up to <strong>N unacknowledged packets</strong> in the pipeline. Sequence number space: [0, 2<sup>k</sup> - 1].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Sender Variables</h3>
+            <p><strong>base:</strong> seq# of oldest unacknowledged packet</p>
+            <p><strong>nextseqnum:</strong> smallest unused seq#</p>
+            <p><strong>Window:</strong> [base, base+N-1] for in-transit packets</p>
+          </div>
+          <div class="card">
+            <h3>Sender Events</h3>
+            <p>1. <strong>From above:</strong> if window not full, send; else refuse</p>
+            <p>2. <strong>ACK receipt:</strong> cumulative ACK; slide window</p>
+            <p>3. <strong>Timeout:</strong> retransmit ALL packets from base to nextseqnum-1</p>
+          </div>
+        </div>
+
+        <div class="code">
+          GBN Sender Pseudocode:<br>
+          rdt_send(data):<br>
+          &nbsp;&nbsp;if nextseqnum &lt; base + N:<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;sndpkt[nextseqnum] = make_pkt(nextseqnum, data, checksum)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;udt_send(sndpkt[nextseqnum])<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;if base == nextseqnum: start_timer<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;nextseqnum++<br>
+          &nbsp;&nbsp;else: refuse_data(data)<br>
+          <br>
+          rdt_rcv(rcvpkt) && notcorrupt:<br>
+          &nbsp;&nbsp;base = getacknum(rcvpkt) + 1<br>
+          &nbsp;&nbsp;if base == nextseqnum: stop_timer else: start_timer<br>
+          <br>
+          timeout:<br>
+          &nbsp;&nbsp;start_timer<br>
+          &nbsp;&nbsp;for i in [base, nextseqnum-1]: udt_send(sndpkt[i])
+        </div>
+
+        <h3>GBN Receiver</h3>
+        <p>The receiver maintains only <strong>expectedseqnum</strong>. It:</p>
+        <ul style="margin-left: 20px; color: #ccc;">
+          <li>✓ Accepts only in-order packets (seq# == expectedseqnum)</li>
+          <li>✗ <strong>Discards all out-of-order packets</strong> (correctly received but out of order are thrown away!)</li>
+          <li>✓ Sends <strong>cumulative ACK</strong> for the highest consecutive packet received</li>
+        </ul>
+
+        <div class="warning">GBN discards correctly-received out-of-order packets! This seems wasteful, but the receiver has no buffer for them — they'll be retransmitted anyway when the lost packet times out. This is GBN's main performance weakness.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Selective Repeat (SR)</h2>
+        <p>Selective Repeat improves on GBN by retransmitting <strong>only lost/corrupted packets</strong> instead of the entire window. This avoids the "unnecessary retransmissions" problem of GBN when many packets are in the pipeline.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>SR Sender</h3>
+            <p>• Window of N sequence numbers</p>
+            <p>• <strong>Individual timers</strong> per packet (logical timers)</p>
+            <p>• Only retransmit the timed-out packet</p>
+            <p>• ACK received → mark packet as received</p>
+            <p>• Window advances when send_base is ACKed</p>
+          </div>
+          <div class="card">
+            <h3>SR Receiver</h3>
+            <p>• Acknowledges <strong>each</strong> correctly received packet (individual ACKs)</p>
+            <p>• <strong>Buffers</strong> out-of-order packets</p>
+            <p>• Delivers batch of consecutive packets in order when gap filled</p>
+            <p>• Re-ACKs packets in [rcv_base-N, rcv_base-1] range</p>
+          </div>
+        </div>
+
+        <div class="code">
+          SR Receiver Events:<br>
+          <br>
+          1. Packet seq in [rcv_base, rcv_base+N-1] received correctly:<br>
+          &nbsp;&nbsp;→ Send selective ACK; buffer if not already received<br>
+          &nbsp;&nbsp;→ If seq == rcv_base: deliver consecutive run, advance window<br>
+          <br>
+          2. Packet seq in [rcv_base-N, rcv_base-1] received correctly:<br>
+          &nbsp;&nbsp;→ Send ACK (re-acknowledge — critical!)<br>
+          <br>
+          3. Otherwise: ignore
+        </div>
+
+        <h3>Critical Constraint: Window Size</h3>
+        <div class="formula">
+          <div class="label">SR Window Size Constraint:</div>
+          <div class="expr">Window Size ≤ (Max Seq# + 1) / 2</div>
+          <div class="desc">With k-bit seq#: N ≤ 2<sup>k-1</sup>. Otherwise sender and receiver may disagree on whether packet is new or a retransmission.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Why Window Size Must Be ≤ Half of Seq# Space</div>
+          <p><strong>Given:</strong> Sequence numbers 0,1,2,3 (2-bit field, max=4). Window size N=3.</p>
+          <p><strong>Scenario A:</strong> Packets 0,1,2 sent. ACKs lost. Sender retransmits 0,1,2. Receiver thinks 0 is a retransmission of old data.</p>
+          <p><strong>Scenario B:</strong> Same packets, ACKs received. Sender sends new packets 3,0,1. Packet 0 arrives — receiver sees seq=0.</p>
+          <p><strong>Problem:</strong> The receiver cannot distinguish Scenario A (retransmission) from Scenario B (new data with seq=0)!</p>
+          <p><span class="result">Solution: N ≤ 4/2 = 2. With window size 2, the ambiguity disappears.</span></p>
+        </div>
+
+        <div class="warning">SR is complex because sender and receiver windows are <strong>not synchronized</strong>. The sender doesn't know which packets the receiver has buffered. This is why re-ACKing packets in [rcv_base-N, rcv_base-1] is essential — it prevents the sender's window from stalling.</div>
+      </div>
+    </div>
+
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Examples: RDT Mechanisms</h2>
+
+        <div class="example">
+          <div class="title">Example 1: GBN Window Sliding</div>
+          <p><strong>Given:</strong> N=4, base=2, nextseqnum=5. Packets 2,3,4 are in flight.</p>
+          <p>ACK for packet 2 arrives.</p>
+          <p><strong>Action:</strong> base = 2+1 = 3. Window now covers [3, 6]. Sender can transmit packet 5 (if data available).</p>
+          <p><span class="result">Before: Window [2,3,4,5]. After: Window [3,4,5,6]. Slid forward by 1.</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: GBN Timeout — "Go-Back-N" in Action</div>
+          <p><strong>Given:</strong> N=5, sender has sent packets 0 through 4. Packet 2 is lost.</p>
+          <p>Receiver gets: pkt0 ✓ (send ACK0), pkt1 ✓ (send ACK1).</p>
+          <p>Receiver gets: pkt3 ✗ (out of order — <strong>discard</strong>), pkt4 ✗ (<strong>discard</strong>).</p>
+          <p>Sender receives ACK0, ACK1. Timer for oldest unACKed (pkt2) eventually fires.</p>
+          <p><span class="result">Sender retransmits: packets 2, 3, 4 (all from base to nextseqnum-1).</span></p>
+          <p class="note">Packets 3 and 4 were correctly received but discarded and retransmitted — this is GBN's weakness!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: SR Recovery — Individual Retransmission</div>
+          <p><strong>Given:</strong> N=4, seq# space [0..7]. Sender sends pkts 0,1,2,3. Pkt 2 is lost.</p>
+          <p>Receiver: pkt0 ✓ → ACK0; pkt1 ✓ → ACK1; pkt3 ✓ → ACK3 <strong>(buffered)</strong>.</p>
+          <p>Sender receives ACK0, ACK1, ACK3. Only pkt2's timer remains active.</p>
+          <p>pkt2 times out. <span class="result">Sender retransmits ONLY pkt2.</span></p>
+          <p>Receiver gets pkt2 ✓ → delivers pkt2 AND buffered pkt3 to upper layer. Both windows advance.</p>
+          <p class="note">SR saves N-1 = 3 unnecessary retransmissions compared to GBN!</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: rdt3.0 — Premature Timeout</div>
+          <p><strong>Scenario:</strong> Sender sends pkt0. The packet and ACK are <strong>both</strong> fine (no loss), but the ACK is delayed (congestion).</p>
+          <p>Timer fires before ACK arrives → sender retransmits pkt0 (duplicate).</p>
+          <p>Receiver sees seq=0 again → detects duplicate via seq# → sends ACK0 again (duplicate ACK).</p>
+          <p>Original (delayed) ACK0 arrives → sender ignores (already advanced? No, rdt3.0 is stop-and-wait).</p>
+          <p><span class="result">Correct behavior: Both ACKs are identical (seq#0). The sender receives the first ACK, advances to seq#1. The second ACK0 is a duplicate and is ignored (rdt3.0 sender discards ACK with wrong seq#).</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Sender Utilization Calculation</div>
+          <p><strong>Given:</strong> R = 10 Mbps, L = 2000 bytes (16000 bits), RTT = 100 ms.</p>
+          <p>d<sub>trans</sub> = L/R = 16000 / 10<sup>7</sup> = 0.0016 s = 1.6 ms</p>
+          <p><strong>Stop-and-wait:</strong> U = 1.6 / (100 + 1.6) = <span class="result">0.0157 → 1.57%</span></p>
+          <p><strong>Pipelined with N=10:</strong> U ≈ 10 × 0.0157 = <span class="result">0.157 → 15.7%</span></p>
+          <p><strong>N needed for 100% utilization:</strong> N ≥ (RTT + L/R) / (L/R) = 101.6 / 1.6 ≈ <span class="result">64 packets</span></p>
+        </div>
+
+        <h3>Summary Table: RDT Mechanisms</h3>
+        <table>
+          <tr>
+            <th>Mechanism</th>
+            <th>Purpose</th>
+            <th>Used In</th>
+          </tr>
+          <tr>
+            <td>Checksum</td>
+            <td>Detect bit errors in transmitted packet</td>
+            <td>rdt2.0, rdt2.1, rdt2.2, rdt3.0, GBN, SR, TCP</td>
+          </tr>
+          <tr>
+            <td>Timer</td>
+            <td>Timeout/retransmit when packet or ACK is lost</td>
+            <td>rdt3.0, GBN (single timer), SR (per-packet timer), TCP</td>
+          </tr>
+          <tr>
+            <td>Sequence Number</td>
+            <td>Detect lost packets (gaps), detect duplicates</td>
+            <td>rdt2.1, rdt2.2, rdt3.0, GBN, SR, TCP</td>
+          </tr>
+          <tr>
+            <td>ACK</td>
+            <td>Tell sender packet(s) received correctly</td>
+            <td>rdt2.0+, GBN (cumulative), SR (individual), TCP (cumulative)</td>
+          </tr>
+          <tr>
+            <td>NAK</td>
+            <td>Tell sender packet received incorrectly</td>
+            <td>rdt2.0, rdt2.1 (eliminated in rdt2.2+ via duplicate ACKs)</td>
+          </tr>
+          <tr>
+            <td>Window / Pipelining</td>
+            <td>Allow multiple unacknowledged packets; improve utilization</td>
+            <td>GBN (size N), SR (size N), TCP (adaptive)</td>
+          </tr>
+        </table>
+
+        <h3>Comparison: GBN vs SR</h3>
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>Go-Back-N</th>
+            <th>Selective Repeat</th>
+          </tr>
+          <tr>
+            <td>Retransmission on loss</td>
+            <td>Resends <strong>all</strong> unACKed packets</td>
+            <td>Resends <strong>only</strong> lost packet</td>
+          </tr>
+          <tr>
+            <td>Receiver buffering</td>
+            <td>None (discards out-of-order)</td>
+            <td>Buffers out-of-order packets</td>
+          </tr>
+          <tr>
+            <td>ACK type</td>
+            <td>Cumulative</td>
+            <td>Individual (selective)</td>
+          </tr>
+          <tr>
+            <td>Timer</td>
+            <td>Single timer for oldest packet</td>
+            <td>Per-packet logical timers</td>
+          </tr>
+          <tr>
+            <td>Window size constraint</td>
+            <td>N ≤ 2<sup>k</sup> - 1</td>
+            <td>N ≤ 2<sup>k-1</sup> (half the seq# space)</td>
+          </tr>
+          <tr>
+            <td>Memory at sender</td>
+            <td>Buffer N packets</td>
+            <td>Buffer N packets</td>
+          </tr>
+          <tr>
+            <td>Memory at receiver</td>
+            <td>None (expectedseqnum only)</td>
+            <td>Buffer up to N packets</td>
+          </tr>
+          <tr>
+            <td>Good for</td>
+            <td>Low error rates, simple implementation</td>
+            <td>High error rates, large bandwidth-delay product</td>
+          </tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>RDT Evolution Summary</h3>
+            <p>rdt1.0: Perfect channel (no errors)</p>
+            <p>rdt2.0: +ACK/NAK (bit errors)</p>
+            <p>rdt2.1: +Seq# (corrupted ACK/NAK)</p>
+            <p>rdt2.2: -NAK (duplicate ACKs)</p>
+            <p>rdt3.0: +Timer (packet loss)</p>
+            <p>GBN: +Pipelining, cumulative ACK</p>
+            <p>SR: +Selective retransmission</p>
+          </div>
+          <div class="card">
+            <h3>Common Exam Mistakes</h3>
+            <p>• Confusing GBN vs SR retransmission behavior</p>
+            <p>• Forgetting SR's window size constraint (≤ half)</p>
+            <p>• Misunderstanding cumulative vs individual ACKs</p>
+            <p>• Thinking rdt2.2 uses NAKs (it doesn't!)</p>
+            <p>• Not wrapping overflow in checksum calculation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

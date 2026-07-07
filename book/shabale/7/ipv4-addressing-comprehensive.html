@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPv4 Addressing and Subnets - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; background: #1a0f00; padding: 10px; border-radius: 4px; font-size: 0.9em; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; margin: 10px 0; border: 1px solid #1a2a3a; }
+    .tag { display: inline-block; background: #003a2a; color: #00ff88; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
+    .diagram { background: #0a0a18; padding: 15px; border-radius: 8px; text-align: center; color: #00ccff; font-size: 0.9em; margin: 10px 0; border: 1px solid #1a2a3a; font-family: monospace; white-space: pre; line-height: 1.5; }
+    @media (max-width: 768px) { .tabs { flex-direction: column; } .tab { text-align: center; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>IPv4 Addressing &amp; Subnets</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross) — Chapter 4</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">IP Interfaces</button>
+      <button class="tab" onclick="showSection('tab2')">Subnets</button>
+      <button class="tab" onclick="showSection('tab3')">CIDR</button>
+      <button class="tab" onclick="showSection('tab4')">Classful Addressing</button>
+      <button class="tab" onclick="showSection('tab5')">Route Aggregation</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: IP Interfaces -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>IP Addresses Are Associated with Interfaces, Not Hosts</h2>
+
+        <p>In IP terminology, every IP address is bound to an <strong>interface</strong> — the physical or logical connection point between a host/router and a link. A router with multiple links has multiple interfaces, each with its own IP address. A host typically has one interface (its Ethernet or Wi-Fi NIC), but can have multiple.</p>
+
+        <div class="diagram">+---------------------------+       +---------------------------+
+|  Host A (223.1.1.1)      |       |  Host B (223.1.1.2)      |
+|  Interface: eth0          |       |  Interface: eth0          |
++-----|---------------------+       +-----|---------------------+
+      |                                      |
+      |          223.1.1.0/24 LAN            |
+      +--------------------------------------+
+                        |
+          +-------------|---------------------+
+          | Router R1                        |
+          |  eth0: 223.1.1.4                 |
+          |  eth1: 223.1.2.9                 |
+          |  eth2: 223.1.3.7                 |
+          +----------------------------------+
+Each interface of the router has a distinct IP.</div>
+
+        <div class="formula">
+          <div class="label">Fundamental Size:</div>
+          <div class="expr">2³² = 4,294,967,296 ≈ 4.3 billion addresses</div>
+          <div class="desc">IPv4 uses 32-bit addresses, giving roughly 4.3 billion possible values.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Dotted-Decimal Notation:</div>
+          <div class="expr">193.32.216.9</div>
+          <div class="desc">Each 32-bit address is written as four decimal octets (8 bits each), separated by dots.</div>
+        </div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Thinking an IP address "belongs to" a computer. An IP address is assigned to an <em>interface</em>, not the device itself. A router with 3 links has 3 different IP addresses — one per interface.
+        </div>
+
+        <h3>Binary ↔ Dotted-Decimal Conversion</h3>
+        <table>
+          <tr><th>Octet</th><th>Bits</th><th>Decimal</th></tr>
+          <tr><td>1st</td><td>11000001</td><td>193</td></tr>
+          <tr><td>2nd</td><td>00100000</td><td>32</td></tr>
+          <tr><td>3rd</td><td>11011000</td><td>216</td></tr>
+          <tr><td>4th</td><td>00001001</td><td>9</td></tr>
+        </table>
+
+        <div class="example">
+          <div class="title">Example 1 — Identify All Interfaces</div>
+          <p>Consider a network with: Host A connects to switch S1, S1 connects to Router R1 via port eth0, R1 also has eth1 to Router R2, and R2 has eth0 to Host B.</p>
+          <p><strong>Interfaces:</strong> Host A (1), S1 is a switch (no IP — Layer 2), R1 eth0 (1), R1 eth1 (1), R2 eth0 (1), Host B (1). Total: <span class="result">5 IP interfaces</span>.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Binary to Dotted-Decimal</div>
+          <p>Convert <code>11000000 10101000 00001111 00000001</code> to dotted-decimal.</p>
+          <p>11000000 = 192, 10101000 = 168, 00001111 = 15, 00000001 = 1.</p>
+          <p>Result: <span class="result">192.168.15.1</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — Dotted-Decimal to Binary</div>
+          <p>Convert <code>10.0.0.255</code> to binary.</p>
+          <p>10 = 00001010, 0 = 00000000, 0 = 00000000, 255 = 11111111.</p>
+          <p>Result: <span class="result">00001010.00000000.00000000.11111111</span></p>
+        </div>
+
+        <div class="formula">
+          <div class="label">Broadcast Address:</div>
+          <div class="expr">255.255.255.255</div>
+          <div class="desc">Packets sent to this address are delivered to every host on the local subnet. All 32 bits set to 1.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Points</h3>
+            <p>• IP address → interface, not host</p>
+            <p>• 32 bits total</p>
+            <p>• Dotted-decimal: 4 octets</p>
+            <p>• Broadcast: 255.255.255.255</p>
+            <p>• Routers have multiple IPs</p>
+          </div>
+          <div class="card">
+            <h3>Quick Reference</h3>
+            <p><span class="highlight">1 octet</span> = 8 bits</p>
+            <p>Range per octet: <span class="dim">0–255</span></p>
+            <p>Total addresses: <span class="highlight">2³²</span></p>
+            <p>Reserved: private, loopback, multicast</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: Subnets -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Subnets — Grouping Interfaces by Network Prefix</h2>
+
+        <p>A <strong>subnet</strong> is a group of interfaces that share the same network prefix and can communicate directly with each other without going through a router. Each subnet is isolated — crossing subnet boundaries requires an IP router.</p>
+
+        <p>A subnet is also called an <strong>IP network</strong> or simply a <strong>network</strong> in Internet literature [RFC 950].</p>
+
+        <p>Point-to-point links between routers also form subnets. For example, the interfaces connecting router R1 and router R2 on a link such as <code>223.1.9.0/24</code> constitute a subnet of their own, even though only two interfaces are attached.</p>
+
+        <div class="formula">
+          <div class="label">Subnet Notation:</div>
+          <div class="expr">223.1.1.0/24</div>
+          <div class="desc">The /24 indicates that the first 24 bits are the network prefix. The remaining 8 bits identify hosts within that subnet.</div>
+        </div>
+
+        <h3>Procedure to Identify Subnets</h3>
+        <div class="code">PROCEDURE DetermineSubnets(network_topology):
+  FOR each router interface:
+    DETACH the interface from the router
+    FOR each attached switch or link:
+      COLLECT all interfaces connected to that link
+      IF those interfaces share a common prefix:
+        DECLARE them as one subnet
+    END FOR
+  END FOR
+  RETURN list of all discovered subnets
+END PROCEDURE</div>
+
+        <p><strong>Rule of thumb:</strong> Replace each router with a cloud. Count the number of isolated network segments (clouds) — that's your subnet count.</p>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Assuming two hosts on the same Ethernet switch are always in the same subnet. They are only in the same subnet if they share the same network prefix AND their interfaces can reach each other without a router.
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1 — Three Router Network</div>
+          <p>Network: Host A (223.1.1.1) ↔ Switch S1 ↔ Router R1 (223.1.1.4 eth0). R1 eth1 (223.1.2.9) ↔ Router R2 (223.1.2.8 eth0). R2 eth1 (223.1.3.7) ↔ Switch S2 ↔ Host B (223.1.3.1).</p>
+          <p><strong>Subnets:</strong></p>
+          <p>• Subnet 1: 223.1.1.0/24 (Host A, R1 eth0)</p>
+          <p>• Subnet 2: 223.1.2.0/24 (R1 eth1, R2 eth0) — point-to-point link</p>
+          <p>• Subnet 3: 223.1.3.0/24 (R2 eth1, Host B)</p>
+          <p>Total: <span class="result">3 subnets</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — House Analogy</div>
+          <p>Imagine 3 houses on the same street. Each house has its own router. Within a house, all devices (phones, laptops) share the same subnet (e.g., 192.168.1.0/24). Devices in different houses are on different subnets (192.168.2.0/24, 192.168.3.0/24) and must go through their respective routers to communicate.</p>
+          <p><span class="result">3 subnets — one per house</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — Campus Network</div>
+          <p>A university has: Admin building (10.0.1.0/24), CS department (10.0.2.0/24), Library (10.0.3.0/24). Each building has its own router connected to a campus backbone. Each building's internal switch connects its own hosts.</p>
+          <p><span class="result">3 subnets — each building is a separate broadcast domain</span></p>
+        </div>
+
+        <h3>Subnet Quick Reference</h3>
+        <table>
+          <tr><th>Prefix Length</th><th>Subnet Mask</th><th>Hosts per Subnet</th><th>Example</th></tr>
+          <tr><td>/24</td><td>255.255.255.0</td><td>254</td><td>192.168.1.0/24</td></tr>
+          <tr><td>/25</td><td>255.255.255.128</td><td>126</td><td>192.168.1.0/25</td></tr>
+          <tr><td>/26</td><td>255.255.255.192</td><td>62</td><td>192.168.1.0/26</td></tr>
+          <tr><td>/27</td><td>255.255.255.224</td><td>30</td><td>192.168.1.0/27</td></tr>
+          <tr><td>/28</td><td>255.255.255.240</td><td>14</td><td>192.168.1.0/28</td></tr>
+          <tr><td>/30</td><td>255.255.255.252</td><td>2</td><td>192.168.1.0/30</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Hosts per Subnet:</div>
+          <div class="expr">2^(32 − prefix_length) − 2</div>
+          <div class="desc">Subtract 2 because the all-zeros address (network) and all-ones address (broadcast) are reserved.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Subnet Definition</h3>
+            <p>• Same network prefix</p>
+            <p>• No router needed between them</p>
+            <p>• Each subnet is an isolated network</p>
+            <p>• <span class="highlight">Detach interfaces</span> to find them</p>
+          </div>
+          <div class="card">
+            <h3>Formula</h3>
+            <p>Hosts = <span class="highlight">2^(32−n) − 2</span></p>
+            <p>Where n = prefix length</p>
+            <p>Subnets = number of isolated</p>
+            <p>  network clouds</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: CIDR -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>CIDR — Classless Inter-Domain Routing</h2>
+
+        <p><strong>CIDR</strong> (pronounced "cider") replaced the rigid classful addressing scheme in the mid-1990s. It generalizes the notion of subnetting by allowing <em>any</em> prefix length, expressed as <code>a.b.c.d/x</code> where <code>x</code> is the number of bits in the network prefix.</p>
+
+        <div class="formula">
+          <div class="label">CIDR Notation:</div>
+          <div class="expr">a.b.c.d/x</div>
+          <div class="desc">The first x bits are the network prefix; the remaining (32 − x) bits identify the host within that network.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Example:</div>
+          <div class="expr">200.23.16.0/20</div>
+          <div class="desc">Network prefix is 20 bits. Host identifier is 12 bits. This gives 2¹² = 4096 total addresses, of which 4094 are usable.</div>
+        </div>
+
+        <h3>Algorithm: Determine Network Prefix from CIDR Notation</h3>
+        <div class="code">PROCEDURE GetNetworkAddress(ip, prefix_len):
+  subnet_mask = (0xFFFFFFFF &lt;&lt; (32 - prefix_len)) & 0xFFFFFFFF
+  network = ip & subnet_mask
+  broadcast = ip | (~subnet_mask & 0xFFFFFFFF)
+  RETURN (network, broadcast, subnet_mask)
+END PROCEDURE
+
+PROCEDURE IsSameSubnet(ip1, ip2, prefix_len):
+  mask = (0xFFFFFFFF &lt;&lt; (32 - prefix_len)) & 0xFFFFFFFF
+  RETURN (ip1 & mask) == (ip2 & mask)
+END PROCEDURE</div>
+
+        <div class="example">
+          <div class="title">Example 1 — Find Network and Broadcast</div>
+          <p>Given <code>192.168.10.50/24</code>:</p>
+          <p>Prefix length = 24 → mask = 255.255.255.0</p>
+          <p>Network = 192.168.10.0 (AND ip with mask)</p>
+          <p>Broadcast = 192.168.10.255 (OR ip with inverted mask)</p>
+          <p>Usable range: <span class="result">192.168.10.1 – 192.168.10.254</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Same Subnet Check</div>
+          <p>Are <code>10.20.30.1/20</code> and <code>10.20.40.1/20</code> on the same subnet?</p>
+          <p>Mask = 255.255.240.0 (20 bits)</p>
+          <p>10.20.30.1 AND mask = 10.20.16.0</p>
+          <p>10.20.40.1 AND mask = 10.20.32.0</p>
+          <p><span class="result">No — they are on different subnets (10.20.16.0/20 vs 10.20.32.0/20)</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — CIDR Block Allocation</div>
+          <p>An ISP is allocated <code>200.23.16.0/20</code>. How many /24 subnets can it create?</p>
+          <p>/20 prefix = 12 bits for hosts (32−20 = 12).</p>
+          <p>Each /24 uses 8 bits for hosts (32−24 = 8).</p>
+          <p>Number of /24 subnets = 2^(24−20) = 2⁴ = <span class="result">16 subnets</span></p>
+          <p>Each /24 subnet has 254 usable addresses.</p>
+        </div>
+
+        <h3>CIDR Prefix Lengths &amp; Address Capacity</h3>
+        <table>
+          <tr><th>Prefix</th><th>Mask</th><th>Total Addrs</th><th>Usable Hosts</th></tr>
+          <tr><td>/8</td><td>255.0.0.0</td><td>16,777,216</td><td>16,777,214</td></tr>
+          <tr><td>/12</td><td>255.240.0.0</td><td>1,048,576</td><td>1,048,574</td></tr>
+          <tr><td>/16</td><td>255.255.0.0</td><td>65,536</td><td>65,534</td></tr>
+          <tr><td>/20</td><td>255.255.240.0</td><td>4,096</td><td>4,094</td></tr>
+          <tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr>
+          <tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr>
+          <tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2</td></tr>
+        </table>
+
+        <h3>ICANN — IP Address Allocation Authority</h3>
+        <p>The <strong>Internet Corporation for Assigned Names and Numbers (ICANN)</strong> [ICANN 2020] manages IP address allocation based on guidelines in [RFC 7020]. ICANN also manages DNS root servers and assigns domain names. ICANN allocates addresses to <strong>regional Internet registries (RIRs)</strong>:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>ARIN</h3>
+            <p>North America</p>
+          </div>
+          <div class="card">
+            <h3>RIPE</h3>
+            <p>Europe, Middle East,<br>parts of Africa</p>
+          </div>
+          <div class="card">
+            <h3>APNIC</h3>
+            <p>Asia Pacific</p>
+          </div>
+          <div class="card">
+            <h3>LACNIC</h3>
+            <p>Latin America &amp;<br>Caribbean</p>
+          </div>
+        </div>
+
+        <p>These RIRs form the <strong>Address Supporting Organization of ICANN</strong> [ASO-ICANN 2020].</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>CIDR Benefits</h3>
+            <p>• Flexible prefix lengths</p>
+            <p>• Efficient address utilization</p>
+            <p>• Route aggregation</p>
+            <p>• Slowed address depletion</p>
+          </div>
+          <div class="card">
+            <h3>Notation</h3>
+            <p><span class="highlight">a.b.c.d/x</span></p>
+            <p>x = network prefix bits</p>
+            <p>32−x = host identifier bits</p>
+            <p><span class="dim">ICANN</span> manages allocation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: Classful Addressing -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Classful Addressing — The Original Scheme</h2>
+
+        <p>The original IP design divided the 32-bit address space into fixed-size <strong>classes</strong>. The first few bits of an address determined its class, which in turn dictated the split between network prefix and host identifier. This rigid scheme led to severe address depletion.</p>
+
+        <div class="formula">
+          <div class="label">Class A:</div>
+          <div class="expr">/8 prefix (255.0.0.0)</div>
+          <div class="desc">First bit = 0. Range: 0.0.0.0 – 127.255.255.255. 128 networks, ~16M hosts each.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Class B:</div>
+          <div class="expr">/16 prefix (255.255.0.0)</div>
+          <div class="desc">First bits = 10. Range: 128.0.0.0 – 191.255.255.255. ~16K networks, ~65K hosts each.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Class C:</div>
+          <div class="expr">/24 prefix (255.255.255.0)</div>
+          <div class="desc">First bits = 110. Range: 192.0.0.0 – 223.255.255.255. ~2M networks, 254 hosts each.</div>
+        </div>
+
+        <h3>Comparison: Classful vs CIDR</h3>
+        <table>
+          <tr><th>Feature</th><th>Classful</th><th>CIDR</th></tr>
+          <tr><td>Prefix lengths</td><td>Fixed (/8, /16, /24)</td><td>Any (0–32)</td></tr>
+          <tr><td>Address waste</td><td>High (too big or too small)</td><td>Minimal (tailored to need)</td></tr>
+          <tr><td>Routing table</td><td>Large (no aggregation)</td><td>Small (route aggregation)</td></tr>
+          <tr><td>Self-identifying class</td><td>Yes (first bits)</td><td>No (needs prefix length)</td></tr>
+          <tr><td>Subnetting flexibility</td><td>Limited (only one level)</td><td>Unlimited (VLSM)</td></tr>
+          <tr><td>Depletion rate</td><td>Fast</td><td>Slowed significantly</td></tr>
+          <tr><td>Year introduced</td><td>1981</td><td>1993</td></tr>
+        </table>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Confusing a Class C address (which always starts with bits "110") with a /24 CIDR prefix. Under CIDR, any address can have any prefix length. A <code>10.0.0.0/24</code> is a valid CIDR block even though 10.x.x.x would be Class A under the old scheme.
+        </div>
+
+        <div class="example">
+          <div class="title">Example 1 — Identify Class</div>
+          <p>What class does <code>130.50.20.1</code> belong to?</p>
+          <p>First octet = 130. In binary: 10000010. The first two bits are "10" → <span class="result">Class B</span> (/16).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Waste Illustration</div>
+          <p>A company needs 300 IP addresses. Under classful: Class C (/24) gives 254 (too few), Class B (/16) gives 65,534 (massive over-allocation). They'd waste 65,234 addresses.</p>
+          <p>Under CIDR: They get a /23 block with 510 usable addresses — <span class="result">only 210 wasted</span> instead of 65,234.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — The 2,000-Host Problem</div>
+          <p>Consider an organization that needs 2,000 IP addresses. Under classful addressing:</p>
+          <p>• Class C (/24) provides only 254 addresses — too few.</p>
+          <p>• Class B (/16) provides 65,534 addresses — gross over-allocation.</p>
+          <p>The organization would be assigned a Class B block, wasting more than <strong>63,000 addresses</strong>. This kind of waste across many organizations led to rapid depletion of the Class B address space and was a key motivation for CIDR.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4 — Classful Range Detection</div>
+          <p>Classify each: <code>15.0.0.1</code>, <code>172.16.0.1</code>, <code>200.1.1.1</code>, <code>224.0.0.1</code>.</p>
+          <p>• 15 → 0xxxxxxx → <span class="result">Class A</span></p>
+          <p>• 172 → 10xxxxxx → <span class="result">Class B</span></p>
+          <p>• 200 → 110xxxxx → <span class="result">Class C</span></p>
+          <p>• 224 → 1110xxxx → <span class="result">Class D (multicast)</span></p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Class Detection</h3>
+            <p><span class="highlight">Class A:</span> 0xxx | 0–127</p>
+            <p><span class="highlight">Class B:</span> 10xx | 128–191</p>
+            <p><span class="highlight">Class C:</span> 110x | 192–223</p>
+            <p><span class="highlight">Class D:</span> 1110 | 224–239</p>
+            <p><span class="highlight">Class E:</span> 1111 | 240–255</p>
+          </div>
+          <div class="card">
+            <h3>Why Classful Failed</h3>
+            <p>• Too few Class Bs (16K)</p>
+            <p>• Too many small Class Cs (2M)</p>
+            <p>• Organizations hoarded Class Bs</p>
+            <p>• Routing tables exploded</p>
+            <p>→ <span class="dim">CIDR fixed all this</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 5: Route Aggregation -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Route Aggregation (Summarization)</h2>
+
+        <p><strong>Route aggregation</strong> (aka route summarization or prefix aggregation) allows a single CIDR prefix to represent a block of multiple more-specific prefixes. This shrinks routing tables dramatically — a core design goal of CIDR.</p>
+
+        <div class="formula">
+          <div class="label">Aggregation Principle:</div>
+          <div class="expr">200.23.16.0/20 → aggregates 8 × /23 blocks</div>
+          <div class="desc">An ISP holding 200.23.16.0/20 can subdivide it into 8 equal /23 blocks and still advertise just one /20 route.</div>
+        </div>
+
+        <h3>Algorithm: Longest Prefix Matching</h3>
+        <div class="code">PROCEDURE LongestPrefixMatch(routing_table, destination_ip):
+  best_match = null
+  best_len = 0
+
+  FOR EACH entry IN routing_table:
+    IF (destination_ip & entry.mask) == entry.network:
+      IF entry.prefix_len > best_len:
+        best_len = entry.prefix_len
+        best_match = entry
+    END IF
+  END FOR
+
+  RETURN best_match.next_hop
+END PROCEDURE</pre></div>
+
+        <div class="example">
+          <div class="title">Example 1 — ISP Allocation Breakdown</div>
+          <p>An ISP owns <code>200.23.16.0/20</code>. It divides this into 8 equal /23 blocks:</p>
+          <table>
+            <tr><th>Block</th><th>CIDR</th><th>Range</th></tr>
+            <tr><td>1</td><td>200.23.16.0/23</td><td>200.23.16.0 – 200.23.17.255</td></tr>
+            <tr><td>2</td><td>200.23.18.0/23</td><td>200.23.18.0 – 200.23.19.255</td></tr>
+            <tr><td>3</td><td>200.23.20.0/23</td><td>200.23.20.0 – 200.23.21.255</td></tr>
+            <tr><td>4</td><td>200.23.22.0/23</td><td>200.23.22.0 – 200.23.23.255</td></tr>
+            <tr><td>5</td><td>200.23.24.0/23</td><td>200.23.24.0 – 200.23.25.255</td></tr>
+            <tr><td>6</td><td>200.23.26.0/23</td><td>200.23.26.0 – 200.23.27.255</td></tr>
+            <tr><td>7</td><td>200.23.28.0/23</td><td>200.23.28.0 – 200.23.29.255</td></tr>
+            <tr><td>8</td><td>200.23.30.0/23</td><td>200.23.30.0 – 200.23.31.255</td></tr>
+          </table>
+          <p>The ISP advertises only <code>200.23.16.0/20</code> to the internet. Inside its network, it routes individual /23 blocks to customers.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2 — Longest Prefix Match in Action</div>
+          <p>Routing table:</p>
+          <table>
+            <tr><th>Prefix</th><th>Next Hop</th></tr>
+            <tr><td>200.23.16.0/20</td><td>ISP-Gateway</td></tr>
+            <tr><td>200.23.18.0/23</td><td>Customer-A</td></tr>
+          </table>
+          <p>Packet arrives for <code>200.23.18.5</code>:</p>
+          <p>• Matches /20 (AND with 255.255.240.0 → 200.23.16.0) ✓</p>
+          <p>• Matches /23 (AND with 255.255.254.0 → 200.23.18.0) ✓</p>
+          <p>• /23 is longer → <span class="result">Forward to Customer-A</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3 — Aggregating Discontiguous Blocks</div>
+          <p>Can <code>10.1.0.0/24</code> and <code>10.2.0.0/24</code> be aggregated?</p>
+          <p>Check: 10.1.0.0 in binary = 00001010.00000001.00000000.00000000</p>
+          <p>10.2.0.0 in binary = 00001010.00000010.00000000.00000000</p>
+          <p>First 15 bits match (00001010.0000000), but bit 16 differs (1 vs 2).</p>
+          <p>They can be aggregated as <code>10.0.0.0/13</code> plus specific /24 routes within, but the minimal single block covering both is <code>10.0.0.0/14</code> (which also includes 10.0.0.0/24 and 10.3.0.0/24).</p>
+          <p><span class="result">Best aggregation: 10.0.0.0/14</span> — though this may include unintended ranges.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4 — Fly-By-Night-ISP and ISPs-R-Us Merger</div>
+          <p>Suppose <strong>Fly-By-Night-ISP</strong> owns CIDR block <code>200.23.16.0/20</code> and has allocated <code>200.23.18.0/23</code> to <strong>Organization 1</strong>. <strong>ISPs-R-Us</strong> owns block <code>199.31.0.0/16</code>. When Fly-By-Night-ISP acquires ISPs-R-Us, Organization 1 (still using <code>200.23.18.0/23</code>) is now a customer of ISPs-R-Us.</p>
+          <p>ISPs-R-Us must advertise <strong>both</strong> its own block (<code>199.31.0.0/16</code>) <strong>and</strong> Organization 1's block (<code>200.23.18.0/23</code>) to the rest of the Internet.</p>
+          <p>Other routers use <strong>longest prefix matching</strong>: the /23 route for Organization 1 is more specific than Fly-By-Night-ISP's /20 route. Packets destined for Organization 1 are forwarded to ISPs-R-Us, not Fly-By-Night-ISP, because the /23 prefix (23 bits) is longer than the /20 prefix (20 bits).</p>
+        </div>
+
+        <h3>Route Aggregation Example Diagram</h3>
+        <div class="diagram">           Internet
+              |
+        200.23.16.0/20   ← ISP advertises this single route
+              |
+     +--------+--------+
+     |        |        |
+  200.23.16.0/23  200.23.18.0/23  ...  200.23.30.0/23
+     |        |        |
+  Cust A   Cust B        Cust H
+  (Org 1)  (Org 2)       (Org 8)
+
+Without aggregation: 8 routes advertised.
+With aggregation:    1 route advertised.</div>
+
+        <div class="warning">
+          <strong>Common Mistake:</strong> Thinking aggregation requires contiguous address blocks within the parent prefix. The blocks <em>must</em> be contiguous and aligned to power-of-2 boundaries. You cannot aggregate <code>200.23.17.0/24</code> and <code>200.23.19.0/24</code> into <code>200.23.16.0/22</code> without also covering 200.23.16.0/24 and 200.23.18.0/24.
+        </div>
+
+        <div class="note">The broadcast address <code>255.255.255.255</code> delivers packets to <strong>all hosts on the same subnet</strong>. When a host sends a packet to 255.255.255.255, every host on the local subnet receives it. This address has all 32 bits set to 1.</div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Aggregation Benefits</h3>
+            <p>• Smaller routing tables</p>
+            <p>• Faster lookups</p>
+            <p>• Less router memory</p>
+            <p>• More stable internet</p>
+            <p>• <span class="dim">Key CIDR advantage</span></p>
+          </div>
+          <div class="card">
+            <h3>Longest Prefix Match</h3>
+            <p><span class="highlight">Always choose</span></p>
+            <p>the most specific</p>
+            <p>(longest) matching</p>
+            <p>route in the table</p>
+            <p><span class="dim">More specific = longer prefix</span></p>
+          </div>
+          <div class="card">
+            <h3>ICANN Role</h3>
+            <p>Allocates IP blocks</p>
+            <p>to Regional Internet</p>
+            <p>Registries (RIRs)</p>
+            <p>→ ISPs → Customers</p>
+            <p><span class="dim">Hierarchical allocation</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

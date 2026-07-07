@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS - The Internet's Directory Service</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 4px; }
+    .warning .wtitle { color: #ff6600; font-weight: bold; font-size: 0.9em; }
+    .warning p { color: #ddd; font-size: 0.85em; margin-top: 5px; }
+    .danger { background: #2a0000; border-left: 3px solid #ff3333; padding: 10px 15px; margin: 10px 0; border-radius: 4px; }
+    .danger .dtitle { color: #ff3333; font-weight: bold; font-size: 0.9em; }
+    .danger p { color: #ddd; font-size: 0.85em; margin-top: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre; }
+    .code-green { color: #00ff88; }
+    .code-orange { color: #ff9944; }
+    .code-purple { color: #cc88ff; }
+    .refcard { background: #0a0a18; border: 1px solid #00ccff; border-radius: 8px; padding: 12px; margin: 8px 0; }
+    .refcard .rtype { color: #00ccff; font-size: 1.1em; font-weight: bold; }
+    .refcard .rdesc { color: #aaa; font-size: 0.85em; }
+    .refcard .rexample { color: #00ff88; font-size: 0.85em; font-family: monospace; }
+    .step { margin: 5px 0; padding: 4px 8px; }
+    .step-num { color: #ffcc00; font-weight: bold; }
+    ul, ol { margin: 8px 0 8px 20px; }
+    li { margin: 4px 0; font-size: 0.9em; }
+    p { font-size: 0.9em; line-height: 1.5; margin: 8px 0; }
+    .dot-leader { display: flex; }
+    .dot-leader .label { color: #aaa; }
+    .dot-leader .dots { flex: 1; border-bottom: 1px dotted #444; margin: 0 5px; }
+    .dot-leader .value { color: #00ff88; }
+    .diagram { background: #0a0a18; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #333; }
+    .diagram .dtitle { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; text-align: center; }
+    @media (max-width: 768px) { .tabs { gap: 5px; } .tab { font-size: 0.75em; padding: 6px 10px; } }
+  </style>
+</head>
+<body>
+  <h1>DNS — The Internet's Directory Service</h1>
+  <p class="subtitle">Computer Networking: Kurose &amp; Ross — Chapter 2 Complete Guide</p>
+
+  <div class="container">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">DNS Services</button>
+      <button class="tab" onclick="showSection('tab2')">Hierarchical Architecture</button>
+      <button class="tab" onclick="showSection('tab3')">Query Resolution</button>
+      <button class="tab" onclick="showSection('tab4')">DNS Records</button>
+      <button class="tab" onclick="showSection('tab5')">DNS Messages</button>
+      <button class="tab" onclick="showSection('tab6')">Examples</button>
+    </div>
+
+    <!-- ===== TAB 1: DNS Services ===== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>The Core Problem: Names vs. Numbers</h2>
+        <p>Humans identify hosts by memorable names like <strong>www.google.com</strong>, but network-layer routers require fixed-length IP addresses like <strong>121.7.106.83</strong> to forward packets. A translation service is essential to bridge this gap.</p>
+
+        <div class="formula">
+          <div class="label">Fundamental Mapping:</div>
+          <div class="expr">Hostname (www.example.com) &#8596; IP Address (192.0.2.1)</div>
+          <div class="desc">DNS translates human-friendly names to machine-friendly addresses and vice versa.</div>
+        </div>
+
+        <h3>What is DNS?</h3>
+        <p>DNS (Domain Name System) is <strong>two things in one</strong>:</p>
+        <ul>
+          <li><strong>A distributed database</strong> — stores resource records hierarchically across millions of servers worldwide</li>
+          <li><strong>An application-layer protocol</strong> — allows clients and servers to query and update this database. DNS runs over <strong>UDP</strong> using <strong>port 53</strong> (TCP is used for zone transfers and large responses)</li>
+        </ul>
+
+        <h3>Primary Service: Hostname-to-IP Translation</h3>
+        <p>When a user types <code>www.google.com</code> into a browser, the following steps occur:</p>
+        <ol>
+          <li>The browser extracts the hostname from the URL</li>
+          <li>The client-side DNS application (resolver) sends a UDP query to port 53</li>
+          <li>The DNS protocol returns one or more IP addresses for <code>www.google.com</code></li>
+          <li>The browser initiates a TCP connection to the returned IP address on port 80/443</li>
+        </ol>
+
+        <div class="example">
+          <div class="title">gethostbyname() — The Application Interface</div>
+          <p>Applications do not invoke DNS directly. Instead, they call the <strong>gethostbyname()</strong> function provided by the operating system. On many UNIX-based machines, this library function triggers the DNS resolution process:</p>
+          <ol>
+            <li>The calling application calls <code>gethostbyname("www.google.com")</code></li>
+            <li>The resolver code on the client side forms a DNS query and sends it via UDP to the local DNS server</li>
+            <li>The resolver waits for the response and returns the resolved IP address to the calling application</li>
+          </ol>
+          <p class="note">The <code>gethostbyname()</code> function is deprecated in modern systems in favor of <code>getaddrinfo()</code> (which supports both IPv4 and IPv6), but the resolution workflow remains the same.</p>
+        </div>
+
+        <h3>Additional Services</h3>
+
+        <div class="example">
+          <div class="title">Host Aliasing</div>
+          <p>Hosts with complex canonical names can have simple aliases. For example, <code>enterprise.example.com</code> might be an alias for <code>relay1.west-coast.example.com</code>. DNS returns the canonical hostname when queried for the alias, along with the IP address via a CNAME record.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Mail Server Aliasing (MX Records)</div>
+          <p>MX records allow a company's mail server to use the same domain name as its web server while pointing to a different host. For example, <code>example.com</code> MX record points to <code>mail.example.com</code>, while the A record for <code>example.com</code> might point to a web server at a different IP.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Load Distribution</div>
+          <p>Popular sites like <code>google.com</code> replicate content across hundreds of servers. The same hostname maps to <strong>multiple IP addresses</strong> in the DNS database. DNS servers rotate through these addresses in round-robin fashion, distributing traffic across replicas.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>• <span class="highlight">Distributed</span> — no single point of failure</p>
+            <p>• <span class="highlight">Hierarchical</span> — three-tier authority</p>
+            <p>• <span class="highlight">Cache-friendly</span> — TTL-based caching</p>
+            <p>• <span class="highlight">Extensible</span> — new record types</p>
+          </div>
+          <div class="card">
+            <h3>Transport</h3>
+            <p>Default: <span class="highlight">UDP port 53</span></p>
+            <p>Fallback: <span class="dim">TCP port 53</span></p>
+            <p>Packet &lt; <span class="dim">512 bytes</span> UDP</p>
+            <p>EDNS0: <span class="dim">up to 4096 bytes</span></p>
+          </div>
+        </div>
+
+        <div class="note" style="background:#0a0a18; border-left: 3px solid #ffcc00; padding: 10px 15px; margin: 10px 0; border-radius: 4px;">
+          <strong style="color:#ffcc00;">&#9888; Design Philosophy: Complexity at the Edge</strong>
+          <p style="color:#ddd; font-size:0.85em; margin-top:5px;">DNS is a prime example of the Internet's <strong>"edge" design philosophy</strong>. The critical name-to-address translation is not performed by a centralized core network component. Instead, it is implemented using DNS clients and servers that operate <strong>at the edge</strong> of the network — on end systems and organization-managed servers. This keeps the network core simple and places intelligence and complexity at the edges, a recurring theme in Internet architecture.</p>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">&#9888; DNS is not just for web browsing</div>
+          <p>Every Internet application that uses hostnames relies on DNS — email (SMTP), file transfers (FTP), SSH, VoIP, streaming media, and virtually everything else.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB 2: Hierarchical Architecture ===== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Why Hierarchy? The Failure of Centralized Design</h2>
+        <p>A single DNS server handling all queries would be catastrophic:</p>
+        <ul>
+          <li><strong>Single point of failure</strong> — if it crashes, the entire Internet stops working</li>
+          <li><strong>Traffic volume</strong> — billions of devices generate trillions of daily queries; one server could never cope</li>
+          <li><strong>Distant database</strong> — a client in Australia querying a server in New York suffers hundreds of milliseconds of latency</li>
+          <li><strong>Maintenance nightmare</strong> — every new host requires updating a central database</li>
+        </ul>
+        <p>The solution is a <strong>distributed, hierarchical database</strong> with three classes of DNS servers.</p>
+
+        <h3>The Three Server Classes</h3>
+
+        <div class="grid">
+          <div class="card">
+            <h3>1. Root DNS Servers</h3>
+            <p>• <span class="highlight">13 root server types</span> labeled A through M</p>
+            <p>• <span class="dim">1000+ physical instances</span> worldwide (anycast)</p>
+            <p>• Managed by <span class="dim">12 independent organizations</span></p>
+            <p>• Coordinated through <span class="dim">IANA</span> (Internet Assigned Numbers Authority)</p>
+            <p>• Provide IP addresses of TLD servers</p>
+          </div>
+          <div class="card">
+            <h3>2. TLD Servers</h3>
+            <p>• Handle top-level domains: <span class="highlight">.com, .org, .net, .edu, .gov</span></p>
+            <p>• Also country TLDs: <span class="dim">.uk, .fr, .jp, .ir</span></p>
+            <p>• Verisign manages <span class="dim">.com</span></p>
+            <p>• Educause manages <span class="dim">.edu</span></p>
+          </div>
+          <div class="card">
+            <h3>3. Authoritative Servers</h3>
+            <p>• Organization's own DNS server</p>
+            <p>• Stores <span class="highlight">authoritative resource records</span></p>
+            <p>• Can be maintained internally or by a <span class="dim">provider</span></p>
+            <p>• Example: <span class="dim">dns1.networkutopia.com</span></p>
+          </div>
+        </div>
+
+        <div class="note" style="background:#0a0a18; border-left: 3px solid #00ccff; padding: 10px 15px; margin: 10px 0; border-radius: 4px;">
+          <strong style="color:#00ccff;">BIND Software</strong>
+          <p style="color:#ddd; font-size:0.85em; margin-top:5px;">DNS servers throughout the hierarchy commonly run <strong>BIND (Berkeley Internet Name Domain)</strong> software [BIND 2020]. Originally developed at the University of California, Berkeley, BIND is the most widely used DNS server software, implementing the DNS protocol and providing both authoritative and recursive resolution services.</p>
+        </div>
+
+        <h3>Local DNS Server (The Essential Proxy)</h3>
+        <p>Though not strictly part of the hierarchy, every ISP provides a <strong>local DNS server</strong> (also called a default name server). When a host makes a DNS query:</p>
+        <ul>
+          <li>The query goes <strong>first to the local DNS server</strong></li>
+          <li>The local server acts as a <strong>proxy</strong>, forwarding queries to the hierarchy on behalf of the requesting host</li>
+          <li>The local server <strong>caches results</strong> aggressively to speed up future queries</li>
+          <li>Example: <code>dns.nyu.edu</code> for NYU's campus network</li>
+        </ul>
+
+        <h3>Visual Hierarchy Diagram</h3>
+        <div class="diagram">
+          <div class="dtitle">DNS Server Hierarchy</div>
+          <div class="code">
+                              +---------------------+
+                              |   ROOT SERVERS      |
+                              | (13 types, 1000+)   |
+                              +----------+----------+
+                                         |
+                    +--------------------+--------------------+
+                    |                    |                    |
+            +-------v-------+    +-------v-------+    +-------v-------+
+            | .com TLD      |    | .org TLD      |    | .edu TLD      |
+            | (Verisign)    |    |               |    | (Educause)    |
+            +-------+-------+    +-------+-------+    +-------+-------+
+                    |                    |                    |
+            +-------v-------+    +-------v-------+    +-------v-------+
+            | Authoritative |    | Authoritative |    | Authoritative |
+            | for google.com|    | for ietf.org  |    | for umass.edu |
+            | 216.58.192.0  |    |  4.31.198.44  |    | 128.119.40.3  |
+            +---------------+    +---------------+    +---------------+
+
+            +-------------------------------------------------------+
+            |          LOCAL DNS SERVER (ISP / Campus)              |
+            |  Acts as proxy for all client queries, caches results |
+            +-------------------------------------------------------+
+                               |
+                    +----------+----------+
+                    |                     |
+           +--------v--------+   +--------v--------+
+           | Client Host      |   | Client Host      |
+           | (cse.nyu.edu)    |   | (cs.umass.edu)   |
+           +-----------------+   +-----------------+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB 3: Query Resolution ===== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Recursive vs. Iterative Queries</h2>
+        <p>Two fundamental query modes exist. Most practical DNS resolution uses a <strong>hybrid</strong>: the client-to-local-DNS query is recursive, while the local-to-hierarchy queries are iterative.</p>
+
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Recursive Query</th>
+            <th>Iterative Query</th>
+          </tr>
+          <tr>
+            <td>Who does the work?</td>
+            <td>The receiving server</td>
+            <td>The requesting server</td>
+          </tr>
+          <tr>
+            <td>Server load</td>
+            <td>Higher (server must resolve fully)</td>
+            <td>Lower (server returns referrals)</td>
+          </tr>
+          <tr>
+            <td>Response</td>
+            <td>Final answer or error</td>
+            <td>Answer or referral to next server</td>
+          </tr>
+          <tr>
+            <td>Cache benefit</td>
+            <td>Intermediate servers can cache</td>
+            <td>Client caches at each step</td>
+          </tr>
+          <tr>
+            <td>Messages for depth-3</td>
+            <td>6 messages (3 queries + 3 replies)</td>
+            <td>8 messages (4 queries + 4 replies)</td>
+          </tr>
+        </table>
+
+        <h3>Step-by-Step: Resolving <code>gaia.cs.umass.edu</code> from <code>cse.nyu.edu</code></h3>
+
+        <div class="diagram">
+          <div class="dtitle">Iterative Query Flow (8 messages total)</div>
+          <div class="code">
+  Host (cse.nyu.edu)                    Local DNS (dns.nyu.edu)
+        |                                       |
+        |--- (1) Query gaia.cs.umass.edu ------>|
+        |                                       |--- (2) Query --> Root Server
+        |                                       |&lt;-- (3) Referral to .edu TLD ---|
+        |                                       |
+        |                                       |--- (4) Query --> .edu TLD
+        |                                       |&lt;-- (5) Referral to umass.edu ---|
+        |                                       |
+        |                                       |--- (6) Query --> dns.umass.edu
+        |                                       |&lt;-- (7) Answer 128.119.40.3 ----|
+        |                                       |
+        |&lt;-- (8) Answer 128.119.40.3 ----------|
+
+  Legend:  (1)   = Recursive (host to local)
+           (2-7) = Iterative (local to hierarchy)
+          </div>
+        </div>
+
+        <h3>All-Recursive Query Mode (Figure 2.20)</h3>
+        <p>In the <strong>all-recursive</strong> alternative, every server in the chain recursively queries the next level on behalf of the requesting server:</p>
+        <ul>
+          <li>The root server recursively queries the TLD server</li>
+          <li>The TLD server recursively queries the authoritative server</li>
+          <li>Each response propagates back down the same chain</li>
+        </ul>
+        <div class="formula">
+          <div class="label">Message Count (all-recursive, 3 levels):</div>
+          <div class="expr">5 queries + 5 replies = <strong>10 total messages</strong></div>
+          <div class="desc">Query chain: Host &#8594; Local &#8594; Root &#8594; TLD &#8594; Authoritative (4) + response chain back (4) + host-to-local response carries final answer = 10 messages total through 3 hierarchy levels.</div>
+        </div>
+        <p><strong>In practice, the hybrid approach</strong> (recursive from host to local DNS, iterative from local DNS upward through the hierarchy) is the most common deployment. It balances the caching benefits of recursion with the low server load of iteration at the upper levels.</p>
+
+        <h3>DNS Caching</h3>
+        <p>DNS servers cache query results to improve performance and reduce load on the hierarchy.</p>
+        <ul>
+          <li>Each mapping has a <strong>TTL (Time To Live)</strong> — typically 2 days</li>
+          <li>When cached, subsequent queries are answered directly without hierarchy traversal</li>
+          <li>Root servers are <strong>often bypassed entirely</strong> because TLD server addresses are cached by local DNS servers</li>
+          <li>Cache entries are <strong>not authoritative</strong> — they are "non-authoritative" answers</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">Caching Benefit Example</div>
+          <p>Host A queries <code>www.google.com</code>. Local DNS server resolves it (8 messages), caching the result. 30 seconds later, Host B queries the same name. The local DNS server responds <strong>immediately</strong> from cache — 0 hierarchy messages, only 1 reply.</p>
+        </div>
+
+        <h3>Algorithm: Iterative DNS Resolution</h3>
+        <div class="code">
+  ALGORITHM: resolve(hostname, type)
+  ----------------------------------------
+  Input:  hostname (e.g., "gaia.cs.umass.edu")
+          record_type (e.g., "A")
+  Output: IP address or error
+
+  1. IF hostname in local cache AND TTL valid THEN
+  2.     return cached result (non-authoritative)
+  3. END IF
+  4.
+  5. current_server &larr; default_root_server
+  6. WHILE IP not found DO
+  7.     send_query(current_server, hostname, type)
+  8.     response &larr; receive_response()
+  9.
+ 10.     IF response contains answer THEN
+ 11.         cache(hostname, response.answer, response.TTL)
+ 12.         return response.answer
+ 13.     ELSE IF response contains referral THEN
+ 14.         current_server &larr; referral_server
+ 15.         CONTINUE  // follow referral
+ 16.     ELSE
+ 17.         return "HOST NOT FOUND" error
+ 18.     END IF
+ 19. END WHILE
+          </div>
+        <p class="note">In practice, the root server address is built into the DNS resolver software (a "hint file").</p>
+
+        <div class="danger">
+          <div class="dtitle">&#9888; DNS Vulnerability: Cache Poisoning</div>
+          <p>An attacker can inject forged DNS records into a resolver's cache. When the cache stores the fake mapping, all subsequent clients are redirected to a malicious server. Mitigation: DNSSEC (DNS Security Extensions) cryptographically signs DNS responses.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB 4: DNS Records ===== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Resource Records (RR)</h2>
+        <p>Every DNS server stores data as <strong>resource records</strong>. Each record is a 4-tuple:</p>
+
+        <div class="formula">
+          <div class="label">Resource Record Format:</div>
+          <div class="expr">(Name, Value, Type, TTL)</div>
+          <div class="desc">Name and Value semantics depend on Type; TTL is the time-to-live in seconds</div>
+        </div>
+
+        <h3>Quick Reference Cards — The Four Essential Record Types</h3>
+
+        <div class="grid">
+          <div class="refcard">
+            <div class="rtype">Type A</div>
+            <div class="rdesc"><strong>Hostname-to-IP</strong></div>
+            <div class="rdesc">Name = hostname<br>Value = 32-bit IPv4 address</div>
+            <div class="rexample">(relay1.example.com, 192.0.2.1, A, 86400)</div>
+          </div>
+          <div class="refcard">
+            <div class="rtype">Type NS</div>
+            <div class="rdesc"><strong>Name Server</strong></div>
+            <div class="rdesc">Name = domain<br>Value = hostname of authoritative server</div>
+            <div class="rexample">(example.com, dns1.example.com, NS, 86400)</div>
+          </div>
+          <div class="refcard">
+            <div class="rtype">Type CNAME</div>
+            <div class="rdesc"><strong>Canonical Name</strong></div>
+            <div class="rdesc">Name = alias hostname<br>Value = canonical hostname</div>
+            <div class="rexample">(www.example.com, relay1.example.com, CNAME, 86400)</div>
+          </div>
+          <div class="refcard">
+            <div class="rtype">Type MX</div>
+            <div class="rdesc"><strong>Mail Exchange</strong></div>
+            <div class="rdesc">Name = mail domain alias<br>Value = canonical mail server name</div>
+            <div class="rexample">(example.com, mail.example.com, MX, 86400)</div>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Record Type</th>
+            <th>Function</th>
+            <th>Name Field</th>
+            <th>Value Field</th>
+            <th>Example</th>
+          </tr>
+          <tr>
+            <td><span class="highlight">A</span></td>
+            <td>Hostname &#8594; IP</td>
+            <td>hostname</td>
+            <td>IPv4 address</td>
+            <td><code>gaia.cs.umass.edu &#8594; 128.119.40.3</code></td>
+          </tr>
+          <tr>
+            <td><span class="highlight">AAAA</span></td>
+            <td>Hostname &#8594; IPv6</td>
+            <td>hostname</td>
+            <td>IPv6 address</td>
+            <td><code>ipv6.google.com &#8594; 2001:4860:...</code></td>
+          </tr>
+          <tr>
+            <td><span class="highlight">NS</span></td>
+            <td>Domain delegation</td>
+            <td>domain</td>
+            <td>authoritative server hostname</td>
+            <td><code>umass.edu &#8594; dns.umass.edu</code></td>
+          </tr>
+          <tr>
+            <td><span class="highlight">CNAME</span></td>
+            <td>Alias resolution</td>
+            <td>alias name</td>
+            <td>canonical name</td>
+            <td><code>www.example.com &#8594; relay1.example.com</code></td>
+          </tr>
+          <tr>
+            <td><span class="highlight">MX</span></td>
+            <td>Mail server lookup</td>
+            <td>domain alias</td>
+            <td>canonical mail server</td>
+            <td><code>example.com &#8594; mail.example.com</code></td>
+          </tr>
+        </table>
+
+        <h3>Example Zone: <code>networkutopia.com</code></h3>
+        <p>A complete set of records for a domain:</p>
+        <div class="code">
+  ; networkutopia.com zone file (authoritative)
+  $TTL 86400
+
+  ; SOA record (Start of Authority)
+  networkutopia.com.  IN  SOA  dns1.networkutopia.com. admin.networkutopia.com. (
+                          2024032001  ; serial
+                          7200        ; refresh
+                          3600        ; retry
+                          1209600     ; expire
+                          86400 )     ; minimum
+
+  ; Name server records
+  networkutopia.com.  IN  NS  dns1.networkutopia.com.
+  networkutopia.com.  IN  NS  dns2.networkutopia.com.
+
+  ; Address records for name servers (glue records)
+  dns1.networkutopia.com.  IN  A   212.212.212.1
+  dns2.networkutopia.com.  IN  A   212.212.212.2
+
+  ; Mail exchange
+  networkutopia.com.  IN  MX  10  mail.networkutopia.com.
+
+  ; Canonical aliases
+  www.networkutopia.com.  IN  CNAME  server1.networkutopia.com.
+
+  ; Host addresses
+  server1.networkutopia.com.  IN  A  212.212.212.10
+  mail.networkutopia.com.     IN  A  212.212.212.20
+          </div>
+
+        <h3>Registrar and Domain Registration</h3>
+        <p>Before a domain can be used on the Internet, it must be registered through an <strong>ICANN-accredited registrar</strong>. ICANN (Internet Corporation for Assigned Names and Numbers) coordinates the global DNS system and accredits organizations authorized to sell domain registrations.</p>
+        <ul>
+          <li>Prior to 1999, <strong>Network Solutions</strong> held a monopoly on <code>.com</code>, <code>.net</code>, and <code>.org</code> registrations</li>
+          <li>Today, hundreds of ICANN-accredited registrars compete (e.g., GoDaddy, Namecheap, Google Domains)</li>
+          <li>The registrar verifies the domain name's uniqueness, collects registration fees, and enters NS and A (glue) records into the TLD DNS database</li>
+        </ul>
+        <p><strong>Registration example — networkutopia.com:</strong></p>
+        <div class="code">
+  Step 1: Network Utopia Inc. selects a registrar and requests "networkutopia.com"
+  Step 2: Registrar checks uniqueness (no other "networkutopia.com" exists)
+  Step 3: Registrar inserts NS and A glue records into the .com TLD database:
+          (networkutopia.com, dns1.networkutopia.com, NS)
+          (networkutopia.com, dns2.networkutopia.com, NS)
+          (dns1.networkutopia.com, 212.212.212.1, A)
+          (dns2.networkutopia.com, 212.212.212.2, A)
+  Step 4: Network Utopia configures authoritative DNS servers with
+          additional A, MX, CNAME records as needed
+        </div>
+
+        <h3>Dynamic DNS Updates</h3>
+        <p>Until recently, DNS records were configured <strong>statically</strong> from configuration files — adding, deleting, or modifying a record required manually editing a zone file and restarting the server. The <strong>UPDATE</strong> option (defined in RFC 2136 and RFC 3007) changes this:</p>
+        <ul>
+          <li>Allows <strong>dynamic addition and deletion</strong> of resource records using DNS messages themselves</li>
+          <li>Enables clients to automatically update their DNS records when their IP address changes</li>
+          <li>Critical for mobile and home devices that receive dynamic IPs via DHCP</li>
+          <li>UPDATE messages follow the same DNS message format as standard queries and responses</li>
+        </ul>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB 5: DNS Messages ===== -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>DNS Message Format</h2>
+        <p>There are only <strong>two message types</strong>: query and reply. Both share the <strong>exact same format</strong>.</p>
+
+        <div class="diagram">
+          <div class="dtitle">DNS Message Structure (12-byte header + 4 variable sections)</div>
+          <div class="code">
+  +-------------------------------+  &lt;-- 12 bytes fixed
+  |        Header (12 bytes)      |
+  |  ID (16 bits) | Flags (16)    |
+  |  QDCOUNT       | ANCOUNT      |
+  |  NSCOUNT       | ARCOUNT      |
+  +-------------------------------+
+  |  Question Section             |  &lt;-- variable length
+  |  (the query being asked)      |
+  +-------------------------------+
+  |  Answer Section               |  &lt;-- variable length
+  |  (resource records for query) |
+  +-------------------------------+
+  |  Authority Section            |  &lt;-- variable length
+  |  (records of authoritative    |
+  |   servers)                    |
+  +-------------------------------+
+  |  Additional Section           |  &lt;-- variable length
+  |  (helpful extra records)      |
+  +-------------------------------+
+
+  Header Field Details:
+  +--------+--------+--------+--------+
+  |     ID (identification)           |  &lt;-- 16-bit random number
+  +--------+--------+--------+--------+      matching query &amp; reply
+  | QR| OPCODE |AA|TC|RD|RA|  Z |RCODE|
+  +--------+--------+--------+--------+
+  QR:    0=query, 1=response
+  OPCODE: 0=standard, 1=inverse, 2=server status
+  AA:    authoritative answer
+  TC:    truncated (UDP, &gt;512 bytes)
+  RD:    recursion desired
+  RA:    recursion available
+  RCODE: 0=OK, 3=name error (NXDOMAIN)
+
+  QDCOUNT: number of questions (typically 1)
+  ANCOUNT: number of answers
+  NSCOUNT: number of authority records
+  ARCOUNT: number of additional records
+          </div>
+        </div>
+
+        <h3>Question Section</h3>
+        <div class="code">
+  +-------------------------------+
+  |  QNAME (variable)             |  &lt;-- sequence of labels
+  |  e.g., 3www6google3com0       |      (length-byte prefixed)
+  +-------------------------------+
+  |  QTYPE (16 bits)              |  &lt;-- 1=A, 15=MX, etc.
+  +-------------------------------+
+  |  QCLASS (16 bits)             |  &lt;-- 1=Internet (IN)
+  +-------------------------------+
+          </div>
+
+        <div class="example">
+          <div class="title">nslookup - Practical DNS Query Tool</div>
+          <div class="code">
+  $ nslookup www.google.com
+  Server:     dns.nyu.edu
+  Address:    216.165.32.2
+  Non-authoritative answer:
+  Name:       www.google.com
+  Addresses:  142.250.80.68
+              2607:f8b0:4004:831::2004
+
+  $ nslookup -type=MX gmail.com
+  Server:     dns.nyu.edu
+  Address:    216.165.32.2
+  gmail.com   MX preference = 10, exchanger = alt1.gmail-smtp-in.l.google.com
+  gmail.com   MX preference = 20, exchanger = alt2.gmail-smtp-in.l.google.com
+
+  $ nslookup -type=NS umass.edu
+  Server:     dns.nyu.edu
+  Address:    216.165.32.2
+  umass.edu   nameserver = umass-dns.umass.edu
+  umass.edu   nameserver = ext-ns.umass.edu
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">nslookup — Platform Availability and Advanced Usage</div>
+          <p>The <code>nslookup</code> tool is available on most <strong>Windows</strong> and <strong>UNIX</strong> platforms. For systems without a command-line interface, <strong>web-based nslookup sites</strong> provide the same functionality through a browser. Advanced usage allows querying specific DNS servers directly:</p>
+          <div class="code">
+  $ nslookup -type=A www.google.com a.root-servers.net   # query root directly
+  $ nslookup -type=NS google.com a.gtld-servers.net       # query TLD directly
+  $ nslookup -type=MX gmail.com dns.google                # use Google's resolver
+          </div>
+          <p>This flexibility allows network administrators to troubleshoot exactly which level of the hierarchy returns a given response.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Additional Section in Action</div>
+          <p>When a DNS server returns MX records for <code>example.com</code>, it often includes the <strong>Additional Section</strong> with the corresponding A records:</p>
+          <div class="code">
+  ;; ANSWER SECTION:
+  example.com.  IN  MX  10  mail.example.com.
+
+  ;; ADDITIONAL SECTION:
+  mail.example.com.  IN  A  93.184.216.34   &lt;-- saves an extra lookup!
+          </div>
+          <p>This optimization eliminates the need for a separate A-record query for the mail server.</p>
+        </div>
+
+        <div class="danger">
+          <div class="dtitle">&#9888; DDoS Amplification Attack</div>
+          <p>Attackers send DNS queries with a <strong>spoofed source IP</strong> (the victim's address) to open DNS resolvers. The response (which can be much larger than the query) is sent to the victim. A 60-byte query can trigger a 4000-byte response — a <strong>66x amplification factor</strong>. Mitigation: disable open recursion on DNS servers.</p>
+        </div>
+
+        <h3>DNS Security — Attack History and Defenses</h3>
+
+        <div class="danger">
+          <div class="dtitle">&#9888; October 21, 2002 — Root Server DDoS Attack</div>
+          <p>Attackers used a botnet to launch ICMP ping floods against all 13 root server IP addresses simultaneously. The attack caused <strong>minimal damage</strong> because:</p>
+          <ul>
+            <li>Root servers had <strong>ICMP packet filters</strong> that dropped the attack traffic</li>
+            <li>Local DNS servers <strong>cache TLD server IPs</strong>, so most queries never reach the root servers</li>
+          </ul>
+        </div>
+
+        <div class="danger">
+          <div class="dtitle">&#9888; October 21, 2016 — Dyn DDoS Attack</div>
+          <p>The <strong>Mirai botnet</strong>, consisting of approximately <strong>100,000 compromised IoT devices</strong> (printers, IP cameras, baby monitors, etc.), launched a massive DDoS attack against Dyn, a major DNS provider. The attack affected: <strong>Amazon, Twitter, Netflix, GitHub, Spotify</strong>, and many other services for <strong>nearly a full day</strong>. This attack demonstrated the vulnerability of DNS infrastructure to large-scale botnets.</p>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">&#9888; Man-in-the-Middle Attack</div>
+          <p>An attacker intercepts DNS queries between a client and a DNS server, then returns <strong>bogus replies</strong> pointing to malicious IP addresses. The client unknowingly connects to attacker-controlled servers.</p>
+        </div>
+
+        <div class="warning">
+          <div class="wtitle">&#9888; DNS Poisoning Attack</div>
+          <p>An attacker sends <strong>forged DNS replies</strong> to a DNS server, tricking it into caching bogus resource records. Once cached, all subsequent clients querying that server receive incorrect IP addresses. This attack can propagate through cache sharing.</p>
+        </div>
+
+        <div class="note" style="background:#0a0a18; border-left: 3px solid #00ff88; padding: 10px 15px; margin: 10px 0; border-radius: 4px;">
+          <strong style="color:#00ff88;">&#9888; DNSSEC — DNS Security Extensions [RFC 4033]</strong>
+          <p style="color:#ddd; font-size:0.85em; margin-top:5px;">DNSSEC provides <strong>cryptographic signing</strong> of DNS responses. Using public-key cryptography, a DNS resolver can verify that a response is authentic and has not been tampered with. DNSSEC does <strong>not</strong> encrypt DNS data — it provides <strong>data integrity</strong> and <strong>origin authentication</strong>, ensuring returned records are exactly what the authoritative source published.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== TAB 6: Examples ===== -->
+    <div class="content" id="tab6">
+      <div class="section">
+        <h2>Worked Examples — DNS in Action</h2>
+
+        <!-- Example 1 -->
+        <div class="example">
+          <div class="title">Example 1: Full Resolution Trace for www.amazon.com</div>
+          <p><strong>Scenario:</strong> A host on the NYU campus (<code>cse.nyu.edu</code>) types <code>www.amazon.com</code> in a browser. No cached entries exist.</p>
+          <div class="code">
+  Step 1:  Host sends query to local DNS (dns.nyu.edu)
+           Q: "What is the IP of www.amazon.com?"
+
+  Step 2:  Local DNS queries root server (e.g., a.root-servers.net)
+           R: "I don't know. Ask .com TLD at a.gtld-servers.net"
+           [Local DNS caches .com TLD server address]
+
+  Step 3:  Local DNS queries .com TLD server
+           Q: "What is the IP of www.amazon.com?"
+           R: "I don't know. Amazon's authoritative DNS is
+               dns.amazon.com (NS record)"
+           [Local DNS caches amazon.com NS record]
+
+  Step 4:  Local DNS queries dns.amazon.com
+           Q: "What is the IP of www.amazon.com?"
+           R: "www.amazon.com is an alias (CNAME) for
+               www.amazon.com.akadns.net"
+           [Local DNS caches CNAME]
+
+  Step 5:  Local DNS follows CNAME and queries dns.amazon.com
+           Q: "What is the IP of www.amazon.com.akadns.net?"
+           R: "Answer: www.amazon.com.akadns.net A 205.251.242.103"
+           [Local DNS caches final A record]
+
+  Step 6:  Local DNS returns 205.251.242.103 to the host
+           Response: "www.amazon.com IP = 205.251.242.103"
+
+  Total messages: 10 (5 queries + 5 replies)
+  Cache entries created: 3 (.com TLD, NS for amazon.com, A record)
+          </div>
+        </div>
+
+        <!-- Example 2 -->
+        <div class="example">
+          <div class="title">Example 2: Recursive vs. Iterative — Message Count Comparison</div>
+          <p><strong>Scenario:</strong> Resolve a hostname 3 levels deep (e.g., <code>host.sub.domain.tld</code>). Assume no caching at any level.</p>
+          <table>
+            <tr>
+              <th>Phase</th>
+              <th>Fully Recursive</th>
+              <th>Hybrid (recursive + iterative)</th>
+              <th>Fully Iterative</th>
+            </tr>
+            <tr>
+              <td>Host &#8594; Local DNS</td>
+              <td>Recursive &#10003;</td>
+              <td>Recursive &#10003;</td>
+              <td>Iterative &#10003;</td>
+            </tr>
+            <tr>
+              <td>Local &#8594; Root</td>
+              <td>Recursive &#10003;</td>
+              <td>Iterative</td>
+              <td>Iterative</td>
+            </tr>
+            <tr>
+              <td>Root &#8594; TLD</td>
+              <td>Recursive &#10003;</td>
+              <td>(handled by local)</td>
+              <td>(handled by host)</td>
+            </tr>
+            <tr>
+              <td>TLD &#8594; Authoritative</td>
+              <td>Recursive &#10003;</td>
+              <td>(handled by local)</td>
+              <td>(handled by host)</td>
+            </tr>
+            <tr>
+              <td><strong>Total messages</strong></td>
+              <td><span class="highlight">6</span></td>
+              <td><span class="highlight">8</span></td>
+              <td><span class="highlight">10</span></td>
+            </tr>
+            <tr>
+              <td>Root server load</td>
+              <td>Highest (must resolve fully)</td>
+              <td>Low (only referral)</td>
+              <td>Low (only referral)</td>
+            </tr>
+          </table>
+          <p><strong>Conclusion:</strong> The hybrid approach balances server load and client complexity. This is what the Internet actually uses.</p>
+        </div>
+
+        <!-- Example 3 -->
+        <div class="example">
+          <div class="title">Example 3: Interpreting Resource Records — A Practical Exercise</div>
+          <p><strong>Scenario:</strong> You are a network administrator examining your zone file. Interpret each of the following records:</p>
+          <div class="code">
+  Record 1:  (www.mycompany.com, 198.51.100.10, A, 3600)
+  Interpretation: www.mycompany.com has IPv4 address 198.51.100.10.
+                   TTL = 3600 seconds (1 hour).
+
+  Record 2:  (mycompany.com, dns1.mycompany.com, NS, 86400)
+  Interpretation: The authoritative DNS server for the mycompany.com
+                   domain is dns1.mycompany.com. TTL = 1 day.
+
+  Record 3:  (mail.mycompany.com, 198.51.100.20, A, 3600)
+             (shop.mycompany.com, 198.51.100.10, A, 3600)
+             (www.mycompany.com, server1.mycompany.com, CNAME, 7200)
+  Interpretation: Mail and web traffic go to different IPs.
+                   www is an alias; its canonical name is server1.
+                   To resolve www, first get server1's A record.
+
+  Record 4:  (mycompany.com, mail.mycompany.com, MX, 86400)
+  Interpretation: Email sent to user@mycompany.com is delivered to
+                   the mail server at mail.mycompany.com.
+          </div>
+        </div>
+
+        <!-- Example 4 -->
+        <div class="example">
+          <div class="title">Example 4: DNS Caching — Two Hosts, Same Query</div>
+          <p><strong>Scenario:</strong> Two hosts (A and B) on the same campus network query <code>www.wikipedia.org</code> at times t=0 and t=60 seconds respectively. All TTLs are 86400 seconds.</p>
+          <div class="code">
+  t = 0s:   Host A queries www.wikipedia.org
+            Local DNS: cache MISS
+            Queries hierarchy: Root -> .org TLD -> wikipedia.org auth
+            Caches result: 208.80.154.224  (TTL = 86400s)
+            Responds to Host A with IP
+            Messages: 8
+
+  t = 60s:  Host B queries www.wikipedia.org
+            Local DNS: cache HIT!  (TTL remaining = 86340s)
+            Immediately responds with 208.80.154.224
+            Messages: 1  (query + reply)
+            (NOTE: response is marked "non-authoritative")
+
+  Cache benefit:   7 saved messages, ~200ms saved latency
+  Hierarchy load:  Reduced by 87.5% for this query
+          </div>
+        </div>
+
+        <!-- Example 5 -->
+        <div class="example">
+          <div class="title">Example 5: Registering a New Domain — networkutopia.com</div>
+          <p><strong>Scenario:</strong> Your startup, Network Utopia Inc., needs to register <code>networkutopia.com</code> and make it accessible worldwide.</p>
+          <div class="code">
+  Step 1: Choose a registrar (e.g., Network Solutions, GoDaddy)
+          The registrar is a company that has access to the .com TLD registry.
+
+  Step 2: Provide registrar with:
+          - Domain name: networkutopia.com
+          - Authoritative DNS servers: dns1.networkutopia.com (212.212.212.1)
+                                        dns2.networkutopia.com (212.212.212.2)
+
+  Step 3: Registrar inserts NS and A records into .com TLD database:
+          (networkutopia.com, dns1.networkutopia.com, NS)
+          (networkutopia.com, dns2.networkutopia.com, NS)
+          (dns1.networkutopia.com, 212.212.212.1, A)  &lt;-- glue record
+          (dns2.networkutopia.com, 212.212.212.2, A)  &lt;-- glue record
+
+  Step 4: On your own authoritative servers (dns1, dns2), you add:
+          - A record for www.networkutopia.com
+          - MX record for mail.networkutopia.com
+          - CNAME records for any aliases
+          - Any other records needed
+
+  Step 5: Propagation (up to 48 hours for DNS caches worldwide to expire)
+
+  After registration, any Internet client can resolve www.networkutopia.com
+  by traversing: Root -> .com TLD -> dns1.networkutopia.com
+          </div>
+        </div>
+
+        <!-- Example 6: Algorithm -->
+        <div class="example">
+          <div class="title">Example 6: DNS Caching Algorithm — Pseudocode</div>
+          <div class="code">
+  ALGORITHM: cache_dns_response(cache, hostname, records, ttl)
+  ----------------------------------------
+  Input:  cache    - hash table (hostname -> record + expiry)
+          hostname - the queried name
+          records  - list of resource records returned
+          ttl      - time-to-live in seconds
+
+  1. expiry &larr; current_time() + ttl
+  2. cache[hostname] &larr; { records, expiry }
+  3.
+  4. FOR EACH ns_record IN records WHERE type == "NS" DO
+  5.     // Cache the delegation as well
+  6.     cache[ns_record.Value] &larr; { ... }
+  7. END FOR
+  8.
+  9. // Cache glue records in additional section
+ 10. FOR EACH additional_record IN additional DO
+ 11.     cache[additional_record.Name] &larr;
+ 12.         { additional_record, current_time() + ttl }
+ 13. END FOR
+ 14.
+ 15. RETURN
+          </div>
+          <div class="code">
+  ALGORITHM: lookup_with_cache(cache, hostname)
+  ----------------------------------------
+  Input:  cache    - hash table
+          hostname - the name to look up
+  Output: IP address or referral
+
+  1. IF hostname IN cache THEN
+  2.     entry &larr; cache[hostname]
+  3.     IF entry.expiry &gt; current_time() THEN
+  4.         return entry.records  // cache HIT
+  5.     ELSE
+  6.         remove(cache[hostname])  // expired
+  7.     END IF
+  8. END IF
+  9.
+ 10. // Cache MISS — initiate full resolution
+ 11. return resolve_from_hierarchy(hostname)
+          </div>
+        </div>
+
+        <!-- Quick Reference Summary -->
+        <div class="section">
+          <h2>Quick Reference Summary</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>DNS Ports</h3>
+              <p>UDP <span class="highlight">53</span></p>
+              <p>TCP <span class="dim">53</span> (zone transfer)</p>
+              <p>EDNS0: up to <span class="dim">4096 B</span></p>
+            </div>
+            <div class="card">
+              <h3>Server Types</h3>
+              <p><span class="highlight">Root</span>: 13 types, 1000+ instances</p>
+              <p><span class="dim">TLD</span>: .com, .org, .edu, etc.</p>
+              <p><span class="dim">Authoritative</span>: org's own</p>
+              <p><span class="dim">Local</span>: ISP proxy, caches</p>
+            </div>
+            <div class="card">
+              <h3>Record Types</h3>
+              <p><span class="highlight">A</span> = IPv4 address</p>
+              <p><span class="dim">AAAA</span> = IPv6 address</p>
+              <p><span class="dim">NS</span> = name server</p>
+              <p><span class="dim">CNAME</span> = alias</p>
+              <p><span class="dim">MX</span> = mail exchange</p>
+            </div>
+            <div class="card">
+              <h3>Vulnerabilities</h3>
+              <p><span class="dim">DDoS</span> amplification</p>
+              <p><span class="dim">Cache poisoning</span></p>
+              <p><span class="dim">Mitigation</span>: DNSSEC</p>
+              <p><span class="dim">Port 53 open = risk</span></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

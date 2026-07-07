@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electronic Mail & SMTP - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #2a1a00; border-left: 4px solid #ff6600; padding: 12px; margin: 12px 0; border-radius: 4px; color: #ffcc88; font-size: 0.9em; }
+    .warning strong { color: #ff6600; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; margin: 10px 0; line-height: 1.5; }
+    .code .c { color: #00ff88; }
+    .code .s { color: #ffcc00; }
+    .code .k { color: #ff6600; }
+    .code .comment { color: #888; font-style: italic; }
+    ul, ol { margin: 8px 0 8px 20px; }
+    li { margin: 4px 0; line-height: 1.5; }
+    p { line-height: 1.6; margin: 8px 0; }
+    .ref-card { background: #0d0d1a; border: 1px solid #00ccff; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .ref-card h4 { color: #00ccff; font-size: 0.9em; margin-bottom: 8px; }
+    .ref-card table { margin: 5px 0; }
+    .ref-card th { background: #111a2a; }
+    .ref-card td { background: #0a0a14; }
+    .flow-diagram { background: #0a0a18; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #ffcc00; font-family: 'Courier New', monospace; font-size: 0.85em; color: #e0e0e0; line-height: 1.6; white-space: pre; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Electronic Mail &amp; SMTP</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross, Ch. 2) — Complete Study Guide</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">System Architecture</button>
+      <button class="tab" onclick="showSection('tab2')">SMTP Protocol</button>
+      <button class="tab" onclick="showSection('tab3')">Message Format</button>
+      <button class="tab" onclick="showSection('tab4')">Access Protocols</button>
+      <button class="tab" onclick="showSection('tab5')">Examples</button>
+    </div>
+
+    <!-- ===== TAB 1: System Architecture ===== -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Three Major Components</h2>
+        <p>E-mail systems are built from three core components:</p>
+        <ol>
+          <li><strong>User Agents (UA)</strong> — the client software that lets users compose, read, reply to, and forward messages.</li>
+          <li><strong>Mail Servers</strong> — the always-on infrastructure that stores mailboxes and manages message queues.</li>
+          <li><strong>SMTP (Simple Mail Transfer Protocol)</strong> — the application-layer protocol used to transfer messages between mail servers.</li>
+        </ol>
+
+        <h3>User Agents</h3>
+        <p>Common user agents include <strong>Microsoft Outlook</strong>, <strong>Gmail</strong> (web-based), and <strong>Apple Mail</strong>. Their primary functions:</p>
+        <ul>
+          <li>Compose new messages</li>
+          <li>Read incoming messages from the mailbox</li>
+          <li>Reply to messages</li>
+          <li>Forward messages to other recipients</li>
+        </ul>
+
+        <h3>Mail Servers</h3>
+        <p>Mail servers form the core of the e-mail infrastructure. Each recipient has a <strong>mailbox</strong> on a mail server where incoming messages are stored. The sender's mail server maintains a <strong>message queue</strong> for messages that cannot yet be delivered. Failed deliveries are retried every <strong>30 minutes</strong>; if delivery still fails after several days, the server removes the message and notifies the sender.</p>
+
+        <div class="formula">
+          <div class="label">E-mail Address Anatomy</div>
+          <div class="expr">alice@crepes.fr</div>
+          <div class="desc">The part after "@" identifies the destination mail server's hostname. "alice" is the mailbox name.</div>
+        </div>
+
+        <h3>End-to-End Delivery Flow</h3>
+        <div class="flow-diagram">┌──────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────┐
+│ Alice's  │   │ Alice's Mail  │   │ Bob's Mail   │   │ Bob's    │
+│ UA       │──▶│ Server        │──▶│ Server       │──▶│ UA       │
+│ (client) │   │ (crepes.fr)   │   │ (hamburger   │   │ (client) │
+└──────────┘   └──────────────┘   │ .edu)        │   └──────────┘
+                                  └──────────────┘
+     Step 1           Step 2               Step 3          Step 4
+  (SMTP to       (SMTP between       (Bob reads via    (Bob's UA
+   own server)   mail servers)        IMAP / HTTP)      displays)</div>
+
+        <p>The flow proceeds as follows:</p>
+        <ol>
+          <li>Alice's UA sends the message to <strong>her mail server</strong> (crepes.fr) using SMTP.</li>
+          <li>Alice's mail server places the message in its <strong>outgoing queue</strong> and then uses SMTP to send it to Bob's mail server (hamburger.edu).</li>
+          <li>Bob's mail server places the message into <strong>Bob's mailbox</strong>.</li>
+          <li>Bob retrieves the message from his mailbox using an <strong>access protocol</strong> (IMAP or HTTP).</li>
+        </ol>
+
+        <div class="warning">
+          <strong>⚠ SMTP is a PUSH protocol.</strong> The sending mail server <em>pushes</em> the message to the receiving mail server. This is fundamentally different from <strong>HTTP</strong>, which is a <em>pull</em> protocol where the client requests data from the server. Because SMTP uses push, a dedicated access protocol is needed for reading mail.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Push vs. Pull</h3>
+            <p><span class="highlight">SMTP (Push)</span> — sender initiates TCP connection and pushes data to receiver</p>
+            <p><span class="dim">HTTP/IMAP (Pull)</span> — client initiates connection and requests/pulls data from server</p>
+          </div>
+          <div class="card">
+            <h3>Retry Policy</h3>
+            <p>Failed deliveries: retry every <span class="highlight">30 min</span></p>
+            <p>Permanent failure: days before sender is notified</p>
+          </div>
+        </div>
+
+        <h3>Historical Context</h3>
+        <p><strong>SMTP</strong> is much older than HTTP — its original RFC (RFC 821) dates back to <strong>1982</strong>, when the Internet was still in its infancy. E-mail was the most popular Internet application during this early period [Segaller 1998], and it remains one of the most widely used services today.</p>
+        <p>A defining characteristic of e-mail is that it is <strong>asynchronous communication</strong> — the sender composes and sends a message at their convenience, and the recipient reads it at theirs. Unlike instant messaging or the request-response pattern of HTTP, there is no expectation that both parties are simultaneously connected.</p>
+      </div>
+    </div>
+
+    <!-- ===== TAB 2: SMTP Protocol ===== -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>SMTP Overview</h2>
+        <p><strong>SMTP</strong> (Simple Mail Transfer Protocol) is the standard protocol for transferring e-mail between mail servers. It is defined in <strong>RFC 5321</strong>.</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Transport</h3>
+            <p>Uses <span class="highlight">TCP</span></p>
+            <p>Port: <span class="dim">25</span></p>
+            <p>Persistent connections: <span class="result">Yes</span></p>
+          </div>
+          <div class="card">
+            <h3>Message Encoding</h3>
+            <p>Restricted to <span class="highlight">7-bit ASCII</span></p>
+            <p>Binary data must be encoded<br>(Base64, quoted-printable)</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>⚠ SMTP uses only 7-bit ASCII!</strong> Binary attachments (images, videos) must be encoded using Base64 or quoted-printable before transmission. The mail server cannot handle raw binary data.
+        </div>
+
+        <h3>Why 7-bit ASCII? Historical Context</h3>
+        <p>The <strong>7-bit ASCII restriction</strong> was entirely sensible in the early 1980s when SMTP was designed. At that time, transmission capacity was scarce, and most network traffic was text-based. Restricting messages to 7-bit ASCII kept the protocol simple and compatible with the limited character encodings of the era.</p>
+        <p>In today's <strong>multimedia era</strong>, this restriction poses a clear challenge. Binary data such as images, videos, and documents cannot be transmitted as-is through SMTP. Instead, they must be encoded into ASCII using schemes like <strong>Base64</strong> or <strong>quoted-printable</strong> before transmission. The receiving end decodes them back into binary form.</p>
+        <p>This stands in stark contrast to <strong>HTTP</strong>, which has no such restriction — HTTP can transmit arbitrary binary data directly using MIME types and Content-Type headers. The design difference reflects the eras in which each protocol was born: SMTP in the text-centric 1980s, HTTP in the more multimedia-aware 1990s.</p>
+
+        <h3>Protocol Roles</h3>
+        <p>The <strong>client side</strong> of SMTP runs on the <em>sender's</em> mail server. The <strong>server side</strong> runs on the <em>receiver's</em> mail server. There is a direct TCP connection between the two — <strong>no intermediate mail servers</strong> participate in the SMTP exchange.</p>
+
+        <p>This direct server-to-server model means that even if the two mail servers are on opposite sides of the world — say, from Hong Kong to St. Louis — the SMTP connection is established <strong>directly</strong> between them. There are no intermediate relay servers that store and forward the message.</p>
+
+        <p>If Bob's mail server is temporarily down, the message does <strong>not</strong> get stored on some intermediate server. Instead, it remains in <strong>Alice's mail server's message queue</strong>. Alice's server will periodically retry delivery (every ~30 minutes) until Bob's server accepts it or the attempt is abandoned after several days.</p>
+
+        <h3>Three Phases of SMTP</h3>
+
+        <h3>1. Handshake Phase</h3>
+        <p>The client establishes a TCP connection and the two sides identify themselves:</p>
+        <ul>
+          <li><strong>C: HELO</strong> — Client identifies itself with its domain name</li>
+          <li><strong>S: 250 Hello</strong> — Server acknowledges</li>
+          <li><strong>C: MAIL FROM:</strong> — Identifies the sender</li>
+          <li><strong>S: 250 OK</strong> — Sender accepted</li>
+          <li><strong>C: RCPT TO:</strong> — Identifies each recipient (one per command)</li>
+          <li><strong>S: 250 OK</strong> — Recipient accepted</li>
+        </ul>
+
+        <h3>2. Transfer Phase</h3>
+        <ul>
+          <li><strong>C: DATA</strong> — Client signals it is ready to send the message body</li>
+          <li><strong>S: 354 Start mail input</strong> — Server is ready</li>
+          <li><strong>C:</strong> Sends message (header lines + blank line + body)</li>
+          <li><strong>C: .</strong> — A single period on a line by itself marks the end of message</li>
+          <li><strong>S: 250 OK</strong> — Message accepted</li>
+        </ul>
+
+        <h3>3. Closure Phase</h3>
+        <ul>
+          <li><strong>C: QUIT</strong> — Client terminates the session</li>
+          <li><strong>S: 221 Bye</strong> — Server closes connection</li>
+        </ul>
+
+        <h3>SMTP Command Reference</h3>
+        <div class="ref-card">
+          <h4>Quick Reference: SMTP Commands</h4>
+          <table>
+            <tr><th>Command</th><th>Format</th><th>Purpose</th><th>Typical Response</th></tr>
+            <tr><td>HELO</td><td>HELO domain</td><td>Identify client to server</td><td>250 Hello</td></tr>
+            <tr><td>MAIL FROM</td><td>MAIL FROM: &lt;sender&gt;</td><td>Specify sender address</td><td>250 OK</td></tr>
+            <tr><td>RCPT TO</td><td>RCPT TO: &lt;recipient&gt;</td><td>Specify recipient address</td><td>250 OK</td></tr>
+            <tr><td>DATA</td><td>DATA</td><td>Begin message transfer</td><td>354 Start mail input</td></tr>
+            <tr><td>.</td><td>(line with single dot)</td><td>End of message marker</td><td>250 OK</td></tr>
+            <tr><td>QUIT</td><td>QUIT</td><td>Terminate session</td><td>221 Bye</td></tr>
+            <tr><td>RSET</td><td>RSET</td><td>Reset the connection</td><td>250 OK</td></tr>
+          </table>
+        </div>
+
+        <h3>Complete Example Dialogue</h3>
+        <div class="code">S: 220 hamburger.edu
+C: HELO crepes.fr
+S: 250 Hello crepes.fr, pleased to meet you
+C: MAIL FROM: &lt;alice@crepes.fr&gt;
+S: 250 OK
+C: RCPT TO: &lt;bob@hamburger.edu&gt;
+S: 250 OK
+C: DATA
+S: 354 Start mail input; end with &lt;CRLF&gt;.&lt;CRLF&gt;
+C: From: alice@crepes.fr
+C: To: bob@hamburger.edu
+C: Subject: Meeting tomorrow
+C:
+C: Hi Bob, let's meet at 3 PM.
+C: -Alice
+C: .
+S: 250 OK, message accepted for delivery
+C: QUIT
+S: 221 hamburger.edu closing connection</div>
+
+        <div class="note">SMTP uses <strong>persistent connections</strong>: multiple messages can be sent over the same TCP connection without re-establishing the handshake.</div>
+
+        <h3>Persistent Connections — Multiple Messages</h3>
+        <p>When a sending mail server has <strong>multiple messages</strong> destined for the same receiving mail server, all of them are transmitted over the <strong>same TCP connection</strong>. This avoids the overhead of repeatedly setting up and tearing down TCP connections.</p>
+        <p>For each individual message, the client begins with a new <strong>MAIL FROM</strong> command and ends with the single-period terminator (CRLF.CRLF). The <strong>QUIT</strong> command is only sent after <strong>all</strong> messages have been transferred. A single TCP connection may thus carry many back-to-back SMTP transactions.</p>
+
+        <h3>SMTP Communication Pseudocode</h3>
+        <div class="code"><span class="comment">// SMTP Client (sender's mail server)</span>
+<span class="k">function</span> sendMail(sender, recipients, message):
+    <span class="c">TCP_connect</span>(server, port=25)
+    recv()                              <span class="comment">// 220 ready</span>
+    send(<span class="s">"HELO "</span> + myDomain)         <span class="comment">// identify</span>
+    recv()                              <span class="comment">// 250 OK</span>
+    send(<span class="s">"MAIL FROM: &lt;"</span> + sender + <span class="s">"&gt;"</span>)
+    recv()
+    <span class="k">for each</span> recipient in recipients:
+        send(<span class="s">"RCPT TO: &lt;"</span> + recipient + <span class="s">"&gt;"</span>)
+        recv()
+    send(<span class="s">"DATA"</span>)
+    recv()                              <span class="comment">// 354 start</span>
+    send(message)
+    send(<span class="s">"."</span>)                          <span class="comment">// end marker</span>
+    recv()                              <span class="comment">// 250 OK</span>
+    send(<span class="s">"QUIT"</span>)
+    <span class="c">TCP_close</span>()</div>
+
+        <h3>Extended SMTP (ESMTP)</h3>
+        <p><strong>ESMTP</strong> (Extended SMTP), defined in RFC 5321, extends the original SMTP protocol with additional capabilities. The telnet example in the Examples tab shows ESMTP in action — note the <strong>enhanced status codes</strong> such as <code>2.1.0</code>, <code>2.1.5</code>, and <code>2.0.0</code> in the server responses. These structured codes provide more detailed delivery information than the basic numeric codes.</p>
+        <p>Key ESMTP extensions include:</p>
+        <ul>
+          <li><strong>SMTP-AUTH</strong> — authentication mechanism for verifying client identity</li>
+          <li><strong>STARTTLS</strong> — upgrades an insecure connection to a TLS-encrypted one</li>
+          <li><strong>PIPELINING</strong> — allows multiple commands to be sent without waiting for each response</li>
+          <li><strong>SIZE</strong> — lets the server advertise a maximum message size</li>
+          <li><strong>DSN</strong> (Delivery Status Notification) — delivery receipts</li>
+        </ul>
+        <p>ESMTP is identified by the server greeting that includes "ESMTP" (e.g., <code>220 mail.hamburger.edu ESMTP Sendmail ready</code>), and clients use <strong>EHLO</strong> instead of HELO to request extended capabilities.</p>
+      </div>
+    </div>
+
+    <!-- ===== TAB 3: Message Format ===== -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>RFC 5322 — Internet Message Format</h2>
+        <p>E-mail messages are defined by <strong>RFC 5322</strong>. A message consists of two parts separated by a blank line:</p>
+        <ol>
+          <li><strong>Header lines</strong> — metadata about the message</li>
+          <li><strong>Body</strong> — the actual content (ASCII text)</li>
+        </ol>
+
+        <div class="ref-card">
+          <h4>Quick Reference: Common Header Fields</h4>
+          <table>
+            <tr><th>Field</th><th>Example</th><th>Purpose</th></tr>
+            <tr><td>From:</td><td>alice@crepes.fr</td><td>Sender's address</td></tr>
+            <tr><td>To:</td><td>bob@hamburger.edu</td><td>Primary recipient(s)</td></tr>
+            <tr><td>Subject:</td><td>Meeting tomorrow</td><td>Message subject line</td></tr>
+            <tr><td>Cc:</td><td>cc@domain.com</td><td>Carbon copy recipients</td></tr>
+            <tr><td>Date:</td><td>Tue, 7 Jul 2026 10:00:00</td><td>Date and time sent</td></tr>
+            <tr><td>Reply-To:</td><td>alice@work.com</td><td>Address for replies</td></tr>
+          </table>
+        </div>
+
+        <div class="warning">
+          <strong>⚠ Important distinction:</strong> SMTP <em>commands</em> (MAIL FROM, RCPT TO) operate at the <strong>protocol level</strong> — they are exchanged between mail servers during SMTP communication. The <em>message headers</em> (From:, To:, Subject:) are part of the <strong>message itself</strong>, transmitted inside the DATA block. They serve different purposes: SMTP commands route the message through the network; headers are displayed to the user.
+        </div>
+
+        <h3>Example: Complete Message</h3>
+        <div class="code">From: alice@crepes.fr                 <span class="comment"># Sender (displayed to recipient)</span>
+To: bob@hamburger.edu                 <span class="comment"># Recipient (displayed to recipient)</span>
+Subject: Meeting tomorrow              <span class="comment"># Subject line (displayed to recipient)</span>
+Date: Tue, 7 Jul 2026 09:15:00 -0500  <span class="comment"># Timestamp with timezone</span>
+
+Hi Bob,
+
+Let's meet at 3 PM in the library to
+discuss the networking project.
+
+Best,
+Alice</div>
+
+        <div class="formula">
+          <div class="label">Structure</div>
+          <div class="expr">Header Lines + CRLF (blank line) + Body</div>
+          <div class="desc">The blank line (CRLF alone) separates headers from body. Headers and body are both 7-bit ASCII.</div>
+        </div>
+
+        <h3>Header Fields vs. SMTP Envelope</h3>
+        <table>
+          <tr><th>Layer</th><th>Information</th><th>Purpose</th></tr>
+          <tr><td><strong>SMTP Envelope</strong><br>(MAIL FROM / RCPT TO)</td><td>Actual sender and recipients used for routing</td><td>Protocol-level delivery — may differ from headers</td></tr>
+          <tr><td><strong>Message Headers</strong><br>(From: / To: / Cc:)</td><td>Displayed sender and recipients</td><td>User-facing metadata — may differ from envelope</td></tr>
+          <tr><td><strong>Body</strong></td><td>Actual content</td><td>What the user reads</td></tr>
+        </table>
+
+        <div class="note">Bcc: (Blind carbon copy) recipients are listed in the SMTP envelope (RCPT TO) but NOT in the message headers, so other recipients don't see them.</div>
+
+        <h3>Bcc: (Blind Carbon Copy) — Envelope vs. Headers</h3>
+        <p>The <strong>Bcc:</strong> (Blind Carbon Copy) header demonstrates a key distinction between the <strong>SMTP envelope</strong> and the <strong>message headers</strong>. Recipients listed in the Bcc: field are included in the SMTP envelope via <strong>RCPT TO</strong> commands, so the mail server delivers the message to them. However, the Bcc: recipients are <strong>not listed in the message headers</strong> transmitted inside the DATA block. As a result, the primary (To:) and carbon copy (Cc:) recipients have no way of knowing that Bcc: recipients also received the message.</p>
+        <p>This illustrates a broader principle: the <strong>envelope</strong> (MAIL FROM, RCPT TO) governs actual delivery, while the <strong>headers</strong> (From:, To:, Cc:, Bcc:) govern what is displayed to the user. They can, and sometimes do, differ.</p>
+      </div>
+    </div>
+
+    <!-- ===== TAB 4: Access Protocols ===== -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>The Problem: SMTP is Push-Only</h2>
+        <p>SMTP is a <strong>push protocol</strong> — it pushes messages from sender to receiver. But reading mail requires a <strong>pull</strong> operation: the recipient must fetch messages from their mailbox to their local device.</p>
+
+        <div class="warning">
+          <strong>⚠ Bob cannot run a mail server on his laptop.</strong> Mail servers must be <em>always on</em> and always connected to the Internet. A typical user's device (laptop, phone) is not suitable. Instead, Bob's mail server at hamburger.edu runs 24/7 and stores his mail; Bob pulls messages from it using an <em>access protocol</em>.
+        </div>
+
+        <h3>Access Protocol Solutions</h3>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Solution 1: HTTP-based</h3>
+            <p><span class="highlight">Web-based e-mail</span></p>
+            <p>Gmail, Hotmail, Yahoo! Mail</p>
+            <p>User reads/sends via browser (HTTP)</p>
+            <p>SMTP still used between mail servers</p>
+          </div>
+          <div class="card">
+            <h3>Solution 2: IMAP</h3>
+            <p><span class="highlight">Internet Mail Access Protocol</span></p>
+            <p>RFC 3501 — folder management</p>
+            <p>Messages stored on server, viewed remotely</p>
+            <p>Supports folders, search, partial fetch</p>
+          </div>
+        </div>
+
+        <h3>IMAP (RFC 3501)</h3>
+        <p><strong>Internet Mail Access Protocol</strong> (IMAP) is a pull protocol that allows users to manage their e-mail on a remote server. Key features:</p>
+        <ul>
+          <li>Messages remain on the <strong>server</strong> — the client views/manipulates them remotely</li>
+          <li>Supports <strong>folder hierarchies</strong> (Inbox, Sent, custom folders)</li>
+          <li>Allows <strong>partial retrieval</strong> (e.g., fetch headers without bodies)</li>
+          <li>Keeps <strong>state</strong> across sessions (read/unread flags, message deletions)</li>
+          <li>Runs over TCP, typically <strong>port 143</strong> (or 993 for IMAPS)</li>
+        </ul>
+
+        <h3>Protocol Comparison</h3>
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>SMTP</th>
+            <th>IMAP</th>
+            <th>HTTP (Webmail)</th>
+          </tr>
+          <tr>
+            <td>Direction</td>
+            <td>Push (send)</td>
+            <td>Pull (read)</td>
+            <td>Pull (read) / Push (send via browser)</td>
+          </tr>
+          <tr>
+            <td>Port</td>
+            <td>25</td>
+            <td>143 / 993 (TLS)</td>
+            <td>80 / 443</td>
+          </tr>
+          <tr>
+            <td>Message Storage</td>
+            <td>Queue at sender; mailbox at receiver</td>
+            <td>On server (managed remotely)</td>
+            <td>On webmail server</td>
+          </tr>
+          <tr>
+            <td>Folder Support</td>
+            <td>No</td>
+            <td>Yes (hierarchical)</td>
+            <td>Yes (via web interface)</td>
+          </tr>
+          <tr>
+            <td>Offline Access</td>
+            <td>N/A</td>
+            <td>Can cache locally</td>
+            <td>Browser cache only</td>
+          </tr>
+        </table>
+
+        <h3>End-to-End Protocol Flow</h3>
+        <div class="flow-diagram">   ┌─────────────────────────────────────────────────────┐
+   │              E-mail Delivery Chain                      │
+   │                                                        │
+   │  Alice ──SMTP──▶ Alice's Mail Server ──SMTP──▶ Bob's  │
+   │  (UA)           (crepes.fr)          (push)    Mail   │
+   │                                                  Server│
+   │                                         (hamburger    │
+   │  Bob ◀──IMAP/HTTP── Bob's Mail Server     .edu)       │
+   │  (UA)   (pull)     (mailbox storage)                  │
+   └─────────────────────────────────────────────────────┘
+
+   SMTP used: Alice's UA → Alice's mail server &amp; between mail servers (push)
+   IMAP/HTTP used: Bob's UA ← Bob's mail server (pull)</div>
+
+        <div class="note">In web-based e-mail (Gmail), the user <strong>sends</strong> via HTTP to the webmail server, which then uses SMTP to relay the message. The user <strong>reads</strong> via HTTP by pulling from the webmail server. The SMTP backbone between servers remains unchanged.</div>
+      </div>
+    </div>
+
+    <!-- ===== TAB 5: Examples ===== -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <!-- Example 1 -->
+        <div class="example">
+          <div class="title">Example 1: Complete SMTP Dialogue — Alice to Bob</div>
+          <p><strong>Scenario:</strong> Alice (alice@crepes.fr) sends a message to Bob (bob@hamburger.edu) about their networking project. The connection is established between crepes.fr (client) and hamburger.edu (server).</p>
+          <div class="code">S: 220 hamburger.edu SMTP service ready
+C: HELO crepes.fr
+S: 250 Hello crepes.fr, pleased to meet you
+C: MAIL FROM: &lt;alice@crepes.fr&gt;
+S: 250 OK
+C: RCPT TO: &lt;bob@hamburger.edu&gt;
+S: 250 OK
+C: DATA
+S: 354 Start mail input; end with &lt;CRLF&gt;.&lt;CRLF&gt;
+C: From: alice@crepes.fr
+C: To: bob@hamburger.edu
+C: Subject: Project update
+C:
+C: Hi Bob,
+C:
+C: I have finished the network topology
+C: diagram. Let me know if you have any
+C: suggestions.
+C:
+C: Best,
+C: Alice
+C: .
+S: 250 OK, message accepted for delivery
+C: QUIT
+S: 221 hamburger.edu closing connection</div>
+          <p><strong>Analysis:</strong> The client sends 4 commands (HELO, MAIL FROM, RCPT TO, DATA) before the message, the message body with 10 header/body lines, a dot terminator, and QUIT. This entire exchange uses a single persistent TCP connection.</p>
+        </div>
+
+        <!-- Example 2 -->
+        <div class="example">
+          <div class="title">Example 2: Telnet into an SMTP Server</div>
+          <p><strong>Scenario:</strong> A user manually uses <code>telnet</code> to connect to an SMTP server and send an e-mail. This demonstrates the raw protocol without a client.</p>
+          <div class="code">$ telnet mail.hamburger.edu 25
+Trying 128.119.245.12...
+Connected to mail.hamburger.edu.
+Escape character is '^]'.
+220 mail.hamburger.edu ESMTP Sendmail ready
+HELO mylaptop.local
+250 mail.hamburger.edu Hello mylaptop.local
+MAIL FROM: &lt;testuser@example.com&gt;
+250 2.1.0 Ok
+RCPT TO: &lt;bob@hamburger.edu&gt;
+250 2.1.5 Ok
+DATA
+354 End data with &lt;CRLF&gt;.&lt;CRLF&gt;
+From: testuser@example.com
+To: bob@hamburger.edu
+Subject: Test from telnet
+
+Hello Bob, this message
+was sent manually via
+telnet!
+.
+250 2.0.0 Ok: queued as ABC123
+QUIT
+221 2.0.0 Bye
+Connection closed.</div>
+          <p><strong>Analysis:</strong> The telnet session demonstrates SMTP's simplicity. Notice that the server sends numeric response codes (220, 250, 354, 221) and human-readable text. The enhanced codes (2.1.0, 2.1.5, 2.0.0) are from ESMTP (Extended SMTP), a more modern version that supports additional features like authentication.</p>
+        </div>
+
+        <!-- Example 3 -->
+        <div class="example">
+          <div class="title">Example 3: Web-based E-mail — Full Journey</div>
+          <p><strong>Scenario:</strong> Alice sends an e-mail from her Gmail account (alice@gmail.com) to Bob, who reads it using an IMAP client (Apple Mail). Trace the full protocol chain.</p>
+          <div class="flow-diagram">Step 1: Alice composes in browser at mail.google.com
+        │
+        │  HTTP POST (TLS encrypted)
+        ▼
+Step 2: Gmail server receives message
+        │
+        │  SMTP over TCP (port 25 or 587)
+        ▼
+Step 3: Gmail's mail server → gmail-smtp.google.com
+        │  resolves MX record for hamburger.edu
+        │  connects to bob's mail server
+        ▼
+Step 4: SMTP handshake (HELO, MAIL FROM, RCPT TO)
+        │  message transferred inside DATA
+        ▼
+Step 5: Bob's mail server (hamburger.edu)
+        │  places message in bob's mailbox
+        │
+        │  IMAP (port 143) — Bob's client connects
+        ▼
+Step 6: Apple Mail on Bob's MacBook
+        │  IMAP SELECT INBOX
+        │  IMAP FETCH (retrieves message)
+        ▼
+Step 7: Bob reads the message in Apple Mail</div>
+          <p><strong>Protocols used:</strong> HTTP (composition), SMTP (server-to-server), IMAP (retrieval). This shows that SMTP is only part of the chain — it handles the push between servers.</p>
+        </div>
+
+        <!-- Example 4 -->
+        <div class="example">
+          <div class="title">Example 4: Push vs. Pull — A Visual Comparison</div>
+          <p><strong>Scenario:</strong> Compare the control flow of SMTP (sending) and IMAP (reading) to understand why both are needed.</p>
+          <div class="flow-diagram">SMTP (Push) — Sending a message:
+
+   Sender                        Receiver
+   (Client)                      (Server)
+      │                             │
+      │──── TCP Connect (port 25)──▶│
+      │──── HELO ──────────────────▶│
+      │──── MAIL FROM ─────────────▶│
+      │──── RCPT TO ───────────────▶│
+      │──── DATA ──────────────────▶│
+      │──── "message body..." ─────▶│
+      │──── . ─────────────────────▶│
+      │                             │  message stored
+      │                             │  in mailbox
+      │◀─── 250 OK ─────────────────│
+      │──── QUIT ──────────────────▶│
+
+
+IMAP (Pull) — Reading a message:
+
+   Receiver                       Server
+   (Client)                        │
+      │                            │
+      │──── TCP Connect (port 143)─▶│
+      │──── LOGIN ────────────────▶│
+      │──── SELECT INBOX ─────────▶│
+      │                            │
+      │◀─── EXISTS: 5 messages ────│
+      │──── FETCH 1:3 (body) ─────▶│
+      │◀─── [message content] ─────│  server pushes data
+      │                            │  back to client
+      │──── LOGOUT ───────────────▶│</div>
+          <p><strong>Key insight:</strong> In SMTP (push), the <em>sender</em> initiates and controls the data flow. In IMAP (pull), the <em>receiver</em> (reader) initiates and controls what data flows back. This is why SMTP alone is insufficient for reading mail — it can only push, never pull.</p>
+        </div>
+
+        <!-- Example 5 -->
+        <div class="example">
+          <div class="title">Example 5: Anatomy of a Complete E-mail Message</div>
+          <p><strong>Scenario:</strong> A university professor sends a detailed e-mail to her students. Below is the complete message with each field explained.</p>
+          <div class="code">From: "Dr. Sarah Chen" &lt;sarah.chen@university.edu&gt;   <span class="comment"># Sender display name + address</span>
+To: cs350-students@university.edu                     <span class="comment"># Mailing list address</span>
+Cc: teaching-assistants@university.edu                 <span class="comment"># Carbon copy</span>
+Subject: Project Milestone 1 — Due Friday              <span class="comment"># Concise, descriptive subject</span>
+Date: Mon, 6 Jul 2026 14:30:00 -0400                   <span class="comment"># Date in RFC 5322 format</span>
+Message-ID: &lt;202607061430.12345@mail.university.edu&gt;   <span class="comment"># Unique identifier</span>
+MIME-Version: 1.0                                       <span class="comment"># MIME version (multipart support)</span>
+Content-Type: text/plain; charset="UTF-8"                <span class="comment"># Body format declaration</span>
+                                                        <span class="comment"># BLANK LINE (CRLF) separates headers from body</span>
+Dear CS 350 Students,
+
+Please submit your Project Milestone 1 by Friday,
+July 10, at 11:59 PM via the course portal.
+
+Requirements:
+1. Network topology diagram (PDF)
+2. Performance analysis (Excel or PDF)
+3. Brief design rationale (1 page)
+
+Contact the TAs for any questions.
+
+Best regards,
+Dr. Sarah Chen
+Professor, Computer Science
+University of Technology</div>
+          <p><strong>Header breakdown:</strong></p>
+          <table>
+            <tr><th>Header</th><th>Purpose</th><th>Notes</th></tr>
+            <tr><td>From</td><td>Displayed sender</td><td>May differ from MAIL FROM envelope</td></tr>
+            <tr><td>To</td><td>Primary recipients</td><td>Can be individual address or mailing list</td></tr>
+            <tr><td>Cc</td><td>Secondary recipients</td><td>Visible to everyone</td></tr>
+            <tr><td>Subject</td><td>Topic summary</td><td>Should be descriptive and concise</td></tr>
+            <tr><td>Date</td><td>Timestamp with timezone</td><td>Required by RFC 5322</td></tr>
+            <tr><td>Message-ID</td><td>Globally unique ID</td><td>For threading and deduplication</td></tr>
+            <tr><td>MIME-Version</td><td>Multipart encoding version</td><td>Enables attachments and rich content</td></tr>
+            <tr><td>Content-Type</td><td>Body format specification</td><td>text/plain, text/html, multipart/mixed</td></tr>
+          </table>
+          <p><strong>SMTP envelope (not visible to end user):</strong></p>
+          <div class="code">MAIL FROM: &lt;sarah.chen@university.edu&gt;
+RCPT TO: &lt;cs350-students@university.edu&gt;
+RCPT TO: &lt;teaching-assistants@university.edu&gt;</div>
+          <p>Notice the envelope has <strong>two RCPT TO</strong> commands — one for To and one for Cc. The SMTP server treats all recipients the same way; To vs. Cc is only relevant for the message headers.</p>
+        </div>
+
+        <h3>SMTP Delivery with Retry Logic — Pseudocode</h3>
+        <div class="code"><span class="comment">// Mail server delivery with retry</span>
+<span class="k">function</span> deliverMail(message, recipientDomain):
+    retries = 0
+    maxRetries = <span class="s">infinite</span>     <span class="comment">// keep trying until success or permanent failure</span>
+    retryInterval = 30 minutes
+
+    <span class="k">while</span> <span class="c">true</span>:
+        try:
+            mxServer = <span class="c">DNS_lookup_MX</span>(recipientDomain)
+            <span class="c">sendMail_async</span>(message, mxServer)
+            return <span class="s">"delivered"</span>
+        <span class="k">catch</span> (temporaryFailure):
+            retries++
+            <span class="c">queue_message</span>(message)
+            <span class="k">sleep</span>(retryInterval)     <span class="comment">// wait 30 minutes</span>
+            <span class="k">continue</span>
+        <span class="k">catch</span> (permanentFailure):
+            <span class="c">bounce_message</span>(message)   <span class="comment">// notify sender</span>
+            return <span class="s">"failed"</span></div>
+
+        <h3>Comparison Table: SMTP vs. HTTP</h3>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>SMTP</th>
+            <th>HTTP</th>
+          </tr>
+          <tr>
+            <td>Direction</td>
+            <td>Push</td>
+            <td>Pull</td>
+          </tr>
+          <tr>
+            <td>Port</td>
+            <td>25</td>
+            <td>80 (443 for HTTPS)</td>
+          </tr>
+          <tr>
+            <td>Message Format</td>
+            <td>7-bit ASCII only</td>
+            <td>Binary allowed (MIME types)</td>
+          </tr>
+          <tr>
+            <td>Connection Model</td>
+            <td>Persistent (per session)</td>
+            <td>Persistent (HTTP/1.1+)</td>
+          </tr>
+          <tr>
+            <td>Encoding</td>
+            <td>CRLF line endings, single-dot terminator</td>
+            <td>Content-Length or chunked transfer</td>
+          </tr>
+          <tr>
+            <td>Object Delivery</td>
+            <td>Single object per connection</td>
+            <td>Multiple objects per connection</td>
+          </tr>
+          <tr>
+            <td>Intermediate Servers</td>
+            <td>Direct server-to-server</td>
+            <td>May use proxies and caches</td>
+          </tr>
+          <tr>
+            <td>ASCII Restriction</td>
+            <td>7-bit ASCII only — binary data (images, video) <em>must</em> be encoded</td>
+            <td>No restriction — binary data transmitted directly via MIME types</td>
+          </tr>
+          <tr>
+            <td>Message Terminator</td>
+            <td>CRLF.CRLF (single period on a line by itself)</td>
+            <td>Content-Length header or chunked transfer encoding</td>
+          </tr>
+          <tr>
+            <td>Connection Persistence</td>
+            <td>Persistent — all messages to same server share one TCP connection</td>
+            <td>Persistent (HTTP/1.1+) — multiple objects share one TCP connection</td>
+          </tr>
+        </table>
+
+        <div class="ref-card">
+          <h4>Exam Cram: Key SMTP Facts</h4>
+          <table>
+            <tr><th>Fact</th><th>Details</th></tr>
+            <tr><td>Port</td><td>25</td></tr>
+            <tr><td>Transport</td><td>TCP (reliable connection)</td></tr>
+            <tr><td>Encoding</td><td>7-bit ASCII only</td></tr>
+            <tr><td>Push/Pull</td><td>Push protocol</td></tr>
+            <tr><td>Phases</td><td>Handshake → Transfer → Closure</td></tr>
+            <tr><td>Message end</td><td>Single period (.) on a line by itself</td></tr>
+            <tr><td>Connection type</td><td>Persistent</td></tr>
+            <tr><td>Retry interval</td><td>~30 minutes</td></tr>
+            <tr><td>Access protocols</td><td>IMAP (port 143) or HTTP (webmail)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

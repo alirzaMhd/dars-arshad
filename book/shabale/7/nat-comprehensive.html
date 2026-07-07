@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NAT (Network Address Translation) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .section h4 { color: #00ccff; font-size: 0.9em; margin: 12px 0 6px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .example .step { color: #aaa; margin: 4px 0; padding-left: 10px; border-left: 2px solid #444; }
+    .example .step b { color: #00ff88; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .card .accent { color: #00ccff; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a1a0a; border: 1px solid #ff6600; border-radius: 8px; padding: 12px; margin: 10px 0; }
+    .warning .title { color: #ff6600; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+    .warning p { color: #e0e0e0; font-size: 0.85em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    tr.highlight-row td { background: #002a1a; color: #00ff88; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.82em; color: #00ccff; overflow-x: auto; border: 1px solid #222; line-height: 1.5; white-space: pre-wrap; }
+    .code .kw { color: #ff6600; }
+    .code .var { color: #ffcc00; }
+    .code .str { color: #00ff88; }
+    .code .cmt { color: #666; }
+    .tag { display: inline-block; background: #002a1a; color: #00ff88; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid #00ff8833; }
+    .tag.orange { background: #2a1a00; color: #ff6600; border-color: #ff660033; }
+    .tag.blue { background: #001a2a; color: #00ccff; border-color: #00ccff33; }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>NAT — Network Address Translation</h1>
+  <p class="subtitle">Computer Networking (Kurose &amp; Ross) &mdash; Chapter 4 &bull; Comprehensive Exam Guide</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Private Addresses</button>
+      <button class="tab" onclick="showSection('tab2')">NAT Translation</button>
+      <button class="tab" onclick="showSection('tab3')">NAT Traversal</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: PRIVATE ADDRESSES                                      -->
+    <!-- ============================================================ -->
+    <div class="content active" id="tab1">
+
+      <div class="section">
+        <h2>Private Network Addresses (RFC 1918)</h2>
+        <p style="margin-bottom:12px;font-size:0.88em;line-height:1.6;">
+          <span class="tag">RFC 1918</span> <span class="tag orange">IPv4</span>
+          Private IP addresses are <b>meaningful only within the local network</b>. Routers in the global Internet are configured to <b>drop any packet</b> with a source or destination address from these ranges. This conserves the limited IPv4 address space — a single public IP can serve an entire private network.
+        </p>
+
+        <div class="formula">
+          <div class="label">Reserved Private Ranges:</div>
+          <div class="expr">10.0.0.0/8 &nbsp;&nbsp; 172.16.0.0/12 &nbsp;&nbsp; 192.168.0.0/16</div>
+          <div class="desc">Class A: 10.x.x.x (16M hosts) &bull; Class B: 172.16-31.x.x (1M hosts) &bull; Class C: 192.168.x.x (65K hosts)</div>
+        </div>
+
+        <h3>Example 1 — Identifying Private vs Public Addresses</h3>
+        <div class="example">
+          <div class="title">Example 1: Address Classification</div>
+          <div class="step"><b>Given:</b> Classify each address as private or public.</div>
+          <div class="step">(a) 10.76.12.4 &nbsp; (b) 172.32.1.5 &nbsp; (c) 192.168.1.100 &nbsp; (d) 172.20.0.8 &nbsp; (e) 8.8.8.8</div>
+          <div class="step"><b>Step 1:</b> Check (a) 10.x.x.x → matches 10.0.0.0/8 → <span class="result">Private</span></div>
+          <div class="step"><b>Step 2:</b> Check (b) 172.32.1.5 → 172.16.0.0/12 covers 172.16.0.0–172.31.255.255 → 32 &gt; 31 → <span class="result">Public</span></div>
+          <div class="step"><b>Step 3:</b> Check (c) 192.168.1.100 → matches 192.168.0.0/16 → <span class="result">Private</span></div>
+          <div class="step"><b>Step 4:</b> Check (d) 172.20.0.8 → 20 is in [16,31] → <span class="result">Private</span></div>
+          <div class="step"><b>Step 5:</b> Check (e) 8.8.8.8 → no range matches → <span class="result">Public</span></div>
+        </div>
+
+        <h3>Example 2 — Subnetting Private Addresses</h3>
+        <div class="example">
+          <div class="title">Example 2: Designing a Private Subnet Plan</div>
+          <div class="step"><b>Problem:</b> A company needs 3 subnets with 100, 50, and 200 hosts using 192.168.0.0/24.</div>
+          <div class="step"><b>Step 1:</b> Largest subnet needs 200 hosts → need 8 bits (2⁸−2=254). Use /24 → 192.168.0.0/24 for subnet A (200 hosts).</div>
+          <div class="step"><b>Step 2:</b> Subnet B needs 50 hosts → 6 bits (2⁶−2=62). Use /26: 192.168.1.0/26.</div>
+          <div class="step"><b>Step 3:</b> Subnet C needs 100 hosts → 7 bits (2⁷−2=126). Use /25: 192.168.1.128/25.</div>
+          <div class="step"><b>Result:</b> <span class="result">A: 192.168.0.0/24, B: 192.168.1.0/26, C: 192.168.1.128/25</span></div>
+        </div>
+
+        <h3>Example 3 — Why Private Addresses Matter</h3>
+        <div class="example">
+          <div class="title">Example 3: Address Exhaustion Prevention</div>
+          <div class="step"><b>Scenario:</b> A SOHO with 12 devices. Without NAT the ISP must assign 12 public IPs. With NAT only 1 public IP is needed.</div>
+          <div class="step"><b>Calculation:</b> Each private address (e.g. 192.168.0.0/16) supports 65,534 hosts per network. Three private ranges combined yield ~17M usable addresses — all behind a single public IP.</div>
+          <div class="step"><b>Impact:</b> Without private addressing + NAT, IPv4 would have been exhausted by the early 2000s instead of 2019.</div>
+          <div class="step"><span class="result">Conclusion: Private addresses solve IPv4 exhaustion through reuse across millions of networks.</span></div>
+        </div>
+
+        <div class="warning">
+          <div class="title">&#9888; Common Mistake — 172.16.0.0/12 Boundary</div>
+          <p>Students often misidentify 172.32.0.0 as private. The /12 prefix 172.16.0.0/12 covers <b>172.16.0.0 through 172.31.255.255</b> only. 172.32.0.0 falls outside this range. Always check the second octet: it must be in 16–31.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Quick Reference</h3>
+            <p><span class="accent">Class A:</span> <span class="highlight">10.0.0.0/8</span></p>
+            <p><span class="accent">Class B:</span> <span class="highlight">172.16.0.0/12</span></p>
+            <p><span class="accent">Class C:</span> <span class="highlight">192.168.0.0/16</span></p>
+            <p><span class="dim">Total: ~17.9M addresses</span></p>
+          </div>
+          <div class="card">
+            <h3>Key Properties</h3>
+            <p>&bull; <span class="highlight">Meaningless</span> outside LAN</p>
+            <p>&bull; Routers <span class="dim">drop</span> private src/dest</p>
+            <p>&bull; Freely reusable across orgs</p>
+            <p>&bull; Must be <span class="highlight">translated</span> at gateway</p>
+          </div>
+          <div class="card">
+            <h3>Why It Exists</h3>
+            <p>&bull; IPv4 address exhaustion</p>
+            <p>&bull; Avoids renumbering on ISP change</p>
+            <p>&bull; Provides basic network isolation</p>
+            <p>&bull; Foundation for NAT operation</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: Private vs Public Addresses</h2>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Private Address</th>
+            <th>Public Address</th>
+          </tr>
+          <tr>
+            <td>Scope</td>
+            <td>Local network only</td>
+            <td>Global Internet</td>
+          </tr>
+          <tr>
+            <td>Uniqueness</td>
+            <td>Only within LAN</td>
+            <td>Globally unique</td>
+          </tr>
+          <tr>
+            <td>Routing</td>
+            <td>Dropped by Internet routers</td>
+            <td>Routable worldwide</td>
+          </tr>
+          <tr>
+            <td>Assignment</td>
+            <td>Free, self-managed</td>
+            <td>Must purchase/lease</td>
+          </tr>
+          <tr>
+            <td>RFC</td>
+            <td>RFC 1918</td>
+            <td>IANA allocation</td>
+          </tr>
+          <tr class="highlight-row">
+            <td>NAT Required</td>
+            <td>Yes — to reach Internet</td>
+            <td>No — directly reachable</td>
+          </tr>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: NAT TRANSLATION                                        -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab2">
+
+      <div class="section">
+        <h2>How NAT Translation Works</h2>
+        <p style="margin-bottom:12px;font-size:0.88em;line-height:1.6;">
+          <span class="tag">Layer 3 Violation</span> <span class="tag orange">Port Mapping</span>
+          A <b>NAT router</b> appears as a <b>single device with a single IP address</b> to the outside world. It replaces the source (or destination) IP:port in every datagram crossing the boundary between the private network and the public Internet, maintaining a <b>NAT translation table</b> that maps (WAN IP:port) ⟷ (LAN IP:port).
+        </p>
+
+        <div class="formula">
+          <div class="label">NAT Translation Table Entry:</div>
+          <div class="expr">(WAN_IP : WAN_port) &harr; (LAN_IP : LAN_port)</div>
+          <div class="desc">e.g., (138.76.29.7 : 5001) &harr; (10.0.0.1 : 3345)</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Simultaneous Connections Capacity:</div>
+          <div class="expr">16-bit port number &rarr; 65,536 ports &rarr; ~60,000+ usable</div>
+          <div class="desc">After reserving well-known ports (0–1023), ~64K ports remain, each mapping to one unique LAN session.</div>
+        </div>
+
+        <h3>NAT Translation Algorithm (Pseudocode)</h3>
+        <div class="code"><span class="cmt">// Called for every outgoing packet (LAN → WAN)</span>
+<span class="kw">procedure</span> <span class="var">NAT_outgoing</span>(pkt):
+  <span class="var">src_IP</span>  = pkt.source_IP
+  <span class="var">src_port</span> = pkt.source_port
+
+  <span class="cmt">// Lookup or create translation entry</span>
+  <span class="kw">if</span> (src_IP, src_port) <span class="kw">in</span> nat_table:
+    entry = nat_table[(src_IP, src_port)]
+  <span class="kw">else</span>:
+    <span class="var">new_port</span> = allocate_free_port()
+    entry = { wan_IP: my_public_IP,
+              wan_port: new_port,
+              lan_IP:   src_IP,
+              lan_port: src_port }
+    nat_table[(src_IP, src_port)] = entry
+
+  <span class="cmt">// Rewrite header</span>
+  pkt.source_IP   = entry.wan_IP
+  pkt.source_port = entry.wan_port
+  <span class="kw">return</span> pkt
+
+<span class="cmt">// Called for every incoming packet (WAN → LAN)</span>
+<span class="kw">procedure</span> <span class="var">NAT_incoming</span>(pkt):
+  <span class="var">dst_IP</span>  = pkt.dest_IP
+  <span class="var">dst_port</span> = pkt.dest_port
+
+  <span class="cmt">// Reverse lookup by WAN IP:port</span>
+  entry = nat_table.reverse_lookup(dst_IP, dst_port)
+
+  <span class="kw">if</span> entry <span class="kw">is</span> <span class="kw">null</span>:
+    drop(pkt)                     <span class="cmt">// No mapping → discard</span>
+    <span class="kw">return</span>
+
+  pkt.dest_IP   = entry.lan_IP
+  pkt.dest_port = entry.lan_port
+  <span class="kw">return</span> pkt</div>
+
+        <h3>Example 1 — Basic Outgoing NAT</h3>
+        <div class="example">
+          <div class="title">Example 1: Host 10.0.0.1 Contacts Web Server 64.233.160.100:80</div>
+          <div class="step"><b>Given:</b> Private host = 10.0.0.1:3345 &nbsp; Public IP = 138.76.29.7 &nbsp; Destination = 64.233.160.100:80</div>
+          <div class="step"><b>Step 1:</b> Packet arrives at NAT router: src=(10.0.0.1,3345) dst=(64.233.160.100,80)</div>
+          <div class="step"><b>Step 2:</b> NAT checks table → no entry exists yet. Allocates port 5001.</div>
+          <div class="step"><b>Step 3:</b> Table updated: (138.76.29.7,5001) ⟷ (10.0.0.1,3345)</div>
+          <div class="step"><b>Step 4:</b> Packet rewritten: src=(138.76.29.7,5001) dst=(64.233.160.100,80) → sent to Internet</div>
+          <div class="step"><b>Step 5:</b> Response arrives: src=(64.233.160.100,80) dst=(138.76.29.7,5001)</div>
+          <div class="step"><b>Step 6:</b> NAT reverse-looks up (138.76.29.7,5001) → finds (10.0.0.1,3345). Rewrites dst to (10.0.0.1,3345).</div>
+          <div class="step"><span class="result">Result: Host 10.0.0.1 receives the response transparently.</span></div>
+        </div>
+
+        <h3>Example 2 — Multiple Hosts, Same Destination</h3>
+        <div class="example">
+          <div class="title">Example 2: Two LAN Hosts Connect to the Same Web Server</div>
+          <div class="step"><b>Given:</b> Host A = 10.0.0.1:3345 &nbsp; Host B = 10.0.0.2:3345 &nbsp; Both → 64.233.160.100:80</div>
+          <div class="step"><b>Observation:</b> Both use the same src port 3345 on different hosts. The NAT must differentiate them.</div>
+          <div class="step"><b>Host A first:</b> NAT allocates port 5001. Table: (138.76.29.7,5001) ⟷ (10.0.0.1,3345)</div>
+          <div class="step"><b>Host B next:</b> NAT allocates port 5002 (5001 is taken). Table: (138.76.29.7,5002) ⟷ (10.0.0.2,3345)</div>
+          <div class="step"><b>Responses arrive:</b> dst (138.76.29.7,5001) → Host A &nbsp; dst (138.76.29.7,5002) → Host B</div>
+          <div class="step"><span class="result">Both hosts reach the same server simultaneously — the NAT distinguishes them by WAN port.</span></div>
+        </div>
+
+        <h3>Example 3 — Port Exhaustion Calculation</h3>
+        <div class="example">
+          <div class="title">Example 3: How Many Simultaneous Connections?</div>
+          <div class="step"><b>Given:</b> NAT uses port range 1024–65535 (64,512 ports). Each connection holds a port for ~60 seconds on average.</div>
+          <div class="step"><b>Question:</b> What is the maximum connection rate (connections/second)?</div>
+          <div class="step"><b>Calculation:</b> Each port reused every 60s → max sustained rate = 64,512 / 60 = <b>1,075 connections/second</b></div>
+          <div class="step"><b>With 10 LAN hosts:</b> Even distribution → ~107 connections/sec per host. Real-world headroom is ample.</div>
+          <div class="step"><span class="result">Practical limit: ~60,000 simultaneous TCP connections. With typical web browsing (6 parallel connections), this serves ~10,000 hosts before port exhaustion.</span></div>
+        </div>
+
+        <div class="warning">
+          <div class="title">&#9888; Common Mistake — NAT is Layer 3 Only</div>
+          <p>NAT rewrites both IP addresses (L3) <b>and</b> TCP/UDP port numbers (L4), violating the principle that routers should only operate up to Layer 3. This breaks end-to-end connectivity, IPsec, and requires ALG (Application Layer Gateway) patches for protocols that embed IP addresses in payload (e.g., FTP, SIP).</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Quick Reference</h3>
+            <p><span class="accent">NAT Type:</span> <span class="highlight">NAPT / PAT</span></p>
+            <p><span class="accent">Table key:</span> <span class="highlight">(WAN IP, WAN port)</span></p>
+            <p><span class="accent">Max conns:</span> <span class="highlight">~60,000+</span></p>
+            <p><span class="accent">Violation:</span> <span class="dim">Layer separation</span></p>
+          </div>
+          <div class="card">
+            <h3>Translation Types</h3>
+            <p>&bull; <span class="highlight">SNAT:</span> Source NAT (outgoing)</p>
+            <p>&bull; <span class="highlight">DNAT:</span> Dest NAT (incoming)</p>
+            <p>&bull; <span class="highlight">Static NAT:</span> 1:1 mapping</p>
+            <p>&bull; <span class="highlight">PAT:</span> Port-based (most common)</p>
+          </div>
+          <div class="card">
+            <h3>When It Breaks</h3>
+            <p>&bull; FTP active mode (IP in payload)</p>
+            <p>&bull; SIP / VoIP signaling</p>
+            <p>&bull; IPsec AH (integrity check fails)</p>
+            <p>&bull; Peer-to-peer connections</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: Static NAT vs NAPT (PAT)</h2>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Static NAT</th>
+            <th>NAPT / PAT</th>
+          </tr>
+          <tr>
+            <td>Mapping basis</td>
+            <td>IP only (1:1)</td>
+            <td>IP + port (many:1)</td>
+          </tr>
+          <tr>
+            <td>Public IPs needed</td>
+            <td>One per private host</td>
+            <td>One for entire network</td>
+          </tr>
+          <tr>
+            <td>Connection limit</td>
+            <td>No port limit</td>
+            <td>~60K per public IP</td>
+          </tr>
+          <tr>
+            <td>Incoming connections</td>
+            <td>Always allowed (static)</td>
+            <td>Port forwarding needed</td>
+          </tr>
+          <tr>
+            <td>RFC</td>
+            <td>RFC 2663</td>
+            <td>RFC 3022</td>
+          </tr>
+          <tr class="highlight-row">
+            <td>Common usage</td>
+            <td>Servers, fixed mapping</td>
+            <td>SOHO, enterprise LANs</td>
+          </tr>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: NAT TRAVERSAL                                          -->
+    <!-- ============================================================ -->
+    <div class="content" id="tab3">
+
+      <div class="section">
+        <h2>Problems for Servers Behind NAT</h2>
+        <p style="margin-bottom:12px;font-size:0.88em;line-height:1.6;">
+          <span class="tag">RFC 5389</span> <span class="tag orange">RFC 5128</span> <span class="tag blue">STUN</span>
+          A host behind NAT <b>cannot accept incoming connections</b> unless the NAT has a pre-existing mapping. This breaks server software, peer-to-peer, VoIP, and gaming. NAT traversal techniques solve this by discovering the external address, relaying traffic, or directly punching holes through the NAT.
+        </p>
+
+        <div class="formula">
+          <div class="label">NAT Traversal Problem:</div>
+          <div class="expr">Server at 192.168.1.10:8080 is unreachable from Internet</div>
+          <div class="desc">Without a port forwarding rule, incoming SYN to (public_IP, any_port) is dropped — no reverse mapping exists.</div>
+        </div>
+
+        <h3>Example 1 — Port Forwarding (Manual Traversal)</h3>
+        <div class="example">
+          <div class="title">Example 1: Configuring Port Forwarding for a Web Server</div>
+          <div class="step"><b>Scenario:</b> A web server at 192.168.1.10:80 behind NAT with public IP 138.76.29.7.</div>
+          <div class="step"><b>Step 1:</b> Admin configures static port forwarding on NAT router: incoming (138.76.29.7,80) → (192.168.1.10,80)</div>
+          <div class="step"><b>Step 2:</b> External client sends SYN to (138.76.29.7,80).</div>
+          <div class="step"><b>Step 3:</b> NAT sees dst (138.76.29.7,80). Static rule matches → rewrites dst to (192.168.1.10,80). Forwards.</div>
+          <div class="step"><b>Step 4:</b> Server responds. NAT rewrites src from (192.168.1.10,80) → (138.76.29.7,80) using the static reverse mapping.</div>
+          <div class="step"><span class="result">External client connects to the internal server transparently.</span></div>
+          <div class="step" style="margin-top:8px;color:#ffcc00;">Caveat: Must be configured manually. Does not scale. Does not work for ephemeral peer-to-peer sessions.</div>
+        </div>
+
+        <h3>Example 2 — STUN Protocol (RFC 5389)</h3>
+        <div class="example">
+          <div class="title">Example 2: Discovering NAT Binding via STUN</div>
+          <div class="step"><b>Given:</b> Client at 192.168.1.5:12345 behind NAT 138.76.29.7. STUN server at 72.14.204.147:3478.</div>
+          <div class="step"><b>Step 1:</b> Client sends STUN binding request from (192.168.1.5,12345) to (72.14.204.147,3478).</div>
+          <div class="step"><b>Step 2:</b> NAT creates mapping: (138.76.29.7,8888) ↔ (192.168.1.5,12345). Forwards to server.</div>
+          <div class="step"><b>Step 3:</b> STUN server responds with the <b>observed address</b>: 138.76.29.7:8888.</div>
+          <div class="step"><b>Step 4:</b> Client now knows its public endpoint. Shares (138.76.29.7,8888) with peers.</div>
+          <div class="step"><span class="result">The client discovers its NAT-mapped address for incoming connections.</span></div>
+          <div class="step" style="margin-top:8px;color:#ffcc00;">Limitation: STUN fails with symmetric NAT (cone NAT issue). TURN relay is fallback.</div>
+        </div>
+
+        <h3>Example 3 — UDP Hole Punching (RFC 5128)</h3>
+        <div class="example">
+          <div class="title">Example 3: Peer-to-Peer UDP Hole Punching</div>
+          <div class="step"><b>Given:</b> Peer A (10.0.0.1,4000) behind NAT A (1.2.3.4). Peer B (192.168.0.5,5000) behind NAT B (5.6.7.8). Rendezvous server at 9.10.11.12.</div>
+          <div class="step"><b>Step 1:</b> Both peers connect to rendezvous server. Server learns their public endpoints: A=1.2.3.4:6001, B=5.6.7.8:7002.</div>
+          <div class="step"><b>Step 2:</b> Server tells A about B's endpoint and vice versa.</div>
+          <div class="step"><b>Step 3:</b> A sends UDP packet to B's public endpoint (5.6.7.8:7002). NAT A creates mapping. NAT B may drop this initial packet (no mapping yet).</div>
+          <div class="step"><b>Step 4:</b> B sends UDP packet to A's public endpoint (1.2.3.4:6001). NAT B creates mapping. NAT A sees this packet and accepts it (hole now punched).</div>
+          <div class="step"><b>Step 5:</b> Both NATs have open mappings. Peers communicate directly.</div>
+          <div class="step"><span class="result">Direct P2P connection established without manual configuration.</span></div>
+        </div>
+
+        <div class="warning">
+          <div class="title">&#9888; Common Mistake — Assuming NAT = Firewall</div>
+          <p>NAT is <b>not</b> a security mechanism. It provides a side-effect of blocking unsolicited inbound traffic because no mapping exists — but this is not the same as a stateful firewall. NAT does not inspect application payloads, enforce policies, or log connections. Relying on NAT for security creates a false sense of safety. Always pair NAT with a proper firewall.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Quick Reference</h3>
+            <p><span class="accent">STUN:</span> <span class="highlight">RFC 5389</span></p>
+            <p><span class="accent">TURN:</span> <span class="highlight">RFC 5766</span></p>
+            <p><span class="accent">ICE:</span> <span class="highlight">RFC 8445</span></p>
+            <p><span class="accent">P2P:</span> <span class="highlight">RFC 5128</span></p>
+          </div>
+          <div class="card">
+            <h3>NAT Types</h3>
+            <p>&bull; <span class="highlight">Full Cone:</span> Any external → mapped port</p>
+            <p>&bull; <span class="highlight">Restricted:</span> Only from same src IP</p>
+            <p>&bull; <span class="highlight">Port Restricted:</span> Same IP+port</p>
+            <p>&bull; <span class="highlight">Symmetric:</span> Unique per dest pair</p>
+          </div>
+          <div class="card">
+            <h3>Traversal Methods</h3>
+            <p>&bull; Port forwarding (manual)</p>
+            <p>&bull; UPnP / NAT-PMP (automatic)</p>
+            <p>&bull; STUN + hole punching</p>
+            <p>&bull; TURN relay (last resort)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: NAT Traversal Techniques</h2>
+        <table>
+          <tr>
+            <th>Technique</th>
+            <th>RFC</th>
+            <th>Automation</th>
+            <th>Works With</th>
+            <th>Limitation</th>
+          </tr>
+          <tr>
+            <td>Port Forwarding</td>
+            <td>—</td>
+            <td>Manual</td>
+            <td>All NAT types</td>
+            <td>Not scalable</td>
+          </tr>
+          <tr>
+            <td>UPnP / NAT-PMP</td>
+            <td>RFC 6970</td>
+            <td>Automatic</td>
+            <td>Cone NATs</td>
+            <td>Disabled by many ISPs</td>
+          </tr>
+          <tr>
+            <td>STUN</td>
+            <td>RFC 5389</td>
+            <td>Automatic</td>
+            <td>Cone NATs</td>
+            <td>Fails on symmetric NAT</td>
+          </tr>
+          <tr>
+            <td>TURN</td>
+            <td>RFC 5766</td>
+            <td>Relay</td>
+            <td>All</td>
+            <td>Bandwidth cost</td>
+          </tr>
+          <tr>
+            <td>ICE</td>
+            <td>RFC 8445</td>
+            <td>Auto (best effort)</td>
+            <td>All types</td>
+            <td>Complex negotiation</td>
+          </tr>
+          <tr class="highlight-row">
+            <td>Hole Punching</td>
+            <td>RFC 5128</td>
+            <td>Rendezvous</td>
+            <td>Cone NATs</td>
+            <td>Fails symmetric NAT</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>NAT Traversal — Algorithm (ICE Pseudocode)</h2>
+        <div class="code"><span class="cmt">// ICE (Interactive Connectivity Establishment) — RFC 8445</span>
+<span class="kw">procedure</span> <span class="var">ICE_establish</span>(peer_info):
+  <span class="var">candidates</span> = []
+
+  <span class="cmt">// 1. Gather local candidates</span>
+  <span class="kw">for each</span> local_IP <span class="kw">in</span> interfaces:
+    candidates.add({ type: <span class="str">"host"</span>, ip: local_IP, port: <span class="var">alloc_port</span>() })
+
+  <span class="cmt">// 2. Get server-reflexive candidate via STUN</span>
+  <span class="var">stun_resp</span> = STUN_request(stun_server)
+  <span class="kw">if</span> stun_resp.success:
+    candidates.add({ type: <span class="str">"srflx"</span>,
+                      ip: stun_resp.mapped_IP,
+                      port: stun_resp.mapped_port })
+
+  <span class="cmt">// 3. Get relayed candidate via TURN</span>
+  <span class="var">turn_resp</span> = TURN_allocate(turn_server)
+  <span class="kw">if</span> turn_resp.success:
+    candidates.add({ type: <span class="str">"relay"</span>,
+                      ip: turn_resp.relay_IP,
+                      port: turn_resp.relay_port })
+
+  <span class="cmt">// 4. Exchange candidates with peer (via signaling)</span>
+  send(peer_info.signaling_channel, candidates)
+
+  <span class="cmt">// 5. Connectivity checks (sorted by priority)</span>
+  <span class="kw">sort</span> candidates <span class="kw">by</span> priority (host &gt; srflx &gt; relay)
+  <span class="kw">for each</span> my_cand <span class="kw">in</span> candidates:
+    <span class="kw">for each</span> peer_cand <span class="kw">in</span> peer_candidates:
+      <span class="kw">if</span> connectivity_check(my_cand, peer_cand):
+        <span class="kw">return</span> (my_cand, peer_cand)  <span class="cmt">// Nominated pair</span>
+
+  <span class="kw">return</span> relay(my_cand, peer_cand)  <span class="cmt">// Fallback</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      const tabIndex = {tab1:0, tab2:1, tab3:2}[id];
+      document.querySelectorAll('.tab')[tabIndex].classList.add('active');
+    }
+  </script>
+</body>
+</html>

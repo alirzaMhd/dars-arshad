@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP-Anycast - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-bottom: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    ul li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>IP-Anycast — One IP, Many Servers</h1>
+  <p class="subtitle">Computer Networks — BGP-Based Anycast Routing & Applications</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Concept & Motivation</button>
+      <button class="tab" onclick="showSection('tab2')">BGP Implementation</button>
+      <button class="tab" onclick="showSection('tab3')">Use Cases</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <!-- Tab 1: Concept & Motivation -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>IP-Anycast: Concept</h2>
+        <p><strong>IP-Anycast</strong> is a networking technique where the <span class="highlight">same IP address is assigned to multiple geographically distributed servers</span>. Internet routers use BGP to direct each client to the "closest" server (according to the BGP route selection algorithm). This allows replicating the same content on servers in many different countries while having each user access the content from the <strong>nearest server</strong>.</p>
+
+        <div class="formula">
+          <div class="label">IP-Anycast Definition</div>
+          <div class="expr">One IP address ← multiple physical servers in different locations<br>Client → Routers → "Closest" server (as determined by BGP)</div>
+          <div class="desc">Different clients (or the same client at different times) may reach different servers. The network decides which server handles the request.</div>
+        </div>
+
+        <h3>Unicast vs. Anycast vs. Multicast vs. Broadcast</h3>
+        <table>
+          <tr><th>Type</th><th>One IP → ? Servers</th><th>Delivery</th><th>Example</th></tr>
+          <tr><td><strong>Unicast</strong></td><td>1 → 1</td><td>One specific server</td><td>Normal web browsing</td></tr>
+          <tr><td><strong>Anycast</strong></td><td>1 → N (closest)</td><td>Best (nearest) server</td><td>DNS root servers, CDNs</td></tr>
+          <tr><td><strong>Multicast</strong></td><td>1 → N (all subscribers)</td><td>All group members</td><td>Video conferencing</td></tr>
+          <tr><td><strong>Broadcast</strong></td><td>1 → All on subnet</td><td>Everyone on the link</td><td>ARP requests</td></tr>
+        </table>
+
+        <h3>Why Use IP-Anycast?</h3>
+        <div class="grid">
+          <div class="card">
+            <h3>Low Latency</h3>
+            <p>Clients are automatically routed to the <span class="highlight">nearest server</span>, reducing round-trip times.</p>
+          </div>
+          <div class="card">
+            <h3>Load Distribution</h3>
+            <p>Different clients reach different servers, <span class="highlight">spreading the load</span> across multiple data centers.</p>
+          </div>
+          <div class="card">
+            <h3>DDoS Resilience</h3>
+            <p>Attack traffic is distributed across many servers. Individual servers see less impact. Attackers cannot target a single IP (it belongs to everyone).</p>
+          </div>
+          <div class="card">
+            <h3>High Availability</h3>
+            <p>If one server fails, BGP withdraws its route. Traffic is <span class="highlight">automatically redirected</span> to the next-closest server.</p>
+          </div>
+        </div>
+
+        <div class="warning">IP-anycast is NOT a transport-layer feature — it is an <strong>IP/BGP layer feature</strong>. The client has no idea it is talking to different servers. The same TCP connection cannot survive being redirected to a different server.</div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card: Anycast</h2>
+        <table>
+          <tr><th>Property</th><th>Description</th></tr>
+          <tr><td>Definition</td><td>Same IP on multiple servers in different locations</td></tr>
+          <tr><td>Routing Mechanism</td><td>BGP (each server advertises the same prefix)</td></tr>
+          <tr><td>Server Selection</td><td>BGP best path selection (hot potato, etc.)</td></tr>
+          <tr><td>Scope</td><td>Global (Internet-wide)</td></tr>
+          <tr><td>Key Advantage</td><td>Automatic closest-server routing</td></tr>
+          <tr><td>Key Limitation</td><td>TCP connections cannot survive server switch</td></tr>
+          <tr><td>Major Uses</td><td>DNS root servers, CDNs, DDoS mitigation</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: BGP Implementation -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>How BGP Implements IP-Anycast</h2>
+        <p>IP-anycast leverages BGP's route selection process to route clients to the nearest server. Here is how it works:</p>
+
+        <div class="formula">
+          <div class="label">Anycast via BGP — The Mechanism</div>
+          <div class="expr">
+Step 1: Server A (New York) advertises 192.0.2.0/24 via BGP<br>
+Step 2: Server B (Tokyo) advertises 192.0.2.0/24 via BGP<br>
+Step 3: Internet routers receive both advertisements<br>
+Step 4: Each router selects the "best" route using the 4-rule algorithm<br>
+Step 5: Client in London reaches the server that BGP selects as closest
+          </div>
+          <div class="desc">Each server independently originates the same IP prefix. The Internet's BGP routers choose which server to send traffic to based on their local BGP decision.</div>
+        </div>
+
+        <h3>BGP Route Selection in Anycast</h3>
+        <p>When a router receives two BGP advertisements for the same anycast prefix from different servers, it applies the standard 4-route selection algorithm:</p>
+        <ol style="margin-left:20px;margin-bottom:10px;">
+          <li><strong>LOCAL_PREF</strong>: Usually identical for both (set by the ISP's policy).</li>
+          <li><strong>AS-PATH</strong>: Tends to be shorter for the geographically closer server.</li>
+          <li><strong>Hot Potato</strong>: The exit point closest to the client wins.</li>
+          <li><strong>Router ID</strong>: Tie-breaker if all else is equal.</li>
+        </ol>
+
+        <div class="example">
+          <div class="title">Anycast Route Selection</div>
+          <p>A router in London receives two BGP advertisements for 192.0.2.0/24:</p>
+          <ul>
+            <li><strong>From Server A (New York)</strong>: AS-PATH = [AS701, AS1239], NEXT-HOP = 10.1.1.1 (IGP cost = 30)</li>
+            <li><strong>From Server B (Tokyo)</strong>: AS-PATH = [AS2914, AS1239, AS701], NEXT-HOP = 10.2.2.2 (IGP cost = 120)</li>
+          </ul>
+          <p><strong>Decision:</strong> Rule 1 (LOCAL_PREF) ties. Rule 2 (AS-PATH): path to New York = 2, path to Tokyo = 3. <span class="result">New York wins</span> — the client in London reaches the New York server.</p>
+        </div>
+
+        <div class="warning">BGP does not measure actual geographic distance or real-time latency. It uses BGP attributes (AS-PATH length, IGP cost). The "closest" server by BGP metrics may not be the geographically closest or the one with lowest actual latency.</div>
+
+        <h3>Anycast Deployment Considerations</h3>
+        <table>
+          <tr><th>Consideration</th><th>Impact</th></tr>
+          <tr><td>BGP Convergence</td><td>Route withdrawal after failure takes seconds to minutes — traffic may be black-holed temporarily</td></tr>
+          <tr><td>Route Flapping</td><td>Frequent BGP updates for anycast prefixes can destabilize global routing</td></tr>
+          <tr><td>Load Imbalance</td><td>Some servers may get much more traffic due to BGP's coarse metrics</td></tr>
+          <tr><td>TCP State</td><td>Different TCP connections from the same client may go to different servers</td></tr>
+          <tr><td>Address Announcement</td><td>Must be authorized via RIR/RPKI to prevent hijacking</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Use Cases -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>IP-Anycast Use Cases</h2>
+
+        <h3>1. DNS Root Server System</h3>
+        <p>The DNS root server system is the <strong>classic example</strong> of IP-anycast. There are only 13 root server IP addresses (a.root-servers.net through m.root-servers.net). Corresponding to each of these IP addresses, there are <strong>multiple DNS root servers</strong>, with some addresses having <strong>over 100 DNS root servers</strong> scattered over all corners of the world.</p>
+
+        <div class="formula">
+          <div class="label">DNS Anycast Statistics</div>
+          <div class="expr">13 Root Server IP Addresses → Over 100 Physical Servers Per Address → 1000+ Total Globally</div>
+          <div class="desc">Each root server IP address is anycasted from dozens to hundreds of locations. For example, the K-root server (operated by RIPE NCC) is deployed in over 50 locations. When a DNS query is sent to one of these 13 IP addresses, IP anycast routes it to the nearest of the DNS root servers responsible for that address [Li 2018].</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>DNS Anycast Benefits</h3>
+            <p>• <span class="highlight">Low latency</span>: Each client reaches a nearby root server.</p>
+            <p>• <span class="highlight">DDoS resilience</span>: Attack traffic spreads across hundreds of instances.</p>
+            <p>• <span class="highlight">High availability</span>: Multiple redundant instances per IP.</p>
+          </div>
+          <div class="card">
+            <h3>Root Server Instances</h3>
+            <p>• A-root: ~200 instances (Verisign)</p>
+            <p>• K-root: ~50 instances (RIPE NCC)</p>
+            <p>• L-root: ~190 instances (ICANN)</p>
+            <p>• M-root: ~200 instances (WIDE Project)</p>
+          </div>
+        </div>
+
+        <h3>2. Content Delivery Networks (CDNs)</h3>
+        <p>CDNs like Cloudflare, Akamai, and Fastly use IP-anycast to deliver content from thousands of edge servers worldwide. A CDN may replicate <strong>videos and other objects</strong> on servers in different countries. Figure 5.12 in the textbook illustrates how a CDN uses anycast to serve a user from the nearest data center.</p>
+        <div class="warning">In practice, CDNs generally choose <strong>not</strong> to use IP-anycast for TCP-based content delivery because BGP routing changes can result in <strong>different packets of the same TCP connection arriving at different server instances</strong>. IP-anycast is more extensively used by the DNS system (UDP-based) than by CDNs for this reason.</div>
+
+        <div class="example">
+          <div class="title">Anycast CDN (Figure 5.12)</div>
+          <p>A CDN deploys servers at multiple locations (New York, London, Tokyo, Sydney), all advertising the same IP prefix (e.g., 203.0.113.0/24).</p>
+          <ul>
+            <li>A user in Berlin reaches the <strong>London</strong> server (shortest AS-PATH from Berlin to London).</li>
+            <li>A user in Seoul reaches the <strong>Tokyo</strong> server.</li>
+            <li>If the London server crashes, BGP withdraws its route. Users in Berlin are redirected to the next-closest server (e.g., New York).</li>
+          </ul>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>CDN Anycast Benefits</h3>
+            <p>• <span class="highlight">Automatic failover</span> — no DNS TTL delays</p>
+            <p>• <span class="highlight">Global load distribution</span></p>
+            <p>• <span class="highlight">Attack mitigation</span> — absorbs DDoS at the edge</p>
+          </div>
+          <div class="card">
+            <h3>CDN Anycast vs DNS-based</h3>
+            <p>DNS-based CDN: Directs clients via DNS resolution (per-request granularity, but slow failover).</p>
+            <p>Anycast-based: Directs via BGP (fast failover, but less granular).</p>
+          </div>
+        </div>
+
+        <h3>3. DDoS Mitigation Services</h3>
+        <p>DDoS protection providers (Cloudflare, Akamai Prolexic, AWS Shield) use anycast to <strong>scrub attack traffic</strong>. When a customer's site is attacked, traffic is redirected to anycast-scrubbing centers that filter malicious packets before forwarding clean traffic to the origin server.</p>
+
+        <div class="formula">
+          <div class="label">Anycast DDoS Scrubbing</div>
+          <div class="expr">
+Attack traffic → Anycast IP → Distributed across N scrubbing centers<br>
+Each scrubbing center sees 1/N of the attack → Filters → Forwards clean traffic
+          </div>
+          <div class="desc">By spreading the attack across many data centers, anycast makes volumetric DDoS attacks much harder to execute.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Use Case Comparison</h2>
+        <table>
+          <tr><th>Use Case</th><th>Anycast Benefit</th><th>Protocol</th><th>TCP Friendly?</th></tr>
+          <tr><td>DNS Root Servers</td><td>Low latency, high availability</td><td>UDP (mostly)</td><td>Yes (UDP, stateless)</td></tr>
+          <tr><td>CDNs</td><td>Fast failover, load distribution</td><td>HTTP/HTTPS</td><td>Challenging (TCP state lost on failover)</td></tr>
+          <tr><td>DDoS Mitigation</td><td>Attack absorption, distribution</td><td>All IP traffic</td><td>Depends on implementation</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Examples: Anycast Routing Decisions</h2>
+
+        <div class="example">
+          <div class="title">Example 1: DNS Anycast — Client in Brazil Reaching Root Server</div>
+          <p><strong>Setup:</strong> The F-root server IP (192.5.5.241) is anycasted from 200+ locations worldwide. A DNS resolver in Sao Paulo, Brazil, needs to resolve www.example.com.</p>
+          <p><strong>Anycast decision:</strong></p>
+          <ul>
+            <li>F-root instance in Miami: AS-PATH = [AS1239, AS3549] (2 AS hops from Brazil)</li>
+            <li>F-root instance in London: AS-PATH = [AS6762, AS1299, AS1239, AS3549] (4 AS hops)</li>
+            <li>F-root instance in Los Angeles: AS-PATH = [AS6461, AS2914, AS3549] (3 AS hops)</li>
+          </ul>
+          <p><strong>Decision:</strong> Rule 1 (LOCAL_PREF) ties (all transit ASs have default). Rule 2 (AS-PATH): Miami (2) < LA (3) < London (4). <span class="result">Miami wins</span>.</p>
+          <p><strong>Result:</strong> The Brazilian resolver queries the F-root server in Miami — the closest instance according to BGP.</p>
+          <div class="note">The actual DNS resolution takes ~20ms (to Miami) instead of ~120ms (to London).</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: CDN Anycast — Video Streaming</div>
+          <p><strong>Setup:</strong> A video streaming CDN uses anycast IP 203.0.113.1, deployed at three data centers:</p>
+          <ul>
+            <li><strong>Ashburn, VA</strong>: AS-PATH from client = [AS701, AS1239]</li>
+            <li><strong>Dallas, TX</strong>: AS-PATH from client = [AS209, AS1239]</li>
+            <li><strong>San Jose, CA</strong>: AS-PATH from client = [AS6461, AS1239]</li>
+          </ul>
+          <p><strong>Client location:</strong> The client is in Chicago. IGP costs from the Chicago router to each peer:</p>
+          <ul>
+            <li>To Ashburn NEXT-HOP: cost 20</li>
+            <li>To Dallas NEXT-HOP: cost 15</li>
+            <li>To San Jose NEXT-HOP: cost 50</li>
+          </ul>
+          <p><strong>Decision process:</strong></p>
+          <ol style="margin-left:20px;margin-bottom:10px;">
+            <li>LOCAL_PREF: All = 100 → tie.</li>
+            <li>AS-PATH: All = 2 → tie.</li>
+            <li><strong>Hot Potato (Rule 3)</strong>: Dallas (cost 15) < Ashburn (20) < San Jose (50). <span class="result">Dallas wins</span>.</li>
+          </ol>
+          <p><strong>Result:</strong> The client streams from the Dallas data center, which has the lowest IGP cost to the exit point.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: TCP Connection Issues with Anycast</div>
+          <p><strong>Setup:</strong> A client in Berlin establishes a TCP connection to an anycast IP (192.0.2.1) served by two CDN nodes: London and Frankfurt.</p>
+          <p><strong>Initial connection:</strong> BGP selects the London node (shorter AS-PATH from Berlin at the time). The TCP three-way handshake completes with London.</p>
+          <p><strong>Mid-session route change:</strong> The BGP route to London's prefix is withdrawn (e.g., link failure between Berlin and London). BGP re-converges and now selects the Frankfurt node.</p>
+          <p><strong>Problem:</strong></p>
+          <ul>
+            <li>The client's TCP packets now arrive at the Frankfurt server.</li>
+            <li>Frankfurt has <strong>no knowledge</strong> of the TCP connection state (sequence numbers, window size, buffers).</li>
+            <li>Frankfurt sends a TCP RST (reset) packet, terminating the connection.</li>
+          </ul>
+          <p><strong>Result:</strong> The TCP connection is <span class="result">broken</span>. The client must re-establish a new TCP connection.</p>
+
+          <div class="warning">TCP connections are <strong>stateful</strong> — the server maintains per-connection state. Anycast can redirect mid-connection to a new server that lacks this state. This is why anycast works best for <strong>stateless protocols</strong> (DNS over UDP) or with state-sharing mechanisms between anycast nodes.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Anycast DDoS Mitigation in Action</div>
+          <p><strong>Setup:</strong> A website protected by a DDoS mitigation service uses anycast IP 104.16.0.1. The service has scrubbing centers in Los Angeles, Chicago, New York, London, Frankfurt, and Singapore.</p>
+          <p><strong>Attack scenario:</strong> A botnet launches a 500 Gbps DDoS attack from compromised IoT devices worldwide.</p>
+          <p><strong>Anycast absorption:</strong></p>
+          <ul>
+            <li>Attack traffic from Asia hits the Singapore scrubbing center (~150 Gbps).</li>
+            <li>Attack traffic from Europe hits London and Frankfurt (~200 Gbps combined).</li>
+            <li>Attack traffic from the Americas hits LA, Chicago, and New York (~150 Gbps combined).</li>
+          </ul>
+          <p>Each scrubbing center sees only a fraction of the total attack. It filters malicious traffic and forwards only clean traffic to the origin server (which sees only ~1 Gbps of legitimate traffic).</p>
+          <p><span class="result">The website remains operational.</span> Without anycast, the origin server's single IP would be overwhelmed by the full 500 Gbps attack.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: When Anycast Fails — BGP Hijacking</div>
+          <p><strong>Setup:</strong> A legitimate AS (AS 200) advertises anycast prefix 203.0.113.0/24 for a CDN. A malicious AS (AS 666) also advertises the same prefix.</p>
+          <p><strong>Normal operation:</strong></p>
+          <ul>
+            <li>AS 200's route: AS-PATH = [200], originating from legitimate servers.</li>
+            <li>AS 666's route: AS-PATH = [666], originating from hijack servers.</li>
+          </ul>
+          <p><strong>If AS 666's route propagates with a shorter AS-PATH or higher LOCAL_PREF:</strong></p>
+          <ul>
+            <li>Traffic destined to 203.0.113.0/24 is routed to AS 666's hijack servers.</li>
+            <li>This is a <strong>BGP hijack</strong> — the anycast IP is "stolen."</li>
+          </ul>
+          <p><strong>Mitigation:</strong> RPKI (Resource Public Key Infrastructure) and BGP filtering prevent unauthorized prefix advertisements.</p>
+          <p><span class="result">RPKI Route Origin Authorization (ROA)</span> ensures only AS 200 can legitimately advertise 203.0.113.0/24.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Anycast vs. Other Server Selection Techniques</h2>
+        <table>
+          <tr><th>Technique</th><th>Granularity</th><th>Failover Speed</th><th>Protocol</th><th>Example</th></tr>
+          <tr><td>Anycast (BGP)</td><td>Coarse (per-prefix)</td><td>Fast (BGP convergence)</td><td>IP/BGP</td><td>DNS root, CDNs</td></tr>
+          <tr><td>DNS-based (GSLB)</td><td>Fine (per-query)</td><td>Slow (TTL-dependent)</td><td>DNS</td><td>Akamai, traditional CDN</td></tr>
+          <tr><td>HTTP redirect</td><td>Fine (per-request)</td><td>Instant (per request)</td><td>HTTP</td><td>302 redirect to nearest</td></tr>
+          <tr><td>Geo-DNS</td><td>Fine (per-location)</td><td>Slow (TTL-dependent)</td><td>DNS + GeoIP</td><td>Regional load balancing</td></tr>
+          <tr><td>Global Server LB</td><td>Combined</td><td>Medium</td><td>DNS + Health + Anycast</td><td>Cloudflare, AWS Route53</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

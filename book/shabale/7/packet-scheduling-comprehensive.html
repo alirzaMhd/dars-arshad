@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Packet Scheduling - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .section h4 { color: #00ccff; font-size: 0.9em; margin: 12px 0 6px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { color: #ff6600; border-left: 3px solid #ff6600; padding-left: 10px; margin: 10px 0; }
+    .warning2 { color: #ff4444; border-left: 3px solid #ff4444; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.85em; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; }
+    .quickref { background: linear-gradient(135deg, #0a0a18, #001a0a); border: 1px solid #00ff8866; padding: 15px; border-radius: 8px; margin: 15px 0; }
+    .quickref h3 { color: #00ff88; }
+    ul, ol { margin-left: 20px; margin-top: 5px; color: #ccc; }
+    li { margin: 4px 0; }
+    p { color: #ccc; line-height: 1.5; margin: 6px 0; }
+    .step { display: inline-block; background: #00ff8833; color: #00ff88; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Packet Scheduling</h1>
+  <p class="subtitle">Computer Networking: A Top-Down Approach — Kurose &amp; Ross, Chapter 4</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('fifo')">FIFO</button>
+      <button class="tab" onclick="showSection('pq')">Priority Queuing</button>
+      <button class="tab" onclick="showSection('rr')">Round Robin</button>
+      <button class="tab" onclick="showSection('wfq')">WFQ</button>
+      <button class="tab" onclick="showSection('neutrality')">Net Neutrality</button>
+    </div>
+
+    <!-- ====== TAB 1: FIFO ====== -->
+    <div class="content active" id="fifo">
+      <div class="section">
+        <h2>FIFO / FCFS (First-In-First-Out / First-Come-First-Served)</h2>
+        <p>FIFO is the simplest packet scheduling discipline. Packets are transmitted in the exact order they arrive at the output link. A single queue is maintained; when the link becomes idle, the packet at the head of the queue is dequeued and transmitted.</p>
+
+        <p>In the FIFO queuing abstraction model, packets arriving at the link output queue wait for transmission if the link is currently busy transmitting another packet. When a packet is completely transmitted over the outgoing link (i.e., receives service), it is removed from the queue.</p>
+
+        <div class="formula">
+          <div class="label">Operation:</div>
+          <div class="expr">Departure Order = Arrival Order</div>
+          <div class="desc">The first packet to arrive is the first to depart (no reordering).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Buffer Occupancy:</div>
+          <div class="expr">Q(t) = A(t) − D(t)</div>
+          <div class="desc">Q = current queue length, A = arrivals, D = departures up to time t</div>
+        </div>
+
+        <div class="warning">Common mistake: Assuming FIFO provides any quality-of-service differentiation. It does not — all packets are treated identically.</div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Basic FIFO Timing</div>
+          <p><span class="step">Given</span> Packets P1, P2, P3 arrive at times 0 ms, 2 ms, 3 ms. Packet transmission time is 4 ms each.</p>
+          <p><span class="step">Step 1</span> P1 starts at t=0, finishes at t=4.</p>
+          <p><span class="step">Step 2</span> P2 starts at t=4, finishes at t=8.</p>
+          <p><span class="step">Step 3</span> P3 starts at t=8, finishes at t=12.</p>
+          <p class="result">Result: Departure order: P1→P2→P3. Average delay = (4+6+9)/3 = 6.33 ms.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Buffer Overflow</div>
+          <p><span class="step">Given</span> A router has a FIFO buffer capacity of 3 packets. Arrivals: 5 packets arrive simultaneously at t=0. Output link rate = 1 packet/ms.</p>
+          <p><span class="step">Step 1</span> 3 packets enter the buffer; 2 packets are dropped.</p>
+          <p><span class="step">Step 2</span> At t=1, first packet departs, a dropped spot opens — but the 2 dropped packets are already gone.</p>
+          <p class="result">Result: 2 packets dropped (tail drop). Drop policy is critical in FIFO.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Bursty Traffic Effect</div>
+          <p><span class="step">Given</span> Link rate = 1 Mbps. Four 1000-bit packets arrive back-to-back at t=0. Two more 1000-bit packets arrive at t=3 ms.</p>
+          <p><span class="step">Step 1</span> First four packets: transmission takes 1 ms each. P1 finishes at 1ms, P2 at 2ms, P3 at 3ms, P4 at 4ms.</p>
+          <p><span class="step">Step 2</span> P5 and P6 (arriving at t=3ms) wait until P4 finishes at 4ms. P5 from 4-5ms, P6 from 5-6ms.</p>
+          <p class="result">Result: P5 delay = 2ms, P6 delay = 3ms. Bursty arrivals cause non-uniform delays even under FIFO.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Facts</h3>
+            <p>• No traffic differentiation</p>
+            <p>• Tail drop on overflow</p>
+            <p>• O(1) enqueue/dequeue</p>
+            <p>• Single queue shared by all</p>
+          </div>
+          <div class="card">
+            <h3>Pros &amp; Cons</h3>
+            <p class="highlight">+ Simple, fast, fair in order</p>
+            <p class="dim">- No QoS, no isolation</p>
+            <p class="dim">- Bursty flows hurt everyone</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 2: Priority Queuing ====== -->
+    <div class="content" id="pq">
+      <div class="section">
+        <h2>Priority Queuing (PQ)</h2>
+        <p>Packets are classified into priority classes (e.g., high, low). The scheduler always transmits packets from the highest non-empty priority class first. This is <strong>non-preemptive</strong> — once a packet begins transmission, it finishes even if a higher-priority packet arrives.</p>
+
+        <p>In practice, a network operator may configure a queue so that packets carrying network management information (as indicated by the source or destination TCP/UDP port number) receive priority over user traffic; additionally, real-time voice-over-IP packets might receive priority over non-real-time traffic such as e-mail packets.</p>
+
+        <div class="formula">
+          <div class="label">Service Rule:</div>
+          <div class="expr">Always serve highest priority class with non-empty queue</div>
+          <div class="desc">Lower classes get service only when all higher classes are empty.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Delay for Priority Class k:</div>
+          <div class="expr">E[D<sub>k</sub>] = (Σ<sub>i=1..k</sub> ρ<sub>i</sub>) × RTT / (1 − Σ<sub>i=1..k-1</sub> ρ<sub>i</sub>)</div>
+          <div class="desc">Approximate mean delay; ρ = utilization per class.</div>
+        </div>
+
+        <div class="warning2">Common mistake: Forgetting PQ is non-preemptive. A low-priority packet currently being transmitted will NOT be interrupted by a newly arrived high-priority packet.</div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Two-Class Priority</div>
+          <p><span class="step">Given</span> High priority: 2 packets (P1,P2). Low priority: 3 packets (P3,P4,P5). All arrive at t=0. Transmission time = 2 ms per packet.</p>
+          <p><span class="step">Step 1</span> High class served first: P1 at 0-2ms, P2 at 2-4ms.</p>
+          <p><span class="step">Step 2</span> Low class served next: P3 at 4-6ms, P4 at 6-8ms, P5 at 8-10ms.</p>
+          <p class="result">Result: High priority avg delay = 2ms. Low priority avg delay = 7ms. Significant disparity.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Non-Preemptive Behavior</div>
+          <p><span class="step">Given</span> Low-priority P1 starts transmission at t=0 (2ms duration). High-priority P2 arrives at t=0.5ms.</p>
+          <p><span class="step">Step 1</span> P1 is already being transmitted — it is NOT interrupted.</p>
+          <p><span class="step">Step 2</span> P1 finishes at t=2ms. P2 then starts at t=2ms.</p>
+          <p class="result">Result: P2 waits 1.5ms despite being highest priority. Starvation is avoided for the low class only at the packet level.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Three Priority Classes</div>
+          <p><span class="step">Given</span> Classes: High (H), Medium (M), Low (L). At t=0: H has 1 pkt, M has 2 pkts, L has 4 pkts. Each pkt = 1ms transmission.</p>
+          <p><span class="step">Step 1</span> H served: 0-1ms.</p>
+          <p><span class="step">Step 2</span> M served: 1-3ms (both M packets).</p>
+          <p><span class="step">Step 3</span> L served: 3-7ms (all 4 L packets).</p>
+          <p class="result">Result: H delay=0.5ms avg, M delay=1.5ms avg, L delay=5ms avg. Low class can experience starvation if higher classes are persistently busy.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Facts</h3>
+            <p>• Non-preemptive</p>
+            <p>• Strict priority service</p>
+            <p>• Low classes can starve</p>
+            <p>• Used in DiffServ (EF, AF)</p>
+          </div>
+          <div class="card">
+            <h3>Pros &amp; Cons</h3>
+            <p class="highlight">+ Low delay for critical traffic</p>
+            <p class="dim">- Starvation for low classes</p>
+            <p class="dim">- Complex classification needed</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 3: Round Robin ====== -->
+    <div class="content" id="rr">
+      <div class="section">
+        <h2>Round Robin (RR) Scheduling</h2>
+        <p>Round Robin serves packets from multiple classes in cyclic order. If there are N classes, the scheduler visits class 1, then 2, ... then N, then back to 1. At each visit, it transmits one packet from that class (if one is waiting). RR is <strong>work-conserving</strong> — if a class has no packet, the scheduler moves to the next class immediately.</p>
+
+        <p>A <strong>work-conserving queuing discipline</strong> will never allow the link to remain idle whenever there are packets (of any class) queued for transmission. A work-conserving round robin discipline that looks for a packet of a given class but finds none will immediately check the next class in the round robin sequence.</p>
+
+        <div class="formula">
+          <div class="label">Service Cycle:</div>
+          <div class="expr">Cycle = [Class 1 → Class 2 → ... → Class N] repeated</div>
+          <div class="desc">Each active class gets exactly one packet per round (assuming all classes have packets).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Work-Conserving Property:</div>
+          <div class="expr">If queue i is empty, skip to queue i+1 immediately</div>
+          <div class="desc">The link is never idle if any queue is non-empty.</div>
+        </div>
+
+        <div class="warning">Common mistake: Confusing Round Robin with weighted fair queuing. In pure RR, all classes get equal turns regardless of weight or priority.</div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Three Active Queues</div>
+          <p><span class="step">Given</span> Queues A, B, C each have multiple packets. Packet sizes: all 1 KB. Link rate = 1 KB/ms.</p>
+          <p><span class="step">Step 1</span> Round 1: A(0-1ms), B(1-2ms), C(2-3ms).</p>
+          <p><span class="step">Step 2</span> Round 2: A(3-4ms), B(4-5ms), C(5-6ms).</p>
+          <p class="result">Result: Each class gets 1/3 of link bandwidth equally. Fair distribution.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Unequal Packet Sizes</div>
+          <p><span class="step">Given</span> Queue A: 1500-byte packets. Queue B: 500-byte packets. Link rate = 1000 bytes/ms.</p>
+          <p><span class="step">Step 1</span> A transmits 1500 bytes (1.5ms), B transmits 500 bytes (0.5ms).</p>
+          <p><span class="step">Step 2</span> Over 10 rounds: A sends 15000 bytes, B sends 5000 bytes.</p>
+          <p class="result">Result: A gets 3x the bandwidth of B! RR gives equal turns, NOT equal bandwidth when packet sizes differ. This is a key drawback.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Work-Conserving Behavior</div>
+          <p><span class="step">Given</span> Queues A (4 pkts), B (0 pkts), C (2 pkts). Packet size = 1ms each.</p>
+          <p><span class="step">Step 1</span> A(0-1ms), B has none → skip, C(1-2ms).</p>
+          <p><span class="step">Step 2</span> Back to A(2-3ms), C(3-4ms), A(4-5ms), C(5-6ms), A(6-7ms).</p>
+          <p class="result">Result: When B is empty, A and C get more frequent service. The link is always busy — work-conserving.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Facts</h3>
+            <p>• Equal turns per class</p>
+            <p>• Work-conserving</p>
+            <p>• No starvation</p>
+            <p>• Sensitive to packet size</p>
+          </div>
+          <div class="card">
+            <h3>Pros &amp; Cons</h3>
+            <p class="highlight">+ Fairness (per-packet)</p>
+            <p class="highlight">+ No starvation</p>
+            <p class="dim">- Unfair with variable sizes</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TAB 4: WFQ ====== -->
+    <div class="content" id="wfq">
+      <div class="section">
+        <h2>Weighted Fair Queuing (WFQ)</h2>
+        <p>WFQ is a generalization of Round Robin where each class (flow) is assigned a weight w<sub>i</sub>. The scheduler services flows in proportion to their weights, achieving both fairness and bandwidth guarantees. WFQ approximates the ideal "Generalized Processor Sharing" (GPS) model using packet-by-packet emulation [Demers 1990; Parekh 1993].</p>
+
+        <p>The description of WFQ has been idealized, as we have not considered the fact that packets are discrete and a packet's transmission will not be interrupted to begin transmission of another packet.</p>
+
+        <div class="formula">
+          <div class="label">Bandwidth Fraction:</div>
+          <div class="expr">Fraction<sub>i</sub> = w<sub>i</sub> / Σ<sub>j</sub> w<sub>j</sub></div>
+          <div class="desc">Class i receives this fraction of the link bandwidth when all classes are backlogged.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Minimum Guaranteed Throughput:</div>
+          <div class="expr">R<sub>i</sub> = R × w<sub>i</sub> / Σ<sub>j</sub> w<sub>j</sub></div>
+          <div class="desc">R = output link rate. Class i is guaranteed at least this rate when it has packets to send.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Virtual Finish Time (for packet-by-packet WFQ):</div>
+          <div class="expr">F<sub>i</sub><sup>k</sup> = max(F<sub>i</sub><sup>k-1</sup>, v(t)) + L<sub>i</sub><sup>k</sup> / w<sub>i</sub></div>
+          <div class="desc">F = finish number, v(t) = virtual time, L = packet length, w = weight. Packets are transmitted in increasing order of finish numbers.</div>
+        </div>
+
+        <div class="warning2">Common mistake: Thinking WFQ guarantees an absolute bandwidth regardless of other flows. The guarantee is relative — if no other flows are active, a flow can get more than its weight proportion.</div>
+
+        <h3>Worked Examples</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Two Flows with Different Weights</div>
+          <p><span class="step">Given</span> Link rate R = 10 Mbps. Two flows: w<sub>1</sub> = 3, w<sub>2</sub> = 1. Both are continuously backlogged.</p>
+          <p><span class="step">Step 1</span> Σw<sub>j</sub> = 3 + 1 = 4.</p>
+          <p><span class="step">Step 2</span> Flow 1 fraction = 3/4 = 0.75. Flow 2 fraction = 1/4 = 0.25.</p>
+          <p><span class="step">Step 3</span> Flow 1 throughput = 10 × 0.75 = 7.5 Mbps. Flow 2 throughput = 10 × 0.25 = 2.5 Mbps.</p>
+          <p class="result">Result: Flow 1 gets 3x the bandwidth of Flow 2, matching the weight ratio 3:1.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Minimum Guarantee in Action</div>
+          <p><span class="step">Given</span> Link rate R = 100 Mbps. Three flows with weights: w = [5, 3, 2].</p>
+          <p><span class="step">Step 1</span> Σw = 5+3+2 = 10.</p>
+          <p><span class="step">Step 2</span> Minimum guarantees: R<sub>1</sub> = 100×5/10 = 50 Mbps, R<sub>2</sub> = 100×3/10 = 30 Mbps, R<sub>3</sub> = 100×2/10 = 20 Mbps.</p>
+          <p><span class="step">Step 3</span> If only Flow 1 is active, it gets the full 100 Mbps (better than minimum).</p>
+          <p class="result">Result: Minimum guarantees hold when flows contend. Unused bandwidth is redistributed.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Packet-by-Packet WFQ Ordering</div>
+          <p><span class="step">Given</span> Two flows: Flow A (w=2), Flow B (w=1). Link rate = 1 pkt/ms. At t=0: A has pkt of 1000 bytes, B has pkt of 500 bytes. Virtual time v(t) starts at 0.</p>
+          <p><span class="step">Step 1</span> Compute finish numbers: F<sub>A</sub> = 0 + 1000/2 = 500. F<sub>B</sub> = 0 + 500/1 = 500.</p>
+          <p><span class="step">Step 2</span> Equal finish numbers — tie-break arbitrarily. Suppose A goes first (0-1ms).</p>
+          <p><span class="step">Step 3</span> At t=1ms, B transmits (1-1.5ms).</p>
+          <p class="result">Result: A sent 1000 bytes, B sent 500 bytes in the first 1.5ms — ratio 2:1 matching weights.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Facts</h3>
+            <p>• Weighted bandwidth shares</p>
+            <p>• Minimum rate guarantees</p>
+            <p>• GPS approximation</p>
+            <p>• Used in carrier networks</p>
+          </div>
+          <div class="card">
+            <h3>Pros &amp; Cons</h3>
+            <p class="highlight">+ Strong fairness</p>
+            <p class="highlight">+ QoS guarantees</p>
+            <p class="dim">- Higher complexity</p>
+            <p class="dim">- Per-flow state needed</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Reference Card -->
+      <div class="quickref">
+        <h3>Quick Reference Card — WFQ</h3>
+        <table>
+          <tr><th>Parameter</th><th>Symbol</th><th>Meaning</th></tr>
+          <tr><td>Weight of class i</td><td>w<sub>i</sub></td><td>Relative bandwidth share</td></tr>
+          <tr><td>Sum of all weights</td><td>Σw<sub>j</sub></td><td>Total weight denominator</td></tr>
+          <tr><td>Link rate</td><td>R</td><td>Output link capacity</td></tr>
+          <tr><td>Guaranteed rate</td><td>R<sub>i</sub></td><td>R × w<sub>i</sub> / Σw<sub>j</sub></td></tr>
+          <tr><td>Packet length</td><td>L</td><td>Size in bits or bytes</td></tr>
+          <tr><td>Finish number</td><td>F<sub>i</sub><sup>k</sup></td><td>Virtual finish time of kth packet</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====== TAB 5: Net Neutrality ====== -->
+    <div class="content" id="neutrality">
+      <div class="section">
+        <h2>Net Neutrality &amp; Packet Scheduling</h2>
+        <p>Net neutrality is the principle that Internet Service Providers (ISPs) should treat all data on the Internet equally, without discriminating or charging differently by user, content, website, platform, or application. Packet scheduling disciplines are the technical mechanisms that implement — or violate — this principle.</p>
+
+        <div class="formula">
+          <div class="label">FCC 2015 Bright-Line Rules (Open Internet Order):</div>
+          <div class="expr">No Blocking · No Throttling · No Paid Prioritization</div>
+          <div class="desc">(1) No Blocking: a person engaged in the provision of broadband Internet access service shall not block lawful content, applications, services, or non-harmful devices. (2) No Throttling: shall not impair or degrade lawful Internet traffic on the basis of Internet content, application, or service, or use of a non-harmful device. (3) No Paid Prioritization: shall not engage in paid prioritization — the management of a broadband consumer's Internet traffic to favor particular content, applications, services, or devices [Smithsonian 2017].</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">FCC 2017 Restoring Internet Freedom Order:</div>
+          <div class="expr">Repealed Title II classification · Eliminated bright-line rules · Adopted transparency-only regime</div>
+          <div class="desc">The 2017 order reclassified broadband Internet access service as an information service (rather than a telecommunications service under Title II), eliminated the bright-line rules against blocking, throttling, and paid prioritization, and replaced them with a transparency requirement [Faulhaber 2012; Economides 2017; Madhyastha 2017].</div>
+        </div>
+
+        <h3>Key Regulatory History</h3>
+        <table>
+          <tr><th>Year</th><th>Order</th><th>Key Provisions</th></tr>
+          <tr><td>2015</td><td>FCC Open Internet Order</td><td>Title II reclassification; bright-line rules (no blocking, throttling, paid prioritization); general conduct standard</td></tr>
+          <tr><td>2017</td><td>Restoring Internet Freedom Order</td><td>Repealed Title II classification; eliminated bright-line rules; required transparency only</td></tr>
+          <tr><td>2024 (proposed)</td><td>Reclassification efforts</td><td>Ongoing debate; some states passed own net neutrality laws</td></tr>
+        </table>
+
+        <h3>Real-World Examples of Violations</h3>
+
+        <div class="example">
+          <div class="title">Example 1: Comcast vs. BitTorrent (2007)</div>
+          <p>Comcast was found to be blocking or throttling BitTorrent peer-to-peer traffic using deep packet inspection. Packets were identified as BitTorrent and either delayed or dropped by the ISP's scheduling policy. This was a clear violation of the no-blocking principle (later codified in 2015).</p>
+          <p class="result">Outcome: FCC issued a cease-and-desist. This case triggered the net neutrality movement.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Vonage vs. ISPs (2004-2006)</div>
+          <p>Several ISPs blocked or degraded VoIP traffic from Vonage to protect their own voice services. The ISPs used priority queuing internally for their VoIP while dropping or deprioritizing Vonage packets — a textbook case of paid prioritization and anti-competitive throttling.</p>
+          <p class="result">Outcome: FCC ordered ISPs to stop blocking Vonage under the "four freedoms" policy.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: The "Fast Lane" Debate</div>
+          <p>A hypothetical ISP implements WFQ with weights: Premium content w=10, Standard content w=1. Netflix pays for premium; a startup streaming service does not. Netflix gets R × 10/11 of the bandwidth while the startup gets R × 1/11 — even if users explicitly want the startup.</p>
+          <p class="result">Outcome: This is exactly what the 2015 no-paid-prioritization rule prohibited. Under the 2017 order, ISPs could legally offer such arrangements.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Terms</h3>
+            <p>• <span class="highlight">Blocking</span>: ISP prevents access to content</p>
+            <p>• <span class="highlight">Throttling</span>: ISP intentionally slows traffic</p>
+            <p>• <span class="highlight">Paid Prioritization</span>: ISP charges for faster delivery</p>
+            <p>• <span class="highlight">Title II</span>: Common carrier regulation</p>
+          </div>
+          <div class="card">
+            <h3>Connection to Scheduling</h3>
+            <p>• FIFO = most neutral (no discrimination)</p>
+            <p>• PQ = potential for paid prioritization</p>
+            <p>• WFQ = can implement fast/slow lanes</p>
+            <p class="dim">Scheduling is the enforcement mechanism</p>
+          </div>
+        </div>
+
+        <div class="warning">Net neutrality is not about scheduling algorithms themselves — it is about <strong>how</strong> they are configured. A WFQ scheduler is neutral if all flows get weight = 1. It becomes a neutrality issue when weights are sold for profit.</div>
+      </div>
+    </div>
+
+    <!-- ====== GLOBAL: Comparison Table ====== -->
+    <div class="section">
+      <h2>Comparison Table: All Scheduling Disciplines</h2>
+      <table>
+        <tr>
+          <th>Feature</th><th>FIFO</th><th>Priority Queuing</th><th>Round Robin</th><th>WFQ</th>
+        </tr>
+        <tr>
+          <td>Queueing model</td><td>Single queue</td><td>Per-class queues</td><td>Per-class queues</td><td>Per-flow/class queues</td>
+        </tr>
+        <tr>
+          <td>Service order</td><td>Arrival order</td><td>Highest priority first</td><td>Cyclic per class</td><td>Weighted finish numbers</td>
+        </tr>
+        <tr>
+          <td>QoS support</td><td>None</td><td>Strict priority</td><td>Equal shares</td><td>Weighted shares</td>
+        </tr>
+        <tr>
+          <td>Starvation possible?</td><td>No</td><td>Yes (low classes)</td><td>No</td><td>No</td>
+        </tr>
+        <tr>
+          <td>Work-conserving?</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td>
+        </tr>
+        <tr>
+          <td>Bandwidth guarantees?</td><td>No</td><td>No</td><td>Unofficial (equal turns)</td><td>Yes (R × w<sub>i</sub>/Σw)</td>
+        </tr>
+        <tr>
+          <td>Complexity</td><td>O(1)</td><td>O(log p)</td><td>O(1)</td><td>O(log n)</td>
+        </tr>
+        <tr>
+          <td>Implementation</td><td>Trivial</td><td>Easy</td><td>Easy</td><td>Moderate</td>
+        </tr>
+        <tr>
+          <td>Real-world use</td><td>Legacy routers</td><td>DiffServ EF/AF</td><td>Cisco CBWFQ base</td><td>Carrier/MPLS networks</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ====== GLOBAL: Quick Reference Card ====== -->
+    <div class="quickref">
+      <h3>Quick Reference Card — All Disciplines</h3>
+      <table>
+        <tr><th>Discipline</th><th>Key Formula / Rule</th><th>Guarantee</th><th>Best For</th></tr>
+        <tr><td>FIFO</td><td>Depart in arrival order</td><td>None</td><td>Best-effort only</td></tr>
+        <tr><td>Priority Queue</td><td>Serve highest priority class</td><td>Low delay for high class</td><td>Real-time + bulk data</td></tr>
+        <tr><td>Round Robin</td><td>One packet per class per round</td><td>Equal turns (not bandwidth)</td><td>Fair sharing, same-size pkts</td></tr>
+        <tr><td>WFQ</td><td>R × w<sub>i</sub> / Σw<sub>j</sub></td><td>Minimum rate R<sub>i</sub></td><td>QoS, SLAs, carrier nets</td></tr>
+      </table>
+    </div>
+
+    <!-- ====== GLOBAL: Common Mistakes Warning ====== -->
+    <div class="section">
+      <h2>Common Mistakes — Warning Box</h2>
+      <div class="warning2">FIFO = No QoS. Don't use FIFO when you need service differentiation.</div>
+      <div class="warning2">Priority Queuing = Starvation risk. Low-priority traffic may never be served under persistent high-priority load.</div>
+      <div class="warning2">Round Robin ≠ equal bandwidth. Equal turns with unequal packet sizes gives unequal bandwidth.</div>
+      <div class="warning2">WFQ guarantees are relative. If Σw changes (flows appear/disappear), the actual rate changes.</div>
+      <div class="warning2">Net neutrality ≠ technology. Scheduling is neutral; it's the policy that determines neutrality.</div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
