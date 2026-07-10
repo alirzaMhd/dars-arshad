@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Constraints (PK, FK, NOT NULL, UNIQUE, CHECK)</title>
+<style>
+:root { --bg: #1a1a2e; --surface: #16213e; --text: #e6e6e6; --accent: #0f3460; --highlight: #e94560; --card-bg: #0f3460; --border: #533483; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.container { max-width: 960px; margin: 0 auto; padding: 2rem; }
+h1 { text-align: center; color: var(--highlight); margin-bottom: 2rem; font-size: 2rem; }
+h2 { color: #90e0ef; margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: .5rem; font-size: 1.4rem; }
+h3 { color: #ffd166; margin: 1.5rem 0 .5rem; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; background: var(--surface); border-radius: 8px; overflow: hidden; }
+th, td { padding: .75rem 1rem; text-align: left; border: 1px solid var(--border); }
+th { background: var(--accent); color: #fff; }
+code { background: #2a2a4a; padding: .2em .5em; border-radius: 4px; font-size: .95em; color: #a8dadc; }
+pre { background: #2a2a4a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; color: #a8dadc; }
+.warning { background: #e76f51; color: #fff; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+.warning::before { content: "⚠ Exam Tip: "; font-weight: bold; }
+.example { background: var(--surface); padding: 1rem; border-left: 4px solid var(--highlight); border-radius: 4px; margin: 1rem 0; }
+.example-title { font-weight: bold; color: var(--highlight); margin-bottom: .5rem; }
+ul, ol { padding-left: 1.5rem; margin: .5rem 0; }
+li { margin: .3rem 0; }
+.formula { background: var(--surface); padding: .75rem; border-radius: 6px; margin: .5rem 0; font-family: monospace; color: #a8dadc; }
+.comparison { background: var(--card-bg); padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>SQL Constraints</h1>
+
+<h2>1. Overview</h2>
+<p>Constraints enforce rules on data to maintain <strong>referential integrity</strong> and <strong>data quality</strong>. They prevent invalid data from being inserted into the database.</p>
+
+<table>
+<tr><th>Constraint</th><th>Enforces</th><th>NULL Allowed?</th></tr>
+<tr><td><code>PRIMARY KEY</code></td><td>Unique identifier</td><td>No</td></tr>
+<tr><td><code>FOREIGN KEY</code></td><td>Referential integrity</td><td>Yes (unless NOT NULL)</td></tr>
+<tr><td><code>NOT NULL</code></td><td>Column cannot be empty</td><td>No</td></tr>
+<tr><td><code>UNIQUE</code></td><td>All values different</td><td>Yes (one NULL in most systems)</td></tr>
+<tr><td><code>CHECK</code></td><td>Values satisfy condition</td><td>Depends on condition</td></tr>
+<tr><td><code>DEFAULT</code></td><td>Default value if none specified</td><td>N/A</td></tr>
+</table>
+
+<h2>2. PRIMARY KEY</h2>
+<p>Uniquely identifies each row in a table. A table can have only <strong>one</strong> primary key.</p>
+
+<h3>2.1 Rules</h3>
+<ul>
+  <li>Must be UNIQUE</li>
+  <li>Cannot contain NULL values</li>
+  <li>Only one per table</li>
+  <li>Can be single column or composite (multiple columns)</li>
+</ul>
+
+<div class="example">
+<div class="example-title">Example 1 — Single Column PK</div>
+<pre>CREATE TABLE Students (
+    StudentID   INT PRIMARY KEY,
+    Name        VARCHAR(50)
+);</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 2 — Composite PK</div>
+<pre>CREATE TABLE Enrollment (
+    StudentID   INT,
+    CourseID    INT,
+    Grade       DECIMAL(3,2),
+    PRIMARY KEY (StudentID, CourseID)
+);
+-- A student can enroll in many courses, but only once per course</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 3 — Named PK Constraint</div>
+<pre>CREATE TABLE Employees (
+    EmpID       INT,
+    Name        VARCHAR(50),
+    CONSTRAINT pk_employee PRIMARY KEY (EmpID)
+);</pre>
+</div>
+
+<h2>3. FOREIGN KEY</h2>
+<p>Links a column in one table to the PRIMARY KEY (or UNIQUE) of another table. Enforces <strong>referential integrity</strong>.</p>
+
+<h3>3.1 Rules</h3>
+<ul>
+  <li>Referenced column must be PRIMARY KEY or UNIQUE</li>
+  <li>Foreign key can have duplicate values</li>
+  <li>Foreign key can be NULL (unless NOT NULL specified)</li>
+  <li>Referenced table must exist before FK is created</li>
+</ul>
+
+<div class="example">
+<div class="example-title">Example 4 — Foreign Key</div>
+<pre>CREATE TABLE Orders (
+    OrderID     INT PRIMARY KEY,
+    CustomerID  INT,
+    OrderDate   DATE,
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);</pre>
+</div>
+
+<h3>3.2 ON DELETE / ON UPDATE Actions</h3>
+<table>
+<tr><th>Action</th><th>ON DELETE</th><th>ON UPDATE</th></tr>
+<tr><td><code>CASCADE</code></td><td>Delete child rows when parent deleted</td><td>Update child rows when parent updated</td></tr>
+<tr><td><code>SET NULL</code></td><td>Set FK to NULL when parent deleted</td><td>Set FK to NULL when parent updated</td></tr>
+<tr><td><code>SET DEFAULT</code></td><td>Set FK to default when parent deleted</td><td>Set FK to default when parent updated</td></tr>
+<tr><td><code>NO ACTION</code></td><td>Reject delete (default)</td><td>Reject update (default)</td></tr>
+</table>
+
+<div class="example">
+<div class="example-title">Example 5 — FK with Actions</div>
+<pre>CREATE TABLE Orders (
+    OrderID     INT PRIMARY KEY,
+    CustomerID  INT,
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+-- If CustomerID=5 is deleted from Customers,
+-- all orders with CustomerID=5 are also deleted</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 6 — FK with SET NULL</div>
+<pre>CREATE TABLE Employees (
+    EmpID       INT PRIMARY KEY,
+    DeptID      INT,
+    FOREIGN KEY (DeptID) REFERENCES Departments(DeptID)
+        ON DELETE SET NULL
+);
+-- If DeptID=3 is deleted, employees in that dept get DeptID=NULL</pre>
+</div>
+
+<div class="warning">
+ON DELETE CASCADE is dangerous — deleting a parent can delete thousands of child rows. Use SET NULL or NO ACTION when in doubt.
+</div>
+
+<h2>4. NOT NULL</h2>
+<p>Prevents NULL values in a column. Every row must have a value.</p>
+
+<div class="example">
+<div class="example-title">Example 7 — NOT NULL</div>
+<pre>CREATE TABLE Users (
+    UserID      INT PRIMARY KEY,
+    Username    VARCHAR(30) NOT NULL,
+    Email       VARCHAR(100) NOT NULL,
+    Bio         TEXT          -- CAN be NULL
+);</pre>
+</div>
+
+<div class="formula">
+<strong>PRIMARY KEY = NOT NULL + UNIQUE</strong> (always)
+</div>
+
+<h2>5. UNIQUE</h2>
+<p>Ensures all values in a column (or combination of columns) are different.</p>
+
+<h3>5.1 Rules</h3>
+<ul>
+  <li>Allows NULL values (most systems allow one NULL)</li>
+  <li>Multiple UNIQUE constraints per table allowed</li>
+  <li>Can be single column or composite</li>
+</ul>
+
+<div class="example">
+<div class="example-title">Example 8 — UNIQUE</div>
+<pre>CREATE TABLE Employees (
+    EmpID       INT PRIMARY KEY,
+    Email       VARCHAR(100) UNIQUE,
+    SSN         CHAR(11) UNIQUE,
+    Phone       VARCHAR(15)
+);</pre>
+</div>
+
+<div class="comparison">
+<table>
+<tr><th>Feature</th><th>PRIMARY KEY</th><th>UNIQUE</th></tr>
+<tr><td>Per table</td><td>One only</td><td>Multiple allowed</td></tr>
+<tr><td>NULL values</td><td>Not allowed</td><td>Allowed (one per column)</td></tr>
+<tr><td>Index created?</td><td>Yes (clustered)</td><td>Yes (non-clustered)</td></tr>
+<tr><td>Can be referenced by FK?</td><td>Yes</td><td>Yes</td></tr>
+</table>
+</div>
+
+<h2>6. CHECK</h2>
+<p>Ensures values satisfy a specific condition. If the condition evaluates to FALSE, the row is rejected.</p>
+
+<div class="example">
+<div class="example-title">Example 9 — CHECK Constraints</div>
+<pre>CREATE TABLE Students (
+    StudentID   INT PRIMARY KEY,
+    Name        VARCHAR(50),
+    Age         INT CHECK (Age >= 18 AND Age <= 120),
+    GPA         DECIMAL(3,2) CHECK (GPA >= 0 AND GPA <= 4.0),
+    Email       VARCHAR(100) CHECK (Email LIKE '%@%.%')
+);</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 10 — Named CHECK</div>
+<pre>CREATE TABLE Products (
+    ProductID   INT PRIMARY KEY,
+    Price       DECIMAL(10,2),
+    Quantity    INT,
+    CONSTRAINT chk_price CHECK (Price > 0),
+    CONSTRAINT chk_quantity CHECK (Quantity >= 0)
+);</pre>
+</div>
+
+<div class="warning">
+CHECK constraints are not supported by all databases (e.g., MySQL ignores them until version 8.0.16). Always check your DBMS documentation.
+</div>
+
+<h2>7. DEFAULT</h2>
+<p>Provides a default value when none is specified during INSERT.</p>
+
+<div class="example">
+<div class="example-title">Example 11 — DEFAULT</div>
+<pre>CREATE TABLE Orders (
+    OrderID     INT PRIMARY KEY,
+    OrderDate   DATE DEFAULT CURRENT_DATE,
+    Status      VARCHAR(20) DEFAULT 'Pending',
+    Priority    INT DEFAULT 0
+);</pre>
+</div>
+
+<h2>8. Constraint Naming Best Practice</h2>
+<p>Always name your constraints for easier maintenance:</p>
+
+<div class="example">
+<div class="example-title">Example 12 — Named Constraints</div>
+<pre>CREATE TABLE Employees (
+    EmpID       INT,
+    Name        VARCHAR(50) NOT NULL,
+    Email       VARCHAR(100),
+    DeptID      INT,
+    Salary      DECIMAL(10,2),
+    
+    CONSTRAINT pk_employee PRIMARY KEY (EmpID),
+    CONSTRAINT uq_email UNIQUE (Email),
+    CONSTRAINT fk_department FOREIGN KEY (DeptID) 
+        REFERENCES Departments(DeptID)
+        ON DELETE SET NULL,
+    CONSTRAINT chk_salary CHECK (Salary > 0)
+);</pre>
+</div>
+
+<h2>9. Complete Example Schema</h2>
+<div class="example">
+<div class="example-title">Example 13 — Full Schema with All Constraints</div>
+<pre>CREATE TABLE Customers (
+    CustomerID  INT PRIMARY KEY,
+    Name        VARCHAR(50) NOT NULL,
+    Email       VARCHAR(100) UNIQUE NOT NULL,
+    Phone       VARCHAR(15),
+    CreatedAt   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Products (
+    ProductID   INT PRIMARY KEY,
+    Name        VARCHAR(100) NOT NULL,
+    Price       NUMERIC(10,2) NOT NULL CHECK (Price > 0),
+    Stock       INT DEFAULT 0 CHECK (Stock >= 0)
+);
+
+CREATE TABLE Orders (
+    OrderID     INT PRIMARY KEY,
+    CustomerID  INT NOT NULL,
+    ProductID   INT NOT NULL,
+    Quantity    INT NOT NULL CHECK (Quantity > 0),
+    OrderDate   DATE DEFAULT CURRENT_DATE,
+    
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+        ON DELETE CASCADE,
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+        ON DELETE RESTRICT,
+    
+    UNIQUE (CustomerID, ProductID, OrderDate)
+);</pre>
+</div>
+
+<h2>10. Exam Tips</h2>
+<div class="warning">
+Key points for exams:<br>
+• PRIMARY KEY = NOT NULL + UNIQUE<br>
+• One PK per table, multiple UNIQUE constraints<br>
+• FOREIGN KEY references PK or UNIQUE column<br>
+• ON DELETE CASCADE deletes children when parent is deleted<br>
+• ON DELETE SET NULL sets FK to NULL when parent is deleted<br>
+• CHECK validates values against a condition<br>
+• DEFAULT provides value when none specified<br>
+• NULLs are allowed in UNIQUE columns (one per column)
+</div>
+
+</div>
+</body>
+</html>

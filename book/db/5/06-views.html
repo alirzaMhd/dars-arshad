@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Views</title>
+<style>
+:root { --bg: #1a1a2e; --surface: #16213e; --text: #e6e6e6; --accent: #0f3460; --highlight: #e94560; --card-bg: #0f3460; --border: #533483; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.container { max-width: 960px; margin: 0 auto; padding: 2rem; }
+h1 { text-align: center; color: var(--highlight); margin-bottom: 2rem; font-size: 2rem; }
+h2 { color: #90e0ef; margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: .5rem; font-size: 1.4rem; }
+h3 { color: #ffd166; margin: 1.5rem 0 .5rem; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; background: var(--surface); border-radius: 8px; overflow: hidden; }
+th, td { padding: .75rem 1rem; text-align: left; border: 1px solid var(--border); }
+th { background: var(--accent); color: #fff; }
+code { background: #2a2a4a; padding: .2em .5em; border-radius: 4px; font-size: .95em; color: #a8dadc; }
+pre { background: #2a2a4a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; color: #a8dadc; }
+.warning { background: #e76f51; color: #fff; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+.warning::before { content: "⚠ Exam Tip: "; font-weight: bold; }
+.example { background: var(--surface); padding: 1rem; border-left: 4px solid var(--highlight); border-radius: 4px; margin: 1rem 0; }
+.example-title { font-weight: bold; color: var(--highlight); margin-bottom: .5rem; }
+ul, ol { padding-left: 1.5rem; margin: .5rem 0; }
+li { margin: .3rem 0; }
+.formula { background: var(--surface); padding: .75rem; border-radius: 6px; margin: .5rem 0; font-family: monospace; color: #a8dadc; }
+.comparison { background: var(--card-bg); padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>SQL Views</h1>
+
+<h2>1. What is a View?</h2>
+<p>A <strong>view</strong> is a virtual table based on the result set of a SELECT statement. It contains no data itself — data is fetched from underlying tables when the view is queried.</p>
+
+<div class="formula">
+<strong>View</strong> = Stored SELECT query that appears as a table<br>
+<strong>Base Table</strong> = The actual table(s) the view references
+</div>
+
+<h2>2. CREATE VIEW Syntax</h2>
+<pre>CREATE VIEW ViewName [(Column1, Column2, ...)] AS
+SELECT columns
+FROM tables
+[WHERE conditions]
+[GROUP BY columns]
+[HAVING conditions];</pre>
+
+<div class="example">
+<div class="example-title">Example 1 — Simple View</div>
+<pre>CREATE VIEW HighGPA_Students AS
+SELECT StudentID, Name, GPA
+FROM Students
+WHERE GPA > 3.5;
+
+-- Query the view like a table
+SELECT * FROM HighGPA_Students;</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 2 — View with Column Aliases</div>
+<pre>CREATE VIEW StudentSummary (Student, Course, GradePoints) AS
+SELECT S.Name, C.CourseName, E.Grade
+FROM Students S
+JOIN Enrollment E ON S.StudentID = E.StudentID
+JOIN Courses C ON E.CourseID = C.CourseID;
+
+SELECT * FROM StudentSummary WHERE GradePoints > 3.0;</pre>
+</div>
+
+<h2>3. View with JOINs</h2>
+
+<div class="example">
+<div class="example-title">Example 3 — Multi-Table View</div>
+<pre>CREATE VIEW EmployeeDepartment AS
+SELECT 
+    E.Name AS EmployeeName,
+    E.Salary,
+    D.DeptName AS Department,
+    D.Location
+FROM Employees E
+JOIN Departments D ON E.DeptID = D.DeptID;
+
+SELECT * FROM EmployeeDepartment WHERE Location = 'Tehran';</pre>
+</div>
+
+<div class="example">
+<div class="example-title">Example 4 — View with Aggregation</div>
+<pre>CREATE VIEW DeptStats AS
+SELECT 
+    DeptID,
+    COUNT(*) AS EmployeeCount,
+    AVG(Salary) AS AvgSalary,
+    MAX(Salary) AS MaxSalary
+FROM Employees
+GROUP BY DeptID;
+
+SELECT * FROM DeptStats WHERE AvgSalary > 50000;</pre>
+</div>
+
+<h2>4. Modifying Data Through Views</h2>
+
+<h3>4.1 INSERT Through Views</h3>
+<p>You can INSERT data through a view if:</p>
+<ul>
+  <li>The view is based on a <strong>single table</strong></li>
+  <li>The view includes all <strong>NOT NULL</strong> columns without defaults</li>
+  <li>No aggregate functions, GROUP BY, HAVING, DISTINCT</li>
+</ul>
+
+<div class="example">
+<div class="example-title">Example 5 — Insert Through View</div>
+<pre>CREATE VIEW CS_Students AS
+SELECT StudentID, Name, Major, GPA
+FROM Students
+WHERE Major = 'CS';
+
+-- This works (single table, all required columns)
+INSERT INTO CS_Students (StudentID, Name, Major, GPA)
+VALUES (101, 'Reza', 'CS', 3.7);
+
+-- This may fail (missing NOT NULL column)
+INSERT INTO CS_Students (StudentID, Name)
+VALUES (102, 'Maryam');  -- Error: Major is NOT NULL</pre>
+</div>
+
+<h3>4.2 UPDATE Through Views</h3>
+<div class="example">
+<div class="example-title">Example 6 — Update Through View</div>
+<pre>-- Update GPA for CS students
+UPDATE CS_Students 
+SET GPA = 3.9 
+WHERE StudentID = 101;
+
+-- This updates the underlying Students table</pre>
+</div>
+
+<h3>4.3 DELETE Through Views</h3>
+<div class="example">
+<div class="example-title">Example 7 — Delete Through View</div>
+<pre>DELETE FROM CS_Students WHERE StudentID = 101;
+
+-- Deletes from underlying Students table</pre>
+</div>
+
+<h2>5. Updatable vs Non-Updatable Views</h2>
+<div class="comparison">
+<table>
+<tr><th>Updatable</th><th>Non-Updatable</th></tr>
+<tr><td>Based on single table</td><td>Based on multiple tables (JOIN)</td></tr>
+<tr><td>No aggregate functions</td><td>Has SUM, COUNT, AVG, etc.</td></tr>
+<tr><td>No GROUP BY / HAVING</td><td>Uses GROUP BY or HAVING</td></tr>
+<tr><td>No DISTINCT</td><td>Uses DISTINCT</td></tr>
+<tr><td>No subqueries in SELECT</td><td>Has subqueries in SELECT list</td></tr>
+<tr><td>All NOT NULL cols included</td><td>Missing required columns</td></tr>
+</table>
+</div>
+
+<div class="warning">
+JOIN views are generally NOT updatable in most database systems. You can READ from them, but not INSERT/UPDATE/DELETE.
+</div>
+
+<h2>6. DROP VIEW</h2>
+<pre>DROP VIEW ViewName;</pre>
+<p>Removing a view does not affect the underlying tables.</p>
+
+<h2>7. REPLACE / ALTER VIEW</h2>
+<pre>-- Some systems support CREATE OR REPLACE
+CREATE OR REPLACE VIEW HighGPA_Students AS
+SELECT StudentID, Name, GPA, Major
+FROM Students
+WHERE GPA > 3.5;
+
+-- Others require ALTER
+ALTER VIEW HighGPA_Students AS
+SELECT StudentID, Name, GPA, Major
+FROM Students
+WHERE GPA > 3.5;</pre>
+
+<h2>8. WITH CHECK OPTION</h2>
+<p>Ensures that INSERT/UPDATE through the view only affects rows that satisfy the view's WHERE clause.</p>
+
+<div class="example">
+<div class="example-title">Example 8 — WITH CHECK OPTION</div>
+<pre>CREATE VIEW HighSalary_Employees AS
+SELECT EmpID, Name, Salary
+FROM Employees
+WHERE Salary > 50000
+WITH CHECK OPTION;
+
+-- This FAILS (new salary would not be visible in view)
+INSERT INTO HighSalary_Employees (EmpID, Name, Salary)
+VALUES (1, 'Ali', 40000);  -- Error: violates CHECK OPTION
+
+-- This works
+UPDATE HighSalary_Employees 
+SET Salary = 60000 
+WHERE EmpID = 1;</pre>
+</div>
+
+<h2>9. Materialized Views</h2>
+<p>Unlike regular views, <strong>materialized views</strong> store the result physically. Useful for complex queries that run frequently.</p>
+
+<table>
+<tr><th>Feature</th><th>Regular View</th><th>Materialized View</th></tr>
+<tr><td>Data storage</td><td>Virtual (no storage)</td><td>Physical storage</td></tr>
+<tr><td>Query speed</td><td>Re-runs query each time</td><td>Faster (pre-computed)</td></tr>
+<tr><td>Update speed</td><td>Always current</td><td>Needs refresh</td></tr>
+<tr><td>Use case</td><td>Simple queries</td><td>Complex aggregations</td></tr>
+</table>
+
+<pre>CREATE MATERIALIZED VIEW DeptStats_MV AS
+SELECT DeptID, COUNT(*) AS EmpCount, AVG(Salary) AS AvgSal
+FROM Employees
+GROUP BY DeptID;
+
+-- Refresh when data changes
+REFRESH MATERIALIZED VIEW DeptStats_MV;</pre>
+
+<h2>10. Benefits of Views</h2>
+<ul>
+  <li><strong>Simplicity:</strong> Hide complex queries behind a simple name</li>
+  <li><strong>Security:</strong> Restrict access to specific rows/columns</li>
+  <li><strong>Consistency:</strong> Ensure consistent data access across applications</li>
+  <li><strong>Independence:</strong> Application code doesn't break if table structure changes</li>
+</ul>
+
+<div class="example">
+<div class="example-title">Example 9 — Security View</div>
+<pre>-- Users can only see their own orders
+CREATE VIEW UserOrders AS
+SELECT OrderID, ProductID, Quantity
+FROM Orders
+WHERE CustomerID = CURRENT_USER_ID;
+
+-- Application always queries the view, not the table</pre>
+</div>
+
+<h2>11. Exam Tips</h2>
+<div class="warning">
+Key points for exams:<br>
+• Views are virtual tables (no physical data stored)<br>
+• Views based on single tables are usually updatable<br>
+• JOIN views are generally NOT updatable<br>
+• WITH CHECK OPTION prevents rows outside the view's WHERE<br>
+• Materialized views store data physically<br>
+• DROP VIEW doesn't affect underlying tables<br>
+• Views simplify complex queries and enhance security
+</div>
+
+</div>
+</body>
+</html>
