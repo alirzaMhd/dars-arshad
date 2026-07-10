@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B+ Tree Splitting Rules - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e0e0e0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; line-height: 1.7; }
+    h1 { text-align: center; font-size: 1.8em; color: #22c55e; margin: 25px 0 5px; text-shadow: 0 0 25px #22c55e55; letter-spacing: 2px; }
+    h2 { color: #22c55e; font-size: 1.2em; margin: 20px 0 10px; }
+    h3 { color: #f97316; font-size: 1.0em; margin: 15px 0 8px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 25px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 40px; }
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 22px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.15em; margin-bottom: 15px; border-bottom: 2px solid #334155; padding-bottom: 8px; }
+    .section h3 { color: #fbbf24; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0c1529; padding: 14px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #38bdf8; }
+    .formula .label { color: #38bdf8; font-size: 0.85em; margin-bottom: 5px; font-weight: 600; }
+    .formula .expr { color: #22c55e; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #94a3b8; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #172140; padding: 16px; border-radius: 8px; margin: 12px 0; border: 1px solid #334155; }
+    .example .title { color: #fbbf24; font-size: 0.95em; margin-bottom: 10px; font-weight: 700; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #172140; padding: 16px; border-radius: 8px; border: 1px solid #334155; }
+    .card h3 { color: #22c55e; margin-top: 0; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+    .note { color: #94a3b8; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #22c55e; font-weight: bold; }
+    .warning { background: #1c1008; border-left: 4px solid #f97316; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 0.9em; }
+    .warning strong { color: #f97316; }
+    .critical { background: #1c0808; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 0.9em; }
+    .critical strong { color: #ef4444; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #334155; padding: 10px 12px; text-align: left; }
+    th { background: #1e293b; color: #38bdf8; font-weight: 600; }
+    td { background: #0f172a; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab { padding: 9px 18px; border: 2px solid #334155; background: #1e293b; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #052e16; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0c1529; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #38bdf8; overflow-x: auto; margin: 10px 0; }
+    .ref-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #22c55e; border-radius: 12px; padding: 18px; margin: 15px 0; }
+    .ref-card h3 { color: #22c55e; margin-top: 0; font-size: 1.05em; }
+    .ref-card ul { padding-left: 18px; }
+    .ref-card li { margin: 6px 0; color: #cbd5e1; }
+    .diagram { background: #0c1529; border: 1px solid #334155; border-radius: 8px; padding: 18px; margin: 15px 0; font-family: 'Courier New', monospace; white-space: pre; overflow-x: auto; color: #22c55e; line-height: 1.5; }
+    .diagram .orange { color: #f97316; }
+    .diagram .red { color: #ef4444; }
+    .diagram .blue { color: #38bdf8; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 600; margin: 2px; }
+    .tag-green { background: #052e16; color: #22c55e; border: 1px solid #22c55e; }
+    .tag-orange { background: #1c1008; color: #f97316; border: 1px solid #f97316; }
+    .tag-blue { background: #0c1529; color: #38bdf8; border: 1px solid #38bdf8; }
+    .step { background: #172140; border-left: 4px solid #22c55e; padding: 14px; border-radius: 0 8px 8px 0; margin: 10px 0; }
+    .step-num { color: #22c55e; font-weight: bold; font-size: 1.1em; margin-bottom: 5px; }
+    .arrow { color: #f97316; font-weight: bold; font-size: 1.2em; text-align: center; margin: 8px 0; }
+    ul { padding-left: 18px; }
+    li { margin: 4px 0; }
+    .split-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 15px 0; }
+    .split-panel { background: #0c1529; border-radius: 8px; padding: 16px; border: 1px solid #334155; }
+    .split-panel h3 { margin-top: 0; }
+    @media (max-width: 700px) { .split-compare { grid-template-columns: 1fr; } .tabs { gap: 5px; } .tab { padding: 7px 12px; font-size: 0.8em; } }
+  </style>
+</head>
+<body>
+  <h1>B+ Tree Splitting Rules</h1>
+  <p class="subtitle">Database Indexing &mdash; Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Key Parameters</button>
+      <button class="tab" onclick="showSection('tab2')">Leaf Node Splitting</button>
+      <button class="tab" onclick="showSection('tab3')">Intermediate Node Splitting</button>
+      <button class="tab" onclick="showSection('tab4')">Leaf vs Intermediate</button>
+      <button class="tab" onclick="showSection('tab5')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Key Parameters -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>B+ Tree Parameters</h2>
+        <p>A B+ tree of order <strong>t</strong> (sometimes called minimum degree) has these capacity rules:</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Leaf Nodes</h3>
+            <p class="highlight">Minimum keys: t - 1</p>
+            <p class="highlight">Maximum keys: 2t - 1</p>
+            <p>Minimum children: N/A (leaf)</p>
+            <p>Maximum children: N/A (leaf)</p>
+            <p style="margin-top: 8px;">Each key has a data pointer to the actual row.</p>
+          </div>
+          <div class="card">
+            <h3>Intermediate (Internal) Nodes</h3>
+            <p class="highlight">Minimum children: t</p>
+            <p class="highlight">Maximum children: 2t</p>
+            <p>Minimum keys: t - 1</p>
+            <p class="highlight">Maximum keys: 2t</p>
+            <p style="margin-top: 8px;">Each key separates child subtrees; each child has a pointer.</p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Splitting Trigger:</div>
+          <div class="expr">Split when node reaches maximum capacity (overflow)</div>
+          <div class="desc">Leaf: splits at 2t - 1 keys. Intermediate: splits at 2t children (2t keys).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Height of B+ Tree:</div>
+          <div class="expr">h = log_t(n+1) &mdash; 1</div>
+          <div class="desc">For n total keys and minimum degree t. Very shallow tree: 1M keys with t=100 needs only height 2.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why Split?</h2>
+        <p>When a node overflows (reaches its maximum capacity), it must be split to maintain the B+ tree properties. Splitting propagates upward &mdash; a leaf split may cause its parent to split, which may cause the grandparent to split, and so on up to the root.</p>
+
+        <div class="warning">
+          <strong>Key Difference:</strong> In leaf nodes, the middle key stays in the right node. In intermediate nodes, the middle key moves UP to the parent. This is the most critical distinction to remember for exams.
+        </div>
+
+        <div class="critical">
+          <strong>Critical Rule:</strong> If the root itself overflows, the tree grows taller by one level. The root splits and a new root is created with a single key (the promoted middle key).
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Leaf Node Splitting -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Leaf Node Splitting &mdash; Step by Step</h2>
+        <p>When a leaf node has <strong>2t - 1 keys</strong> and a new key is inserted, the node overflows and must split.</p>
+
+        <div class="step">
+          <div class="step-num">Step 1: Detect Overflow</div>
+          <p>Leaf node has <span class="highlight">2t - 1 keys</span> (maximum capacity). A new key arrives that belongs in this node.</p>
+          <p class="note">The node is now full. We cannot insert without violating the maximum key constraint.</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 2: Create a New Node</div>
+          <p>Create a <span class="highlight">new empty leaf node</span> to the right of the current node.</p>
+          <p class="note">This new node will hold the upper half of the keys.</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 3: Distribute Keys</div>
+          <p>After temporary insertion of all 2t keys:</p>
+          <p>• <span class="result">Left node</span> keeps the <span class="highlight">first t keys</span></p>
+          <p>• <span class="result">Right node</span> gets the <span class="highlight">last t - 1 keys</span></p>
+          <p>• The <span style="color: #ef4444; font-weight: bold;">middle key stays in the right node</span> (this is different from intermediate splitting!)</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 4: Update Linked List</div>
+          <p>Both leaf nodes are in a <span class="highlight">doubly-linked list</span>:</p>
+          <p>• Left node's <code>next</code> pointer &rarr; Right node</p>
+          <p>• Right node's <code>prev</code> pointer &rarr; Left node</p>
+          <p>• Maintain existing neighbors' pointers to include new node</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 5: Copy Middle Key to Parent</div>
+          <p>Copy the <span class="highlight">first key of the right node</span> (the middle key) UP to the parent.</p>
+          <p>This key is <span class="result">COPIED, NOT moved</span> &mdash; it remains in the leaf node as well.</p>
+          <p class="note">This is the key difference from intermediate splitting: leaf middle key is copied, not moved.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Visual Example: Leaf Split (t = 2)</h2>
+        <p>Maximum keys per leaf: 2t - 1 = 3. Split occurs at 3 keys.</p>
+
+        <div class="diagram">
+<span class="blue">BEFORE split (insert key 7):</span>
+                [ ... ]
+                  |
+          ┌───────┴───────┐
+          |               |
+     [1, 3, 5]     [8, 10, <span class="red">12</span>]
+          |
+     (overflow! 3 keys + new 7 = 4 &gt; max 3)
+
+<span class="orange">AFTER split:</span>
+                [ ... ]
+                  |
+          ┌───────┼───────┐
+          |       |       |
+     [1, 3]   [5, 7]   [8, 10, 12]
+                    \      /
+              linked list pointers
+              (bidirectional)</div>
+
+        <p style="margin-top: 15px;"><strong>What happened:</strong></p>
+        <ul>
+          <li>Original leaf had [1, 3, 5] &rarr; insert 7 &rarr; temporary [1, 3, 5, 7]</li>
+          <li>Left node keeps first t = 2 keys: <span class="result">[1, 3]</span></li>
+          <li>Right node gets remaining t - 1 = 1 keys: <span class="result">[5, 7]</span></li>
+          <li>Middle key 5 <span class="result">stays in right node</span> AND is <span class="result">copied to parent</span></li>
+          <li>Parent now has key 5 as separator: left subtree &lt; 5, right subtree &ge; 5</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Leaf Split &mdash; Detailed Example (t = 3)</h2>
+        <p>Maximum keys per leaf: 2t - 1 = 5. Split occurs when inserting into a node with 5 keys.</p>
+
+        <div class="diagram">
+<span class="blue">BEFORE: Insert key 22 into full leaf</span>
+
+Leaf node: [10, 15, 18, 20, 25]  &larr; 5 keys (MAX)
+
+After inserting 22 (temporarily): [10, 15, 18, 20, 22, 25]  &larr; 6 keys (overflow!)
+
+<span class="orange">AFTER split:</span>
+
+Left leaf:  [10, 15, 18]      &larr; t = 3 keys
+Right leaf: [20, 22, 25]      &larr; t - 1 = 2 keys (20 was middle, stays here)
+
+Parent gets copy of 20:
+                    [..., 20, ...]
+                    /      \
+          [10,15,18]    [20,22,25]
+
+<span class="blue">Key point:</span> 20 is in BOTH the parent and the right leaf!
+          </div>
+
+        <div class="ref-card">
+          <h3>Leaf Splitting Rules Summary</h3>
+          <ul>
+            <li><span class="result">Trigger:</span> Leaf has 2t - 1 keys and new key arrives</li>
+            <li><span class="result">Distribution:</span> Left gets t keys, right gets t - 1 keys</li>
+            <li><span class="result">Middle key:</span> Stays in right node (COPIED to parent)</li>
+            <li><span class="result">Linked list:</span> Update prev/next pointers for both nodes</li>
+            <li><span class="result">Parent:</span> Gets a copy of the right node's first key</li>
+            <li><span class="result">No removal:</span> The middle key is NOT removed from the leaf</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Intermediate Node Splitting -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Intermediate Node Splitting &mdash; Step by Step</h2>
+        <p>When an intermediate (internal) node has <strong>2t children</strong> and a new child must be added, the node overflows and must split.</p>
+
+        <div class="step">
+          <div class="step-num">Step 1: Detect Overflow</div>
+          <p>Intermediate node has <span class="highlight">2t children</span> (maximum). A new child pointer must be inserted.</p>
+          <p class="note">Intermediate nodes hold keys + child pointers. Max children = 2t, max keys = 2t (one extra key from parent insertion context).</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 2: Create a New Node</div>
+          <p>Create a <span class="highlight">new empty intermediate node</span>.</p>
+          <p class="note">This node will hold the upper half of the children and keys.</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 3: Distribute Keys and Children</div>
+          <p>After temporary insertion of all 2t keys and 2t+1 children:</p>
+          <p>• <span class="result">Left node</span> keeps first <span class="highlight">t keys</span> and <span class="highlight">t children</span></p>
+          <p>• The <span style="color: #ef4444; font-weight: bold;">middle key is MOVED UP to the parent</span> (removed from this level)</p>
+          <p>• <span class="result">Right node</span> gets last <span class="highlight">t - 1 keys</span> and <span class="highlight">t children</span></p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 4: Update Parent</div>
+          <p>The middle key is <span class="highlight">inserted into the parent</span> along with a pointer to the new right node.</p>
+          <p class="note">The parent may now overflow, triggering a recursive split!</p>
+        </div>
+        <div class="arrow">&darr;</div>
+
+        <div class="step">
+          <div class="step-num">Step 5: Handle Recursive Split (if needed)</div>
+          <p>If the parent also overflows, apply the same splitting rule to the parent.</p>
+          <p>This can propagate all the way up to the root.</p>
+          <p class="note">If the root splits, the tree height increases by 1 (new root created).</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Visual Example: Intermediate Split (t = 2)</h2>
+        <p>Maximum children: 2t = 4. Split occurs at 4 children (3 keys).</p>
+
+        <div class="diagram">
+<span class="blue">BEFORE (inserting new child):</span>
+
+                    [5, 10, 15]
+                   / |    |    \
+          [1,3] [7,8] [12] [18,20]  &larr; 4 children (MAX)
+                    |
+             new child with key 6 arrives
+             (5 has 4 children + 1 new = 5, overflow!)
+
+<span class="orange">AFTER split:</span>
+
+                      [10]
+                    /       \
+            [5]            [15]
+           / |            / |    \
+     [1,3] [7,8]    [12] [18,20]
+                  |
+            [6] (new child)
+          |
+Note: 10 was the middle key, MOVED UP to parent.
+      Parent lost 10 from its key list.
+      Left node has [5] with 2 children.
+      Right node has [15] with 2 children.
+          </div>
+
+        <p style="margin-top: 15px;"><strong>What happened:</strong></p>
+        <ul>
+          <li>Original node had children: [1,3], [7,8], [12], [18,20] with keys [5, 10, 15]</li>
+          <li>New child [6] inserted between [1,3] and [7,8]</li>
+          <li>After redistribution, middle key 10 is <span class="result">MOVED UP</span> to parent</li>
+          <li>Left node: key [5], children [1,3] and [7,8]</li>
+          <li>Right node: key [15], children [12] and [18,20]</li>
+          <li>Parent now has [10] with two child pointers</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Intermediate Split &mdash; Detailed Example (t = 3)</h2>
+        <p>Maximum children: 2t = 6. Split occurs when node has 6 children (5 keys).</p>
+
+        <div class="diagram">
+<span class="blue">BEFORE: Insert new child (key 30) into full intermediate node</span>
+
+Intermediate node: keys [10, 20, 35, 45, 50], children: 6
+Children: [C1] [C2] [C3] [C4] [C5] [C6]
+
+After inserting key 30 (temporarily): keys [10, 20, 30, 35, 45, 50], 7 children
+<span class="red">Overflow!</span> 7 children &gt; max 6.
+
+<span class="orange">AFTER split:</span>
+
+Middle key = 30 (index 3 of 6 keys)
+
+Left node:
+  Keys: [10, 20]           &larr; t - 1 = 2 keys
+  Children: [C1][C2][C3]   &larr; t = 3 children
+
+Middle key 30: MOVED UP to parent
+
+Right node:
+  Keys: [35, 45, 50]       &larr; t - 1 = 2 keys  (Wait: t = 3, so 5 - 3 = 2 keys, 3 children)
+  Children: [C4][C5][C6]   &larr; t = 3 children
+
+Result:
+                [30]
+               /    \
+       [10, 20]    [35, 45, 50]
+       /  |  \     /  |  \
+     C1  C2  C3   C4  C5  C6
+
+<span class="blue">Key point:</span> 30 is ONLY in the parent, NOT in the intermediate children!
+          </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Leaf vs Intermediate -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Leaf vs Intermediate Splitting &mdash; Side by Side</h2>
+
+        <div class="split-compare">
+          <div class="split-panel">
+            <h3 style="color: #22c55e;">Leaf Node Split</h3>
+            <ul>
+              <li><strong>Overflow at:</strong> 2t - 1 keys</li>
+              <li><strong>Left keeps:</strong> t keys</li>
+              <li><strong>Right gets:</strong> t - 1 keys</li>
+              <li><strong>Middle key:</strong> <span class="result">STAYS in right node</span></li>
+              <li><strong>Parent action:</strong> Gets a <span class="result">COPY</span> of middle key</li>
+              <li><strong>Linked list:</strong> Updated (prev/next pointers)</li>
+              <li><strong>Recursive?</strong> Only if parent overflows</li>
+              <li><strong>Data pointers:</strong> Keys have data pointers</li>
+            </ul>
+          </div>
+          <div class="split-panel">
+            <h3 style="color: #f97316;">Intermediate Node Split</h3>
+            <ul>
+              <li><strong>Overflow at:</strong> 2t children (2t keys)</li>
+              <li><strong>Left keeps:</strong> t - 1 keys, t children</li>
+              <li><strong>Right gets:</strong> t - 1 keys, t children</li>
+              <li><strong>Middle key:</strong> <span style="color: #f97316; font-weight: bold;">MOVED UP to parent</span></li>
+              <li><strong>Parent action:</strong> Gets the key <span class="dim">(removed from child)</span></li>
+              <li><strong>Linked list:</strong> None (not applicable)</li>
+              <li><strong>Recursive?</strong> Yes, may cascade up to root</li>
+              <li><strong>Data pointers:</strong> Keys separate child subtrees</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>The #1 Exam Mistake:</strong> Confusing COPY vs MOVE. For leaf splits, the middle key is COPIED (stays in leaf + copied to parent). For intermediate splits, the middle key is MOVED (removed from child + placed in parent). Mixing these up is the most common error.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complete Comparison Table</h2>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th style="color: #22c55e;">Leaf Split</th>
+            <th style="color: #f97316;">Intermediate Split</th>
+          </tr>
+          <tr>
+            <td><strong>Overflow condition</strong></td>
+            <td>2t - 1 keys (full)</td>
+            <td>2t children / 2t keys (full)</td>
+          </tr>
+          <tr>
+            <td><strong>Temporary keys before split</strong></td>
+            <td>2t (inserted into full node)</td>
+            <td>2t + 1 (2t existing + 1 new child)</td>
+          </tr>
+          <tr>
+            <td><strong>Left node keeps</strong></td>
+            <td>t keys</td>
+            <td>t - 1 keys, t children</td>
+          </tr>
+          <tr>
+            <td><strong>Right node gets</strong></td>
+            <td>t - 1 keys</td>
+            <td>t - 1 keys, t children</td>
+          </tr>
+          <tr>
+            <td><strong>Middle key behavior</strong></td>
+            <td><span class="result">Copied to parent (stays in leaf)</span></td>
+            <td><span style="color: #f97316;">Moved to parent (removed from node)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Parent receives</strong></td>
+            <td>Key + pointer to right node</td>
+            <td>Key + pointer to right node</td>
+          </tr>
+          <tr>
+            <td><strong>Linked list update</strong></td>
+            <td><span class="result">Yes (prev/next)</span></td>
+            <td><span style="color: #f97316;">No</span></td>
+          </tr>
+          <tr>
+            <td><strong>Recursive splitting</strong></td>
+            <td>Only if parent overflows</td>
+            <td>Common &mdash; cascades up</td>
+          </tr>
+          <tr>
+            <td><strong>Root split result</strong></td>
+            <td>Tree height + 1</td>
+            <td>Tree height + 1</td>
+          </tr>
+          <tr>
+            <td><strong>Contains</strong></td>
+            <td>Data pointers to rows</td>
+            <td>Child pointers to subtrees</td>
+          </tr>
+          <tr>
+            <td><strong>Traversal</strong></td>
+            <td>All leaves at same level (bottom)</td>
+            <td>Root to leaf path (internal)</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Cards</h2>
+        <div class="ref-card">
+          <h3>Leaf Splitting &mdash; Quick Reference</h3>
+          <ul>
+            <li>When: <span class="result">2t - 1 keys</span> &rarr; insert &rarr; overflow</li>
+            <li>Split into: <span class="result">t keys (left)</span> + <span class="result">t - 1 keys (right)</span></li>
+            <li>Middle key: <span class="result">COPIED</span> to parent (remains in right leaf)</li>
+            <li>Update: doubly-linked list pointers</li>
+            <li>Formula: After split, left has t keys, right has t - 1 keys, parent gains 1 key</li>
+          </ul>
+        </div>
+
+        <div class="ref-card" style="border-color: #f97316;">
+          <h3 style="color: #f97316;">Intermediate Splitting &mdash; Quick Reference</h3>
+          <ul>
+            <li>When: <span style="color: #f97316;">2t children</span> &rarr; insert &rarr; overflow</li>
+            <li>Split into: <span style="color: #f97316;">t - 1 keys + t children (left)</span> + <span style="color: #f97316;">t - 1 keys + t children (right)</span></li>
+            <li>Middle key: <span style="color: #f97316;">MOVED</span> up to parent (removed from this level)</li>
+            <li>Update: parent key list + child pointer</li>
+            <li>Recursive: parent may also split &rarr; cascade upward</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Worked Examples -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Leaf Split with t = 2 (Insert 7)</div>
+          <p><strong>Setup:</strong> B+ tree of order t=2. Max keys per leaf = 2t-1 = 3.</p>
+          <p><strong>State:</strong> Leaf has keys [1, 3, 5], parent has key [10].</p>
+          <div class="diagram">
+Step 1: Insert 7 into leaf [1, 3, 5]
+        Result: [1, 3, 5, 7] &mdash; 4 keys, overflow!
+
+Step 2: Split [1, 3, 5, 7]
+        Middle position = index 2 (0-indexed)
+        Middle key = 5
+
+Step 3: Distribute
+        Left leaf:  [1, 3]         &mdash; t = 2 keys
+        Right leaf: [5, 7]         &mdash; t - 1 = 1 key (5 stays here)
+
+Step 4: Update linked list
+        [...] &harr; [1, 3] &harr; [5, 7] &harr; [...]
+
+Step 5: Copy 5 to parent
+        Parent was: [..., 10, ...]
+        Parent now: [..., <span class="result">5</span>, 10, ...]
+                     /     \
+            [1, 3]      [5, 7]</div>
+          <p><span class="result">Key takeaway:</span> 5 is in BOTH the parent AND the right leaf (copied, not moved).</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Intermediate Split with t = 2 (Insert key 15)</div>
+          <p><strong>Setup:</strong> B+ tree of order t=2. Max children = 2t = 4.</p>
+          <p><strong>State:</strong> Intermediate node has keys [10, 20, 30] with 4 children: A, B, C, D.</p>
+          <div class="diagram">
+Step 1: Need to insert new child E with key 15 between B and C
+        Intermediate: keys [10, 20, 30], children [A, B, E, C, D] &mdash; 5 children, overflow!
+
+Step 2: After temporary insertion: keys [10, 15, 20, 30], 5 children
+        Middle key = 20 (index 2 of 4 keys)
+
+Step 3: Distribute
+        Left node:  keys [10], children [A, B, E]   &mdash; t-1 = 1 key, t = 2 children
+        Middle key 20: <span style="color: #f97316;">MOVED UP</span> to parent (removed from this level)
+        Right node: keys [30], children [C, D]       &mdash; t-1 = 1 key, t = 2 children
+
+Step 4: Parent receives 20
+        Parent was: [..., 20, ...]
+        Parent now: [..., <span class="result">20</span>, ...] with new pointer to right node
+
+            [..., 20, ...]
+            /      |      \
+    [10]       [20 promoted]  [30]
+    / | \         / \          / \
+   A  B  E      C    D</div>
+          <p><span class="result">Key takeaway:</span> 20 is REMOVED from the intermediate node and placed ONLY in the parent.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Cascading Split (Root Split)</div>
+          <p><strong>Setup:</strong> B+ tree where root has max keys (2t = 4 for t=2).</p>
+          <p><strong>State:</strong> Root has keys [5, 10, 15, 20] with 5 children.</p>
+          <div class="diagram">
+Step 1: Insert new child &rarr; root overflow (5 keys, max 4)
+
+Step 2: Split root
+        Middle key = 15 (moved UP)
+        Left root:  [5, 10]     with 3 children
+        Right root: [20]        with 2 children
+
+Step 3: Create NEW root (tree height increases!)
+        New root: [15]          with 2 children
+        /              \
+    [5, 10]          [20]
+    /  |  \            / \
+  (children)       (children)
+
+<span class="red">BEFORE:</span>     Height 1 (root only)
+<span class="orange">AFTER:</span>      Height 2 (new root created)
+          </div>
+          <p><span class="result">Key takeaway:</span> When the root splits, the tree grows taller. This is how B+ trees increase in height.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Full Insertion Sequence (t = 2)</div>
+          <p><strong>Build a B+ tree by inserting: 10, 20, 30, 40, 50, 25, 35</strong></p>
+          <div class="diagram">
+Insert 10: [10]
+
+Insert 20: [10, 20]
+
+Insert 30: [10, 20, 30] &mdash; full (max 3 keys)
+
+Insert 40: Overflow! Split [10, 20, 30, 40]
+  Left:  [10]           &mdash; t = 1 key?  (t=2: left gets 2 keys)
+  Actually for t=2: left gets t=2 keys, right gets t-1=1 key
+
+  Left:  [10, 20]
+  Right: [30, 40]        &mdash; 30 copied to parent
+  Root:  [30]
+         /     \
+  [10, 20]   [30, 40]
+
+Insert 50: Goes to right leaf [30, 40, 50] &mdash; full!
+  Split [30, 40, 50]:
+  Left:  [30]
+  Right: [40, 50]        &mdash; 40 copied to parent
+
+  Root was: [30]
+  Root now: [30, 40]
+            /   |   \
+  [10, 20] [30] [40, 50]
+
+Insert 25: Goes to left leaf [10, 20, 25] &mdash; full!
+  Split [10, 20, 25]:
+  Left:  [10]
+  Right: [20, 25]        &mdash; 20 copied to parent
+
+  Root was: [30, 40]
+  Root now: [20, 30, 40]  &mdash; still OK (max 3 keys)
+           /   |   |    \
+  [10] [20,25] [30] [40,50]
+
+Insert 35: Goes to [30] leaf &rarr; [30, 35] &mdash; OK (2 keys, max 3)
+
+Final tree:
+         [20, 30, 40]
+        /   |   |    \
+  [10] [20,25] [30,35] [40,50]
+          </div>
+          <p class="note">Note: Each leaf split copies the middle key up. The tree grows only when the root splits.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Exam-Style Question &mdash; Count Keys After Splits</div>
+          <p><strong>Question:</strong> A B+ tree has t = 3. A leaf node has 5 keys (2t-1 = 5, full). One more key is inserted, causing a split. How many keys end up in the left leaf, right leaf, and parent?</p>
+          <div class="diagram">
+Given: t = 3
+Max keys per leaf: 2t - 1 = 5
+After insertion: 6 keys temporarily (overflow)
+
+Split distribution:
+  Left leaf:  t = 3 keys
+  Right leaf: t - 1 = 2 keys
+  Parent:     +1 key (copy of middle key)
+
+<span class="result">Answer:</span>
+  Left leaf:  <span class="result">3 keys</span>
+  Right leaf: <span class="result">2 keys</span>
+  Parent:     <span class="result">gains 1 key</span> (the middle key, copied)
+  Total keys in leaves: 3 + 2 = 5 (correct: 6 - 1 = 5, because middle key counted once in leaf, once in parent)
+          </div>
+          <div class="warning">
+            <strong>Exam Tip:</strong> Always count carefully. After a leaf split with 2t keys temporarily:
+            <br>&bull; Left has t, right has t-1, parent gains 1.
+            <br>&bull; Total unique key count: t + (t-1) = 2t-1 (middle key exists in right leaf AND parent, but is the same key).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B+ Tree Insertion Algorithm - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #22c55e; margin: 20px 0 5px; text-shadow: 0 0 20px #22c55e55; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .section h3 { color: #fbbf24; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0f172a; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #38bdf8; }
+    .formula .label { color: #38bdf8; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a2332; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #475569; }
+    .example .title { color: #fbbf24; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a2332; padding: 15px; border-radius: 8px; border: 1px solid #475569; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #22c55e; font-weight: bold; }
+    .warning { background: #1a1520; border-left: 3px solid #f97316; padding: 12px 15px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+    .warning .title { color: #f97316; font-weight: bold; margin-bottom: 5px; }
+    .warning .content { color: #fca5a5; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: center; }
+    th { background: #1a2332; color: #38bdf8; }
+    td { background: #0f172a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #475569; background: #1a2332; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #0f2a1a; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0f172a; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #38bdf8; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .tree-box { background: #0f172a; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #334155; font-family: monospace; text-align: center; }
+    .tree-box .node { display: inline-block; border: 2px solid #22c55e; padding: 8px 12px; margin: 5px; border-radius: 6px; background: #1a2332; }
+    .tree-box .node.split { border-color: #f97316; }
+    .tree-box .node.new { border-color: #fbbf24; background: #1a1a0a; }
+    .step-num { display: inline-block; background: #22c55e; color: #0f172a; font-weight: bold; padding: 2px 8px; border-radius: 50%; margin-right: 5px; }
+    .step-arrow { text-align: center; color: #475569; font-size: 1.5em; margin: 5px 0; }
+    .ref-card { background: linear-gradient(135deg, #1a2332 0%, #0f172a 100%); padding: 20px; border-radius: 12px; border: 2px solid #22c55e; margin: 15px 0; }
+    .ref-card h3 { color: #22c55e; margin-bottom: 10px; text-align: center; }
+    .ref-card .item { padding: 5px 0; border-bottom: 1px solid #334155; font-size: 0.9em; }
+    .ref-card .item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <h1>B+ TREE INSERTION ALGORITHM</h1>
+  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm Steps</button>
+      <button class="tab" onclick="showSection('tab2')">Pseudocode</button>
+      <button class="tab" onclick="showSection('tab3')">Split Rules</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab5')">Quick Reference</button>
+    </div>
+
+    <!-- Tab 1: Algorithm Steps -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>B+ Tree Insertion Overview</h2>
+        <p>A B+ Tree of order <span class="result">t</span> has the following properties:</p>
+        
+        <div class="grid">
+          <div class="card">
+            <h3>Node Capacity</h3>
+            <p>• Each node has at most <span class="highlight">2t - 1</span> keys</p>
+            <p>• Each node has at most <span class="highlight">2t</span> children</p>
+            <p>• Root has at least <span class="dim">1</span> key</p>
+          </div>
+          <div class="card">
+            <h3>Leaf Properties</h3>
+            <p>• All leaves at <span class="highlight">same level</span></p>
+            <p>• Leaf contains <span class="highlight">data pointers</span></p>
+            <p>• Leaves linked via <span class="dim">next pointers</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>7-Step Insertion Process</h2>
+        
+        <div class="example">
+          <div class="title"><span class="step-num">1</span> Find the Target Leaf</div>
+          <p>Start at the root. At each internal node, compare the key with index values to determine which child pointer to follow. Continue until you reach a leaf node.</p>
+          <div class="formula">
+            <div class="label">Decision Rule:</div>
+            <div class="expr">If key < K₁, follow P₀</div>
+            <div class="desc">If Kᵢ ≤ key < Kᵢ₊₁, follow Pᵢ. If key ≥ Kₙ, follow Pₙ</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">2</span> Insert Key into Leaf (Sorted Order)</div>
+          <p>Insert the new key into the leaf node while maintaining sorted order. Shift existing keys to make room for the new key.</p>
+          <div class="formula">
+            <div class="label">Condition Check:</div>
+            <div class="expr">Leaf keys < 2t - 1 ?</div>
+            <div class="desc">If YES → insert and finish. If NO → proceed to step 3 (split)</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">3</span> Detect Overflow (Node Full)</div>
+          <p>After insertion, if the leaf node has <span class="result">2t - 1</span> keys, it is full. This triggers a split operation.</p>
+          <div class="warning">
+            <div class="title">⚠ Critical Point</div>
+            <div class="content">Overflow is detected AFTER insertion, not before. The node temporarily holds 2t keys before splitting.</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">4</span> Split the Full Node</div>
+          <p>Create a new node. Distribute keys between the old node and the new node. Each node gets exactly <span class="result">t</span> keys.</p>
+          <div class="formula">
+            <div class="label">Split Rule for Leaf:</div>
+            <div class="expr">Left: keys[0..t-1] | Right: keys[t..2t-1]</div>
+            <div class="desc">The middle key stays in the right node (leaf split rule)</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">5</span> Copy Middle Key to Parent</div>
+          <p>For <span class="result">leaf split</span>: copy the middle key up to the parent. For <span class="result">internal split</span>: move the middle key up (it's removed from the split node).</p>
+          <div class="formula">
+            <div class="label">Leaf vs Internal Split:</div>
+            <div class="expr">Leaf: copy up | Internal: move up</div>
+            <div class="desc">Leaf keeps a copy; internal node doesn't keep the middle key</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">6</span> Insert into Parent</div>
+          <p>Insert the promoted key and the new child pointer into the parent node. Maintain sorted order in the parent.</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">7</span> Propagate Split Upward</div>
+          <p>If the parent overflows, repeat steps 4-6 for the parent. Continue propagating upward until no overflow occurs. If the root splits, create a new root (tree grows taller).</p>
+          <div class="formula">
+            <div class="label">Termination:</div>
+            <div class="expr">Stop when no overflow occurs</div>
+            <div class="desc">Worst case: split propagates to root, creating new root (height increases by 1)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Visual Example: Insert Key 25 into B+ Tree (t=3)</h2>
+        
+        <div class="tree-box">
+          <p style="color: #38bdf8; margin-bottom: 10px;">Step 1: Initial Tree (t=3, max keys per node = 5)</p>
+          <div class="node">[10 | 20 | 30]</div>
+          <br>
+          <div class="node">[5 | 8]</div> <div class="node">[12 | 15 | 18]</div> <div class="node">[22 | 25 | 28]</div> <div class="node">[35 | 40]</div>
+        </div>
+
+        <div class="step-arrow">↓ Insert 25 into leaf containing [22, 25, 28] — already exists, skip or update</div>
+
+        <div class="tree-box">
+          <p style="color: #38bdf8; margin-bottom: 10px;">Better Example: Insert key 25 into tree with t=3</p>
+          <div class="node">[10 | 20 | 30]</div>
+          <br>
+          <div class="node">[5 | 8]</div> <div class="node">[12 | 15 | 18]</div> <div class="node">[22 | 28]</div> <div class="node">[35 | 40]</div>
+        </div>
+
+        <div class="step-arrow">↓ Insert 25 into leaf [22, 28] → [22, 25, 28] — no overflow (2t-1=5 keys max)</div>
+
+        <div class="tree-box">
+          <p style="color: #22c55e; margin-bottom: 10px;">Result: Leaf now has 3 keys (under capacity)</p>
+          <div class="node">[10 | 20 | 30]</div>
+          <br>
+          <div class="node">[5 | 8]</div> <div class="node">[12 | 15 | 18]</div> <div class="node new">[22 | 25 | 28]</div> <div class="node">[35 | 40]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Pseudocode -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Insertion Pseudocode</h2>
+        <div class="code">1:  function INSERT(root, key):
+2:      if root is NULL:
+3:          root = new LeafNode()
+4:          root.keys[0] = key
+5:          root.n = 1
+6:          return root
+7:  
+8:      // Step 1: Find the target leaf
+9:      leaf = FIND_LEAF(root, key)
+10: 
+11:     // Step 2: Check if key already exists
+12:     if key in leaf.keys:
+13:         return root  // No duplicates
+14: 
+15:     // Step 3: Insert key in sorted order
+16:     i = leaf.n - 1
+17:     while i >= 0 and leaf.keys[i] > key:
+18:         leaf.keys[i+1] = leaf.keys[i]
+19:         i = i - 1
+20:     leaf.keys[i+1] = key
+21:     leaf.n = leaf.n + 1
+22: 
+23:     // Step 4: Check for overflow
+24:     if leaf.n == 2t - 1:
+25:         SPLIT_LEAF(leaf, key)
+26: 
+27:     return root</div>
+      </div>
+
+      <div class="section">
+        <h2>Split Functions Pseudocode</h2>
+        <div class="code">1:  function SPLIT_LEAF(leaf, new_key):
+2:      // Create new right sibling
+3:      right = new LeafNode()
+4:      mid = t  // Split position
+5:  
+6:      // Copy upper half to right node
+7:      for j from 0 to t - 1:
+8:          right.keys[j] = leaf.keys[mid + j]
+9:      right.n = t
+10:     right.next = leaf.next
+11:     leaf.next = right
+12:     leaf.n = t
+13: 
+14:     // Copy middle key UP to parent (not move)
+15:     parent_key = leaf.keys[mid]
+16:     INSERT_INTO_PARENT(leaf.parent, parent_key, right)
+17: 
+18: 
+19: function SPLIT_INTERNAL(internal):
+20:     // Create new right sibling
+21:     right = new InternalNode()
+22:     mid = t - 1  // Split position
+23: 
+24:     // Move middle key UP (remove from split node)
+22:     parent_key = internal.keys[mid]
+23: 
+24:     // Copy upper half to right node
+25:     for j from 0 to t - 2:
+26:         right.keys[j] = internal.keys[mid + 1 + j]
+27:     right.n = t - 1
+28: 
+29:     // Copy upper child pointers
+30:     for j from 0 to t - 1:
+31:         right.children[j] = internal.children[mid + 1 + j]
+32:     internal.n = t - 1
+33: 
+34:     INSERT_INTO_PARENT(internal.parent, parent_key, right)</div>
+      </div>
+
+      <div class="section">
+        <h2>Helper Function: Insert into Parent</h2>
+        <div class="code">1:  function INSERT_INTO_PARENT(parent, key, right_child):
+2:      if parent is NULL:
+3:          // Create new root
+4:          root = new InternalNode()
+5:          root.keys[0] = key
+6:          root.children[0] = left_child
+7:          root.children[1] = right_child
+8:          root.n = 1
+9:          return root
+10: 
+11:     // Insert key in sorted order
+12:     i = parent.n - 1
+13:     while i >= 0 and parent.keys[i] > key:
+14:         parent.keys[i+1] = parent.keys[i]
+15:         parent.children[i+2] = parent.children[i+1]
+16:         i = i - 1
+17:     parent.keys[i+1] = key
+18:     parent.children[i+2] = right_child
+19:     parent.n = parent.n + 1
+20: 
+21:     // Check for overflow
+22:     if parent.n == 2t - 1:
+23:         SPLIT_INTERNAL(parent)</div>
+      </div>
+
+      <div class="section">
+        <h2>Complexity Analysis</h2>
+        <table>
+          <tr><th>Aspect</th><th>Complexity</th><th>Explanation</th></tr>
+          <tr><td>Search for leaf</td><td class="result">O(log_t n)</td><td>Height of tree = O(log_t n)</td></tr>
+          <tr><td>Insert into leaf</td><td class="result">O(t)</td><td>Shift keys in node (max 2t-1 keys)</td></tr>
+          <tr><td>Split operation</td><td class="result">O(t)</td><td>Copy t keys to new node</td></tr>
+          <tr><td>Parent update</td><td class="result">O(t)</td><td>Insert key into parent node</td></tr>
+          <tr><td><strong>Total per insert</strong></td><td class="result"><strong>O(t · log_t n)</strong></td><td>Height × cost per level</td></tr>
+          <tr><td>If t is constant</td><td class="result"><strong>O(log n)</strong></td><td>Common in practice (t ≈ 100-200)</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Space Complexity:</div>
+          <div class="expr">O(n) total for all nodes</div>
+          <div class="desc">Each key stored in exactly one leaf node. Internal nodes store copies of keys for routing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Split Rules -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Leaf Split vs Internal Node Split</h2>
+        
+        <div class="grid">
+          <div class="card">
+            <h3>🍃 Leaf Split Rule</h3>
+            <p>• Split point: <span class="highlight">position t</span></p>
+            <p>• Left node: keys[0..t-1] → <span class="highlight">t keys</span></p>
+            <p>• Right node: keys[t..2t-1] → <span class="highlight">t keys</span></p>
+            <p>• Middle key: <span class="dim">COPIED up</span> (stays in right)</p>
+          </div>
+          <div class="card">
+            <h3>🏠 Internal Split Rule</h3>
+            <p>• Split point: <span class="highlight">position t-1</span></p>
+            <p>• Left node: keys[0..t-2] → <span class="highlight">t-1 keys</span></p>
+            <p>• Right node: keys[t..2t-2] → <span class="highlight">t-1 keys</span></p>
+            <p>• Middle key: <span class="dim">MOVED up</span> (removed)</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Common Mistake</div>
+          <div class="content">Students often confuse "copy up" vs "move up". In leaf splits, the middle key is COPIED to the parent (leaf keeps a copy). In internal splits, the middle key is MOVED to the parent (internal node loses it).</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Split Example: t=3 (max 5 keys per node)</h2>
+        
+        <div class="example">
+          <div class="title">Leaf Split: Inserting into full leaf [2, 4, 6, 8, 10]</div>
+          <p style="margin-bottom: 10px;">Node has 5 keys (2t-1=5). Insert 7:</p>
+          
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">Before split: [2, 4, 6, 7, 8, 10] (temporarily 6 keys)</p>
+            <div class="node split">[2, 4, 6, 7, 8, 10]</div>
+          </div>
+          
+          <div class="step-arrow">↓</div>
+          
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">Split: Left gets [2, 4, 6], Right gets [7, 8, 10]</p>
+            <div class="node">[2, 4, 6]</div> → <div class="node new">[7, 8, 10]</div>
+            <p style="color: #22c55e; margin-top: 10px;">Middle key 7 COPIED up to parent</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Internal Split: Full internal node [10, 20, 30, 40]</div>
+          <p style="margin-bottom: 10px;">Node has 4 keys (t-1=2 for t=3, but this is t=5 example with max 9 keys)</p>
+          
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">For t=3 (max 5 keys), internal node [10, 20, 30, 40, 50] full</p>
+            <div class="node split">[10, 20, 30, 40, 50]</div>
+          </div>
+          
+          <div class="step-arrow">↓</div>
+          
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">Split: Left [10, 20], Right [40, 50], Middle 30 MOVED up</p>
+            <div class="node">[10, 20]</div> ← <strong style="color: #f97316;">30</strong> → <div class="node new">[40, 50]</div>
+            <p style="color: #22c55e; margin-top: 10px;">Key 30 removed from this level, promoted to parent</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Split Decision Flowchart</h2>
+        <div class="code">INSERT key into leaf
+         ↓
+Leaf has ≤ 2t-2 keys? ──YES──→ Insert done ✓
+         │
+         NO (2t-1 keys after insert)
+         ↓
+Is it a LEAF node? ──YES──→ SPLIT LEAF
+         │                      • Left: t keys
+         NO (internal)         • Right: t keys
+         ↓                      • Copy middle up
+SPLIT INTERNAL
+         • Left: t-1 keys
+         • Right: t-1 keys
+         • Move middle up
+         ↓
+Parent overflows? ──YES──→ Repeat split process
+         │
+         NO
+         ↓
+    INSERT DONE ✓</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Example 1: Build B+ Tree from Scratch (t=3)</h2>
+        <p>Insert keys: <span class="result">10, 20, 30, 40, 50, 60, 70</span> one by one into an empty B+ Tree (t=3, max 5 keys per node)</p>
+
+        <div class="example">
+          <div class="title">Step 1: Insert 10</div>
+          <div class="tree-box">
+            <div class="node new">[10]</div>
+            <p style="color: #888; margin-top: 10px;">Single leaf node created</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 2-5: Insert 20, 30, 40, 50</div>
+          <div class="tree-box">
+            <div class="node">[10, 20, 30, 40, 50]</div>
+            <p style="color: #888; margin-top: 10px;">All fit in one leaf (5 keys = max capacity 2t-1)</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 6: Insert 60 — Leaf Split!</div>
+          <div class="tree-box">
+            <p style="color: #f97316; margin-bottom: 10px;">Leaf temporarily has 6 keys: [10,20,30,40,50,60]</p>
+            <div class="node split">[10,20,30,40,50,60]</div>
+            <div class="step-arrow">↓</div>
+            <p style="color: #fbbf24; margin-bottom: 10px;">Split: Left [10,20,30] | Right [40,50,60]</p>
+            <div class="node">[10, 20, 30]</div> → <div class="node new">[40, 50, 60]</div>
+            <p style="color: #22c55e; margin-top: 10px;">Key 40 copied up to parent (new root)</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 7: Insert 70</div>
+          <div class="tree-box">
+            <p style="color: #38bdf8; margin-bottom: 10px;">Final tree after inserting 70:</p>
+            <div class="node">[40]</div>
+            <br>
+            <div class="node">[10, 20, 30]</div> <div class="node new">[40, 50, 60, 70]</div>
+            <p style="color: #888; margin-top: 10px;">70 added to right leaf (no overflow)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Chain of Splits (t=3)</h2>
+        <p>Insert keys: <span class="result">5, 10, 15, 20, 25, 30, 35</span></p>
+
+        <div class="example">
+          <div class="title">After inserting 5, 10, 15, 20, 25 (leaf full)</div>
+          <div class="tree-box">
+            <div class="node">[5, 10, 15, 20, 25]</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Insert 30 → Leaf splits → New root created</div>
+          <div class="tree-box">
+            <div class="node">[15]</div>
+            <br>
+            <div class="node">[5, 10]</div> <div class="node">[15, 20, 25, 30]</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Insert 35 → Right leaf splits → Parent splits → New root!</div>
+          <div class="tree-box">
+            <p style="color: #f97316; margin-bottom: 10px;">Chain reaction of splits!</p>
+            <div class="node">[15, 30]</div>
+            <br>
+            <div class="node">[5, 10]</div> <div class="node">[15, 20, 25]</div> <div class="node">[30, 35]</div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Chain Split Warning</div>
+          <div class="content">A single insertion can cause O(log_t n) splits if every ancestor is full. This is why B+ Trees remain balanced — splits propagate upward maintaining balance.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: Large t=5 (Detailed)</h2>
+        <p>B+ Tree with t=5, max keys per node = 9</p>
+        <p>Insert keys: <span class="result">5, 10, 25, 30, 50, 15, 20, 55, 75, 80, 85, 90, 60, 65, 28, 70, 95</span></p>
+
+        <div class="example">
+          <div class="title">Phase 1: Fill first leaf (keys 1-9)</div>
+          <div class="tree-box">
+            <div class="node">[5, 10, 15, 20, 25, 28, 30, 50, 55]</div>
+            <p style="color: #888; margin-top: 10px;">First 9 keys fill one leaf completely</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Phase 2: Insert 75 → Leaf splits</div>
+          <div class="tree-box">
+            <p style="color: #f97316; margin-bottom: 10px;">Leaf overflows with 10 keys, split at position t=5</p>
+            <div class="node">[5, 10, 15, 20, 25]</div> → <div class="node new">[28, 30, 50, 55, 75]</div>
+            <p style="color: #22c55e; margin-top: 10px;">Key 28 copied to parent (new root)</p>
+            <div class="node" style="margin-top: 10px;">[28]</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Phase 3: Insert 80, 85, 90, 60, 65</div>
+          <div class="tree-box">
+            <div class="node">[28]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> <div class="node">[28, 30, 50, 55, 60, 65, 75, 80, 85]</div>
+            <p style="color: #888; margin-top: 10px;">Right leaf now full with 9 keys</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Phase 4: Insert 90 → Right leaf splits, then insert 28, 70, 95</div>
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">Final tree structure:</p>
+            <div class="node">[28, 60]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> 
+            <div class="node">[28, 30, 50, 55]</div> 
+            <div class="node new">[60, 65, 70, 75, 80, 85, 90, 95]</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: Insertion with Existing Keys</h2>
+        <p>Insert keys: <span class="result">5, 15, 25, 35, 45, 55</span> into tree with existing keys</p>
+
+        <div class="example">
+          <div class="title">Existing tree with root [30] and leaves [10,20] [30,40]</div>
+          <div class="tree-box">
+            <div class="node">[30]</div>
+            <br>
+            <div class="node">[10, 20]</div> <div class="node">[30, 40]</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Insert 5, 15, 25 into left leaf</div>
+          <div class="tree-box">
+            <div class="node">[30]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> <div class="node">[30, 40]</div>
+            <p style="color: #888; margin-top: 10px;">Left leaf now full with 5 keys</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Insert 35, 45, 55 → Right leaf splits</div>
+          <div class="tree-box">
+            <p style="color: #fbbf24; margin-bottom: 10px;">Right leaf overflows, splits, parent overflows, chain split!</p>
+            <div class="node">[30]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> 
+            <div class="node">[30, 35, 40]</div> 
+            <div class="node new">[45, 55]</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 5: Tree Height Growth</h2>
+        <p>Show how tree grows from height 1 to height 3 with t=3</p>
+
+        <div class="example">
+          <div class="title">Height 1: Single leaf node</div>
+          <div class="tree-box">
+            <div class="node">[10, 20, 30, 40, 50]</div>
+            <p style="color: #888; margin-top: 10px;">Root is also leaf</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Height 2: After root splits</div>
+          <div class="tree-box">
+            <div class="node">[30]</div>
+            <br>
+            <div class="node">[10, 20]</div> <div class="node">[40, 50]</div>
+            <p style="color: #888; margin-top: 10px;">Root has 1 key, 2 children</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Height 3: After root splits again</div>
+          <div class="tree-box">
+            <div class="node">[50]</div>
+            <br>
+            <div class="node">[20, 40]</div>
+            <br>
+            <div class="node">[10, 15]</div> <div class="node">[25, 35]</div> <div class="node">[45, 55]</div> <div class="node">[60, 70]</div>
+            <p style="color: #888; margin-top: 10px;">Tree height grows only when root splits</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Quick Reference -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        
+        <div class="ref-card">
+          <h3>B+ Tree Properties (order t)</h3>
+          <div class="item">• Max keys per node: <span class="result">2t - 1</span></div>
+          <div class="item">• Max children per node: <span class="result">2t</span></div>
+          <div class="item">• Min keys (non-root): <span class="result">t - 1</span></div>
+          <div class="item">• Min children (non-root): <span class="result">t</span></div>
+          <div class="item">• Root min keys: <span class="result">1</span></div>
+          <div class="item">• All leaves at same level: <span class="result">YES</span></div>
+          <div class="item">• Keys in leaves: <span class="result">Sorted, linked</span></div>
+          <div class="item">• Keys in internal: <span class="result">Copies for routing</span></div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Insertion Algorithm Summary</h3>
+          <div class="item">1. Find target leaf (traverse from root)</div>
+          <div class="item">2. Insert key in sorted order</div>
+          <div class="item">3. If overflow (2t-1 keys), split</div>
+          <div class="item">4. Leaf split: copy middle up</div>
+          <div class="item">5. Internal split: move middle up</div>
+          <div class="item">6. Propagate splits upward</div>
+          <div class="item">7. If root splits, create new root</div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Split Rules Cheat Sheet</h3>
+          <div class="item"><strong>Leaf split point:</strong> position t (0-indexed)</div>
+          <div class="item"><strong>Leaf left keys:</strong> t keys [0..t-1]</div>
+          <div class="item"><strong>Leaf right keys:</strong> t keys [t..2t-1]</div>
+          <div class="item"><strong>Leaf middle key:</strong> COPIED up (stays in right)</div>
+          <div class="item"><strong>Internal split point:</strong> position t-1</div>
+          <div class="item"><strong>Internal left keys:</strong> t-1 keys [0..t-2]</div>
+          <div class="item"><strong>Internal right keys:</strong> t-1 keys [t..2t-2]</div>
+          <div class="item"><strong>Internal middle key:</strong> MOVED up (removed)</div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Complexity Quick Reference</h3>
+          <div class="item">• Insertion: <span class="result">O(t · log_t n)</span></div>
+          <div class="item">• If t constant: <span class="result">O(log n)</span></div>
+          <div class="item">• Space per key: <span class="result">O(1) in leaf</span></div>
+          <div class="item">• Space per key: <span class="result">O(1) in internal (copy)</span></div>
+          <div class="item">• Tree height: <span class="result">O(log_t n)</span></div>
+          <div class="item">• Worst case splits: <span class="result">O(log_t n) per insert</span></div>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Top 5 Exam Mistakes</div>
+          <div class="content">
+            1. Confusing "copy up" (leaf) vs "move up" (internal)<br>
+            2. Wrong split position: t vs t-1<br>
+            3. Forgetting to link leaf nodes after split<br>
+            4. Not handling root split (create new root)<br>
+            5. Confusing B+ Tree with B-Tree (B+ has all data in leaves)
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Comparison Table: B+ Tree vs B-Tree Insertion</h2>
+          <table>
+            <tr><th>Property</th><th>B+ Tree</th><th>B-Tree</th></tr>
+            <tr><td>Data location</td><td class="result">Only in leaves</td><td>In all nodes</td></tr>
+            <tr><td>Leaf split middle key</td><td class="result">Copy up</td><td>Move up</td></tr>
+            <tr><td>Internal split middle key</td><td class="result">Move up</td><td>Move up</td></tr>
+            <tr><td>Leaf linking</td><td class="result">Yes (linked list)</td><td>No</td></tr>
+            <tr><td>Search complexity</td><td class="result">O(log_t n)</td><td>O(log_t n)</td></tr>
+            <tr><td>Range query</td><td class="result">O(log_t n + k)</td><td>O(log_t n + k)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

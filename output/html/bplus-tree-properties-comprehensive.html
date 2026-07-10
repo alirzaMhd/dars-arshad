@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B+ Tree Properties & Formulas - Comprehensive Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; line-height: 1.6; }
+
+    h1 { text-align: center; font-size: 1.8em; color: #22c55e; margin: 25px 0 5px; text-shadow: 0 0 25px #22c55e44; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 25px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 40px; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+    .tab { padding: 10px 18px; border: 2px solid #334155; background: #1e293b; color: #94a3b8; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.88em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #052e16; font-weight: 600; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+
+    .content { display: none; }
+    .content.active { display: block; }
+
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 24px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.15em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .section h3 { color: #fbbf24; font-size: 0.98em; margin: 18px 0 10px; }
+
+    .formula { background: #0f172a; padding: 14px 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #3b82f6; }
+    .formula .label { color: #60a5fa; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.15em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula .desc { color: #94a3b8; font-size: 0.85em; margin-top: 6px; }
+
+    .formula-big { background: #0f172a; padding: 18px 20px; border-radius: 10px; margin: 14px 0; border: 2px solid #22c55e; text-align: center; }
+    .formula-big .expr { color: #22c55e; font-size: 1.3em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula-big .desc { color: #94a3b8; font-size: 0.88em; margin-top: 8px; }
+
+    .example { background: #0f172a; padding: 18px; border-radius: 10px; margin: 14px 0; border: 1px solid #334155; }
+    .example .title { color: #fbbf24; font-size: 0.92em; margin-bottom: 12px; font-weight: 600; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 16px 0; }
+    .card { background: #0f172a; padding: 18px; border-radius: 10px; border: 1px solid #334155; }
+    .card h3 { color: #f97316; margin-bottom: 10px; font-size: 0.95em; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+
+    .note { color: #94a3b8; font-style: italic; font-size: 0.85em; margin-top: 10px; padding-left: 12px; border-left: 2px solid #475569; }
+    .warning { background: #451a03; border: 1px solid #f97316; border-radius: 8px; padding: 14px 16px; margin: 14px 0; }
+    .warning .title { color: #f97316; font-weight: 600; margin-bottom: 6px; }
+    .warning p { color: #fdba74; font-size: 0.9em; }
+
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #334155; padding: 10px 12px; text-align: center; }
+    th { background: #1e293b; color: #3b82f6; font-weight: 600; }
+    td { background: #0f172a; }
+    tr:hover td { background: #1a2740; }
+
+    .code { background: #0f172a; padding: 14px 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #93c5fd; overflow-x: auto; border: 1px solid #334155; line-height: 1.7; }
+    .code .keyword { color: #c084fc; font-weight: bold; }
+    .code .comment { color: #6b7280; }
+    .code .func { color: #22c55e; }
+    .code .var { color: #fbbf24; }
+
+    .quick-ref { background: linear-gradient(135deg, #0f172a, #1e293b); border: 2px solid #22c55e; border-radius: 12px; padding: 20px; margin: 16px 0; }
+    .quick-ref h3 { color: #22c55e; margin-bottom: 12px; text-align: center; }
+    .quick-ref ul { list-style: none; padding: 0; }
+    .quick-ref li { padding: 6px 0; border-bottom: 1px solid #1e293b; color: #e2e8f0; }
+    .quick-ref li:last-child { border-bottom: none; }
+    .quick-ref .sym { color: #22c55e; font-weight: bold; margin-right: 8px; }
+
+    .complexity { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
+    .cx-item { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: center; }
+    .cx-item .op { color: #94a3b8; font-size: 0.8em; margin-bottom: 4px; }
+    .cx-item .val { color: #22c55e; font-size: 1.1em; font-weight: bold; font-family: 'Courier New', monospace; }
+
+    .result { color: #22c55e; font-weight: bold; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+
+    .var-table td:first-child { color: #fbbf24; font-weight: bold; text-align: left; }
+    .var-table td:nth-child(2) { text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>B+ Tree Properties & Formulas</h1>
+  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Node Constraints</button>
+      <button class="tab" onclick="showSection('tab2')">Height Formulas</button>
+      <button class="tab" onclick="showSection('tab3')">Number of Nodes</button>
+      <button class="tab" onclick="showSection('tab4')">Storage Analysis</button>
+      <button class="tab" onclick="showSection('tab5')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Node Constraints -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Parameter Definitions</h2>
+        <p>All B+ Tree properties are expressed in terms of the parameter <span class="result">t</span> (order). Understanding these variables is essential for all formulas.</p>
+
+        <table class="var-table">
+          <tr><th>Variable</th><th>Meaning</th></tr>
+          <tr><td>t</td><td>Order of the B+ Tree — determines min/max keys per node</td></tr>
+          <tr><td>n</td><td>Total number of keys in the tree</td></tr>
+          <tr><td>h</td><td>Height of the tree (root at height 0)</td></tr>
+          <tr><td>N</td><td>Total number of nodes in the tree</td></tr>
+          <tr><td>p</td><td>Page size (disk block size) in bytes</td></tr>
+          <tr><td>q</td><td>Size of a key pointer pair in bytes</td></tr>
+          <tr><td>S</td><td>Total storage space required in bytes</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Node Key Constraints</h2>
+
+        <div class="formula">
+          <div class="label">Root Node (Internal)</div>
+          <div class="expr">1 ≤ keys ≤ 2t</div>
+          <div class="desc">The root is special — it can have as few as 1 key (unlike other internal nodes which need at least t).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Intermediate (Internal) Nodes</div>
+          <div class="expr">t ≤ keys ≤ 2t</div>
+          <div class="desc">Every non-root internal node must have at least t keys and at most 2t keys.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Leaf Nodes</div>
+          <div class="expr">t - 1 ≤ keys ≤ 2t - 1</div>
+          <div class="desc">Each leaf holds between t-1 and 2t-1 keys (data records). Note: leaves have one fewer max key than internal nodes.</div>
+        </div>
+
+        <div class="warning">
+          <div class="title">Leaf vs Internal — Off by One</div>
+          <p>Internal nodes: max <span class="result">2t</span> keys. Leaf nodes: max <span class="result">2t - 1</span> keys. This difference exists because leaf keys include data pointers while internal keys are just routing copies.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Node Children Constraints</h2>
+
+        <div class="formula">
+          <div class="label">Root Node Children</div>
+          <div class="expr">2 ≤ children ≤ 2t</div>
+          <div class="desc">A node with k keys has k+1 children. Root has min 1 key → min 2 children.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Intermediate Node Children</div>
+          <div class="expr">t + 1 ≤ children ≤ 2t + 1</div>
+          <div class="desc">A node with t keys has t+1 children (minimum). A node with 2t keys has 2t+1 children (maximum).</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: t = 3</div>
+          <div class="grid">
+            <div class="card">
+              <h3>Root (Internal)</h3>
+              <p>Min keys: <span class="highlight">1</span></p>
+              <p>Max keys: <span class="highlight">6</span></p>
+              <p>Min children: <span class="highlight">2</span></p>
+              <p>Max children: <span class="highlight">6</span></p>
+            </div>
+            <div class="card">
+              <h3>Intermediate</h3>
+              <p>Min keys: <span class="dim">3</span></p>
+              <p>Max keys: <span class="dim">6</span></p>
+              <p>Min children: <span class="dim">4</span></p>
+              <p>Max children: <span class="dim">7</span></p>
+            </div>
+            <div class="card">
+              <h3>Leaf</h3>
+              <p>Min keys: <span class="highlight">2</span></p>
+              <p>Max keys: <span class="highlight">5</span></p>
+              <p>Min children: N/A</p>
+              <p>Max children: N/A</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complete Constraints Table</h2>
+        <table>
+          <tr>
+            <th>Property</th>
+            <th>Root (Internal)</th>
+            <th>Intermediate</th>
+            <th>Leaf</th>
+          </tr>
+          <tr>
+            <td>Min Keys</td>
+            <td class="result">1</td>
+            <td class="result">t</td>
+            <td class="result">t - 1</td>
+          </tr>
+          <tr>
+            <td>Max Keys</td>
+            <td class="result">2t</td>
+            <td class="result">2t</td>
+            <td class="result">2t - 1</td>
+          </tr>
+          <tr>
+            <td>Min Children</td>
+            <td class="result">2</td>
+            <td class="result">t + 1</td>
+            <td>N/A</td>
+          </tr>
+          <tr>
+            <td>Max Children</td>
+            <td class="result">2t</td>
+            <td class="result">2t + 1</td>
+            <td>N/A</td>
+          </tr>
+          <tr>
+            <td>Stores Data?</td>
+            <td>No</td>
+            <td>No</td>
+            <td class="result">Yes</td>
+          </tr>
+          <tr>
+            <td>Linked List?</td>
+            <td>No</td>
+            <td>No</td>
+            <td class="result">Yes (doubly)</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Height Formulas -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Tree Height Formula</h2>
+        <p>The height of a B+ Tree determines how many node accesses are needed for any operation. A shorter tree means fewer disk reads.</p>
+
+        <div class="formula-big">
+          <div class="expr">h = log_t(⌈(n + 1) / (2t + 1)⌉)</div>
+          <div class="desc">Height h of a B+ Tree with n keys and parameter t. This is the minimum height.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Height (worst case)</div>
+          <div class="expr">h = ⌈log_t((n+1)/2)⌉</div>
+          <div class="desc">When nodes are minimally filled (t-1 keys per leaf, t keys per internal).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Minimum Height (best case)</div>
+          <div class="expr">h = ⌈log_{2t}((n+1)/2)⌉</div>
+          <div class="desc">When nodes are maximally filled (2t-1 keys per leaf, 2t keys per internal).</div>
+        </div>
+
+        <div class="warning">
+          <div class="title">Height Formula Convention</div>
+          <p>Some textbooks define root at height 1, others at height 0. The formulas above use <span class="result">root at height 0</span> (number of edges from root to deepest leaf).</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why Height Matters</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Disk I/O</h3>
+            <p>Each level = 1 disk read</p>
+            <p>Height 3 → <span class="highlight">3 disk reads</span></p>
+            <p>Height 2 → <span class="highlight">2 disk reads</span></p>
+          </div>
+          <div class="card">
+            <h3>Search Complexity</h3>
+            <p>Time: <span class="highlight">O(h) = O(log_t(n))</span></p>
+            <p>t越大 → tree shorter → faster</p>
+            <p>Usually h = 3-4 for millions of keys</p>
+          </div>
+          <div class="card">
+            <h3>Practical Impact</h3>
+            <p>With t=100, height 3 can hold</p>
+            <p><span class="highlight">~2 billion keys!</span></p>
+            <p>That's only 3 disk reads</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Height Examples</h2>
+        <div class="example">
+          <div class="title">Example 1: Height with t=2, n=7</div>
+          <div class="code">
+<span class="comment">// t = 2, n = 7 keys</span>
+h = log_2(⌈(7 + 1) / (2×2 + 1)⌉)
+h = log_2(⌈8 / 5⌉)
+h = log_2(⌈1.6⌉)
+h = log_2(2)
+<span class="func">h = 1</span>
+<span class="comment">// Tree has 2 levels: root + leaves</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Height with t=3, n=50</div>
+          <div class="code">
+<span class="comment">// t = 3, n = 50 keys</span>
+h = log_3(⌈(50 + 1) / (2×3 + 1)⌉)
+h = log_3(⌈51 / 7⌉)
+h = log_3(⌈7.29⌉)
+h = log_3(8)
+h = ln(8) / ln(3)
+h ≈ 2.096 → <span class="func">h = 3</span> (ceiling)
+<span class="comment">// Tree has 3 levels: root + intermediate + leaves</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Height with t=100, n=1,000,000</div>
+          <div class="code">
+<span class="comment">// t = 100, n = 1,000,000 keys</span>
+h = log_100(⌈(1,000,000 + 1) / (201)⌉)
+h = log_100(⌈4975.1⌉)
+h = log_100(4976)
+h = ln(4976) / ln(100)
+h ≈ 1.65 → <span class="func">h = 2</span> (ceiling)
+<span class="comment">// Only 2 levels for 1 million keys!</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Minimum Height (max filled)</div>
+          <div class="code">
+<span class="comment">// t = 2, n = 15, all nodes maximally filled</span>
+h_min = ⌈log_{2×2}((15+1)/2)⌉
+h_min = ⌈log_4(8)⌉
+h_min = ⌈1.5⌉
+<span class="func">h_min = 2</span>
+<span class="comment">// 3 levels: root + internal + leaves</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 5: Maximum Height (min filled)</div>
+          <div class="code">
+<span class="comment">// t = 2, n = 15, all nodes minimally filled</span>
+h_max = ⌈log_2((15+1)/2)⌉
+h_max = ⌈log_2(8)⌉
+h_max = ⌈3⌉
+<span class="func">h_max = 3</span>
+<span class="comment">// 4 levels: root + 2 internal + leaves</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Number of Nodes -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Minimum Number of Nodes</h2>
+        <p>The number of nodes N depends on how full each node is. We derive bounds for N based on the node fill constraints.</p>
+
+        <div class="formula-big">
+          <div class="expr">N ≥ 1 + (n - 1) / (2t - 1)</div>
+          <div class="desc">Minimum number of nodes in a B+ Tree with n keys and parameter t. This occurs when nodes are maximally filled.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Number of Nodes</div>
+          <div class="expr">N ≤ 1 + (n - 1) / (t - 1)</div>
+          <div class="desc">Maximum number of nodes when nodes are minimally filled. Occurs when leaves have only t-1 keys each.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Derivation: Minimum Nodes</div>
+          <div class="expr">
+n = keys in leaves = N_leaf × (2t - 1) [max fill]
+N_leaf = n / (2t - 1)
+N_internal ≥ N_leaf / (2t) [each internal has max 2t children]
+          </div>
+          <div class="desc">Simplifying gives the formula N ≥ 1 + (n-1)/(2t-1).</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Number of Leaf Nodes</h2>
+
+        <div class="formula">
+          <div class="label">Leaf Nodes (minimum)</div>
+          <div class="expr">N_leaf ≥ ⌈n / (2t - 1)⌉</div>
+          <div class="desc">Minimum leaf nodes when each is maximally filled with 2t-1 keys.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Leaf Nodes (maximum)</div>
+          <div class="expr">N_leaf ≤ ⌈n / (t - 1)⌉</div>
+          <div class="desc">Maximum leaf nodes when each has only t-1 keys.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: n = 20, t = 3</div>
+          <div class="code">
+<span class="comment">// Minimum leaf nodes:</span>
+N_leaf_min = ⌈20 / (2×3 - 1)⌉ = ⌈20/5⌉ = <span class="func">4</span>
+
+<span class="comment">// Maximum leaf nodes:</span>
+N_leaf_max = ⌈20 / (3 - 1)⌉ = ⌈20/2⌉ = <span class="func">10</span>
+
+<span class="comment">// Minimum total nodes:</span>
+N_min = 1 + (20 - 1)/(2×3 - 1) = 1 + 19/5 = 1 + 3.8 = <span class="func">5</span> (at least 5 nodes)
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Node Count Table</h2>
+        <table>
+          <tr>
+            <th>n (keys)</th>
+            <th>t</th>
+            <th>Min Leaf Nodes</th>
+            <th>Max Leaf Nodes</th>
+            <th>Min Total N</th>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>2</td>
+            <td class="result">⌈10/3⌉ = 4</td>
+            <td class="result">⌈10/1⌉ = 10</td>
+            <td class="result">1 + 9/3 = 4</td>
+          </tr>
+          <tr>
+            <td>50</td>
+            <td>3</td>
+            <td class="result">⌈50/5⌉ = 10</td>
+            <td class="result">⌈50/2⌉ = 25</td>
+            <td class="result">1 + 49/5 = 11</td>
+          </tr>
+          <tr>
+            <td>100</td>
+            <td>5</td>
+            <td class="result">⌈100/9⌉ = 12</td>
+            <td class="result">⌈100/4⌉ = 25</td>
+            <td class="result">1 + 99/9 = 12</td>
+          </tr>
+          <tr>
+            <td>1000</td>
+            <td>10</td>
+            <td class="result">⌈1000/19⌉ = 53</td>
+            <td class="result">⌈1000/9⌉ = 112</td>
+            <td class="result">1 + 999/19 = 54</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Fanout and Branching Factor</h2>
+        <div class="formula">
+          <div class="label">Maximum Fanout</div>
+          <div class="expr">fanout_max = 2t + 1</div>
+          <div class="desc">Maximum number of children per internal node. Each child pointer takes about log₂(2t+1) bits.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Average Fanout</div>
+          <div class="expr">fanout_avg ≈ n / (n/(2t+1)) = 2t + 1</div>
+          <div class="desc">In a well-filled tree, average fanout approaches maximum.</div>
+        </div>
+
+        <div class="note">Higher t → higher fanout → shorter tree → fewer disk I/O. This is why database systems use large t values (typically t = 100-500).</div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Storage Analysis -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Storage Formula</h2>
+        <p>The total storage space S required for a B+ Tree depends on the page size, key size, and number of nodes.</p>
+
+        <div class="formula-big">
+          <div class="expr">S = N × ⌈(p - 1) / q⌉ × q</div>
+          <div class="desc">Total storage S in bytes. Each node occupies one page. The ⌈(p-1)/q⌉ term calculates how many keys fit per page.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Keys Per Page</div>
+          <div class="expr">k = ⌊(p - 1) / q⌋</div>
+          <div class="desc">Number of key-pointer pairs that fit in one page of size p bytes, where each pair is q bytes. The -1 accounts for the page header.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Maximum Keys in Tree</div>
+          <div class="expr">n = k × N_leaf</div>
+          <div class="desc">Total keys = keys per leaf × number of leaves. Where k = ⌊(p-1)/q⌋.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Lower Bound on Storage</h2>
+        <p>Combining the minimum node count with the storage formula gives a lower bound on total storage.</p>
+
+        <div class="formula-big">
+          <div class="expr">S ≥ (p - 1)/p × n × q × (1/(2t) + 1/(2t²))</div>
+          <div class="desc">Lower bound on storage. This shows how storage scales with n, p, q, and t.</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Derivation</div>
+          <div class="expr">
+N ≥ 1 + (n - 1)/(2t - 1)
+S = N × p
+S ≥ [1 + (n-1)/(2t-1)] × p
+S ≈ n × p / (2t - 1)  [for large n]
+          </div>
+          <div class="desc">Simplifying with n >> 1 gives the asymptotic bound.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Storage Examples</h2>
+        <div class="example">
+          <div class="title">Example 1: Calculate keys per page</div>
+          <div class="code">
+<span class="comment">// p = 4096 bytes (4KB page), q = 24 bytes (key + pointer)</span>
+k = ⌊(4096 - 1) / 24⌋
+k = ⌊4095 / 24⌋
+k = ⌊170.625⌋
+<span class="func">k = 170 keys per page</span>
+
+<span class="comment">// So t ≈ 170/2 = 85 for this page size</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Storage for n = 1,000,000 keys</div>
+          <div class="code">
+<span class="comment">// t = 85, p = 4096, q = 24</span>
+k = 170 keys per page
+
+<span class="comment">// Minimum leaf nodes:</span>
+N_leaf = ⌈1,000,000 / (2×85 - 1)⌉ = ⌈1,000,000/169⌉ = 5918
+
+<span class="comment">// Total storage (leaf nodes only):</span>
+S_leaf = 5918 × 4096 = <span class="func">24,239,328 bytes ≈ 24 MB</span>
+
+<span class="comment">// With internal nodes (~5918/170 ≈ 35 internal nodes):</span>
+S_total ≈ <span class="func">24.4 MB</span>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Storage lower bound formula</div>
+          <div class="code">
+<span class="comment">// Using: S ≥ (p-1)/p × n × q × (1/(2t) + 1/(2t²))</span>
+<span class="comment">// t = 85, n = 1,000,000, p = 4096, q = 24</span>
+
+S ≥ (4095/4096) × 1,000,000 × 24 × (1/170 + 1/170²)
+S ≥ 0.99976 × 1,000,000 × 24 × (0.005882 + 0.0000346)
+S ≥ 0.99976 × 1,000,000 × 24 × 0.005917
+S ≥ 0.99976 × 142,008
+S ≥ <span class="func">141,974 bytes ≈ 142 KB</span>
+
+<span class="comment">// Actual storage is larger because of page alignment</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Space Efficiency Analysis</h2>
+        <table>
+          <tr>
+            <th>Metric</th>
+            <th>Formula</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>Fill Factor</td>
+            <td class="result">50% - 100%</td>
+            <td>Average node occupancy (50% worst case)</td>
+          </tr>
+          <tr>
+            <td>Space Overhead</td>
+            <td class="result">50% - 100%</td>
+            <td>Extra space beyond raw data</td>
+          </tr>
+          <tr>
+            <td>Utilization</td>
+            <td class="result">≈ (2t-1)/(2t)</td>
+            <td>Leaf node utilization ≈ 100% when full</td>
+          </tr>
+          <tr>
+            <td>Internal Util.</td>
+            <td class="result">≈ (2t)/(2t+1)</td>
+            <td>Internal node utilization ≈ 100% when full</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 5: Worked Examples -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Example 1: Complete Analysis (t=2)</h2>
+        <p>Analyze a B+ Tree with t=2 and n=15 keys.</p>
+
+        <div class="example">
+          <div class="title">Full Analysis</div>
+          <div class="code">
+<span class="comment">// Given: t = 2, n = 15</span>
+
+<span class="comment">// Step 1: Node constraints</span>
+Root:   min 1 key,   max 4 keys
+Internal: min 2 keys, max 4 keys
+Leaf:   min 1 key,   max 3 keys
+
+<span class="comment">// Step 2: Height</span>
+h = log_2(⌈(15+1)/(2×2+1)⌉) = log_2(⌈16/5⌉) = log_2(4) = <span class="func">2</span>
+
+<span class="comment">// Step 3: Min leaf nodes</span>
+N_leaf = ⌈15/(2×2-1)⌉ = ⌈15/3⌉ = <span class="func">5</span>
+
+<span class="comment">// Step 4: Min total nodes</span>
+N ≥ 1 + (15-1)/(2×2-1) = 1 + 14/3 = 1 + 4.67 = <span class="func">6</span>
+
+<span class="comment">// Step 5: Max leaf nodes</span>
+N_leaf_max = ⌈15/(2-1)⌉ = <span class="func">15</span> (each leaf has only 1 key)
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Storage Calculation</h2>
+        <p>Calculate storage for a database with 10 million records, p=8KB, q=32 bytes.</p>
+
+        <div class="example">
+          <div class="title">Storage Analysis</div>
+          <div class="code">
+<span class="comment">// Given: n = 10,000,000, p = 8192, q = 32</span>
+
+<span class="comment">// Step 1: Keys per page</span>
+k = ⌊(8192-1)/32⌋ = ⌊8191/32⌋ = <span class="func">255 keys per page</span>
+
+<span class="comment">// Step 2: Order t</span>
+t ≈ k/2 = <span class="func">127</span> (approximate, since max leaf = 2t-1 ≈ 255)
+
+<span class="comment">// Step 3: Minimum leaf nodes</span>
+N_leaf = ⌈10,000,000/255⌉ = <span class="func">39,216 leaf pages</span>
+
+<span class="comment">// Step 4: Total leaf storage</span>
+S_leaf = 39,216 × 8192 = <span class="func">321,253,376 bytes ≈ 306 MB</span>
+
+<span class="comment">// Step 5: Internal nodes (fanout ≈ 256)</span>
+Level 1: ⌈39,216/256⌉ = 154 nodes
+Level 0 (root): 1 node
+Total internal: 155 nodes
+S_internal = 155 × 8192 = <span class="func">1,269,760 bytes ≈ 1.2 MB</span>
+
+<span class="comment">// Step 6: Total storage</span>
+S_total = 306 + 1.2 = <span class="func">≈ 307 MB</span>
+
+<span class="comment">// Height: log_127(⌈(10M+1)/255⌉) = log_127(39216) ≈ 2.2 → h = 3</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: Height Impact on I/O</h2>
+        <p>Compare I/O operations for different t values with n = 100,000 keys.</p>
+
+        <div class="example">
+          <div class="title">Comparison</div>
+          <table>
+            <tr>
+              <th>t</th>
+              <th>Height</th>
+              <th>Keys/Page (p=4KB)</th>
+              <th>Disk Reads/Op</th>
+              <th>Total I/O for 1000 searches</th>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td class="result">12</td>
+              <td>4</td>
+              <td class="result">12</td>
+              <td>12,000</td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td class="result">5</td>
+              <td>20</td>
+              <td class="result">5</td>
+              <td>5,000</td>
+            </tr>
+            <tr>
+              <td>50</td>
+              <td class="result">3</td>
+              <td>100</td>
+              <td class="result">3</td>
+              <td>3,000</td>
+            </tr>
+            <tr>
+              <td>200</td>
+              <td class="result">2</td>
+              <td>400</td>
+              <td class="result">2</td>
+              <td>2,000</td>
+            </tr>
+          </table>
+          <p class="note">Larger t dramatically reduces I/O. Most database systems use t = 100-500.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: Deletion Rebalancing</h2>
+        <p>After deleting keys, nodes may underflow. Calculate minimum keys after deletion.</p>
+
+        <div class="example">
+          <div class="title">Deletion Rules</div>
+          <div class="code">
+<span class="comment">// Given: t = 3</span>
+
+<span class="comment">// If leaf has 2 keys and we delete 1 → underflow (min = t-1 = 2)</span>
+<span class="comment">// Actually 2 - 1 = 1 < 2 → UNDERFLOW!</span>
+
+<span class="comment">// Fix: borrow from sibling or merge</span>
+
+<span class="comment">// Borrow (redistribute):</span>
+<span class="comment">// Sibling has 4 keys (≥ t+1 = 4):</span>
+  Before: [A,B] [C,D,E,F]  <span class="comment">// left leaf underflows</span>
+  After:  [A,B,C] [D,E,F]  <span class="comment">// C moved from right to left</span>
+
+<span class="comment">// Merge (if sibling also has t keys = 3):</span>
+  Before: [A] [B,C,D]  <span class="comment">// left has 1 key (< min 2)</span>
+  After:  [A,B,C,D]    <span class="comment">// merge into one leaf</span>
+  <span class="comment">// Remove B from parent (it was separating these two)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 5: Exam-Style Problem</h2>
+        <p>A B+ Tree has t=4, page size p=512 bytes, key+pointer size q=16 bytes, and 50,000 records. Find: height, number of leaf nodes, total storage.</p>
+
+        <div class="example">
+          <div class="title">Solution</div>
+          <div class="code">
+<span class="comment">// Given: t=4, p=512, q=16, n=50,000</span>
+
+<span class="comment">// Step 1: Keys per page</span>
+k = ⌊(512-1)/16⌋ = ⌊511/16⌋ = <span class="func">31</span>
+<span class="comment">// Max leaf keys = 2t-1 = 7 (actual constraint)</span>
+<span class="comment">// But page can hold 31 → use min(31, 2t-1) = 7</span>
+
+<span class="comment">// Step 2: Height</span>
+h = log_4(⌈(50000+1)/9⌉)
+h = log_4(⌈5555.7⌉)
+h = log_4(5556)
+h = ln(5556)/ln(4)
+h ≈ 6.14 → <span class="func">h = 7</span>
+
+<span class="comment">// Step 3: Min leaf nodes</span>
+N_leaf = ⌈50000/7⌉ = <span class="func">7,143</span>
+
+<span class="comment">// Step 4: Total nodes</span>
+N ≥ 1 + 49999/7 = 1 + 7142.7 = <span class="func">7,144</span>
+
+<span class="comment">// Step 5: Total storage</span>
+S = 7144 × 512 = <span class="func">3,657,728 bytes ≈ 3.5 MB</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-ref">
+        <h3>Quick Reference Card — All Formulas</h3>
+        <ul>
+          <li><span class="sym">▸</span> Root keys: 1 ≤ k ≤ 2t | Internal keys: t ≤ k ≤ 2t | Leaf keys: t-1 ≤ k ≤ 2t-1</li>
+          <li><span class="sym">▸</span> Root children: 2 ≤ c ≤ 2t | Internal children: t+1 ≤ c ≤ 2t+1</li>
+          <li><span class="sym">▸</span> Height: h = log_t(⌈(n+1)/(2t+1)⌉)</li>
+          <li><span class="sym">▸</span> Min nodes: N ≥ 1 + (n-1)/(2t-1)</li>
+          <li><span class="sym">▸</span> Max nodes: N ≤ 1 + (n-1)/(t-1)</li>
+          <li><span class="sym">▸</span> Leaf nodes: ⌈n/(2t-1)⌉ ≤ N_leaf ≤ ⌈n/(t-1)⌉</li>
+          <li><span class="sym">▸</span> Keys per page: k = ⌊(p-1)/q⌋</li>
+          <li><span class="sym">▸</span> Storage: S = N × p ≈ n × p / (2t-1)</li>
+          <li><span class="sym">▸</span> Search: O(log_t(n)) | Insert: O(log_t(n)) | Delete: O(log_t(n))</li>
+          <li><span class="sym">▸</span> Range query: O(log_t(n) + k) where k = results</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Complexity Summary</h2>
+        <div class="complexity">
+          <div class="cx-item">
+            <div class="op">Search</div>
+            <div class="val">O(log_t n)</div>
+          </div>
+          <div class="cx-item">
+            <div class="op">Insert</div>
+            <div class="val">O(log_t n)</div>
+          </div>
+          <div class="cx-item">
+            <div class="op">Delete</div>
+            <div class="val">O(log_t n)</div>
+          </div>
+          <div class="cx-item">
+            <div class="op">Range Query</div>
+            <div class="val">O(log_t n + k)</div>
+          </div>
+          <div class="cx-item">
+            <div class="op">Space</div>
+            <div class="val">O(n)</div>
+          </div>
+          <div class="cx-item">
+            <div class="op">Height</div>
+            <div class="val">O(log_t n)</div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">Exam Tips</div>
+          <p>1. Always check if the question uses <span class="result">root at height 0 or 1</span> — formulas differ.</p>
+          <p>2. Remember: <span class="result">leaf max = 2t-1</span>, internal max = 2t (off by one!).</p>
+          <p>3. Root is special: min 1 key, min 2 children (not t).</p>
+          <p>4. Copy Up for leaf splits, Push Up for internal splits.</p>
+          <p>5. Storage formulas depend on whether you count the root as a separate node.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

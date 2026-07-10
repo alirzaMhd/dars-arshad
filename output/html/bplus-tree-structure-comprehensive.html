@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B+ Tree Structure - Comprehensive Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; line-height: 1.6; }
+
+    h1 { text-align: center; font-size: 1.8em; color: #22c55e; margin: 25px 0 5px; text-shadow: 0 0 25px #22c55e44; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 25px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 40px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+    .tab { padding: 10px 18px; border: 2px solid #334155; background: #1e293b; color: #94a3b8; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.88em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #052e16; font-weight: 600; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+
+    .content { display: none; }
+    .content.active { display: block; }
+
+    /* Sections */
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 24px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.15em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .section h3 { color: #fbbf24; font-size: 0.98em; margin: 18px 0 10px; }
+
+    /* Formulas */
+    .formula { background: #0f172a; padding: 14px 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #3b82f6; }
+    .formula .label { color: #60a5fa; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.15em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula .desc { color: #94a3b8; font-size: 0.85em; margin-top: 6px; }
+
+    /* Examples */
+    .example { background: #0f172a; padding: 18px; border-radius: 10px; margin: 14px 0; border: 1px solid #334155; }
+    .example .title { color: #fbbf24; font-size: 0.92em; margin-bottom: 12px; font-weight: 600; }
+
+    /* Grid / Cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 16px 0; }
+    .card { background: #0f172a; padding: 18px; border-radius: 10px; border: 1px solid #334155; }
+    .card h3 { color: #f97316; margin-bottom: 10px; font-size: 0.95em; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+
+    /* Notes & Warnings */
+    .note { color: #94a3b8; font-style: italic; font-size: 0.85em; margin-top: 10px; padding-left: 12px; border-left: 2px solid #475569; }
+    .warning { background: #451a03; border: 1px solid #f97316; border-radius: 8px; padding: 14px 16px; margin: 14px 0; }
+    .warning .title { color: #f97316; font-weight: 600; margin-bottom: 6px; }
+    .warning p { color: #fdba74; font-size: 0.9em; }
+
+    /* Tables */
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #334155; padding: 10px 12px; text-align: center; }
+    th { background: #1e293b; color: #3b82f6; font-weight: 600; }
+    td { background: #0f172a; }
+    tr:hover td { background: #1a2740; }
+
+    /* Code / Pseudocode */
+    .code { background: #0f172a; padding: 14px 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #93c5fd; overflow-x: auto; border: 1px solid #334155; line-height: 1.7; }
+    .code .keyword { color: #c084fc; font-weight: bold; }
+    .code .comment { color: #6b7280; }
+    .code .func { color: #22c55e; }
+    .code .var { color: #fbbf24; }
+
+    /* Tree Diagram */
+    .tree-diagram { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 20px; margin: 14px 0; text-align: center; font-family: 'Courier New', monospace; font-size: 0.9em; overflow-x: auto; }
+    .tree-node { display: inline-block; border: 2px solid #22c55e; border-radius: 6px; padding: 4px 10px; margin: 4px; color: #22c55e; }
+    .tree-node.leaf { border-color: #f97316; color: #f97316; }
+    .tree-node.root { border-color: #fbbf24; color: #fbbf24; border-width: 3px; }
+    .tree-connector { color: #475569; }
+
+    /* Quick Reference */
+    .quick-ref { background: linear-gradient(135deg, #0f172a, #1e293b); border: 2px solid #22c55e; border-radius: 12px; padding: 20px; margin: 16px 0; }
+    .quick-ref h3 { color: #22c55e; margin-bottom: 12px; text-align: center; }
+    .quick-ref ul { list-style: none; padding: 0; }
+    .quick-ref li { padding: 6px 0; border-bottom: 1px solid #1e293b; color: #e2e8f0; }
+    .quick-ref li:last-child { border-bottom: none; }
+    .quick-ref .sym { color: #22c55e; font-weight: bold; margin-right: 8px; }
+
+    /* Complexity */
+    .complexity { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
+    .cx-item { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; text-align: center; }
+    .cx-item .op { color: #94a3b8; font-size: 0.8em; margin-bottom: 4px; }
+    .cx-item .val { color: #22c55e; font-size: 1.1em; font-weight: bold; font-family: 'Courier New', monospace; }
+
+    .result { color: #22c55e; font-weight: bold; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h1>B+ Tree Structure</h1>
+  <p class="subtitle">Data Structures — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Node Types</button>
+      <button class="tab" onclick="showSection('tab3')">Leaf Linking</button>
+      <button class="tab" onclick="showSection('tab4')">Insertion & Splitting</button>
+      <button class="tab" onclick="showSection('tab5')">Worked Examples</button>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is a B+ Tree?</h2>
+        <p>A B+ Tree is a self-balancing tree data structure that maintains sorted data and allows searches, sequential access, insertions, and deletions in logarithmic time. It is widely used in databases and file systems for indexing.</p>
+        <p style="margin-top: 12px;">Unlike a regular B-Tree, a B+ Tree stores all actual data in the <span class="result">leaf nodes</span>, while internal (intermediate) nodes store only index keys used for navigation.</p>
+
+        <div class="warning">
+          <div class="title">Key Difference from B-Tree</div>
+          <p>In a B-Tree, data pointers exist in both internal and leaf nodes. In a B+ Tree, <strong>all data pointers are only in leaf nodes</strong>. Internal nodes contain only copies of keys for routing.</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">B+ Tree Parameter</div>
+          <div class="expr">t = order of the B+ Tree</div>
+          <div class="desc">t determines the minimum and maximum number of keys and children each node can have. All capacity constraints are expressed in terms of t.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>General Structure Diagram</h2>
+        <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+            [ 10 | 20 ]                ← Root (internal)
+           /    |     \
+    [5|8]     [15|18]    [25|30]      ← Intermediate nodes
+   / | \      / | \      / | \
+  ↓  ↓  ↓    ↓  ↓  ↓    ↓  ↓  ↓
+[1 3 5 8] [12 15 18] [22 25 30] [35 40]  ← Leaf nodes
+  ↔  ↔  ↔    ↔  ↔  ↔    ↔  ↔  ↔          (doubly linked)
+</pre>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>Root Node</h3>
+            <p><span class="highlight">●</span> Top node of the tree</p>
+            <p><span class="highlight">●</span> Can be internal OR leaf</p>
+            <p><span class="highlight">●</span> Min 1 key, min 2 children</p>
+          </div>
+          <div class="card">
+            <h3>Intermediate Nodes</h3>
+            <p><span class="dim">●</span> Contain index keys only</p>
+            <p><span class="dim">●</span> Guide search to correct leaf</p>
+            <p><span class="dim">●</span> No data pointers stored here</p>
+          </div>
+          <div class="card">
+            <h3>Leaf Nodes</h3>
+            <p style="color:#22c55e;">● Contain actual data/records</p>
+            <p style="color:#22c55e;">● Linked together (doubly)</p>
+            <p style="color:#22c55e;">● Support range queries efficiently</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why B+ Trees Over B-Trees?</h2>
+        <table>
+          <tr><th>Feature</th><th>B-Tree</th><th>B+ Tree</th></tr>
+          <tr><td>Data Storage</td><td>All nodes</td><td>Only leaf nodes</td></tr>
+          <tr><td>Leaf Linking</td><td>No</td><td>Yes (doubly linked)</td></tr>
+          <tr><td>Range Queries</td><td>O(n) traversal</td><td>O(log n + k) sequential</td></tr>
+          <tr><td>Internal Node Size</td><td>Larger (has data)</td><td>Smaller (keys only)</td></tr>
+          <tr><td>Cache Performance</td><td>Lower</td><td>Higher (more keys per page)</td></tr>
+          <tr><td>Disk I/O</td><td>More</td><td>Fewer (shallower tree)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Node Types -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Root Node</h2>
+        <p>The root node is the entry point of the B+ Tree. It can be either an internal node (if the tree has more than one level) or a leaf node (if the entire tree fits in one node).</p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Root as Internal Node</h3>
+            <p>• Minimum keys: <span class="highlight">1</span></p>
+            <p>• Maximum keys: <span class="highlight">2t</span></p>
+            <p>• Minimum children: <span class="highlight">2</span></p>
+            <p>• Maximum children: <span class="highlight">2t</span></p>
+          </div>
+          <div class="card">
+            <h3>Root as Leaf Node</h3>
+            <p>• Minimum keys: <span class="dim">0</span> (empty tree)</p>
+            <p>• Maximum keys: <span class="highlight">2t - 1</span></p>
+            <p>• Contains data pointers</p>
+            <p>• No children</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">Root Exception</div>
+          <p>The root node is the <strong>only</strong> node that can have fewer than t keys (minimum 1 key for internal, 0 for leaf). This exception allows the tree to grow gradually.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Intermediate (Internal) Nodes</h2>
+        <p>Intermediate nodes exist between the root and the leaves. They store <strong>only index keys</strong> — no data pointers. These keys act as routing information to direct searches to the correct leaf.</p>
+
+        <div class="formula">
+          <div class="label">Intermediate Node Constraints</div>
+          <div class="expr">t ≤ keys ≤ 2t</div>
+          <div class="desc">Each intermediate node must have at least t keys and at most 2t keys (except the root).</div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Children Constraint</div>
+          <div class="expr">t + 1 ≤ children ≤ 2t + 1</div>
+          <div class="desc">A node with k keys has k+1 children. So min children = t+1, max children = 2t+1.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Intermediate Node (t = 2)</div>
+          <p>With t = 2, an intermediate node can have:</p>
+          <ul>
+            <li>Minimum 2 keys, maximum 4 keys</li>
+            <li>Minimum 3 children, maximum 5 children</li>
+          </ul>
+          <div class="tree-diagram" style="margin-top:10px;">
+<pre style="text-align:left; display:inline-block;">
+   [10 | 20 | 30]      ← 3 keys
+  /   |    |    \
+ ↓    ↓    ↓     ↓     ← 4 children
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Leaf Nodes</h2>
+        <p>Leaf nodes store the actual data records or pointers to data records. Every key in the B+ Tree must appear at least once in a leaf node. Leaf nodes are linked together via a doubly linked list for efficient range queries.</p>
+
+        <div class="formula">
+          <div class="label">Leaf Node Constraints</div>
+          <div class="expr">t - 1 ≤ keys ≤ 2t - 1</div>
+          <div class="desc">Each leaf node must have at least t-1 keys and at most 2t-1 keys.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Leaf Node Properties</h3>
+            <p>• Contains actual data pointers</p>
+            <p>• All data is at the leaf level</p>
+            <p>• Keys may be duplicated across leaves</p>
+            <p>• Sorted order maintained</p>
+          </div>
+          <div class="card">
+            <h3>Leaf Node Links</h3>
+            <p>• Forward pointer → next leaf</p>
+            <p>• Backward pointer ← previous leaf</p>
+            <p>• Enables sequential scan</p>
+            <p>• Range queries: O(log n + k)</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Leaf Node (t = 3)</div>
+          <p>With t = 3, a leaf node can hold between 2 and 5 keys:</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+  [5, 8, 12] → [20, 25] → [30, 35, 40] → null
+   ↑ backward    ↑
+</pre>
+          </div>
+          <p class="note">Each bracket [ ] represents one leaf node. Arrows show the doubly linked list between leaves.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complete Node Summary Table</h2>
+        <table>
+          <tr>
+            <th>Node Type</th>
+            <th>Min Keys</th>
+            <th>Max Keys</th>
+            <th>Min Children</th>
+            <th>Max Children</th>
+            <th>Stores Data?</th>
+          </tr>
+          <tr>
+            <td>Root (internal)</td>
+            <td class="result">1</td>
+            <td class="result">2t</td>
+            <td class="result">2</td>
+            <td class="result">2t</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Intermediate</td>
+            <td class="result">t</td>
+            <td class="result">2t</td>
+            <td class="result">t + 1</td>
+            <td class="result">2t + 1</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Leaf</td>
+            <td class="result">t - 1</td>
+            <td class="result">2t - 1</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td class="result">Yes</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 3: Leaf Linking -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Doubly Linked Leaf List</h2>
+        <p>All leaf nodes in a B+ Tree are connected through a <span class="result">doubly linked list</span>. This is one of the most important structural features that distinguishes B+ Trees from B-Trees.</p>
+
+        <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+  ┌──────────────────────────────────────────────────┐
+  │                                                  │
+  ↓                                                  │
+[1 3 5] ↔ [8 12 15] ↔ [20 25] ↔ [30 35 40] ↔ null
+  ↑                                              │
+  └──────────────────────────────────────────────┘
+</pre>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Forward Pointer</h3>
+            <p>• Points to the next leaf node</p>
+            <p>• Used for sequential scans</p>
+            <p>• Enables ORDER BY queries</p>
+          </div>
+          <div class="card">
+            <h3>Backward Pointer</h3>
+            <p>• Points to the previous leaf</p>
+            <p>• Enables reverse scans</p>
+            <p>• Bidirectional traversal</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Range Query Efficiency</h2>
+        <p>Without leaf linking, a range query would require traversing the tree for every key in the range — O(k × log n). With leaf linking, after finding the first key, we simply follow the linked list: O(log n + k).</p>
+
+        <div class="formula">
+          <div class="label">Range Query Complexity</div>
+          <div class="expr">O(log_t(n) + k)</div>
+          <div class="desc">Where n = total keys, k = number of results. The log n part finds the starting leaf; the k part scans the linked list.</div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example: Range Query [12, 35]</div>
+          <p>Step 1: Search for key 12 → traverse tree, reach leaf [8, 12, 15]</p>
+          <p>Step 2: Follow leaf links forward, collecting all keys ≤ 35:</p>
+          <ul>
+            <li>[8, 12, 15] → keep 12, 15</li>
+            <li>[20, 25] → keep 20, 25</li>
+            <li>[30, 35, 40] → keep 30, 35 (stop at 35)</li>
+          </ul>
+          <p class="result" style="margin-top:8px;">Result: 12, 15, 20, 25, 30, 35 — scanned 3 leaf nodes, no tree traversal needed!</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Leaf Splitting During Insertion</h2>
+        <p>When a leaf node overflows (exceeds 2t - 1 keys), it splits into two leaves. The middle key is <strong>copied up</strong> (not promoted) to the parent. The two resulting leaves are re-linked in the doubly linked list.</p>
+
+        <div class="warning">
+          <div class="title">Copy Up vs. Push Up</div>
+          <p><strong>Leaf split:</strong> The key is <span class="result">copied up</span> — it remains in the leaf AND appears in the parent.</p>
+          <p><strong>Internal split:</strong> The key is <span class="result">pushed up</span> — it is moved (not copied) to the parent.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Leaf Split Example (t = 2, max 3 keys per leaf)</div>
+          <p>Before: Leaf [5, 8, 12, 15] — overflow (4 keys > max 3)</p>
+          <div class="code">
+<span class="comment">// Split leaf at middle key (index = ceil(4/2) = 2)</span>
+Left leaf:  [5, 8]        <span class="comment">// first half</span>
+Right leaf: [12, 15]      <span class="comment">// second half</span>
+Copied up:  12            <span class="comment">// middle key goes to parent</span>
+<span class="comment">// Leaf links updated:</span>
+[5,8] ↔ [12,15] ↔ [next leaf]
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Benefits of Leaf Linking</h2>
+        <table>
+          <tr><th>Benefit</th><th>Explanation</th></tr>
+          <tr><td>Range Queries</td><td>After finding start, scan linearly through leaves</td></tr>
+          <tr><td>Sequential Access</td><td>Read all data in sorted order without tree traversal</td></tr>
+          <tr><td>ORDER BY</td><td>Database can use leaf links for sorted output</td></tr>
+          <tr><td>Minimal I/O</td><td>Sequential leaf reads are faster than random tree traversals</td></tr>
+          <tr><td>Cursors</td><td>Database cursors can move through results via leaf pointers</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Insertion & Splitting -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Insertion Algorithm</h2>
+        <p>Insertion in a B+ Tree follows these steps: find the correct leaf, insert the key, and split nodes if overflow occurs.</p>
+
+        <div class="code">
+<span class="keyword">function</span> <span class="func">BPlusTreeInsert</span>(tree, key, data):
+    <span class="comment">// Step 1: Find the correct leaf node</span>
+    leaf = <span class="func">findLeaf</span>(tree.root, key)
+
+    <span class="comment">// Step 2: Insert key into leaf in sorted order</span>
+    <span class="func">insertIntoLeaf</span>(leaf, key, data)
+
+    <span class="comment">// Step 3: Check for overflow</span>
+    <span class="keyword">if</span> leaf.numKeys > <span class="var">MAX_LEAF_KEYS</span>:
+        <span class="func">splitLeaf</span>(leaf)
+
+<span class="keyword">function</span> <span class="func">splitLeaf</span>(leaf):
+    <span class="comment">// Create new leaf</span>
+    newLeaf = <span class="func">createLeaf</span>()
+
+    <span class="comment">// Split: first half stays, second half moves to new leaf</span>
+    mid = <span class="func">ceil</span>(leaf.numKeys / 2)
+    <span class="keyword">for</span> i = mid <span class="keyword">to</span> leaf.numKeys:
+        <span class="func">moveKey</span>(leaf, newLeaf, i)
+
+    <span class="comment">// Copy middle key up to parent</span>
+    parentKey = newLeaf.keys[0]
+    <span class="func">insertIntoParent</span>(leaf.parent, parentKey, newLeaf)
+
+    <span class="comment">// Update leaf links</span>
+    newLeaf.next = leaf.next
+    leaf.next = newLeaf
+    newLeaf.prev = leaf
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Internal Node Splitting</h2>
+        <p>When an internal node overflows (exceeds 2t keys), it splits. The middle key is <strong>pushed up</strong> to the parent — it is NOT kept in the split node.</p>
+
+        <div class="code">
+<span class="keyword">function</span> <span class="func">splitInternal</span>(node):
+    <span class="comment">// Create new internal node</span>
+    newNode = <span class="func">createInternal</span>()
+
+    <span class="comment">// Middle key pushes up to parent</span>
+    mid = <span class="func">ceil</span>(node.numKeys / 2)
+    pushUpKey = node.keys[mid]
+
+    <span class="comment">// Split: first half stays, second half moves</span>
+    <span class="keyword">for</span> i = mid+1 <span class="keyword">to</span> node.numKeys:
+        <span class="func">moveKeyAndChild</span>(node, newNode, i)
+
+    node.numKeys = mid  <span class="comment">// remove middle key from node</span>
+
+    <span class="comment">// Insert pushed-up key into parent</span>
+    <span class="func">insertIntoParent</span>(node.parent, pushUpKey, newNode)
+        </div>
+
+        <div class="warning">
+          <div class="title">Copy Up vs Push Up — Critical Difference</div>
+          <p><strong>Leaf split → Copy Up:</strong> The middle key is copied to the parent AND stays in the right leaf.</p>
+          <p><strong>Internal split → Push Up:</strong> The middle key is moved to the parent and does NOT remain in either child node.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Root Splitting</h2>
+        <p>If the root node overflows, a new root is created. This is the only case where the tree grows taller.</p>
+
+        <div class="code">
+<span class="keyword">function</span> <span class="func">splitRoot</span>(root):
+    newRoot = <span class="func">createInternal</span>()
+    newNode = <span class="func">createInternal</span>()
+
+    mid = <span class="func">ceil</span>(root.numKeys / 2)
+    pushUpKey = root.keys[mid]
+
+    <span class="comment">// Move second half to newNode</span>
+    <span class="keyword">for</span> i = mid+1 <span class="keyword">to</span> root.numKeys:
+        <span class="func">moveKeyAndChild</span>(root, newNode, i)
+
+    root.numKeys = mid
+
+    <span class="comment">// New root gets the pushed-up key</span>
+    newRoot.keys[0] = pushUpKey
+    newRoot.children[0] = root
+    newRoot.children[1] = newNode
+    root.parent = newRoot
+    newNode.parent = newRoot
+
+    tree.root = newRoot  <span class="comment">// tree grows taller</span>
+        </div>
+
+        <div class="example">
+          <div class="title">Root Split Visual</div>
+          <p>Before: Root [5 | 10 | 15 | 20] — overflow with t=2 (max 4 keys)</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+Before:          [5 | 10 | 15 | 20]
+                /   |    |     \
+              ↓     ↓    ↓      ↓
+
+After:              [15]              ← new root
+                   /    \
+              [5|10]    [20]          ← split root
+              / | \      | \
+            ↓   ↓  ↓     ↓  ↓
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Complete Insertion Walkthrough</h2>
+        <div class="example">
+          <div class="title">Full Example: Insert 1,2,3,4,5,6,7,8,9,10 (t=2)</div>
+          <p>Max keys per leaf = 2t-1 = 3, Max keys per internal = 2t = 4</p>
+
+          <p style="margin-top:12px;"><strong>Insert 1, 2, 3:</strong> All go to root leaf [1, 2, 3]</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+[1 | 2 | 3]
+</pre>
+          </div>
+
+          <p><strong>Insert 4:</strong> Leaf overflows → split</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+         [3]              ← 3 copied up
+        /    \
+    [1|2]  [3|4]          ← leaf split, 3 stays in right leaf
+</pre>
+          </div>
+
+          <p><strong>Insert 5:</strong> Goes to leaf [3, 4] → [3, 4, 5]</p>
+          <p><strong>Insert 6:</strong> Leaf overflows → split</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+         [3 | 5]          ← 5 copied up
+        /   |    \
+    [1|2] [3|4] [5|6]     ← leaf split
+</pre>
+          </div>
+
+          <p><strong>Insert 7, 8, 9:</strong> Eventually more splits occur...</p>
+          <p><strong>Insert 10:</strong> May trigger root split → tree grows taller</p>
+          <div class="tree-diagram">
+<pre style="text-align:left; display:inline-block;">
+              [5]              ← new root
+             /    \
+         [3]        [8]        ← internal nodes
+        / | \      / | \
+   [1|2] [3|4] [5|6|7] [8|9|10]  ← leaves
+</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Worked Examples -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Worked Example 1: Basic B+ Tree (t=2)</h2>
+        <p>Build a B+ Tree with t=2 by inserting keys: 10, 20, 30, 40, 50</p>
+
+        <div class="example">
+          <div class="title">Step-by-Step Insertion</div>
+          <div class="code">
+<span class="comment">// Insert 10:</span>
+Root: [10]
+
+<span class="comment">// Insert 20:</span>
+Root: [10, 20]
+
+<span class="comment">// Insert 30:</span>
+Root: [10, 20, 30]
+
+<span class="comment">// Insert 40: Root overflows (4 keys > max 2t-1=3 for leaf root)
+// Split leaf, copy up middle key</span>
+         [30]
+        /    \
+    [10|20]  [30|40]     <span class="comment">// 30 copied up AND stays in right leaf</span>
+
+<span class="comment">// Insert 50: Goes to right leaf</span>
+         [30]
+        /    \
+    [10|20]  [30|40|50]
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Internal Split (t=2)</h2>
+        <p>Continue from Example 1. Insert 60, 70, 80:</p>
+
+        <div class="example">
+          <div class="title">Step-by-Step</div>
+          <div class="code">
+<span class="comment">// Insert 60: Right leaf overflows</span>
+         [30 | 50]       <span class="comment">// 50 copied up</span>
+        /   |    \
+    [10|20] [30|40] [50|60]
+
+<span class="comment">// Insert 70: Goes to last leaf</span>
+         [30 | 50]
+        /   |    \
+    [10|20] [30|40] [50|60|70]
+
+<span class="comment">// Insert 80: Last leaf overflows → split → internal may overflow</span>
+         [30 | 50 | 70]
+        /   |    |    \
+    [10|20] [30|40] [50|60] [70|80]
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: Search Operation</h2>
+        <p>Search for key 50 in this tree:</p>
+
+        <div class="example">
+          <div class="title">Search Path</div>
+          <div class="code">
+Tree:
+         [30 | 50 | 70]
+        /   |    |    \
+    [10|20] [30|40] [50|60] [70|80]
+
+<span class="comment">// Step 1: Start at root, compare 50 with keys</span>
+  50 ≥ 50, so go to 3rd child
+
+<span class="comment">// Step 2: At intermediate node [30|50|70]</span>
+  50 ≥ 50, so go to child after 50
+
+<span class="comment">// Step 3: Reach leaf [50, 60]</span>
+  Found 50! <span class="func">Return data pointer</span>
+
+<span class="comment">// Total: 2 node accesses (height = 2)</span>
+          </div>
+          <p class="result">Search complexity: O(log_t(n)) = O(log_2(n))</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: Range Query</h2>
+        <p>Find all keys in range [25, 65]:</p>
+
+        <div class="example">
+          <div class="title">Range Query Execution</div>
+          <div class="code">
+<span class="comment">// Step 1: Search for lower bound 25</span>
+  Root [30|50|70]: 25 < 30, go to 1st child
+  Leaf [10,20]: 25 not found, but 25 > 20
+  → start from next leaf [30,40]
+
+<span class="comment">// Step 2: Scan leaf linked list from [30,40]</span>
+  Leaf [30,40]:   keep 30, 40  (both ≤ 65)
+  Leaf [50,60]:   keep 50, 60  (both ≤ 65)
+  Leaf [70,80]:   70 > 65 → STOP
+
+<span class="comment">// Result: 30, 40, 50, 60</span>
+<span class="comment">// Accessed: 1 root + 1 leaf (search) + 3 leaves (scan) = 5 nodes</span>
+          </div>
+          <p class="result">Range query: O(log_t(n) + k) where k = number of results</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 5: Deletion</h2>
+        <p>Delete key 30 from the tree:</p>
+
+        <div class="example">
+          <div class="title">Deletion Process</div>
+          <div class="code">
+Before:
+         [30 | 50 | 70]
+        /   |    |    \
+    [10|20] [30|40] [50|60] [70|80]
+
+<span class="comment">// Step 1: Find and remove 30 from leaf</span>
+  Leaf becomes: [40]
+  Still valid (≥ t-1 = 1 key) → DONE
+
+After:
+         [30 | 50 | 70]
+        /   |    |    \
+    [10|20] [40] [50|60] [70|80]
+          </div>
+          <p class="note">If the leaf had only 1 key and we deleted it, we'd need to merge or redistribute with siblings.</p>
+        </div>
+      </div>
+
+      <div class="quick-ref">
+        <h3>Quick Reference Card</h3>
+        <ul>
+          <li><span class="sym">▸</span> Root: min 1 key, max 2t keys, min 2 children, max 2t children</li>
+          <li><span class="sym">▸</span> Internal: min t keys, max 2t keys, min t+1 children, max 2t+1 children</li>
+          <li><span class="sym">▸</span> Leaf: min t-1 keys, max 2t-1 keys, linked list, stores data</li>
+          <li><span class="sym">▸</span> Leaf split → Copy Up (key stays in leaf AND goes to parent)</li>
+          <li><span class="sym">▸</span> Internal split → Push Up (key moves to parent only)</li>
+          <li><span class="sym">▸</span> Root split → tree grows taller (only time height increases)</li>
+          <li><span class="sym">▸</span> Search: O(log_t(n)) — follow path from root to leaf</li>
+          <li><span class="sym">▸</span> Range query: O(log_t(n) + k) — use leaf linked list</li>
+          <li><span class="sym">▸</span> Insert: O(log_t(n)) — find leaf + possible splits</li>
+          <li><span class="sym">▸</span> Delete: O(log_t(n)) — find leaf + possible merges</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

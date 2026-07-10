@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B+ Tree Queries (Point & Range) - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #22c55e; margin: 20px 0 5px; text-shadow: 0 0 20px #22c55e55; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .section h3 { color: #fbbf24; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0f172a; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #38bdf8; }
+    .formula .label { color: #38bdf8; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a2332; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #475569; }
+    .example .title { color: #fbbf24; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a2332; padding: 15px; border-radius: 8px; border: 1px solid #475569; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #22c55e; font-weight: bold; }
+    .warning { background: #1a1520; border-left: 3px solid #f97316; padding: 12px 15px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+    .warning .title { color: #f97316; font-weight: bold; margin-bottom: 5px; }
+    .warning .content { color: #fca5a5; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: center; }
+    th { background: #1a2332; color: #38bdf8; }
+    td { background: #0f172a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #475569; background: #1a2332; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #0f2a1a; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0f172a; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #38bdf8; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .tree-box { background: #0f172a; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #334155; font-family: monospace; text-align: center; }
+    .tree-box .node { display: inline-block; border: 2px solid #22c55e; padding: 8px 12px; margin: 5px; border-radius: 6px; background: #1a2332; }
+    .tree-box .node.found { border-color: #fbbf24; background: #1a1a0a; }
+    .tree-box .node.pointer { border-color: #38bdf8; }
+    .step-num { display: inline-block; background: #22c55e; color: #0f172a; font-weight: bold; padding: 2px 8px; border-radius: 50%; margin-right: 5px; }
+    .step-arrow { text-align: center; color: #475569; font-size: 1.5em; margin: 5px 0; }
+    .ref-card { background: linear-gradient(135deg, #1a2332 0%, #0f172a 100%); padding: 20px; border-radius: 12px; border: 2px solid #22c55e; margin: 15px 0; }
+    .ref-card h3 { color: #22c55e; margin-bottom: 10px; text-align: center; }
+    .ref-card .item { padding: 5px 0; border-bottom: 1px solid #334155; font-size: 0.9em; }
+    .ref-card .item:last-child { border-bottom: none; }
+    .highlight-box { background: #0f2a1a; border: 2px solid #22c55e; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .highlight-box .title { color: #22c55e; font-weight: bold; margin-bottom: 5px; }
+    .search-path { color: #38bdf8; font-weight: bold; }
+    .range-result { background: #1a1a0a; padding: 10px; border: 1px dashed #fbbf24; border-radius: 6px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>B+ TREE QUERIES</h1>
+  <p class="subtitle">Point Query & Range Query — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Point Query</button>
+      <button class="tab" onclick="showSection('tab2')">Range Query</button>
+      <button class="tab" onclick="showSection('tab3')">Pseudocode</button>
+      <button class="tab" onclick="showSection('tab4')">Worked Examples</button>
+      <button class="tab" onclick="showSection('tab5')">Quick Reference</button>
+    </div>
+
+    <!-- Tab 1: Point Query -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Point Query Algorithm</h2>
+        <p>A point query searches for an <span class="result">exact match</span> of a key in the B+ Tree. It follows a single path from root to leaf.</p>
+
+        <div class="formula">
+          <div class="label">Algorithm Overview:</div>
+          <div class="expr">Start at root → Compare keys → Follow pointer → Reach leaf → Search leaf</div>
+          <div class="desc">At each internal node, determine which child to follow based on key comparison</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Time Complexity</h3>
+            <p>• Tree height: <span class="highlight">O(log_t n)</span></p>
+            <p>• Cost per level: <span class="dim">O(t)</span> (binary search)</p>
+            <p>• Total: <span class="highlight">O(t · log_t n)</span></p>
+            <p>• If t constant: <span class="result">O(log n)</span></p>
+          </div>
+          <div class="card">
+            <h3>Space Complexity</h3>
+            <p>• Extra space: <span class="highlight">O(1)</span></p>
+            <p>• Uses only pointers</p>
+            <p>• No recursion stack needed</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step-by-Step Point Query Process</h2>
+        
+        <div class="example">
+          <div class="title"><span class="step-num">1</span> Start at Root</div>
+          <p>Begin at the root node. The root contains index keys that partition the search space.</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">2</span> Compare with Internal Keys</div>
+          <p>At each internal node, compare the search key with the node's keys:</p>
+          <div class="formula">
+            <div class="label">Decision Rule:</div>
+            <div class="expr">key < K₁ → follow P₀</div>
+            <div class="expr">Kᵢ ≤ key < Kᵢ₊₁ → follow Pᵢ</div>
+            <div class="expr">key ≥ Kₙ → follow Pₙ</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">3</span> Follow Pointer to Child</div>
+          <p>Follow the appropriate child pointer down to the next level. Repeat until reaching a leaf node.</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">4</span> Search Leaf Node</div>
+          <p>At the leaf node, perform a linear or binary search for the key. The leaf contains actual data pointers.</p>
+          <div class="formula">
+            <div class="label">Leaf Search:</div>
+            <div class="expr">For i = 0 to leaf.n-1: if leaf.keys[i] == key → FOUND</div>
+            <div class="desc">If key not found after searching all keys → NOT FOUND</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">5</span> Return Result</div>
+          <p>If found, return the data pointer associated with the key. If not found, return NULL or "not found".</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Visual Example: Point Query for key 25 (t=3)</h2>
+        
+        <div class="tree-box">
+          <p style="color: #38bdf8; margin-bottom: 10px;">Search path for key 25:</p>
+          <div class="node pointer">[10 | 20 | 30]</div>
+          <p style="color: #475569; font-size: 0.8em;">↑ 25 ≥ 20 and 25 < 30 → follow P₂</p>
+          <br>
+          <div class="node">[5 | 8]</div> <div class="node">[12 | 15 | 18]</div> <div class="node found">[22 | 25 | 28]</div> <div class="node">[35 | 40]</div>
+          <p style="color: #475569; font-size: 0.8em;">↑ Found key 25 in leaf</p>
+          <br>
+          <div class="range-result">
+            <span class="result">FOUND!</span> Key 25 → Data pointer at leaf[1]
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Key Observation</div>
+          <div class="content">In a B+ Tree, ALL searches end at a leaf node. Internal nodes only contain copies of keys for routing. Even if a key exists in an internal node, you must go to the leaf to get the data pointer.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Comparison: B+ Tree vs B-Tree Point Query</h2>
+        <table>
+          <tr><th>Aspect</th><th>B+ Tree</th><th>B-Tree</th></tr>
+          <tr><td>Search path</td><td class="result">Always root to leaf</td><td>Can stop at any node</td></tr>
+          <tr><td>Best case</td><td>O(log_t n)</td><td>O(1) if found at root</td></tr>
+          <tr><td>Worst case</td><td>O(log_t n)</td><td>O(log_t n)</td></tr>
+          <tr><td>Consistency</td><td class="result">Always same height</td><td>May vary</td></tr>
+          <tr><td>Leaf linking</td><td class="result">Useful for range queries</td><td>Not available</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Range Query -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Range Query Algorithm</h2>
+        <p>A range query searches for all keys in the range <span class="result">[a, b]</span>. It uses the leaf-level linked list for efficient sequential access.</p>
+
+        <div class="formula">
+          <div class="label">Algorithm Overview:</div>
+          <div class="expr">Point Query(a) → Find first leaf with key ≥ a → Follow leaf pointers → Stop when key > b</div>
+          <div class="desc">Combines point query with sequential leaf traversal</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Time Complexity</h3>
+            <p>• Point query part: <span class="highlight">O(log_t n)</span></p>
+            <p>• Leaf traversal: <span class="dim">O(k)</span></p>
+            <p>• Total: <span class="highlight">O(log_t n + k)</span></p>
+            <p>• k = number of results</p>
+          </div>
+          <div class="card">
+            <h3>Advantage over B-Tree</h3>
+            <p>• <span class="highlight">No backtracking</span></p>
+            <p>• <span class="highlight">Sequential access</span> pattern</p>
+            <p>• <span class="dim">Cache-friendly</span> (leaf nodes linked)</p>
+            <p>• <span class="result">Better for range queries</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step-by-Step Range Query Process</h2>
+        
+        <div class="example">
+          <div class="title"><span class="step-num">1</span> Find Starting Point</div>
+          <p>Use point query algorithm to find the first leaf node containing a key ≥ a. This gives the starting position for the range scan.</p>
+          <div class="formula">
+            <div class="label">Goal:</div>
+            <div class="expr">Find leaf with first key ≥ a</div>
+            <div class="desc">Follow same path as point query, but stop at first key ≥ a</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">2</span> Scan Leaf Forward</div>
+          <p>Starting from the position found in step 1, scan forward in the leaf, collecting all keys ≤ b.</p>
+          <div class="formula">
+            <div class="label">In current leaf:</div>
+            <div class="expr">For each key from position to end: if key ≤ b → add to result</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">3</span> Follow Leaf Pointer</div>
+          <p>If the current leaf's last key ≤ b, follow the next pointer to the next leaf. Continue scanning.</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">4</span> Stop Condition</div>
+          <p>Stop when you reach a leaf where the first key > b, or when the next pointer is NULL (end of leaves).</p>
+          <div class="formula">
+            <div class="label">Stop when:</div>
+            <div class="expr">leaf.keys[0] > b OR leaf.next == NULL</div>
+            <div class="desc">All keys in range have been collected</div>
+          </div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="example">
+          <div class="title"><span class="step-num">5</span> Return Result Set</div>
+          <p>Return all collected keys as the result set. Keys are already in sorted order due to B+ Tree structure.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Visual Example: Range Query [15, 45] (t=3)</h2>
+        
+        <div class="tree-box">
+          <p style="color: #38bdf8; margin-bottom: 10px;">Step 1: Find first leaf with key ≥ 15</p>
+          <div class="node pointer">[10 | 20 | 30]</div>
+          <p style="color: #475569; font-size: 0.8em;">15 ≥ 10 and 15 < 20 → follow P₁</p>
+          <br>
+          <div class="node">[5 | 8]</div> <div class="node found">[12 | 15 | 18]</div> <div class="node">[22 | 25 | 28]</div> <div class="node">[35 | 40]</div>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="tree-box">
+          <p style="color: #fbbf24; margin-bottom: 10px;">Step 2: Scan leaf [12, 15, 18] from key ≥ 15</p>
+          <div class="range-result">
+            Found: 15, 18 (both ≤ 45)
+          </div>
+          <p style="color: #888;">Last key 18 ≤ 45 → follow next pointer</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="tree-box">
+          <p style="color: #fbbf24; margin-bottom: 10px;">Step 3: Scan next leaf [22, 25, 28]</p>
+          <div class="range-result">
+            Found: 22, 25, 28 (all ≤ 45)
+          </div>
+          <p style="color: #888;">Last key 28 ≤ 45 → follow next pointer</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="tree-box">
+          <p style="color: #fbbf24; margin-bottom: 10px;">Step 4: Scan next leaf [35, 40]</p>
+          <div class="range-result">
+            Found: 35, 40 (both ≤ 45)
+          </div>
+          <p style="color: #888;">Last key 40 ≤ 45 → follow next pointer</p>
+        </div>
+
+        <div class="step-arrow">↓</div>
+
+        <div class="tree-box">
+          <p style="color: #fbbf24; margin-bottom: 10px;">Step 5: Scan next leaf [50, 55, 60]</p>
+          <div class="range-result">
+            First key 50 > 45 → <span class="result">STOP</span>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="title">Final Result Set:</div>
+          <p>{15, 18, 22, 25, 28, 35, 40}</p>
+          <p style="color: #888; font-size: 0.85em;">Total: 7 keys found in range [15, 45]</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why B+ Tree is Superior for Range Queries</h2>
+        
+        <div class="grid">
+          <div class="card">
+            <h3>B+ Tree (Linked Leaves)</h3>
+            <p>• Point query to start: <span class="highlight">O(log_t n)</span></p>
+            <p>• Then follow links: <span class="highlight">O(k)</span></p>
+            <p>• <span class="result">No backtracking needed</span></p>
+            <p>• <span class="result">Sequential access pattern</span></p>
+          </div>
+          <div class="card">
+            <h3>B-Tree (No Links)</h3>
+            <p>• Must find each key separately</p>
+            <p>• Each search: <span class="dim">O(log_t n)</span></p>
+            <p>• <span class="dim">k searches = O(k · log_t n)</span></p>
+            <p>• <span class="dim">Much slower for ranges</span></p>
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Performance Comparison:</div>
+          <div class="expr">B+ Tree: O(log_t n + k) vs B-Tree: O(k · log_t n)</div>
+          <div class="desc">For large ranges (k >> 1), B+ Tree is significantly faster</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Pseudocode -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Point Query Pseudocode</h2>
+        <div class="code">1:  function POINT_QUERY(root, key):
+2:      if root is NULL:
+3:          return NULL
+4:  
+5:      // Start at root
+6:      current = root
+7:  
+8:      // Step 1: Traverse to leaf
+9:      while current is not leaf:
+10:         // Find correct child pointer
+11:         i = 0
+12:         while i < current.n and key > current.keys[i]:
+13:             i = i + 1
+14:         // Follow pointer to child
+15:         current = current.children[i]
+16: 
+17:     // Step 2: Search leaf node
+18:     i = 0
+19:     while i < current.n:
+20:         if current.keys[i] == key:
+21:             return current.data[i]  // FOUND
+22:         i = i + 1
+23: 
+24:     return NULL  // NOT FOUND</div>
+      </div>
+
+      <div class="section">
+        <h2>Range Query Pseudocode</h2>
+        <div class="code">1:  function RANGE_QUERY(root, low, high):
+2:      results = empty list
+3:  
+4:      // Step 1: Find first leaf with key >= low
+5:      leaf = FIND_FIRST_LEAF(root, low)
+6:  
+7:      // Step 2: Scan leaves forward
+8:      while leaf is not NULL:
+9:          for i = 0 to leaf.n - 1:
+10:             if leaf.keys[i] >= low and leaf.keys[i] <= high:
+11:                 results.add(leaf.keys[i])
+12:             if leaf.keys[i] > high:
+13:                 return results  // Done
+14:         leaf = leaf.next  // Follow link
+15: 
+16:     return results
+17: 
+18: 
+19: function FIND_FIRST_LEAF(root, low):
+20:     current = root
+21: 
+22:     // Traverse to leaf
+23:     while current is not leaf:
+24:         i = 0
+25:         while i < current.n and low > current.keys[i]:
+26:             i = i + 1
+27:         current = current.children[i]
+28: 
+29:     // Find first key >= low
+30:     i = 0
+31:     while i < current.n and current.keys[i] < low:
+32:         i = i + 1
+33: 
+34:     // If no key >= low, try next leaf
+35:     if i == current.n:
+36:         current = current.next
+37:         i = 0
+38: 
+39:     return current</div>
+      </div>
+
+      <div class="section">
+        <h2>Optimized Range Query (with Binary Search)</h2>
+        <div class="code">1:  function RANGE_QUERY_OPT(root, low, high):
+2:      results = empty list
+3:  
+4:      // Step 1: Find first leaf with key >= low
+5:      leaf = FIND_FIRST_LEAF(root, low)
+6:  
+7:      // Step 2: Scan leaves with binary search
+8:      while leaf is not NULL:
+9:          // Binary search for start position
+10:         start = BINARY_SEARCH(leaf.keys, low, 0, leaf.n - 1)
+11: 
+12:         // Add all valid keys from start position
+13:         for i = start to leaf.n - 1:
+14:             if leaf.keys[i] <= high:
+15:                 results.add(leaf.keys[i])
+16:             else:
+17:                 return results  // Done
+18: 
+19:         leaf = leaf.next  // Follow link
+20: 
+21:     return results
+22: 
+23: 
+24: function BINARY_SEARCH(keys, target, low, high):
+25:     while low <= high:
+26:         mid = (low + high) / 2
+27:         if keys[mid] < target:
+28:             low = mid + 1
+29:         else:
+30:             high = mid - 1
+31:     return low</div>
+      </div>
+
+      <div class="section">
+        <h2>Complexity Analysis</h2>
+        <table>
+          <tr><th>Operation</th><th>Time Complexity</th><th>Space</th><th>Notes</th></tr>
+          <tr><td>Point Query</td><td class="result">O(t · log_t n)</td><td>O(1)</td><td>If t constant → O(log n)</td></tr>
+          <tr><td>Range Query</td><td class="result">O(t · log_t n + k)</td><td>O(k)</td><td>k = result count</td></tr>
+          <tr><td>Range (optimized)</td><td class="result">O(log_t n + k)</td><td>O(k)</td><td>Binary search in leaf</td></tr>
+          <tr><td>Find first leaf</td><td class="result">O(t · log_t n)</td><td>O(1)</td><td>Same as point query</td></tr>
+        </table>
+
+        <div class="formula">
+          <div class="label">Why O(t · log_t n)?</div>
+          <div class="expr">Height × comparison cost per level</div>
+          <div class="desc">Height = O(log_t n), comparisons per level = O(t) for linear search, or O(log t) for binary search within node</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Worked Examples -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Worked Example 1: Point Query for key 28 (t=5)</h2>
+        <p>B+ Tree with t=5, keys: 5, 10, 25, 30, 50, 15, 20, 55, 75, 80, 85, 90, 60, 65, 28, 70, 95</p>
+
+        <div class="example">
+          <div class="title">Tree Structure:</div>
+          <div class="tree-box">
+            <div class="node">[28 | 60]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> 
+            <div class="node">[28, 30, 50, 55]</div> 
+            <div class="node">[60, 65, 70, 75, 80, 85, 90, 95]</div>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Search for key 28:</div>
+          <div class="tree-box">
+            <p style="color: #38bdf8; margin-bottom: 10px;">Step 1: At root [28, 60]</p>
+            <p>28 ≥ 28 and 28 < 60 → follow P₁</p>
+            <div class="step-arrow">↓</div>
+            <p style="color: #fbbf24; margin-bottom: 10px;">Step 2: At leaf [28, 30, 50, 55]</p>
+            <p>28 ≥ 28 → found at position 0!</p>
+            <div class="range-result">
+              <span class="result">FOUND!</span> Key 28 → Data pointer at leaf[0]
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 2: Point Query for key 45 (not found)</h2>
+
+        <div class="example">
+          <div class="title">Search for key 45:</div>
+          <div class="tree-box">
+            <p style="color: #38bdf8; margin-bottom: 10px;">Step 1: At root [28, 60]</p>
+            <p>45 ≥ 28 and 45 < 60 → follow P₁</p>
+            <div class="step-arrow">↓</div>
+            <p style="color: #fbbf24; margin-bottom: 10px;">Step 2: At leaf [28, 30, 50, 55]</p>
+            <p>Search: 28? No. 30? No. 50? 50 > 45, stop.</p>
+            <div class="range-result">
+              <span class="dim">NOT FOUND</span> Key 45 does not exist in the tree
+            </div>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Common Mistake</div>
+          <div class="content">Don't stop searching at internal nodes! Even though we see 28 in the root, we must continue to the leaf to confirm and get the data pointer. In B+ Trees, all data is in leaves only.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 3: Range Query [20, 70]</h2>
+
+        <div class="example">
+          <div class="title">Step 1: Find first leaf with key ≥ 20</div>
+          <div class="tree-box">
+            <p style="color: #38bdf8; margin-bottom: 10px;">At root [28, 60]:</p>
+            <p>20 < 28 → follow P₀</p>
+            <div class="node found">[5, 10, 15, 20, 25]</div>
+            <p style="color: #888;">First key ≥ 20 is at position 3</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 2: Scan leaf [5, 10, 15, 20, 25]</div>
+          <div class="tree-box">
+            <div class="range-result">
+              From position 3: 20, 25 (both ≤ 70)
+            </div>
+            <p style="color: #888;">Last key 25 ≤ 70 → follow next pointer</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 3: Scan next leaf [28, 30, 50, 55]</div>
+          <div class="tree-box">
+            <div class="range-result">
+              28, 30, 50, 55 (all ≤ 70)
+            </div>
+            <p style="color: #888;">Last key 55 ≤ 70 → follow next pointer</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 4: Scan next leaf [60, 65, 70, 75, 80, 85, 90, 95]</div>
+          <div class="tree-box">
+            <div class="range-result">
+              60, 65, 70 (all ≤ 70)
+            </div>
+            <p>Next key 75 > 70 → <span class="result">STOP</span></p>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="title">Final Result:</div>
+          <p>{20, 25, 28, 30, 50, 55, 60, 65, 70}</p>
+          <p style="color: #888; font-size: 0.85em;">Total: 9 keys found in range [20, 70]</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 4: Range Query [100, 200] (empty range)</h2>
+
+        <div class="example">
+          <div class="title">Search for keys in range [100, 200]</div>
+          <div class="tree-box">
+            <p style="color: #38bdf8; margin-bottom: 10px;">Step 1: Find first leaf with key ≥ 100</p>
+            <div class="node">[28 | 60]</div>
+            <br>
+            <div class="node">[5, 10, 15, 20, 25]</div> 
+            <div class="node">[28, 30, 50, 55]</div> 
+            <div class="node">[60, 65, 70, 75, 80, 85, 90, 95]</div>
+            <p style="color: #888; margin-top: 10px;">All keys < 100, so first leaf with key ≥ 100 is NULL</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Result:</div>
+          <div class="tree-box">
+            <div class="range-result">
+              <span class="dim">EMPTY SET</span> No keys in range [100, 200]
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Example 5: Large Range Query [5, 95]</h2>
+        <p>This query covers almost all keys in the tree.</p>
+
+        <div class="example">
+          <div class="title">Step 1: Find first leaf with key ≥ 5</div>
+          <div class="tree-box">
+            <div class="node">[28 | 60]</div>
+            <br>
+            <div class="node found">[5, 10, 15, 20, 25]</div> 
+            <div class="node">[28, 30, 50, 55]</div> 
+            <div class="node">[60, 65, 70, 75, 80, 85, 90, 95]</div>
+            <p style="color: #888; margin-top: 10px;">First leaf contains key 5 at position 0</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Step 2: Scan through all leaves</div>
+          <div class="tree-box">
+            <div class="range-result">
+              Leaf 1: 5, 10, 15, 20, 25<br>
+              Leaf 2: 28, 30, 50, 55<br>
+              Leaf 3: 60, 65, 70, 75, 80, 85, 90, 95
+            </div>
+            <p style="color: #888; margin-top: 10px;">Last key 95 ≤ 95 → follow next pointer → NULL → STOP</p>
+          </div>
+        </div>
+
+        <div class="highlight-box">
+          <div class="title">Final Result:</div>
+          <p>{5, 10, 15, 20, 25, 28, 30, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95}</p>
+          <p style="color: #888; font-size: 0.85em;">Total: 17 keys (all keys in tree)</p>
+        </div>
+
+        <div class="warning">
+          <div class="title">⚠ Performance Note</div>
+          <div class="content">Even for a large range covering all keys, B+ Tree range query is O(log_t n + k) because we only traverse from the starting leaf to the ending leaf. We don't need to search from the root for each key.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Quick Reference -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        
+        <div class="ref-card">
+          <h3>Point Query Summary</h3>
+          <div class="item">• Start at root, traverse to leaf</div>
+          <div class="item">• Compare key with internal node keys</div>
+          <div class="item">• Follow appropriate child pointer</div>
+          <div class="item">• Search leaf for exact match</div>
+          <div class="item">• Return data pointer or NULL</div>
+          <div class="item">• <span class="result">Time: O(log_t n)</span></div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Range Query Summary</h3>
+          <div class="item">• Use point query to find first key ≥ a</div>
+          <div class="item">• Scan leaf forward, collecting keys ≤ b</div>
+          <div class="item">• Follow leaf next pointers</div>
+          <div class="item">• Stop when key > b or end of leaves</div>
+          <div class="item">• Result is already sorted!</div>
+          <div class="item">• <span class="result">Time: O(log_t n + k)</span></div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Key Differences: Point vs Range</h3>
+          <div class="item">• Point query: single path, one leaf</div>
+          <div class="item">• Range query: single path + leaf traversal</div>
+          <div class="item">• Point query doesn't use leaf links</div>
+          <div class="item">• Range query exploits leaf linking</div>
+          <div class="item">• Point: O(log n) | Range: O(log n + k)</div>
+        </div>
+
+        <div class="ref-card">
+          <h3>Decision Rules for Traversal</h3>
+          <div class="item">• <span class="result">key < K₁:</span> follow P₀ (leftmost child)</div>
+          <div class="item">• <span class="result">Kᵢ ≤ key < Kᵢ₊₁:</span> follow Pᵢ</div>
+          <div class="item">• <span class="result">key ≥ Kₙ:</span> follow Pₙ (rightmost child)</div>
+          <div class="item">• <span class="result">At leaf:</span> linear search for exact match</div>
+        </div>
+
+        <div class="section">
+          <h2>Complexity Comparison Table</h2>
+          <table>
+            <tr><th>Operation</th><th>B+ Tree</th><th>B-Tree</th><th>Array (Sorted)</th><th>Linked List</th></tr>
+            <tr><td>Point Query</td><td class="result">O(log n)</td><td>O(log n)</td><td>O(log n)</td><td class="dim">O(n)</td></tr>
+            <tr><td>Range Query</td><td class="result">O(log n + k)</td><td class="dim">O(k log n)</td><td class="dim">O(log n + k)</td><td class="dim">O(n)</td></tr>
+            <tr><td>Insert</td><td class="result">O(log n)</td><td>O(log n)</td><td class="dim">O(n)</td><td>O(1)</td></tr>
+            <tr><td>Delete</td><td class="result">O(log n)</td><td>O(log n)</td><td class="dim">O(n)</td><td>O(1)</td></tr>
+          </table>
+
+          <div class="warning">
+            <div class="title">⚠ Why B+ Tree Wins for Range Queries</div>
+            <div class="content">B-Tree must search from root for EACH key in range → O(k log n). B+ Tree traverses leaves sequentially → O(log n + k). For large ranges, B+ Tree is orders of magnitude faster.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Top 5 Exam Tips for Queries</h2>
+          
+          <div class="warning">
+            <div class="title">1. Always start at root</div>
+            <div class="content">Never start at an internal node or leaf directly. Every search begins at the root.</div>
+          </div>
+
+          <div class="warning">
+            <div class="title">2. Follow decision rules exactly</div>
+            <div class="content">key < K₁ → P₀ | Kᵢ ≤ key < Kᵢ₊₁ → Pᵢ | key ≥ Kₙ → Pₙ</div>
+          </div>
+
+          <div class="warning">
+            <div class="title">3. Point query ends at leaf</div>
+            <div class="content">Even if key exists in internal node, you MUST go to leaf. Data pointers are ONLY in leaves.</div>
+          </div>
+
+          <div class="warning">
+            <div class="title">4. Range query uses leaf links</div>
+            <div class="content">After finding start, follow leaf.next pointers. Don't go back to root!</div>
+          </div>
+
+          <div class="warning">
+            <div class="title">5. Result is automatically sorted</div>
+            <div class="content">B+ Tree leaves are linked in sorted order. Range query results come out sorted for free.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

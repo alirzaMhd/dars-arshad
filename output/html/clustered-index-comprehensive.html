@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clustered Index - Comprehensive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #22c55e; margin: 20px 0 5px; text-shadow: 0 0 20px #22c55e55; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .section h3 { color: #fbbf24; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0f172a; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #06b6d4; }
+    .formula .label { color: #06b6d4; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a2332; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #475569; }
+    .example .title { color: #fbbf24; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a2332; padding: 15px; border-radius: 8px; border: 1px solid #475569; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #22c55e; font-weight: bold; }
+    .warning { color: #f97316; border-left: 3px solid #f97316; padding-left: 10px; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #334155; padding: 8px; text-align: center; }
+    th { background: #1a2332; color: #06b6d4; }
+    td { background: #0f172a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #475569; background: #1a2332; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #052e16; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0f172a; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #06b6d4; overflow-x: auto; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+    .comparison .pro { border-left: 3px solid #22c55e; padding-left: 10px; }
+    .comparison .con { border-left: 3px solid #ef4444; padding-left: 10px; }
+    .decision { background: #1a2332; padding: 15px; border-radius: 8px; border: 2px solid #22c55e; margin: 15px 0; }
+    .decision .question { color: #fbbf24; font-weight: bold; }
+    .decision .answer { color: #22c55e; margin-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>CLUSTERED INDEX</h1>
+  <p class="subtitle">Database Indexing — Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Concept</button>
+      <button class="tab" onclick="showSection('tab2')">Structure</button>
+      <button class="tab" onclick="showSection('tab3')">SQL & Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Performance</button>
+      <button class="tab" onclick="showSection('tab5')">Decision Guide</button>
+    </div>
+
+    <!-- Tab 1: Concept -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is a Clustered Index?</h2>
+        
+        <div class="formula">
+          <div class="label">Definition:</div>
+          <div class="expr">A clustered index determines the physical storage order of data rows in a table</div>
+          <div class="desc">Data pages are sorted and stored on disk according to the clustered index key values</div>
+        </div>
+
+        <p style="margin: 15px 0; line-height: 1.8;">
+          When you create a clustered index on a column (or set of columns), the database engine physically reorganizes the data rows in the table so that they are stored in the same order as the index key. This means the leaf level of the clustered index <em>is</em> the actual data table itself.
+        </p>
+
+        <div class="warning">
+          <strong>CRITICAL RULE:</strong> Each table can have <span class="result">ONLY ONE</span> clustered index. Since data can only be physically sorted in one order, you cannot have multiple clustered indexes.
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Key Characteristic</h3>
+            <p>• Data IS the index at leaf level</p>
+            <p>• Physically sorts rows on disk</p>
+            <p>• One per table maximum</p>
+          </div>
+          <div class="card">
+            <h3>Default Behavior</h3>
+            <p>• PRIMARY KEY → auto clustered</p>
+            <p>• If no PK → first UNIQUE NOT NULL</p>
+            <p>• Can be manually overridden</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Clustered vs Heap</h2>
+        
+        <table>
+          <tr>
+            <th>Feature</th>
+            <th>Clustered Table</th>
+            <th>Heap Table</th>
+          </tr>
+          <tr>
+            <td>Data Order</td>
+            <td class="highlight">Physically sorted</td>
+            <td class="dim">No particular order</td>
+          </tr>
+          <tr>
+            <td>Leaf Level</td>
+            <td>Contains actual data rows</td>
+            <td>Contains row locators</td>
+          </tr>
+          <tr>
+            <td>Range Queries</td>
+            <td class="highlight">Very fast</td>
+            <td class="dim">Slow (full scan)</td>
+          </tr>
+          <tr>
+            <td>Insert Speed</td>
+            <td class="dim">Slower (maintain order)</td>
+            <td class="highlight">Fast (append only)</td>
+          </tr>
+          <tr>
+            <td>Disk Space</td>
+            <td>Only index structure</td>
+            <td>Extra row locator column</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 2: Structure -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>B-Tree Structure of Clustered Index</h2>
+        
+        <p style="margin: 15px 0; line-height: 1.8;">
+          The clustered index uses a balanced B-tree structure with three types of pages:
+        </p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Root Page</h3>
+            <p class="highlight">• Top of the tree</p>
+            <p>• Single page at root level</p>
+            <p>• Contains pointers to intermediate pages</p>
+          </div>
+          <div class="card">
+            <h3>Intermediate Pages</h3>
+            <p class="highlight">• Routing nodes</p>
+            <p>• Direct to correct branch</p>
+            <p>• Multiple levels possible</p>
+          </div>
+          <div class="card">
+            <h3>Leaf Pages (Data)</h3>
+            <p class="highlight">• Bottom of tree</p>
+            <p>• Contains actual row data</p>
+            <p>• Linked as doubly-linked list</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Visual Structure</div>
+          <div class="code">
+ROOT: [10 | 25 | 50]
+        |      |      |
+INTER: [5-10] [15-25] [30-50] [55-100]
+        |        |        |        |
+LEAF:  ROWS    ROWS     ROWS     ROWS
+(data pages in sorted order)
+          </div>
+        </div>
+
+        <div class="formula">
+          <div class="label">Height Calculation:</div>
+          <div class="expr">Height = ⌈log_b(n)⌉ where b = branching factor, n = data pages</div>
+          <div class="desc">Typically 2-4 levels for millions of rows. More levels = more I/O for lookups</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Leaf Level Data Organization</h2>
+        
+        <div class="example">
+          <div class="title">Example: Students Table with Clustered Index on StudentID</div>
+          <div class="code">
+CREATE CLUSTERED INDEX IX_Students_ID ON Students(StudentID);
+
+Physical storage after clustering:
+┌─────────┬────────────┬──────┬───────────┐
+│StudentID│ Name       │ GPA  │ Department│
+├─────────┼────────────┼──────┼───────────┤
+│ 1001    │ Alice      │ 3.8  │ CS        │
+│ 1002    │ Bob        │ 3.5  │ Math      │
+│ 1003    │ Carol      │ 3.9  │ CS        │
+│ 1004    │ David      │ 3.2  │ Physics   │
+│ 1005    │ Eve        │ 3.7  │ CS        │
+│ ...     │ ...        │ ...  │ ...       │
+└─────────┴────────────┴──────┴───────────┘
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Leaf Page Linking:</strong> All leaf pages are connected in a doubly-linked list. This enables efficient range scans — once you find the first matching row, you can follow pointers to get all subsequent rows without going back to intermediate levels.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: SQL & Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>SQL Syntax for Clustered Index</h2>
+        
+        <div class="formula">
+          <div class="label">Create Clustered Index:</div>
+          <div class="expr">CREATE CLUSTERED INDEX index_name ON table_name (column1, column2, ...);</div>
+          <div class="desc">Creates a clustered index on specified columns</div>
+        </div>
+
+        <div class="code">
+-- Basic syntax
+CREATE CLUSTERED INDEX IX_Employees_ID 
+ON Employees(EmployeeID);
+
+-- Composite clustered index
+CREATE CLUSTERED INDEX IX_Orders_Date_Cust 
+ON Orders(OrderDate, CustomerID);
+
+-- Drop existing clustered index before creating new one
+DROP INDEX IX_Employees_ID ON Employees;
+CREATE CLUSTERED INDEX IX_Employees_Name 
+ON Employees(LastName, FirstName);
+        </div>
+
+        <div class="warning">
+          <strong>NOTE:</strong> Most database systems automatically create a clustered index on the PRIMARY KEY constraint. You cannot have multiple clustered indexes — dropping the PK clustered index removes the physical ordering.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Worked Examples</h2>
+        
+        <div class="example">
+          <div class="title">Example 1: Create Clustered Index on Employees Table</div>
+          <div class="code">
+-- Table setup
+CREATE TABLE Employees (
+    EmployeeID INT PRIMARY KEY,  -- auto clustered
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Department VARCHAR(50),
+    Salary DECIMAL(10,2)
+);
+
+-- Check existing indexes
+sp_helpindex 'Employees';
+-- Shows: PK_Employees clustered on EmployeeID
+
+-- Create clustered index on different column
+-- (must drop PK first or use a different approach)
+DROP INDEX PK_Employees ON Employees;
+
+CREATE CLUSTERED INDEX IX_Emp_Dept 
+ON Employees(Department, EmployeeID);
+
+-- Now data is physically sorted by Department
+-- Rows with same Department are grouped together
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Range Query Performance</div>
+          <div class="code">
+-- Query 1: Range scan on clustered index column
+SELECT * FROM Employees 
+WHERE EmployeeID BETWEEN 100 AND 200;
+-- Performance: FAST
+-- Reads consecutive data pages
+-- No bookmark lookup needed
+
+-- Query 2: Range scan on non-indexed column
+SELECT * FROM Employees 
+WHERE Salary BETWEEN 50000 AND 70000;
+-- Performance: SLOW (full table scan)
+-- Salary is not the clustered index key
+-- Must read every data page
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Composite Clustered Index</div>
+          <div class="code">
+-- Create composite clustered index
+CREATE CLUSTERED INDEX IX_Orders_Date 
+ON Orders(OrderDate, OrderID);
+
+-- Query benefits from composite index
+SELECT * FROM Orders 
+WHERE OrderDate = '2024-01-15';
+-- Uses OrderDate prefix - fast
+
+SELECT * FROM Orders 
+WHERE OrderDate = '2024-01-15' AND OrderID = 12345;
+-- Uses both columns - very fast
+
+SELECT * FROM Orders 
+WHERE OrderID = 12345;
+-- Cannot use index (OrderID not first column)
+-- Must scan entire table
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Performance -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Performance Analysis</h2>
+        
+        <table>
+          <tr>
+            <th>Operation</th>
+            <th>Time Complexity</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>Point Query</td>
+            <td class="highlight">O(log_b n)</td>
+            <td>B-tree traversal to find specific row</td>
+          </tr>
+          <tr>
+            <td>Range Scan</td>
+            <td class="highlight">O(log_b n + k)</td>
+            <td>Find start + follow leaf pointers (k = matches)</td>
+          </tr>
+          <tr>
+            <td>Insert</td>
+            <td class="dim">O(log_b n)</td>
+            <td>Find correct position + split pages if needed</td>
+          </tr>
+          <tr>
+            <td>Delete</td>
+            <td class="dim">O(log_b n)</td>
+            <td>Find row + remove + potential page merge</td>
+          </tr>
+          <tr>
+            <td>Update (key)</td>
+            <td class="dim">O(log_b n)</td>
+            <td>Move row to new physical location</td>
+          </tr>
+        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Advantages</h3>
+            <div class="pro">
+              <p>• Range queries are fastest</p>
+              <p>• No bookmark lookup needed</p>
+              <p>• Covers queries naturally</p>
+              <p>• Reduces disk I/O for scans</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Disadvantages</h3>
+            <div class="con">
+              <p>• Inserts cause page splits</p>
+              <p>• Updates to key = row movement</p>
+              <p>• Only one per table</p>
+              <p>• GUID keys cause fragmentation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Page Split Problem</h2>
+        
+        <div class="example">
+          <div class="title">What Happens During Page Split</div>
+          <div class="code">
+Before Insert (Page Full):
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  ← 100% full
+
+Insert value 6 (duplicate, needs to go between 5 and 6):
+→ Page is full, must split!
+
+After Page Split:
+Page A: [1, 2, 3, 4, 5]     ← 50% full
+Page B: [6, 6, 7, 8, 9, 10] ← 60% full
+→ Intermediate page must be updated
+→ All leaf page pointers must be reorganized
+→ This is EXPENSIVE!
+          </div>
+        </div>
+
+        <div class="warning">
+          <strong>Avoid Page Splits:</strong> Use ascending keys (IDENTITY columns), avoid random keys (GUIDs), and maintain adequate free space on pages (FILLFACTOR setting).
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Decision Guide -->
+    <div class="content" id="tab5">
+      <div class="section">
+        <h2>When to Use Clustered Index</h2>
+        
+        <div class="decision">
+          <p class="question">Decision Tree:</p>
+          <div class="answer">
+            <p>1. Do you have a PRIMARY KEY column? → Usually yes → <span class="highlight">Use it as clustered index</span></p>
+            <p>2. Do you frequently run range queries on a column? → Yes → <span class="highlight">Cluster on that column</span></p>
+            <p>3. Is the table read-heavy (more SELECTs than INSERTs)? → Yes → <span class="highlight">Clustered index helps</span></p>
+            <p>4. Do you need to sort data physically for reports? → Yes → <span class="highlight">Cluster on sort column</span></p>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>USE Clustered Index When:</h3>
+            <p class="highlight">• Range queries on column range</p>
+            <p class="highlight">• Table is large (100K+ rows)</p>
+            <p class="highlight">• Queries return sequential data</p>
+            <p class="highlight">• Date/ID columns queried in order</p>
+          </div>
+          <div class="card">
+            <h3>AVOID Clustered Index When:</h3>
+            <p class="dim">• Frequent random inserts (UUIDs)</p>
+            <p class="dim">• Table is mostly write-heavy</p>
+            <p class="dim">• No clear range query pattern</p>
+            <p class="dim">• Small lookup tables</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference Card</h2>
+        
+        <div class="code">
+╔══════════════════════════════════════════════╗
+║           CLUSTERED INDEX REFERENCE          ║
+╠══════════════════════════════════════════════╣
+║ Structure:   B-tree (data at leaf level)     ║
+║ Max per Table: 1                             ║
+║ Default:     PRIMARY KEY                     ║
+║ Data Order:  Physical on disk                ║
+║                                                  ║
+║ Best For:    Range queries (BETWEEN, >, <)   ║
+║ Avoid For:   Random inserts, key updates     ║
+║                                                  ║
+║ Lookup:      O(log_b n)                      ║
+║ Range Scan:  O(log_b n + k)                  ║
+║ Insert:      O(log_b n) + possible split     ║
+║                                                  ║
+║ Key Column:  Use ascending (IDENTITY)        ║
+║ FILLFACTOR:  70-90% for write-heavy tables   ║
+╚══════════════════════════════════════════════╝
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
