@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boyce-Codd Normal Form (BCNF) - Comprehensive Guide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; line-height: 1.6; }
+    h1 { text-align: center; font-size: 1.8em; color: #22c55e; margin: 25px 0 5px; text-shadow: 0 0 25px #22c55e44; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 25px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 40px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+    .tab { padding: 10px 18px; border: 2px solid #334155; background: #1e293b; color: #94a3b8; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.88em; transition: all 0.2s; }
+    .tab.active { border-color: #22c55e; color: #22c55e; background: #052e16; font-weight: 600; }
+    .tab:hover { border-color: #22c55e; color: #22c55e; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .section { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 24px; margin: 20px 0; }
+    .section h2 { color: #f97316; font-size: 1.15em; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .section h3 { color: #fbbf24; font-size: 0.98em; margin: 18px 0 10px; }
+    .formula { background: #0f172a; padding: 14px 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #3b82f6; }
+    .formula .label { color: #60a5fa; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #22c55e; font-size: 1.15em; font-weight: bold; font-family: 'Courier New', monospace; }
+    .formula .desc { color: #94a3b8; font-size: 0.85em; margin-top: 6px; }
+    .example { background: #0f172a; padding: 18px; border-radius: 10px; margin: 14px 0; border: 1px solid #334155; }
+    .example .title { color: #fbbf24; font-size: 0.92em; margin-bottom: 12px; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 16px 0; }
+    .card { background: #0f172a; padding: 18px; border-radius: 10px; border: 1px solid #334155; }
+    .card h3 { color: #f97316; margin-bottom: 10px; font-size: 0.95em; }
+    .card .highlight { color: #22c55e; font-weight: bold; }
+    .card .dim { color: #f97316; }
+    .note { color: #94a3b8; font-style: italic; font-size: 0.85em; margin-top: 10px; padding-left: 12px; border-left: 2px solid #475569; }
+    .warning { background: #451a03; border: 1px solid #f97316; border-radius: 8px; padding: 14px 16px; margin: 14px 0; }
+    .warning .title { color: #f97316; font-weight: 600; margin-bottom: 6px; }
+    .warning p { color: #fdba74; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #334155; padding: 10px 12px; text-align: center; }
+    th { background: #1e293b; color: #3b82f6; font-weight: 600; }
+    td { background: #0f172a; }
+    tr:hover td { background: #1a2740; }
+    .code { background: #0f172a; padding: 14px 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #93c5fd; overflow-x: auto; border: 1px solid #334155; line-height: 1.7; }
+    .code .keyword { color: #c084fc; font-weight: bold; }
+    .code .comment { color: #6b7280; }
+    .code .func { color: #22c55e; }
+    .code .var { color: #fbbf24; }
+    .result { color: #22c55e; font-weight: bold; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    .quick-ref { background: linear-gradient(135deg, #0f172a, #1e293b); border: 2px solid #22c55e; border-radius: 12px; padding: 20px; margin: 16px 0; }
+    .quick-ref h3 { color: #22c55e; margin-bottom: 12px; text-align: center; }
+    .quick-ref ul { list-style: none; padding: 0; }
+    .quick-ref li { padding: 6px 0; border-bottom: 1px solid #1e293b; color: #e2e8f0; }
+    .quick-ref li:last-child { border-bottom: none; }
+    .quick-ref .sym { color: #22c55e; font-weight: bold; margin-right: 8px; }
+    .highlight-box { background: #0f172a; border: 1px solid #22c55e; border-radius: 8px; padding: 14px; margin: 12px 0; }
+    .highlight-box .h-title { color: #22c55e; font-weight: 600; margin-bottom: 6px; }
+    .highlight-box p { color: #e2e8f0; font-size: 0.9em; }
+    .badge { display: inline-block; background: #052e16; color: #22c55e; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 600; border: 1px solid #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>Boyce-Codd Normal Form (BCNF)</h1>
+  <p class="subtitle">Database Normalization — فرم نرمال بویس-کاد | Complete Guide for 20/20 Exam</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Definition</button>
+      <button class="tab" onclick="showSection('tab2')">BCNF vs 3NF</button>
+      <button class="tab" onclick="showSection('tab3')">Examples</button>
+      <button class="tab" onclick="showSection('tab4')">Decomposition Algorithm</button>
+    </div>
+
+    <!-- Tab 1: Definition -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is BCNF?</h2>
+        <p><span class="result">Boyce-Codd Normal Form (BCNF)</span> is a stricter version of 3NF. A table is in BCNF if and only if:</p>
+        <ul>
+          <li>It is in <span class="result">3NF</span></li>
+          <li>For every non-trivial functional dependency X &rarr; Y, <span class="result">X must be a superkey</span></li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">BCNF Definition (Formal)</div>
+          <div class="expr">&forall; (X &rarr; Y) &isin; F+, if Y &nsub; X, then X must be a superkey of R</div>
+          <div class="desc">Every determinant (left-hand side of an FD) must be a superkey. No exceptions.</div>
+        </div>
+
+        <div class="warning">
+          <div class="title">BCNF is the Strongest Practical Normal Form</div>
+          <p>BCNF eliminates all redundancy based on functional dependencies. It is stronger than 3NF: every BCNF relation is in 3NF, but not every 3NF relation is in BCNF. For most practical database designs, BCNF is the target.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Key Insight: Determinant Must Be a Superkey</h2>
+        <p>The fundamental rule of BCNF: <strong>Every determinant must be a candidate key.</strong></p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Superkey</h3>
+            <p>• A set of attributes that uniquely identifies all rows</p>
+            <p>• May contain extra attributes beyond a candidate key</p>
+            <p>• In BCNF, every LHS of every FD must be a superkey</p>
+          </div>
+          <div class="card">
+            <h3>Candidate Key</h3>
+            <p>• A minimal superkey (no proper subset is a superkey)</p>
+            <p>• There can be multiple candidate keys</p>
+            <p>• BCNF: each FD's LHS must contain at least one candidate key</p>
+          </div>
+          <div class="card">
+            <h3>BCNF Violation</h3>
+            <p>• An FD where the LHS is NOT a superkey</p>
+            <p>• Example: A &rarr; B where A is not a key</p>
+            <p>• Even if the relation satisfies 3NF!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>BCNF Violation Example</h2>
+        <div class="example">
+          <div class="title">Table: Student_Grade_Advisor (3NF but NOT BCNF)</div>
+          <table>
+            <tr><th>StudentID</th><th>CourseID</th><th>Grade</th><th>Advisor</th></tr>
+            <tr><td>101</td><td>CSE201</td><td>A</td><td>Dr. Ahmadi</td></tr>
+            <tr><td>101</td><td>CSE301</td><td>B</td><td>Dr. Ahmadi</td></tr>
+            <tr><td>102</td><td>CSE201</td><td>A</td><td>Dr. Karimi</td></tr>
+          </table>
+          <p><strong>FDs:</strong> (StudentID, CourseID) &rarr; Grade, Advisor; Advisor &rarr; StudentID</p>
+          <p><strong>Problem:</strong> Advisor &rarr; StudentID is a valid FD but Advisor is NOT a superkey (an advisor advises many students). This violates BCNF even though it satisfies 3NF (all attributes are prime since (StudentID, CourseID) and (Advisor, CourseID) are both keys).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: BCNF vs 3NF -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>BCNF vs 3NF: The Key Difference</h2>
+        <table>
+          <tr><th>Feature</th><th>3NF</th><th>BCNF</th></tr>
+          <tr><td>Condition</td><td>2NF + no transitive dependencies</td><td>Every determinant is a superkey</td></tr>
+          <tr><td>Non-key determinant allowed?</td><td>Yes (if dependent is prime)</td><td class="result">No</td></tr>
+          <tr><td>Dependency Preservation</td><td class="result">Always possible</td><td>Not always possible</td></tr>
+          <tr><td>Redundancy Elimination</td><td>Most redundancy removed</td><td class="result">Complete (for FDs)</td></tr>
+          <tr><td>Complexity</td><td>Easier to achieve</td><td>Harder in some cases</td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Case Where 3NF Satisfies but BCNF Doesn't</h2>
+        <div class="example">
+          <div class="title">Classic Example: R(A, B, C) with FDs {AB &rarr; C, C &rarr; B}</div>
+          <div class="code">
+<span class="comment">// Candidate keys: AB and AC
+// Prime attributes: A, B, C (all three are prime!)</span>
+
+<span class="comment">// Check 3NF:
+// AB &rarr; C: AB is a superkey &rarr; OK
+// C &rarr; B: C is not a superkey, BUT B is prime &rarr; OK for 3NF</span>
+
+<span class="result">// R is in 3NF but NOT in BCNF!</span>
+
+<span class="comment">// Check BCNF:
+// C &rarr; B: C is NOT a superkey &rarr; VIOLATES BCNF</span>
+
+<span class="comment">// To achieve BCNF, we must decompose:
+// R1(A, C) and R2(C, B) or R1(A, B) and R2(C, B)</span>
+          </div>
+          <p class="note">This is the textbook example of a relation in 3NF but not BCNF. Since all attributes are prime, 3NF is satisfied even with C &rarr; B. But BCNF requires C to be a superkey, which it is not.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Dependency Preservation</h2>
+        <div class="formula">
+          <div class="label">3NF Guarantee</div>
+          <div class="expr">3NF decomposition is ALWAYS dependency-preserving</div>
+        </div>
+        <div class="formula">
+          <div class="label">BCNF Trade-off</div>
+          <div class="expr">BCNF decomposition may LOSE some functional dependencies</div>
+        </div>
+
+        <div class="example">
+          <div class="title">BCNF Decomposition May Lose FDs</div>
+          <div class="code">
+<span class="comment">// R(A, B, C) with FDs: AB &rarr; C, C &rarr; B
+// Decompose to BCNF:</span>
+
+<span class="comment">// Option: R1(C, B) and R2(A, C)</span>
+<span class="comment">// R1: C &rarr; B (preserved)</span>
+<span class="comment">// R2: no non-trivial FDs
+// AB &rarr; C is LOST! Cannot enforce it.</span>
+
+<span class="comment">// In this case, 3NF might be a better practical choice
+// since it preserves all FDs.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>When to Choose 3NF vs BCNF</h2>
+        <table>
+          <tr><th>Situation</th><th>Recommendation</th></tr>
+          <tr><td>All FDs can be preserved in BCNF</td><td class="result">Use BCNF</td></tr>
+          <tr><td>BCNF decomposition loses FDs</td><td>Consider 3NF (dependency preservation is important)</td></tr>
+          <tr><td>No non-key determinants present</td><td class="result">Already in BCNF (3NF = BCNF)</td></tr>
+          <tr><td>Data integrity is critical</td><td class="result">BCNF (less redundancy)</td></tr>
+          <tr><td>FD enforcement is critical</td><td>3NF (always preserves FDs)</td></tr>
+        </table>
+      </div>
+
+      <div class="highlight-box">
+        <div class="h-title">Exam Tip: 3NF vs BCNF</div>
+        <p>To check if a 3NF relation is also BCNF: look for any FD where the LHS is not a superkey. If all FDs have superkey LHS, it is BCNF. If some FD has a non-superkey LHS but its RHS is a prime attribute, it is 3NF but not BCNF.</p>
+      </div>
+    </div>
+
+    <!-- Tab 3: Examples -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Example 1: Library Loan System</h2>
+        <div class="example">
+          <div class="title">Before: Loan (in 3NF but not BCNF)</div>
+          <table>
+            <tr><th>LoanID</th><th>BookID</th><th>MemberID</th><th>LoanDate</th></tr>
+            <tr><td>L001</td><td>B101</td><td>M01</td><td>2024-01-15</td></tr>
+            <tr><td>L002</td><td>B202</td><td>M01</td><td>2024-02-01</td></tr>
+            <tr><td>L003</td><td>B101</td><td>M02</td><td>2024-01-20</td></tr>
+          </table>
+          <p><strong>FDs:</strong> LoanID &rarr; BookID, MemberID, LoanDate (key); (BookID, MemberID) &rarr; LoanID (alternate key)</p>
+          <p>No BCNF violation here since both FDs have superkey LHS &rarr; Already in BCNF.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Student-Subject-Teacher</h2>
+        <div class="example">
+          <div class="title">SST Relation (3NF but not BCNF)</div>
+          <table>
+            <tr><th>StudentID</th><th>Subject</th><th>Teacher</th></tr>
+            <tr><td>S01</td><td>DBMS</td><td>Dr. Ahmadi</td></tr>
+            <tr><td>S02</td><td>DBMS</td><td>Dr. Ahmadi</td></tr>
+            <tr><td>S01</td><td>OS</td><td>Dr. Rezaei</td></tr>
+            <tr><td>S03</td><td>AI</td><td>Dr. Karimi</td></tr>
+          </table>
+
+          <p><strong>FDs:</strong></p>
+          <div class="code">
+(StudentID, Subject) &rarr; Teacher   <span class="comment">// PK</span>
+Teacher &rarr; Subject                 <span class="comment">// Each teacher teaches one subject
+                                   // But Teacher is NOT a superkey!</span>
+          </div>
+
+          <p><strong>Candidate keys:</strong> (StudentID, Subject), (StudentID, Teacher)</p>
+          <p><strong>Prime attributes:</strong> StudentID, Subject, Teacher (all are prime)</p>
+          <p>All attributes are prime &rarr; satisfies 3NF. But Teacher &rarr; Subject violates BCNF because Teacher is not a superkey.</p>
+
+          <p><strong>BCNF Decomposition:</strong></p>
+          <div class="code">
+<span class="comment">// Decompose based on violating FD: Teacher &rarr; Subject</span>
+R1(Teacher, Subject)   <span class="comment">// Teacher is a key here</span>
+R2(StudentID, Teacher) <span class="comment">// (StudentID, Teacher) is a key here</span>
+
+<span class="note">// Note: FD (StudentID, Subject) &rarr; Teacher is LOST!
+// We cannot enforce that a student takes only one subject per teacher.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Hospital Appointments</h2>
+        <div class="example">
+          <div class="title">Appointment (3NF but not BCNF)</div>
+          <table>
+            <tr><th>PatientID</th><th>DoctorID</th><th>RoomNo</th><th>ApptDate</th></tr>
+            <tr><td>P01</td><td>D10</td><td>101</td><td>2024-03-01</td></tr>
+            <tr><td>P02</td><td>D10</td><td>101</td><td>2024-03-01</td></tr>
+            <tr><td>P01</td><td>D20</td><td>202</td><td>2024-03-02</td></tr>
+          </table>
+
+          <p><strong>FDs:</strong></p>
+          <div class="code">
+(PatientID, DoctorID, ApptDate) &rarr; RoomNo  <span class="comment">// PK (complex)</span>
+DoctorID &rarr; RoomNo                          <span class="comment">// Each doctor has one room
+                                               // Violates BCNF!</span>
+RoomNo &rarr; DoctorID                          <span class="comment">// Each room has one doctor
+                                               // Violates BCNF!</span>
+          </div>
+
+          <p><strong>BCNF Decomposition:</strong></p>
+          <div class="code">
+R1(DoctorID, RoomNo)       <span class="comment">// DoctorID &rarr; RoomNo, RoomNo &rarr; DoctorID
+                           // Both are keys here &rarr; BCNF</span>
+R2(PatientID, DoctorID, ApptDate)  <span class="comment">// All FDs preserved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 4: BCNF Already Satisfied</h2>
+        <div class="example">
+          <div class="title">Enrollment (Already in BCNF)</div>
+          <table>
+            <tr><th>StudentID</th><th>CourseID</th><th>Grade</th></tr>
+            <tr><td>101</td><td>CSE201</td><td>A</td></tr>
+            <tr><td>101</td><td>CSE301</td><td>B</td></tr>
+            <tr><td>102</td><td>CSE201</td><td>A</td></tr>
+          </table>
+          <p><strong>FD:</strong> (StudentID, CourseID) &rarr; Grade</p>
+          <p>The only determinant is the full primary key which is a superkey. No other FDs exist. <span class="result">This is in BCNF.</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Decomposition Algorithm -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>BCNF Decomposition Algorithm</h2>
+        <p>The BCNF decomposition algorithm iteratively splits relations that violate BCNF until all relations satisfy BCNF.</p>
+
+        <div class="code">
+<span class="keyword">Algorithm</span> <span class="func">BCNFDecompose</span>(R, FDs):
+    <span class="comment">// Input: Relation R, Set of FDs F</span>
+    <span class="comment">// Output: Set of relations in BCNF</span>
+
+    result = {R}
+
+    <span class="keyword">while</span> &exist; Ri &isin; result <span class="keyword">that is not in BCNF</span>:
+        <span class="comment">// Find a violating FD X &rarr; Y in Ri</span>
+        <span class="comment">// X &rarr; Y violates BCNF if X is not a superkey of Ri</span>
+        violatingFD = <span class="func">findViolatingFD</span>(Ri, FDs)
+
+        <span class="comment">// Decompose Ri into two relations</span>
+        R1 = (X &cup; Y)              <span class="comment">// Create relation from the violating FD</span>
+        R2 = (Ri &minus; Y)           <span class="comment">// Remove only the dependent attributes</span>
+        <span class="comment">// Note: R2 keeps X (the determinant) for rejoining</span>
+
+        result.<span class="func">remove</span>(Ri)
+        result.<span class="func">add</span>(R1)
+        result.<span class="func">add</span>(R2)
+
+    <span class="keyword">return</span> result
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Algorithm Walkthrough</h2>
+        <div class="example">
+          <div class="title">BCNF Decomposition Step-by-Step</div>
+          <div class="code">
+<span class="comment">// Given: R(A, B, C, D)
+// FDs: AB &rarr; C, C &rarr; D, D &rarr; B
+// Candidate key: AB, AC, AD</span>
+
+<span class="comment">// Iteration 1: Check R(A, B, C, D)
+// C &rarr; D: C is not a superkey &rarr; VIOLATES BCNF!</span>
+
+<span class="comment">// Decompose:
+// R1(C, D)        &larr; from violating FD C &rarr; D
+// R2(A, B, C)     &larr; R - D + C (keep C for joining)</span>
+
+<span class="comment">// Iteration 2: Check R1(C, D)
+// C &rarr; D: C is a superkey of R1 &rarr; OK
+// R1 is in BCNF ✓</span>
+
+<span class="comment">// Iteration 3: Check R2(A, B, C)
+// AB &rarr; C: AB is a superkey &rarr; OK
+// No other FDs violate BCNF
+// R2 is in BCNF ✓</span>
+
+<span class="result">// Final BCNF decomposition: R1(C, D), R2(A, B, C)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Algorithm Example with Non-Deterministic Choice</h2>
+        <div class="example">
+          <div class="title">BCNF Decomposition May Have Multiple Valid Results</div>
+          <div class="code">
+<span class="comment">// Given: R(StudentID, Subject, Teacher)
+// FDs: (StudentID, Subject) &rarr; Teacher (PK)
+//       Teacher &rarr; Subject</span>
+
+<span class="comment">// Violating FD: Teacher &rarr; Subject</span>
+
+<span class="comment">// Decompose:</span>
+
+<span class="comment">// Option 1:
+// R1(Teacher, Subject)             Teacher is key here</span>
+<span class="comment">// R2(StudentID, Teacher)           (StudentID, Teacher) is key here
+// Losses: (StudentID, Subject) &rarr; Teacher</span>
+
+<span class="comment">// Option 2 (if we choose differently):
+// R1(Teacher, Subject)             Teacher is key here</span>
+<span class="comment">// R2(StudentID, Subject)           (StudentID, Subject) is key here
+// Losses: Teacher &rarr; Subject
+// But preserves: (StudentID, Subject) &rarr; Teacher</span>
+
+<span class="result">// The choice affects which FDs are preserved!
+// No BCNF decomposition can preserve all FDs in this case.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Properties of BCNF Decomposition</h2>
+        <table>
+          <tr><th>Property</th><th>BCNF Guarantee</th></tr>
+          <tr><td>Lossless Join</td><td class="result">Yes (always)</td></tr>
+          <tr><td>Dependency Preservation</td><td><span style="color: #f97316;">Not always possible</span></td></tr>
+          <tr><td>Eliminates All FD-Based Redundancy</td><td class="result">Yes</td></tr>
+          <tr><td>Eliminates Non-Key Determinants</td><td class="result">Yes</td></tr>
+          <tr><td>Decomposition Result</td><td>May vary based on FD choice order</td></tr>
+        </table>
+
+        <div class="warning">
+          <div class="title">BCNF vs 3NF: Practical Trade-off</div>
+          <p>When BCNF decomposition loses functional dependencies, database designers often choose to stay at 3NF instead. Maintaining data integrity through FK constraints is more important than eliminating every last bit of redundancy.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Checking BCNF Algorithm</h2>
+        <div class="code">
+<span class="keyword">function</span> <span class="func">isBCNF</span>(R, FDs):
+    <span class="comment">// Check if relation R is in BCNF given FDs</span>
+    <span class="keyword">for each</span> FD: X &rarr; Y <span class="keyword">in</span> FDs:
+        <span class="comment">// Skip trivial FDs (Y &sube; X)</span>
+        <span class="keyword">if</span> Y &sube; X: <span class="keyword">continue</span>
+
+        <span class="comment">// Check if X is a superkey of R</span>
+        <span class="keyword">if</span> not <span class="func">isSuperkey</span>(X, R, FDs):
+            <span class="keyword">return</span> <span class="var">false</span>
+
+    <span class="keyword">return</span> <span class="var">true</span>
+
+<span class="keyword">function</span> <span class="func">isSuperkey</span>(X, R, FDs):
+    <span class="comment">// Compute X+ using FDs</span>
+    closure = X
+    <span class="keyword">while</span> closure changes:
+        <span class="keyword">for each</span> FD: A &rarr; B <span class="keyword">in</span> FDs:
+            <span class="keyword">if</span> A &sube; closure <span class="keyword">and</span> B &nsub; closure:
+                closure = closure &cup; B
+
+    <span class="comment">// X is a superkey if closure contains all attributes of R</span>
+    <span class="keyword">return</span> closure == <span class="func">allAttributes</span>(R)
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Summary: Normal Form Comparison</h2>
+        <table>
+          <tr><th>NF</th><th>Requirement</th><th>Eliminates</th><th>Dependency Preserving?</th></tr>
+          <tr><td>1NF</td><td>Atomic values, PK</td><td>Non-atomic data</td><td class="result">Yes</td></tr>
+          <tr><td>2NF</td><td>1NF + full FD on PK</td><td>Partial dependencies</td><td class="result">Yes</td></tr>
+          <tr><td>3NF</td><td>2NF + no transitive dep</td><td>Transitive dependencies</td><td class="result">Yes</td></tr>
+          <tr><td>BCNF</td><td>3NF + every det. is superkey</td><td>Non-key determinants</td><td><span style="color: #f97316;">Sometimes</span></td></tr>
+        </table>
+      </div>
+
+      <div class="quick-ref">
+        <h3>BCNF Quick Reference</h3>
+        <ul>
+          <li><span class="sym">▸</span> Rule: Every determinant must be a superkey</li>
+          <li><span class="sym">▸</span> Stricter than 3NF: 3NF allows non-key det. if RHS is prime</li>
+          <li><span class="sym">▸</span> Classic violation: A &rarr; B where A is not a key</li>
+          <li><span class="sym">▸</span> Algorithm: iteratively decompose on violating FDs</li>
+          <li><span class="sym">▸</span> Always lossless, but may not preserve FDs</li>
+          <li><span class="sym">▸</span> 3NF is the fallback when BCNF loses FDs</li>
+          <li><span class="sym">▸</span> Developed by Boyce and Codd (1974)</li>
+          <li><span class="sym">▸</span> Check: compute closure of each FD's LHS</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

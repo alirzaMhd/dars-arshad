@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Denormalization - Database Course</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a0a00; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+    .warning-title { color: #ff6600; font-weight: bold; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .quick-ref { background: #0a1a0a; border: 1px solid #00ff88; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .quick-ref h3 { color: #00ff88; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>DENORMALIZATION</h1>
+  <p class="subtitle">Database Systems — Chapter 7: Normalization</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Concept</button>
+      <button class="tab" onclick="showSection('tab2')">When to Denormalize</button>
+      <button class="tab" onclick="showSection('tab3')">Trade-offs</button>
+      <button class="tab" onclick="showSection('tab4')">Examples</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is Denormalization?</h2>
+        <p><span class="result">Denormalization</span> is the intentional process of introducing <span class="highlight">redundancy</span> into a normalized database schema to improve <span class="highlight">read performance</span> by reducing the number of join operations needed for common queries.</p>
+
+        <div class="formula">
+          <div class="label">Denormalization Strategy:</div>
+          <div class="expr">Normalized Schema → Redundant Data + Fewer Joins → Better Read Performance</div>
+          <div class="desc">Trade-off: data integrity for query speed.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Normalization</h3>
+            <p>Minimizes <span class="highlight">redundancy</span></p>
+            <p>Maximizes <span class="highlight">integrity</span></p>
+            <p class="dim">More tables, more joins</p>
+          </div>
+          <div class="card">
+            <h3>Denormalization</h3>
+            <p>Introduces <span class="highlight">redundancy</span></p>
+            <p>Improves <span class="highlight">read speed</span></p>
+            <p class="dim">Fewer tables, fewer joins</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">Critical Distinction:</div>
+          <p>Denormalization is NOT the absence of normalization. It is a <span class="highlight">deliberate, strategic choice</span> made after normalizing, when performance requirements demand it. You should always <span class="highlight">normalize first, then denormalize selectively</span>.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why Denormalize?</h2>
+        <p>Databases are typically <span class="result">read-heavy</span> (more SELECT queries than INSERT/UPDATE/DELETE). Each join operation costs CPU and I/O. For frequently executed queries involving many tables, denormalization can dramatically improve performance.</p>
+
+        <h3>Common Motivations:</h3>
+        <ul style="margin-left: 20px; margin-top: 5px;">
+          <li><span class="highlight">Query Performance:</span> Reduce join overhead for complex queries</li>
+          <li><span class="highlight">Reporting:</span> Data warehouses and analytical systems benefit from pre-joined tables</li>
+          <li><span class="highlight">Caching:</span> Avoid computing expensive aggregations on every query</li>
+          <li><span class="highlight">Application Simplicity:</span> Simplify application code by reducing complex joins</li>
+          <li><span class="highlight">Latency Requirements:</span> Meet strict response time SLAs</li>
+        </ul>
+
+        <div class="example">
+          <div class="title">Real-World Scenario</div>
+          <p>An e-commerce site displays order history with product names, categories, and supplier info. A normalized schema might require 5-6 joins per query. With denormalization, this data is stored in a single <span class="result">order_summary</span> table, reducing query time from 500ms to 5ms.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Types of Denormalization</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Pre-joining</h3>
+            <p>Store joined data in one table. <span class="dim">Example: Order + Customer name in same row.</span></p>
+          </div>
+          <div class="card">
+            <h3>Materialized Views</h3>
+            <p>Pre-computed query results stored as tables. <span class="dim">Automatically refreshed.</span></p>
+          </div>
+          <div class="card">
+            <h3>Duplicate Columns</h3>
+            <p>Store derived/aggregated values. <span class="dim">Example: Order total in Order header.</span></p>
+          </div>
+          <div class="card">
+            <h3>Vertical Merging</h3>
+            <p>Merge two related tables into one. <span class="dim">Example: Customer + CustomerProfile.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>When to Denormalize</h2>
+
+        <p>Denormalization is appropriate when the following conditions are met:</p>
+
+        <table>
+          <tr><th>Condition</th><th>Description</th><th>Priority</th></tr>
+          <tr><td><span class="result">Read-Heavy Workload</span></td><td>Significantly more SELECT than INSERT/UPDATE/DELETE</td><td>High</td></tr>
+          <tr><td><span class="result">Frequent Complex Joins</span></td><td>Common queries join 4+ tables</td><td>High</td></tr>
+          <tr><td><span class="result">Performance Requirements</span></td><td>Strict latency SLAs for read operations</td><td>High</td></tr>
+          <tr><td><span class="result">Data is Mostly Static</span></td><td>Reference data changes infrequently</td><td>Medium</td></tr>
+          <tr><td><span class="result">Write Volume is Low</span></td><td>Updates/inserts are rare or batch-oriented</td><td>Medium</td></tr>
+          <tr><td><span class="result">Analytical / Reporting</span></td><td>Data warehouse or BI workload</td><td>Medium</td></tr>
+          <tr><td><span class="result">Storage is Cheap</span></td><td>Redundant storage cost is acceptable</td><td>Low</td></tr>
+        </table>
+
+        <h3>When NOT to Denormalize</h3>
+        <ul style="margin-left: 20px; margin-top: 5px;">
+          <li><span class="dim">Write-Heavy Workloads:</span> Frequent updates make redundant data expensive to maintain</li>
+          <li><span class="dim">High Consistency Requirements:</span> Financial systems where data integrity is paramount</li>
+          <li><span class="dim">Complex Update Logic:</span> When redundant data is hard to keep synchronized</li>
+          <li><span class="dim">Limited Storage:</span> When disk space is constrained</li>
+        </ul>
+
+        <div class="warning">
+          <div class="warning-title">Golden Rule:</div>
+          <p><span class="highlight">Normalize until it hurts performance, then denormalize until it hurts consistency.</span></p>
+          <p class="note">— A common database design adage</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Denormalization Decision Tree</h2>
+        <div class="code">
+START: Is the schema fully normalized (3NF/BCNF)?
+  ├── No → Normalize first, then reconsider
+  └── Yes → ↓
+
+Are read operations a bottleneck?
+  ├── No → Keep normalized schema (no denormalization needed)
+  └── Yes → ↓
+
+Are common queries joining 3+ tables?
+  ├── No → Optimize queries/indexes first
+  └── Yes → ↓
+
+Is the write volume low or manageable?
+  ├── No → Consider materialized views instead
+  └── Yes → ↓
+
+Is data integrity critical (financial, medical)?
+  ├── Yes → Use triggers/constraints to maintain consistency
+  └── No → Proceed with denormalization
+
+CONSIDER denormalization strategies:
+  1. Pre-join frequently accessed tables
+  2. Add computed columns
+  3. Create summary/aggregate tables
+  4. Use materialized views
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Common Denormalization Patterns</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>1. Pre-joining</h3>
+            <p>Store <span class="highlight">customer_name</span> in Order table to avoid joining Customer on every query</p>
+            <p class="dim">Trade-off: Name changes must update all orders</p>
+          </div>
+          <div class="card">
+            <h3>2. Aggregate Storage</h3>
+            <p>Store <span class="highlight">order_total</span> in Order table instead of computing from OrderItems</p>
+            <p class="dim">Trade-off: Updates to items must recalculate total</p>
+          </div>
+          <div class="card">
+            <h3>3. Reporting Tables</h3>
+            <p>Create a dedicated <span class="highlight">sales_summary</span> table for monthly reports</p>
+            <p class="dim">Trade-off: Separate refresh process needed</p>
+          </div>
+          <div class="card">
+            <h3>4. Array/JSON Columns</h3>
+            <p>Store <span class="highlight">tags</span> or <span class="highlight">phone_numbers</span> as JSON array in one column</p>
+            <p class="dim">Trade-off: Violates 1NF, harder to query individual items</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Trade-offs: Read Performance vs Write Overhead</h2>
+
+        <div class="formula">
+          <div class="label">The Core Trade-off:</div>
+          <div class="expr">Read Speed ↑ ⇔ Write Overhead ↑ ⇔ Consistency Risk ↑</div>
+          <div class="desc">Denormalization always increases write complexity and consistency maintenance.</div>
+        </div>
+
+        <table>
+          <tr><th>Aspect</th><th>Normalized (3NF/BCNF)</th><th>Denormalized</th></tr>
+          <tr><td><span class="highlight">Read Performance</span></td><td>Slower (more joins)</td><td>Faster (fewer joins)</td></tr>
+          <tr><td><span class="highlight">Write Performance</span></td><td>Faster (single table update)</td><td>Slower (multiple tables to update)</td></tr>
+          <tr><td><span class="highlight">Data Integrity</span></td><td>High (single source of truth)</td><td>Lower (multiple copies to maintain)</td></tr>
+          <tr><td><span class="highlight">Storage</span></td><td>Minimal</td><td>Higher (duplicate data)</td></tr>
+          <tr><td><span class="highlight">Maintenance</span></td><td>Simple</td><td>Complex (sync logic)</td></tr>
+          <tr><td><span class="highlight">Query Simplicity</span></td><td>Complex (many joins)</td><td>Simple (flat table)</td></tr>
+          <tr><td><span class="highlight">Schema Changes</span></td><td>Easier</td><td>Harder</td></tr>
+        </table>
+
+        <div class="example">
+          <div class="title">Performance vs Integrity: A Concrete Example</div>
+          <h3>Normalized Approach:</h3>
+          <div class="code">
+SELECT o.order_id, c.name
+FROM Orders o JOIN Customers c ON o.customer_id = c.id
+WHERE o.date = '2024-01-01';
+          </div>
+          <p>✓ Single source of truth for customer name</p>
+          <p>✗ Requires join for every query</p>
+
+          <h3>Denormalized Approach:</h3>
+          <div class="code">
+SELECT order_id, customer_name
+FROM Orders
+WHERE date = '2024-01-01';
+          </div>
+          <p>✓ No join needed, faster reads</p>
+          <p>✗ If customer changes name, must update all historical orders</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Consistency Strategies for Denormalized Data</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Triggers</h3>
+            <p>Database triggers propagate changes automatically</p>
+            <p class="dim">Pro: Immediate consistency</p>
+            <p class="dim">Con: Performance overhead on writes</p>
+          </div>
+          <div class="card">
+            <h3>Batch Jobs</h3>
+            <p>Periodic synchronization of redundant data</p>
+            <p class="dim">Pro: Simple to implement</p>
+            <p class="dim">Con: Windows of inconsistency</p>
+          </div>
+          <div class="card">
+            <h3>Application Logic</h3>
+            <p>Application updates all copies of data</p>
+            <p class="dim">Pro: Full control</p>
+            <p class="dim">Con: Complex, error-prone code</p>
+          </div>
+          <div class="card">
+            <h3>Materialized Views</h3>
+            <p>DB-managed pre-computed views</p>
+            <p class="dim">Pro: Automatic refresh options</p>
+            <p class="dim">Con: Limited to SQL expressions</p>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">Consistency Risk:</div>
+          <p>The biggest danger of denormalization is <span class="highlight">update anomalies</span>. A change to one fact must be propagated to all redundant copies. Failure to do so creates <span class="highlight">data inconsistency</span> — the database contains contradictory information.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Read vs Write Workload Analysis</h2>
+        <table>
+          <tr><th>Workload Type</th><th>Denormalization Impact</th><th>Recommendation</th></tr>
+          <tr><td>95% reads, 5% writes</td><td>Significant read improvement, minor write cost</td><td><span class="result">Strongly consider</span></td></tr>
+          <tr><td>70% reads, 30% writes</td><td>Moderate read improvement, notable write cost</td><td><span class="dim">Evaluate carefully</span></td></tr>
+          <tr><td>50% reads, 50% writes</td><td>Read improvement offset by write overhead</td><td><span class="dim">Usually not worth it</span></td></tr>
+          <tr><td>30% reads, 70% writes</td><td>Write overhead dominates</td><td><span class="dim">Avoid denormalization</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Denormalization Examples</h2>
+      </div>
+
+      <div class="section">
+        <h2>Example 1: E-Commerce Order Processing</h2>
+
+        <h3>Normalized Schema (BCNF):</h3>
+        <div class="code">
+Customers(id, name, email, address)
+Orders(id, customer_id, order_date)
+OrderItems(id, order_id, product_id, quantity, unit_price)
+Products(id, name, category, supplier_id, price)
+Suppliers(id, name, contact_phone)
+        </div>
+        <p>To display an order summary with customer name, product names, and supplier:</p>
+        <div class="code">
+SELECT o.id, c.name, p.name, s.name, oi.quantity
+FROM Orders o
+JOIN Customers c ON o.customer_id = c.id
+JOIN OrderItems oi ON o.id = oi.order_id
+JOIN Products p ON oi.product_id = p.id
+JOIN Suppliers s ON p.supplier_id = s.id;
+        </div>
+        <p><span class="dim">5 tables joined for a simple order display!</span></p>
+
+        <h3>Denormalized Schema:</h3>
+        <div class="code">
+OrderSummary(order_id, customer_name, product_name,
+             supplier_name, quantity, unit_price, total)
+        </div>
+        <div class="code">
+SELECT order_id, customer_name, product_name,
+       supplier_name, quantity, unit_price, total
+FROM OrderSummary;
+        </div>
+        <p><span class="result">No joins! Single table query.</span></p>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Before Denormalization</h3>
+            <p>5 tables, 4 joins</p>
+            <p class="dim">Query time: ~50ms</p>
+          </div>
+          <div class="card">
+            <h3>After Denormalization</h3>
+            <p>1 table, 0 joins</p>
+            <p class="dim">Query time: ~2ms</p>
+          </div>
+          <div class="card">
+            <h3>Cost</h3>
+            <p>OrderSummary must be refreshed when:</p>
+            <p class="dim">Customer name changes, product name changes, order is placed</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 2: Social Media Feed</h2>
+
+        <h3>Normalized Schema:</h3>
+        <div class="code">
+Users(id, username, display_name, avatar_url)
+Posts(id, user_id, content, created_at)
+Likes(id, user_id, post_id, created_at)
+Comments(id, user_id, post_id, content, created_at)
+        </div>
+
+        <p>To display a feed with post author, like count, and comment count:</p>
+        <div class="code">
+SELECT p.id, u.display_name, u.avatar_url, p.content,
+       COUNT(DISTINCT l.id) AS likes,
+       COUNT(DISTINCT c.id) AS comments
+FROM Posts p
+JOIN Users u ON p.user_id = u.id
+LEFT JOIN Likes l ON p.id = l.post_id
+LEFT JOIN Comments c ON p.id = c.post_id
+GROUP BY p.id, u.display_name, u.avatar_url, p.content;
+        </div>
+        <p><span class="dim">Expensive aggregation on every feed load!</span></p>
+
+        <h3>Denormalized Schema:</h3>
+        <div class="code">
+FeedItems(id, author_name, author_avatar, content,
+         like_count, comment_count, created_at)
+        </div>
+        <p><span class="result">Pre-computed counts, no joins, no aggregations.</span></p>
+
+        <div class="warning">
+          <div class="warning-title">Consistency Challenge:</div>
+          <p>Like counts change frequently (many writes). The denormalized <span class="highlight">like_count</span> must be updated on every like/unlike, making each like operation more expensive. This trade-off is acceptable because <span class="highlight">feed reads far outnumber likes</span>.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 3: Data Warehouse Star Schema</h2>
+
+        <p>Data warehouses commonly use the <span class="result">star schema</span>, which is a denormalized design for analytical queries.</p>
+
+        <div class="code">
+-- Normalized (OLTP) Schema:
+Products(id, name, category)
+Categories(id, name, department)
+Sales(id, product_id, date, quantity, price)
+
+-- Denormalized (Star Schema) Fact Table:
+SalesFact(id, product_name, category_name, department_name,
+          date, quantity, price)
+        </div>
+
+        <p>The star schema pre-joins dimension attributes into the fact table, enabling fast analytical queries without joins.</p>
+
+        <div class="example">
+          <div class="title">Query Comparison</div>
+          <p><span class="result">Normalized OLTP Query:</span></p>
+          <div class="code">
+SELECT SUM(s.quantity * s.price)
+FROM Sales s
+JOIN Products p ON s.product_id = p.id
+JOIN Categories c ON p.category_id = c.id
+WHERE c.department = 'Electronics';
+          </div>
+
+          <p><span class="result">Denormalized Star Schema Query:</span></p>
+          <div class="code">
+SELECT SUM(quantity * price)
+FROM SalesFact
+WHERE department_name = 'Electronics';
+          </div>
+          <p class="note">The star schema eliminates all joins, dramatically improving query performance for analytics.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Example 4: Financial Application (Cautious Denormalization)</h2>
+
+        <h3>Normalized:</h3>
+        <div class="code">
+Accounts(id, customer_id, balance, last_updated)
+Transactions(id, account_id, amount, type, timestamp)
+        </div>
+
+        <p>To show account balance with recent transactions:</p>
+        <div class="code">
+SELECT a.balance, t.amount, t.type, t.timestamp
+FROM Accounts a
+JOIN Transactions t ON a.id = t.account_id
+WHERE a.id = 1234;
+        </div>
+
+        <h3>Denormalized (with trigger-based consistency):</h3>
+        <div class="code">
+AccountSummary(account_id, customer_name, balance,
+              last_five_transactions_json)
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">Financial Data Caution:</div>
+          <p>In financial systems, <span class="highlight">data integrity is paramount</span>. If denormalization is used, it must be protected by <span class="highlight">database triggers</span> or <span class="highlight">stored procedures</span> that ensure atomic updates to all redundant copies. Even then, most financial systems avoid denormalization for transaction data.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Denormalization Best Practices</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>✓ Always Normalize First</h3>
+            <p>Start with a fully normalized design (3NF/BCNF). Then measure performance before denormalizing.</p>
+          </div>
+          <div class="card">
+            <h3>✓ Denormalize Selectively</h3>
+            <p>Only denormalize the specific tables and columns that are performance bottlenecks. Don't denormalize everything.</p>
+          </div>
+          <div class="card">
+            <h3>✓ Document Decisions</h3>
+            <p>Record why and where denormalization was applied. Future developers need to understand the trade-offs.</p>
+          </div>
+          <div class="card">
+            <h3>✓ Automate Consistency</h3>
+            <p>Use triggers, materialized views, or application logic to keep redundant data synchronized.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Key Computation from Functional Dependencies - Database Course</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .section h4 { color: #00ccff; font-size: 0.9em; margin: 12px 0 6px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a0a00; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+    .warning-title { color: #ff6600; font-weight: bold; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .quick-ref { background: #0a1a0a; border: 1px solid #00ff88; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .quick-ref h3 { color: #00ff88; margin-bottom: 10px; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 6px; margin: 8px 0; font-family: 'Courier New', monospace; color: #00ccff; border: 1px solid #222; overflow-x: auto; white-space: pre; }
+    .step { background: #111a22; border-left: 3px solid #ffcc00; padding: 8px 12px; margin: 8px 0; border-radius: 0 6px 6px 0; }
+    .step .step-num { color: #ffcc00; font-weight: bold; }
+    ul, ol { margin-left: 20px; line-height: 1.8; }
+    li { margin: 5px 0; }
+    p { line-height: 1.7; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>KEY COMPUTATION FROM FUNCTIONAL DEPENDENCIES</h1>
+  <p class="subtitle">Database Systems — Chapter 8: Finding All Candidate Keys from FDs</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Algorithm</button>
+      <button class="tab" onclick="showSection('tab2')">Examples</button>
+      <button class="tab" onclick="showSection('tab3')">Candidate Keys</button>
+      <button class="tab" onclick="showSection('tab4')">Practice</button>
+    </div>
+
+    <!-- Tab 1: Algorithm -->
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>Candidate Key Computation Algorithm</h2>
+        <p>Given a relation schema R and a set of FDs F, we can find all candidate keys using <span class="result">attribute closure</span>. The key idea: a candidate key is a <span class="highlight">minimal set</span> of attributes whose closure contains all attributes of R.</p>
+
+        <div class="formula">
+          <div class="label">Definition:</div>
+          <div class="expr">K is a candidate key ⟺ K⁺ = R AND ∀A ∈ K, (K − {A})⁺ ≠ R</div>
+          <div class="desc">Closure of K is the whole relation, and removing any attribute breaks this property.</div>
+        </div>
+
+        <div class="step">
+          <span class="step-num">Step 1: Classify Attributes</span>
+          <p>Partition all attributes of R into four categories based on their appearance in FDs:</p>
+          <table>
+            <tr><th>Category</th><th>Definition</th><th>Symbol</th></tr>
+            <tr><td>Left-only (L)</td><td>Appears only on LHS of FDs</td><td>L</td></tr>
+            <tr><td>Right-only (R)</td><td>Appears only on RHS of FDs</td><td>R</td></tr>
+            <tr><td>Both (B)</td><td>Appears on both LHS and RHS</td><td>B</td></tr>
+            <tr><td>Neither (N)</td><td>Does not appear in any FD</td><td>N</td></tr>
+          </table>
+        </div>
+
+        <div class="step">
+          <span class="step-num">Step 2: Determine Mandatory Attributes</span>
+          <p>Attributes in categories <span class="result">N</span> (neither) and <span class="result">L</span> (left-only) MUST be part of every candidate key.</p>
+          <p>If an attribute never appears on the RHS of any FD, it can never be determined by other attributes → it must be in every key.</p>
+        </div>
+
+        <div class="step">
+          <span class="step-num">Step 3: Compute Closure of L ∪ N</span>
+          <p>Let <span class="result">X = L ∪ N</span>. Compute <span class="result">X⁺</span>.</p>
+          <p>If <span class="result">X⁺ = R</span>, then X is the <span class="highlight">ONLY</span> candidate key.</p>
+          <p>Otherwise, add attributes from <span class="result">B</span> (both sides) one at a time to find all candidate keys.</p>
+        </div>
+
+        <div class="step">
+          <span class="step-num">Step 4: Systematic Search</span>
+          <p>For each subset S of B (both-side attributes):</p>
+          <p>• Compute <span class="result">(X ∪ S)⁺</span></p>
+          <p>• If <span class="result">(X ∪ S)⁺ = R</span>, then X ∪ S is a superkey</p>
+          <p>• Check <span class="highlight">minimality</span>: ensure no proper subset is also a superkey</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">Optimization — Order Matters</div>
+          <div class="expr">Try smaller subsets of B first (size 1, then 2, etc.)</div>
+          <div class="desc">To find all candidate keys, explore subsets of B minimally. When a superkey is found, any superset can be skipped.</div>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">Critical Rule</div>
+          <p>Attributes in categories <span class="highlight">L</span> (left-only) and <span class="highlight">N</span> (neither) are <span class="highlight">required in every candidate key</span>. If you forget to include them, the closure can never equal R.</p>
+        </div>
+
+        <div class="quick-ref">
+          <h3>Attribute Classification — Quick Reference</h3>
+          <table>
+            <tr><th>Category</th><th>Meaning</th><th>In Every Key?</th></tr>
+            <tr><td>L (Left-only)</td><td>Appears only on LHS</td><td>YES — must be in every CK</td></tr>
+            <tr><td>R (Right-only)</td><td>Appears only on RHS</td><td>NO — can never be in any CK</td></tr>
+            <tr><td>B (Both)</td><td>Appears on both sides</td><td>MAYBE — some may be in CK</td></tr>
+            <tr><td>N (Neither)</td><td>Appears in no FD</td><td>YES — must be in every CK</td></tr>
+          </table>
+        </div>
+
+        <div class="example">
+          <div class="title">Attribute Classification — Example</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E, F), F = {AB → C, C → D, D → E, E → F}</p>
+          <table>
+            <tr><th>Attribute</th><th>LHS Appearances</th><th>RHS Appearances</th><th>Category</th></tr>
+            <tr><td>A</td><td>AB → C</td><td>—</td><td>L</td></tr>
+            <tr><td>B</td><td>AB → C</td><td>—</td><td>L</td></tr>
+            <tr><td>C</td><td>C → D</td><td>AB → C</td><td>B</td></tr>
+            <tr><td>D</td><td>D → E</td><td>C → D</td><td>B</td></tr>
+            <tr><td>E</td><td>E → F</td><td>D → E</td><td>B</td></tr>
+            <tr><td>F</td><td>—</td><td>E → F</td><td>R</td></tr>
+          </table>
+          <p>L = {A, B}, R = {F}, B = {C, D, E}, N = {}</p>
+          <p>X = L ∪ N = {A, B} (must be in every candidate key)</p>
+          <p>X⁺ = {A,B,C,D,E,F} = R → {A, B} is the <span class="result">ONLY candidate key</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Examples -->
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Detailed Worked Examples</h2>
+
+        <div class="example">
+          <div class="title">Example 1: Simple — Single Candidate Key</div>
+          <p><span class="result">Given:</span> R(A, B, C, D), F = {A → B, B → C, C → D}</p>
+
+          <h3>Attribute Classification:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>A → B</td><td>—</td><td>L</td></tr>
+            <tr><td>B</td><td>B → C</td><td>A → B</td><td>B</td></tr>
+            <tr><td>C</td><td>C → D</td><td>B → C</td><td>B</td></tr>
+            <tr><td>D</td><td>—</td><td>C → D</td><td>R</td></tr>
+          </table>
+          <p>L = {A}, R = {D}, B = {B, C}, N = {}</p>
+
+          <h3>Compute X = L ∪ N = {A}:</h3>
+          <p>A⁺ = {A, B, C, D} = R ✓</p>
+          <p><span class="result">Candidate Key: {A}</span></p>
+          <p class="note">Since {A} alone already covers R, no need to test subsets of B.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 2: Multiple Candidate Keys</div>
+          <p><span class="result">Given:</span> R(A, B, C, D), F = {A → B, B → A, AC → D}</p>
+
+          <h3>Attribute Classification:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>A → B, AC → D</td><td>B → A</td><td>B</td></tr>
+            <tr><td>B</td><td>B → A</td><td>A → B</td><td>B</td></tr>
+            <tr><td>C</td><td>AC → D</td><td>—</td><td>L</td></tr>
+            <tr><td>D</td><td>—</td><td>AC → D</td><td>R</td></tr>
+          </table>
+          <p>L = {C}, R = {D}, B = {A, B}, N = {}</p>
+
+          <h3>Compute X = L ∪ N = {C}:</h3>
+          <p>C⁺ = {C} ≠ R (D is not determined by C alone)</p>
+
+          <h3>Add attributes from B one at a time:</h3>
+          <p><span class="highlight">Try X ∪ {A} = {A, C}:</span> (A,C)⁺ = {A,B,C,D} = R ✓ → <span class="result">{A, C} is a candidate key</span></p>
+          <p><span class="highlight">Try X ∪ {B} = {B, C}:</span> (B,C)⁺ = {B,A,C,D} = R ✓ → <span class="result">{B, C} is a candidate key</span></p>
+          <p><span class="highlight">Try X ∪ {A, B} = {A, B, C}:</span> Superkey but not minimal (superset of {A,C} and {B,C})</p>
+
+          <h3>Check minimality of {A, C}:</h3>
+          <p>Remove A: C⁺ = {C} ≠ R</p>
+          <p>Remove C: A⁺ = {A, B} ≠ R</p>
+          <p>{A, C} is minimal ✓</p>
+
+          <h3>Check minimality of {B, C}:</h3>
+          <p>Remove B: C⁺ = {C} ≠ R</p>
+          <p>Remove C: B⁺ = {B, A} ≠ R</p>
+          <p>{B, C} is minimal ✓</p>
+
+          <p><span class="result">Candidate Keys: {A, C} and {B, C}</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 3: Attributes Not in Any FD</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E), F = {AB → C}</p>
+
+          <h3>Attribute Classification:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>AB → C</td><td>—</td><td>L</td></tr>
+            <tr><td>B</td><td>AB → C</td><td>—</td><td>L</td></tr>
+            <tr><td>C</td><td>—</td><td>AB → C</td><td>R</td></tr>
+            <tr><td>D</td><td>—</td><td>—</td><td>N</td></tr>
+            <tr><td>E</td><td>—</td><td>—</td><td>N</td></tr>
+          </table>
+          <p>L = {A, B}, N = {D, E}, R = {C}, B = {}</p>
+
+          <h3>X = L ∪ N = {A, B, D, E}:</h3>
+          <p>(A,B,D,E)⁺ = {A,B,D,E,C} = R ✓</p>
+          <p><span class="result">Candidate Key: {A, B, D, E}</span></p>
+          <p class="note">D and E are not determined by any FD, so they MUST be in the key. Without them, the closure can never include D and E.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Example 4: Complex — Many Both-Side Attributes</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E, F, G), F = {A → B, BC → D, D → E, E → A, AF → G}</p>
+
+          <h3>Attribute Classification:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>A → B, AF → G</td><td>E → A</td><td>B</td></tr>
+            <tr><td>B</td><td>BC → D</td><td>A → B</td><td>B</td></tr>
+            <tr><td>C</td><td>BC → D</td><td>—</td><td>L</td></tr>
+            <tr><td>D</td><td>D → E</td><td>BC → D</td><td>B</td></tr>
+            <tr><td>E</td><td>E → A</td><td>D → E</td><td>B</td></tr>
+            <tr><td>F</td><td>AF → G</td><td>—</td><td>L</td></tr>
+            <tr><td>G</td><td>—</td><td>AF → G</td><td>R</td></tr>
+          </table>
+          <p>L = {C, F}, N = {}, R = {G}, B = {A, B, D, E}</p>
+
+          <h3>X = {C, F}:</h3>
+          <p>(C,F)⁺ = {C, F} ≠ R</p>
+
+          <h3>Try adding B attributes one at a time:</h3>
+          <p><span class="highlight">X ∪ {A} = {A, C, F}:</span></p>
+          <p>(A,C,F)⁺ = {A,B,C,D,E,F,G} = R ✓ → <span class="result">{A, C, F} is a candidate key</span></p>
+
+          <p><span class="highlight">X ∪ {B} = {B, C, F}:</span></p>
+          <p>(B,C,F)⁺ = {B,C,D,E,A,F,G} = R ✓ → <span class="result">{B, C, F} is a candidate key</span></p>
+
+          <p><span class="highlight">X ∪ {D} = {C, D, F}:</span></p>
+          <p>(C,D,F)⁺ = {C,D,E,A,B,F,G} = R ✓ → <span class="result">{C, D, F} is a candidate key</span></p>
+
+          <p><span class="highlight">X ∪ {E} = {C, E, F}:</span></p>
+          <p>(C,E,F)⁺ = {C,E,A,B,D,F,G} = R ✓ → <span class="result">{C, E, F} is a candidate key</span></p>
+
+          <p><span class="result">Candidate Keys: {A,C,F}, {B,C,F}, {C,D,F}, {C,E,F}</span></p>
+          <p class="note">All four candidate keys have 3 attributes and include the mandatory attributes C and F.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Special Cases</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Trivial FDs</h3>
+            <p>FDs like A → A provide no information. They do not affect key computation.</p>
+          </div>
+          <div class="card">
+            <h3>Empty LHS</h3>
+            <p>An FD ∅ → A means A has the <span class="highlight">same value</span> in all tuples. This is rare and affects key analysis.</p>
+          </div>
+          <div class="card">
+            <h3>Cyclic Dependencies</h3>
+            <p>Cycles like A → B, B → A create <span class="highlight">equivalence classes</span>. Both A and B are in the B (both) category.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Candidate Keys -->
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Understanding Candidate Keys</h2>
+
+        <div class="formula">
+          <div class="label">Candidate Key Definition:</div>
+          <div class="expr">K is a candidate key of R ⟺ K⁺ = R (superkey) and ∀A ∈ K, (K − {A})⁺ ≠ R (minimal)</div>
+        </div>
+
+        <div class="quick-ref">
+          <h3>Relationship with FDs</h3>
+          <p>A candidate key is essentially a <span class="highlight">basis</span> for all FDs: if K is a key, then K → A holds for every attribute A in R.</p>
+          <p>Finding keys = finding <span class="highlight">minimal LHS sets</span> whose closure covers R.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Key vs. Superkey Closure Comparison</div>
+          <p><span class="result">Given:</span> R(A, B, C, D), F = {A → B, B → C, C → D}</p>
+          <table>
+            <tr><th>Set</th><th>Closure</th><th>Superkey?</th><th>Candidate Key?</th></tr>
+            <tr><td>{A}</td><td>{A,B,C,D}</td><td>✓</td><td>✓ (minimal)</td></tr>
+            <tr><td>{A, B}</td><td>{A,B,C,D}</td><td>✓</td><td>✗ (A alone suffices)</td></tr>
+            <tr><td>{A, B, C}</td><td>{A,B,C,D}</td><td>✓</td><td>✗ (A alone suffices)</td></tr>
+            <tr><td>{B}</td><td>{B,C,D}</td><td>✗</td><td>✗ (not a superkey)</td></tr>
+            <tr><td>{B, C}</td><td>{B,C,D}</td><td>✗</td><td>✗ (A missing from closure)</td></tr>
+          </table>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">Key Finding Strategy</div>
+          <p>1. Start with the <span class="highlight">smallest possible set</span> of mandatory attributes (L ∪ N)</p>
+          <p>2. If X⁺ = R, you're done — that's the only candidate key</p>
+          <p>3. Otherwise, try adding <span class="highlight">one B-attribute at a time</span>, then groups of 2, 3, etc.</p>
+          <p>4. <span class="highlight">Skip supersets</span> once you find a candidate key</p>
+          <p>5. Always verify <span class="highlight">minimality</span> — removing any attribute should break the key property</p>
+        </div>
+
+        <div class="formula">
+          <div class="label">Important Properties</div>
+          <div class="expr">|Candidate Keys| ≥ 1</div>
+          <div class="desc">Every relation must have at least one candidate key (otherwise it's not well-formed).</div>
+          <div class="expr">R-attribs are NEVER in any candidate key</div>
+          <div class="desc">Attributes that appear only on the RHS of FDs can never be part of a candidate key because they are always determined by others.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Practice -->
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Practice Problems</h2>
+
+        <div class="example">
+          <div class="title">Problem 1</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E), F = {AB → C, CD → E, DE → B}</p>
+
+          <h3>Solution:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>AB → C</td><td>—</td><td>L</td></tr>
+            <tr><td>B</td><td>AB → C, DE → B</td><td>DE → B</td><td>B</td></tr>
+            <tr><td>C</td><td>CD → E</td><td>AB → C</td><td>B</td></tr>
+            <tr><td>D</td><td>CD → E, DE → B</td><td>—</td><td>L</td></tr>
+            <tr><td>E</td><td>DE → B</td><td>CD → E</td><td>B</td></tr>
+          </table>
+          <p>L = {A, D}, N = {}, R = {}, B = {B, C, E}</p>
+          <p>X = {A, D}. (A,D)⁺ = {A,D} ≠ R.</p>
+
+          <p>Try X ∪ {B} = {A,B,D}: (A,B,D)⁺ = {A,B,D,C,E} = R ✓ → <span class="result">{A,B,D}</span></p>
+          <p>Try X ∪ {C} = {A,C,D}: (A,C,D)⁺ = {A,C,D,E,B} = R ✓ → <span class="result">{A,C,D}</span></p>
+          <p>Try X ∪ {E} = {A,D,E}: (A,D,E)⁺ = {A,D,E,B,C} = R ✓ → <span class="result">{A,D,E}</span></p>
+
+          <p>Check pairs of B: {A,B,C,D}, {A,B,D,E}, {A,C,D,E} — all supersets of keys found.</p>
+          <p><span class="result">Candidate Keys: {A,B,D}, {A,C,D}, {A,D,E}</span></p>
+        </div>
+
+        <div class="example">
+          <div class="title">Problem 2</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E, F), F = {A → B, BC → D, D → E, E → F, F → A}</p>
+
+          <h3>Solution:</h3>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>A → B</td><td>F → A</td><td>B</td></tr>
+            <tr><td>B</td><td>BC → D</td><td>A → B</td><td>B</td></tr>
+            <tr><td>C</td><td>BC → D</td><td>—</td><td>L</td></tr>
+            <tr><td>D</td><td>D → E</td><td>BC → D</td><td>B</td></tr>
+            <tr><td>E</td><td>E → F</td><td>D → E</td><td>B</td></tr>
+            <tr><td>F</td><td>F → A</td><td>E → F</td><td>B</td></tr>
+          </table>
+          <p>L = {C}, N = {}, R = {}, B = {A, B, D, E, F}</p>
+          <p>X = {C}. C⁺ = {C} ≠ R.</p>
+
+          <p><span class="highlight">Try X ∪ {A} = {A, C}:</span> (A,C)⁺ = {A,C,B,D,E,F} = R ✓ → <span class="result">{A,C}</span></p>
+          <p><span class="highlight">Try X ∪ {B} = {B, C}:</span> (B,C)⁺ = {B,C,D,E,F,A} = R ✓ → <span class="result">{B,C}</span></p>
+          <p><span class="highlight">Try X ∪ {D} = {C, D}:</span> (C,D)⁺ = {C,D,E,F,A,B} = R ✓ → <span class="result">{C,D}</span></p>
+          <p><span class="highlight">Try X ∪ {E} = {C, E}:</span> (C,E)⁺ = {C,E,F,A,B,D} = R ✓ → <span class="result">{C,E}</span></p>
+          <p><span class="highlight">Try X ∪ {F} = {C, F}:</span> (C,F)⁺ = {C,F,A,B,D,E} = R ✓ → <span class="result">{C,F}</span></p>
+
+          <p><span class="result">Candidate Keys: {A,C}, {B,C}, {C,D}, {C,E}, {C,F}</span></p>
+          <p class="note">All five keys contain C (the only left-only attribute) plus exactly one attribute from the cycle A → B → D → E → F → A.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Problem 3 — No Left-Only Attributes</div>
+          <p><span class="result">Given:</span> R(A, B, C), F = {A → B, B → A, A → C}</p>
+
+          <h3>Solution:</h3>
+          <p>All attributes appear on both sides or only RHS.</p>
+          <table>
+            <tr><th>Attr</th><th>LHS</th><th>RHS</th><th>Cat</th></tr>
+            <tr><td>A</td><td>A → B, A → C</td><td>B → A</td><td>B</td></tr>
+            <tr><td>B</td><td>B → A</td><td>A → B</td><td>B</td></tr>
+            <tr><td>C</td><td>—</td><td>A → C</td><td>R</td></tr>
+          </table>
+          <p>L = {}, N = {}, R = {C}, B = {A, B}</p>
+          <p>X = {} (empty). ∅⁺ = ∅ ≠ R.</p>
+
+          <p><span class="highlight">Try {A}:</span> A⁺ = {A,B,C} = R ✓ → <span class="result">{A}</span></p>
+          <p><span class="highlight">Try {B}:</span> B⁺ = {B,A,C} = R ✓ → Check minimal: remove B → ∅⁺ ≠ R. <span class="result">{B}</span></p>
+          <p><span class="highlight">Try {A,B}:</span> superkey but superset.</p>
+
+          <p><span class="result">Candidate Keys: {A}, {B}</span></p>
+          <p class="note">C is only on RHS, so it can never be in a candidate key.</p>
+        </div>
+
+        <div class="example">
+          <div class="title">Problem 4 — Exam Style</div>
+          <p><span class="result">Given:</span> R(A, B, C, D, E, F, G), F = {A → B, B → C, C → A, D → E, E → F, F → D, AG → G}</p>
+
+          <h3>Solution:</h3>
+          <p>Note: AG → G is a <span class="highlight">trivial FD</span> (RHS is subset of LHS). It provides no information and can be ignored.</p>
+
+          <table>
+            <tr><th>Attr</th><th>Cat</th></tr>
+            <tr><td>A</td><td>B (A → B, C → A)</td></tr>
+            <tr><td>B</td><td>B (B → C, A → B)</td></tr>
+            <tr><td>C</td><td>B (C → A, B → C)</td></tr>
+            <tr><td>D</td><td>B (D → E, F → D)</td></tr>
+            <tr><td>E</td><td>B (E → F, D → E)</td></tr>
+            <tr><td>F</td><td>B (F → D, E → F)</td></tr>
+            <tr><td>G</td><td>N (appears only in trivial FD)</td></tr>
+          </table>
+          <p>L = {}, N = {G}, R = {}, B = {A, B, C, D, E, F}</p>
+          <p>X = {G}. G⁺ = {G} ≠ R.</p>
+
+          <p>We need to add attributes from B to cover the two cycles:</p>
+          <p>Cycle 1 (A-B-C): need at least one of {A,B,C}</p>
+          <p>Cycle 2 (D-E-F): need at least one of {D,E,F}</p>
+
+          <p>Try {A,D,G}: (A,D,G)⁺ = {A,B,C,D,E,F,G} = R → <span class="result">{A,D,G}</span></p>
+          <p>Try {A,E,G}: (A,E,G)⁺ = R → <span class="result">{A,E,G}</span></p>
+          <p>Try {A,F,G}: (A,F,G)⁺ = R → <span class="result">{A,F,G}</span></p>
+          <p>Try {B,D,G}: (B,D,G)⁺ = R → <span class="result">{B,D,G}</span></p>
+          <p>And so on... 3 × 3 = 9 candidate keys:</p>
+          <p><span class="result">{A,D,G}, {A,E,G}, {A,F,G}, {B,D,G}, {B,E,G}, {B,F,G}, {C,D,G}, {C,E,G}, {C,F,G}</span></p>
+        </div>
+
+        <div class="quick-ref">
+          <h3>Practice Tips for Exams</h3>
+          <p>✓ Always <span class="highlight">classify attributes</span> first (L, R, B, N)</p>
+          <p>✓ Start with <span class="highlight">mandatory set</span> X = L ∪ N</p>
+          <p>✓ Check if X⁺ = R — if yes, it's the only key</p>
+          <p>✓ Add <span class="highlight">minimal</span> subsets of B to X</p>
+          <p>✓ Verify <span class="highlight">minimality</span> by removing each attribute</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

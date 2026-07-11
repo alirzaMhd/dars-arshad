@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Normalization Process - Database Course</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+    h1 { text-align: center; font-size: 1.6em; color: #00ff88; margin: 20px 0 5px; text-shadow: 0 0 20px #00ff8855; letter-spacing: 2px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px 30px; }
+    .section { background: #111; border: 2px solid #333; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .section h2 { color: #ff6600; font-size: 1.1em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    .section h3 { color: #ffcc00; font-size: 0.95em; margin: 15px 0 8px; }
+    .formula { background: #0a0a18; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 3px solid #00ccff; }
+    .formula .label { color: #00ccff; font-size: 0.85em; margin-bottom: 5px; }
+    .formula .expr { color: #00ff88; font-size: 1.1em; font-weight: bold; }
+    .formula .desc { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+    .example { background: #1a1a2e; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #444; }
+    .example .title { color: #ffcc00; font-size: 0.9em; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0; }
+    .card { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid #444; }
+    .card .highlight { color: #00ff88; font-weight: bold; }
+    .card .dim { color: #ff9944; }
+    .note { color: #aaa; font-style: italic; font-size: 0.85em; margin-top: 10px; }
+    .result { color: #00ff88; font-weight: bold; }
+    .warning { background: #1a0a00; border-left: 3px solid #ff6600; padding: 10px 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+    .warning-title { color: #ff6600; font-weight: bold; margin-bottom: 5px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+    th { background: #1a1a2e; color: #00ccff; }
+    td { background: #0d0d1a; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 2px solid #444; background: #1a1a2e; color: #e0e0e0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    .tab.active { border-color: #00ff88; color: #00ff88; background: #002a1a; }
+    .tab:hover { border-color: #00ff88; color: #00ff88; }
+    .content { display: none; }
+    .content.active { display: block; }
+    .code { background: #0a0a18; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #00ccff; overflow-x: auto; white-space: pre-wrap; }
+    .quick-ref { background: #0a1a0a; border: 1px solid #00ff88; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .quick-ref h3 { color: #00ff88; margin-bottom: 10px; }
+    .step-box { background: #0a0a18; border: 1px solid #333; border-radius: 8px; padding: 12px; margin: 8px 0; }
+    .step-box .step-num { color: #ff6600; font-weight: bold; font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <h1>NORMALIZATION PROCESS</h1>
+  <p class="subtitle">Database Systems — Chapter 7: Normalization</p>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('tab1')">Overview</button>
+      <button class="tab" onclick="showSection('tab2')">Step-by-Step Process</button>
+      <button class="tab" onclick="showSection('tab3')">Full Example</button>
+      <button class="tab" onclick="showSection('tab4')">Summary</button>
+    </div>
+
+    <div class="content active" id="tab1">
+      <div class="section">
+        <h2>What is Normalization?</h2>
+        <p><span class="result">Normalization</span> is a systematic process of organizing data in a database to:</p>
+        <ul style="margin-left: 20px; margin-top: 5px;">
+          <li><span class="highlight">Eliminate redundancy</span> (duplicate data)</li>
+          <li><span class="highlight">Avoid anomalies</span> (insertion, update, deletion problems)</li>
+          <li><span class="highlight">Ensure data integrity</span> and consistency</li>
+          <li><span class="highlight">Simplify</span> query processing and maintenance</li>
+        </ul>
+
+        <div class="formula">
+          <div class="label">Normalization Goal:</div>
+          <div class="expr">Unnormalized → 1NF → 2NF → 3NF → BCNF → 4NF → 5NF</div>
+          <div class="desc">Each step removes a specific type of redundancy and anomaly.</div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>UNF</h3>
+            <p>Unnormalized form</p>
+            <p class="dim">Contains repeating groups</p>
+          </div>
+          <div class="card">
+            <h3>1NF</h3>
+            <p>Atomic values</p>
+            <p class="dim">No repeating groups</p>
+          </div>
+          <div class="card">
+            <h3>2NF</h3>
+            <p>Full FD on key</p>
+            <p class="dim">No partial dependencies</p>
+          </div>
+          <div class="card">
+            <h3>3NF</h3>
+            <p>No transitive dependencies</p>
+            <p class="dim">No non-key → non-key FDs</p>
+          </div>
+          <div class="card">
+            <h3>BCNF</h3>
+            <p>Every FD key-based</p>
+            <p class="dim">No overlapping candidate keys</p>
+          </div>
+          <div class="card">
+            <h3>4NF</h3>
+            <p>No MVDs</p>
+            <p class="dim">Independent multi-valued facts separated</p>
+          </div>
+          <div class="card">
+            <h3>5NF</h3>
+            <p>No JDs</p>
+            <p class="dim">No lossless 3+ way decompositions</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Why Normalize?</h2>
+        <p>Without normalization, databases suffer from three types of <span class="result">anomalies</span>:</p>
+
+        <table>
+          <tr><th>Anomaly</th><th>Description</th><th>Example</th></tr>
+          <tr><td><span class="highlight">Insertion</span></td><td>Cannot insert data without including unrelated data</td><td>Cannot add a new course without a student enrolled</td></tr>
+          <tr><td><span class="highlight">Update</span></td><td>Changing one value requires updating multiple rows</td><td>Changing a professor's office requires updating all rows for that professor</td></tr>
+          <tr><td><span class="highlight">Deletion</span></td><td>Deleting one fact unintentionally deletes another</td><td>Deleting the last student in a course deletes the course info</td></tr>
+        </table>
+
+        <div class="warning">
+          <div class="warning-title">Normalization Trade-off:</div>
+          <p>Higher normal forms reduce redundancy but may <span class="highlight">increase join operations</span>, potentially degrading query performance. The optimal level depends on the <span class="highlight">specific application requirements</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab2">
+      <div class="section">
+        <h2>Step-by-Step Normalization Process</h2>
+
+        <div class="step-box">
+          <span class="step-num">Step 0:</span> Start with <span class="result">Unnormalized Form (UNF)</span>
+          <p>A table with <span class="dim">repeating groups</span>, multi-valued attributes, or composite values.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 1:</span> Convert to <span class="result">First Normal Form (1NF)</span>
+          <p><span class="highlight">Action:</span> Remove repeating groups by creating separate rows or separate tables.</p>
+          <p><span class="highlight">Rule:</span> Each cell must contain an atomic (indivisible) value.</p>
+          <p><span class="highlight">Result:</span> A table with atomic values, a primary key, no repeating groups.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 2:</span> Convert to <span class="result">Second Normal Form (2NF)</span>
+          <p><span class="highlight">Action:</span> Remove partial dependencies — FDs where a non-key attribute depends on part of a composite key.</p>
+          <p><span class="highlight">Rule:</span> Must be in 1NF. Every non-key attribute must be fully functionally dependent on the entire primary key.</p>
+          <p><span class="highlight">Result:</span> Decompose table so each non-key attribute depends on the full key.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 3:</span> Convert to <span class="result">Third Normal Form (3NF)</span>
+          <p><span class="highlight">Action:</span> Remove transitive dependencies — FDs where a non-key attribute depends on another non-key attribute.</p>
+          <p><span class="highlight">Rule:</span> Must be in 2NF. No non-key attribute should be transitively dependent on the primary key.</p>
+          <p><span class="highlight">Result:</span> Every non-key attribute depends on "the key, the whole key, and nothing but the key."</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 4:</span> Convert to <span class="result">Boyce-Codd Normal Form (BCNF)</span>
+          <p><span class="highlight">Action:</span> Remove remaining FDs where the determinant is not a candidate key.</p>
+          <p><span class="highlight">Rule:</span> Must be in 3NF. For every FD X → Y, X must be a superkey.</p>
+          <p><span class="highlight">Result:</span> Every functional dependency is key-based.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 5:</span> Convert to <span class="result">Fourth Normal Form (4NF)</span>
+          <p><span class="highlight">Action:</span> Remove multi-valued dependencies (MVDs).</p>
+          <p><span class="highlight">Rule:</span> Must be in BCNF. No non-trivial MVDs where the determinant is not a superkey.</p>
+          <p><span class="highlight">Result:</span> Independent multi-valued facts are stored in separate tables.</p>
+        </div>
+
+        <div class="step-box">
+          <span class="step-num">Step 6:</span> Convert to <span class="result">Fifth Normal Form (5NF)</span>
+          <p><span class="highlight">Action:</span> Remove join dependencies (JDs) not implied by candidate keys.</p>
+          <p><span class="highlight">Rule:</span> Must be in 4NF. Every join dependency must be implied by candidate keys.</p>
+          <p><span class="highlight">Result:</span> Relation cannot be losslessly decomposed further — the ultimate normal form.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Normalization Summary Decision Chart</h2>
+        <div class="code">
+UNF: Repeating groups exist?
+  ├── Yes → Flatten into 1NF (atomic values, key identified)
+  └── No → Already in 1NF
+
+1NF: Partial dependencies exist? (non-key attr depends on part of key)
+  ├── Yes → Decompose into 2NF
+  └── No → Already in 2NF
+
+2NF: Transitive dependencies exist? (non-key → non-key)
+  ├── Yes → Decompose into 3NF
+  └── No → Already in 3NF
+
+3NF: Every FD determinant is a candidate key?
+  ├── No → Decompose into BCNF
+  └── Yes → Already in BCNF
+
+BCNF: Non-trivial MVDs with non-superkey determinant?
+  ├── Yes → Decompose into 4NF
+  └── No → Already in 4NF
+
+4NF: Non-trivial JDs not implied by keys?
+  ├── Yes → Decompose into 5NF
+  └── No → Already in 5NF (end of process)
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab3">
+      <div class="section">
+        <h2>Complete Running Example: University Database</h2>
+        <p>We will normalize a university enrollment table step by step from <span class="result">unnormalized form</span> to <span class="result">BCNF</span>.</p>
+      </div>
+
+      <div class="section">
+        <h2>Step 0: Unnormalized Form (UNF)</h2>
+        <div class="example">
+          <div class="title">StudentCourse_UNF</div>
+          <table>
+            <tr><th>StudentID</th><th>StudentName</th><th>Courses</th><th>Instructor</th><th>Dept</th><th>DeptPhone</th></tr>
+            <tr><td>S1</td><td>Alice</td><td>CS101, CS201</td><td>Dr.Smith, Dr.Jones</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S2</td><td>Bob</td><td>CS101</td><td>Dr.Smith</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S3</td><td>Carol</td><td>MATH101</td><td>Dr.Lee</td><td>Math</td><td>555-0200</td></tr>
+          </table>
+          <p class="note">Problems: Courses column has multiple values (comma-separated). Instructor column has multiple values. Repeated department phone for each student.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 1: Convert to 1NF</h2>
+        <p><span class="result">Action:</span> Flatten repeating groups — create one row per course per student.</p>
+
+        <div class="example">
+          <div class="title">StudentCourse_1NF</div>
+          <table>
+            <tr><th>StudentID</th><th>StudentName</th><th>CourseID</th><th>Instructor</th><th>Dept</th><th>DeptPhone</th></tr>
+            <tr><td>S1</td><td>Alice</td><td>CS101</td><td>Dr.Smith</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S1</td><td>Alice</td><td>CS101</td><td>Dr.Jones</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S1</td><td>Alice</td><td>CS201</td><td>Dr.Smith</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S1</td><td>Alice</td><td>CS201</td><td>Dr.Jones</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S2</td><td>Bob</td><td>CS101</td><td>Dr.Smith</td><td>CS</td><td>555-0100</td></tr>
+            <tr><td>S3</td><td>Carol</td><td>MATH101</td><td>Dr.Lee</td><td>Math</td><td>555-0200</td></tr>
+          </table>
+          <p>Primary Key: <span class="result">(StudentID, CourseID, Instructor)</span></p>
+          <p class="note">Notice: Redundancy is now visible. StudentName repeats for every row of the same student. DeptPhone repeats for every row of the same department.</p>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">1NF Issues:</div>
+          <p>Partial dependencies exist: <span class="highlight">StudentID → StudentName</span> (depends on only part of the key).</p>
+          <p>Transitive dependencies exist: <span class="highlight">Dept → DeptPhone</span> (via CourseID → Dept).</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 2: Convert to 2NF</h2>
+        <p><span class="result">Action:</span> Identify and remove partial dependencies.</p>
+
+        <h3>FDs in 1NF:</h3>
+        <ul style="margin-left: 20px;">
+          <li>StudentID → StudentName (partial dependency — depends on part of key)</li>
+          <li>CourseID → Dept (partial dependency)</li>
+          <li>Dept → DeptPhone</li>
+          <li>(StudentID, CourseID, Instructor) is the full key</li>
+        </ul>
+
+        <h3>Decomposition:</h3>
+        <p>Create separate tables for each partial dependency:</p>
+
+        <table>
+          <tr><th colspan="2">Student(SID, Name)</th></tr>
+          <tr><th>StudentID</th><th>StudentName</th></tr>
+          <tr><td>S1</td><td>Alice</td></tr>
+          <tr><td>S2</td><td>Bob</td></tr>
+          <tr><td>S3</td><td>Carol</td></tr>
+        </table>
+        <br>
+        <table>
+          <tr><th colspan="2">Course(CourseID, Dept)</th></tr>
+          <tr><th>CourseID</th><th>Dept</th></tr>
+          <tr><td>CS101</td><td>CS</td></tr>
+          <tr><td>CS201</td><td>CS</td></tr>
+          <tr><td>MATH101</td><td>Math</td></tr>
+        </table>
+        <br>
+        <table>
+          <tr><th colspan="3">Enrollment(SID, CourseID, Instructor)</th></tr>
+          <tr><th>StudentID</th><th>CourseID</th><th>Instructor</th></tr>
+          <tr><td>S1</td><td>CS101</td><td>Dr.Smith</td></tr>
+          <tr><td>S1</td><td>CS101</td><td>Dr.Jones</td></tr>
+          <tr><td>S1</td><td>CS201</td><td>Dr.Smith</td></tr>
+          <tr><td>S1</td><td>CS201</td><td>Dr.Jones</td></tr>
+          <tr><td>S2</td><td>CS101</td><td>Dr.Smith</td></tr>
+          <tr><td>S3</td><td>MATH101</td><td>Dr.Lee</td></tr>
+        </table>
+
+        <div class="note">
+          <p>Now all non-key attributes depend on the full key in each relation. But we still have transitive dependency: <span class="dim">CourseID → Dept → DeptPhone</span>.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 3: Convert to 3NF</h2>
+        <p><span class="result">Action:</span> Remove transitive dependencies.</p>
+
+        <h3>FDs in Course Table:</h3>
+        <ul style="margin-left: 20px;">
+          <li>CourseID → Dept (FD)</li>
+          <li>Dept → DeptPhone (transitive through Course — CourseID → Dept → DeptPhone)</li>
+        </ul>
+
+        <h3>Decomposition:</h3>
+        <p>Split Course table to remove the transitive dependency:</p>
+
+        <table>
+          <tr><th colspan="2">Course(CourseID, Dept)</th></tr>
+          <tr><th>CourseID</th><th>Dept</th></tr>
+          <tr><td>CS101</td><td>CS</td></tr>
+          <tr><td>CS201</td><td>CS</td></tr>
+          <tr><td>MATH101</td><td>Math</td></tr>
+        </table>
+        <br>
+        <table>
+          <tr><th colspan="2">Department(Dept, Phone)</th></tr>
+          <tr><th>Dept</th><th>DeptPhone</th></tr>
+          <tr><td>CS</td><td>555-0100</td></tr>
+          <tr><td>Math</td><td>555-0200</td></tr>
+        </table>
+
+        <p class="note">Now every non-key attribute depends on "the key, the whole key, and nothing but the key." All three tables are in 3NF.</p>
+
+        <div class="result">
+          <p>Final 3NF Schema:</p>
+          <ul style="margin-left: 20px;">
+            <li><span class="highlight">Student</span>(StudentID, StudentName)</li>
+            <li><span class="highlight">Course</span>(CourseID, Dept)</li>
+            <li><span class="highlight">Department</span>(Dept, DeptPhone)</li>
+            <li><span class="highlight">Enrollment</span>(StudentID, CourseID, Instructor)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 4: Check BCNF</h2>
+        <p><span class="result">Action:</span> Verify that every FD determinant is a candidate key.</p>
+
+        <h3>Check each table:</h3>
+
+        <ul style="margin-left: 20px;">
+          <li><span class="result">Student:</span> StudentID → StudentName. StudentID is the key. ✓</li>
+          <li><span class="result">Course:</span> CourseID → Dept. CourseID is the key. ✓</li>
+          <li><span class="result">Department:</span> Dept → DeptPhone. Dept is the key. ✓</li>
+          <li><span class="result">Enrollment:</span> (StudentID, CourseID, Instructor) is the key. No non-trivial FDs with non-key determinant. ✓</li>
+        </ul>
+
+        <p><span class="result">All tables are in BCNF!</span></p>
+
+        <p>Note: In some cases, the transition from 3NF to BCNF requires additional decomposition when there are overlapping candidate keys. For example:</p>
+
+        <div class="example">
+          <div class="title">BCNF Special Case</div>
+          <p>R(A, B, C) with FDs: AB → C and C → B</p>
+          <p>Candidate keys: AB and AC</p>
+          <p>This is in 3NF but NOT in BCNF because C → B and C is not a superkey.</p>
+          <p>Decompose: R₁(C, B), R₂(A, C). Now both are in BCNF.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Step 5: Check 4NF</h2>
+        <p><span class="result">Action:</span> Check for multi-valued dependencies.</p>
+
+        <p>In our Enrollment table, a student might have multiple courses and each course might have multiple instructors. This could create MVDs.</p>
+
+        <p>Looking at the Enrollment table: <span class="result">(StudentID, CourseID, Instructor)</span></p>
+        <p>If courses and instructors are independent (all combinations valid), then:</p>
+        <ul style="margin-left: 20px;">
+          <li>StudentID →→ CourseID (each student can take many courses, independent of instructors)</li>
+          <li>StudentID →→ Instructor (each student can have many instructors, independent of courses)</li>
+        </ul>
+
+        <p>If these MVDs exist, we would decompose:</p>
+        <ul style="margin-left: 20px;">
+          <li><span class="result">EnrollCourse</span>(StudentID, CourseID)</li>
+          <li><span class="result">EnrollInstructor</span>(StudentID, Instructor)</li>
+        </ul>
+
+        <p>However, in our running example, the original data shows that <span class="dim">Instructor is tied to Course</span> (Dr.Smith teaches CS101, Dr.Lee teaches MATH101). So the MVDs do NOT hold, and the Enrollment table remains in 4NF.</p>
+      </div>
+
+      <div class="section">
+        <h2>Step 6: Check 5NF</h2>
+        <p><span class="result">Action:</span> Check for join dependencies not implied by keys.</p>
+
+        <p>Our tables have simple key structures. No non-trivial join dependencies exist. All tables are in 5NF (PJNF).</p>
+
+        <div class="quick-ref">
+          <h3>Final Normalized Schema Summary</h3>
+          <p><span class="highlight">Student</span>(StudentID PK, StudentName)</p>
+          <p><span class="highlight">Course</span>(CourseID PK, Dept)</p>
+          <p><span class="highlight">Department</span>(Dept PK, DeptPhone)</p>
+          <p><span class="highlight">Enrollment</span>(StudentID FK→Student, CourseID FK→Course, Instructor)</p>
+          <p class="note">All tables in 5NF. Redundancy eliminated. Anomalies prevented.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="tab4">
+      <div class="section">
+        <h2>Normalization Summary</h2>
+
+        <table>
+          <tr><th>Normal Form</th><th>Condition</th><th>Action to Achieve</th><th>Eliminates</th></tr>
+          <tr><td>1NF</td><td>Atomic values</td><td>Flatten repeating groups</td><td>Non-atomic data</td></tr>
+          <tr><td>2NF</td><td>Full FD on key</td><td>Remove partial dependencies</td><td>Partial dependency anomalies</td></tr>
+          <tr><td>3NF</td><td>No transitive FD</td><td>Remove transitive dependencies</td><td>Transitive dependency anomalies</td></tr>
+          <tr><td>BCNF</td><td>Key-based FDs only</td><td>Remove FDs with non-key determinants</td><td>Remaining FD anomalies</td></tr>
+          <tr><td>4NF</td><td>No MVDs</td><td>Separate independent multi-valued facts</td><td>MVD redundancy</td></tr>
+          <tr><td>5NF</td><td>No JDs</td><td>Decompose on non-key JDs</td><td>JD redundancy</td></tr>
+        </table>
+
+        <div class="warning">
+          <div class="warning-title">Key Principle — "The Key, the Whole Key, and Nothing but the Key"</div>
+          <p>This famous maxim describes 3NF but extends in spirit to all normal forms: each table should represent <span class="highlight">one fact about one entity</span>, identified by its key. Violating this at any level introduces redundancy.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>When to Stop Normalizing?</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Stop at 3NF</h3>
+            <p>Most practical databases stop here. 3NF eliminates <span class="highlight">most</span> anomalies while preserving dependencies.</p>
+          </div>
+          <div class="card">
+            <h3>Go to BCNF</h3>
+            <p>When overlapping candidate keys exist, <span class="highlight">BCNF</span> catches edge cases 3NF misses.</p>
+          </div>
+          <div class="card">
+            <h3>Consider 4NF/5NF</h3>
+            <p>Only when <span class="highlight">MVDs or JDs</span> are present. These are rare in practice.</p>
+          </div>
+        </div>
+
+        <div class="example">
+          <div class="title">Practical Normalization Guidelines</div>
+          <ul style="margin-left: 20px;">
+            <li>Almost always: normalize to <span class="result">3NF</span> or <span class="result">BCNF</span></li>
+            <li>For most business applications: <span class="result">3NF</span> is sufficient</li>
+            <li>When performance is critical: consider <span class="result">denormalization</span></li>
+            <li>4NF/5NF: only for specialized cases with complex relationships</li>
+            <li>Remember: normalization is a <span class="result">bottom-up</span> design approach (complements ER modeling)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Common Mistakes in Normalization</h2>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Over-normalization</h3>
+            <p>Creating too many tables degrades performance. <span class="dim">More joins = slower queries.</span></p>
+          </div>
+          <div class="card">
+            <h3>Under-normalization</h3>
+            <p>Stopping too early leaves redundancy. <span class="dim">More anomalies = data inconsistency.</span></p>
+          </div>
+          <div class="card">
+            <h3>Ignoring FDs</h3>
+            <p>Not identifying all functional dependencies leads to <span class="dim">incomplete normalization.</span></p>
+          </div>
+          <div class="card">
+            <h3>Skipping Steps</h3>
+            <p>Going directly to 3NF from UNF without 1NF/2NF may <span class="dim">miss important decompositions.</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Quick Reference: Normalization Flowchart</h2>
+        <div class="code">
+START: Unnormalized Form (UNF)
+  │
+  ▼
+[Remove repeating groups] ─────────────→ 1NF
+  │
+  ▼
+[Remove partial dependencies] ─────────→ 2NF
+  │
+  ▼
+[Remove transitive dependencies] ──────→ 3NF
+  │
+  ▼
+[Remove non-key determinants] ─────────→ BCNF
+  │
+  ▼
+[Remove non-key MVDs] ─────────────────→ 4NF
+  │
+  ▼
+[Remove non-key JDs] ──────────────────→ 5NF (PJNF)
+  │
+  ▼
+END: Fully normalized database
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
